@@ -16,9 +16,13 @@ export function GroupDetailHeader({ group }: GroupDetailHeaderProps) {
   const [formattedCreatedAt, setFormattedCreatedAt] = useState<string | null>(null);
 
   useEffect(() => {
-    // This effect runs only on the client, after initial hydration
-    setFormattedCreatedAt(new Date(group.createdAt).toLocaleDateString());
-  }, [group.createdAt]);
+    // This effect runs only on the client, after initial hydration,
+    // and only once on mount due to the empty dependency array.
+    // This is safe as group.createdAt is static for this component instance.
+    if (group && group.createdAt) {
+      setFormattedCreatedAt(new Date(group.createdAt).toLocaleDateString());
+    }
+  }, []); // Empty dependency array ensures this runs once on mount
 
   return (
     <div className="mb-6">
