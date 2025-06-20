@@ -17,6 +17,7 @@ import { Icons } from "@/components/icons";
 import { NavLinks, mainNavItems, settingsNavItem } from "./nav-links";
 import { UserNav } from "./user-nav";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DynamicYear } from "./dynamic-year";
 
 function AppHeader({ pageTitle }: { pageTitle?: string }) {
   const { toggleSidebar, isMobile } = useSidebar();
@@ -44,8 +45,8 @@ function AppHeader({ pageTitle }: { pageTitle?: string }) {
 }
 
 function AppSidebar() {
-  const { open } = useSidebar(); // Use 'open' to determine if sidebar is expanded or collapsed (icon-only)
-  const isCollapsed = !open; // This needs to align with how `collapsible="icon"` works in `Sidebar`
+  const { open } = useSidebar(); 
+  const isCollapsed = !open; 
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r">
@@ -75,11 +76,9 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, pageTitle }: AppShellProps) {
-  // Get cookie for defaultOpen state
   const [defaultOpen, setDefaultOpen] = React.useState(true);
 
   React.useEffect(() => {
-    // Only run on client
     if (typeof window !== "undefined") {
       const storedState = document.cookie
         .split('; ')
@@ -102,7 +101,7 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
             {children}
           </main>
           <footer className="py-4 px-6 text-center text-xs text-muted-foreground border-t">
-            SettleEase &copy; {new Date().getFullYear()}
+            SettleEase &copy; <DynamicYear />
           </footer>
         </div>
       </SidebarInset>

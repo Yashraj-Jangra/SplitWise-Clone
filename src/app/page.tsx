@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import Image from 'next/image';
+import { DynamicYear } from '@/components/layout/dynamic-year';
 
 export default function HomePage() {
   return (
@@ -60,7 +61,7 @@ export default function HomePage() {
       </div>
 
       <footer className="mt-20 text-center text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} SettleEase. Simplify your shared expenses.</p>
+        <p>&copy; <DynamicYear /> SettleEase. Simplify your shared expenses.</p>
       </footer>
     </main>
   );
