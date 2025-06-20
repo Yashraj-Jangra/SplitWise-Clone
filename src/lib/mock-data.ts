@@ -4,16 +4,19 @@ import { CURRENCY_CODE } from "./constants";
 
 // Mock Users
 export const mockUsers: User[] = [
-  { id: "user1", name: "Alice Wonderland", email: "alice@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AW" },
-  { id: "user2", name: "Bob The Builder", email: "bob@example.com", avatarUrl: "https://placehold.co/100x100.png?text=BB" },
-  { id: "user3", name: "Charlie Brown", email: "charlie@example.com", avatarUrl: "https://placehold.co/100x100.png?text=CB" },
-  { id: "user4", name: "Diana Prince", email: "diana@example.com", avatarUrl: "https://placehold.co/100x100.png?text=DP" },
-  { id: "user5", name: "Sample User", email: "sample@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU" },
-  { id: "user6", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU" },
+  { id: "user1", name: "Alice Wonderland", email: "alice@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AW", role: "user" },
+  { id: "user2", name: "Bob The Builder", email: "bob@example.com", avatarUrl: "https://placehold.co/100x100.png?text=BB", role: "user" },
+  { id: "user3", name: "Charlie Brown", email: "charlie@example.com", avatarUrl: "https://placehold.co/100x100.png?text=CB", role: "user" },
+  { id: "user4", name: "Diana Prince", email: "diana@example.com", avatarUrl: "https://placehold.co/100x100.png?text=DP", role: "user" },
+  { id: "admin001", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU", role: "admin" },
+  { id: "user007", name: "Standard User", email: "user@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU", role: "user" },
+  { id: "user5", name: "Sample User", email: "sample@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU" }, // Kept for other mock data consistency
+  { id: "user6", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU" }, // Kept for other mock data consistency
 ];
 
-// Mock Current User (Simulating logged-in user)
-export const mockCurrentUser: User = mockUsers[0];
+// Mock Current User (Simulating logged-in user) - this remains Alice by default.
+// The login form will simulate login for other users but won't dynamically change this globally in the current app setup.
+export const mockCurrentUser: User = mockUsers[0]; 
 
 // Mock Groups
 export const mockGroups: Group[] = [
@@ -191,24 +194,24 @@ export const mockUserBalances: Balance[] = [
   }
 ];
 
-export function getGroupById(groupId: string): Group | undefined {
-  return mockGroups.find(g => g.id === groupId);
+export function getGroupById(groupId: string): Promise<Group | undefined> {
+  return new Promise(resolve => setTimeout(() => resolve(mockGroups.find(g => g.id === groupId)), 100));
 }
 
-export function getExpensesByGroupId(groupId: string): Expense[] {
-  return mockExpenses.filter(e => e.groupId === groupId);
+export function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
+  return new Promise(resolve => setTimeout(() => resolve(mockExpenses.filter(e => e.groupId === groupId)), 100));
 }
 
-export function getSettlementsByGroupId(groupId: string): Settlement[] {
-  return mockSettlements.filter(s => s.groupId === groupId);
+export function getSettlementsByGroupId(groupId: string): Promise<Settlement[]> {
+   return new Promise(resolve => setTimeout(() => resolve(mockSettlements.filter(s => s.groupId === groupId)), 100));
 }
 
 // A more complex function to calculate balances for a group would exist in a real app
-export function getGroupBalances(groupId: string): Balance[] {
-  const group = getGroupById(groupId);
+export async function getGroupBalances(groupId: string): Promise<Balance[]> {
+  const group = await getGroupById(groupId);
   if (!group) return [];
-  const expenses = getExpensesByGroupId(groupId);
-  const settlements = getSettlementsByGroupId(groupId);
+  const expenses = await getExpensesByGroupId(groupId);
+  const settlements = await getSettlementsByGroupId(groupId);
 
   const memberBalances: Record<string, number> = {};
   group.members.forEach(member => memberBalances[member.id] = 0);
@@ -233,11 +236,9 @@ export function getGroupBalances(groupId: string): Balance[] {
     const netBalance = parseFloat(memberBalances[member.id].toFixed(2));
     return {
       user: member,
-      owes: netBalance < 0 ? [{ to: {id: "group", name: "Group Total", email:""}, amount: Math.abs(netBalance) }] : [],
-      owedBy: netBalance > 0 ? [{ from: {id: "group", name: "Group Total", email:""}, amount: netBalance }] : [],
+      owes: netBalance < 0 ? [{ to: {id: "group", name: "Group Total", email:"", role: "user"}, amount: Math.abs(netBalance) }] : [],
+      owedBy: netBalance > 0 ? [{ from: {id: "group", name: "Group Total", email:"", role: "user"}, amount: netBalance }] : [],
       netBalance: netBalance,
     };
   });
 }
-
-    

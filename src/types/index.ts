@@ -1,3 +1,4 @@
+
 import type { IconName } from "@/components/icons";
 
 export interface User {
@@ -5,6 +6,7 @@ export interface User {
   name: string;
   email: string;
   avatarUrl?: string; // URL to placeholder or actual image
+  role?: 'admin' | 'user'; // Added role
 }
 
 export interface Group {
@@ -63,3 +65,4 @@ export interface NavItem {
   disabled?: boolean;
   external?: boolean;
   label?: string
+}

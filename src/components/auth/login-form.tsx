@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { AuthCard } from "./auth-card";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
+import { mockUsers } from "@/lib/mock-data"; // Import mockUsers
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -33,18 +34,35 @@ export function LoginForm() {
     },
   });
 
-  // Simulate login
   async function onSubmit(values: LoginFormValues) {
-    // In a real app, you'd call your auth API here
     console.log("Login attempt with:", values);
-    
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Simulate success
+    const enteredEmail = values.email.toLowerCase();
+    const potentialUser = mockUsers.find(u => u.email.toLowerCase() === enteredEmail);
+
+    let toastTitle = "Login Successful";
+    let toastDescription = "Welcome back!";
+
+    if (potentialUser) {
+      if (potentialUser.role === 'admin' && enteredEmail === 'admin@example.com') {
+        toastTitle = `Admin Login Successful`;
+        toastDescription = `Welcome, ${potentialUser.name}! (Admin privileges simulated)`;
+        // Note: The password "123456" is not actually checked here.
+      } else if (potentialUser.role === 'user' && enteredEmail === 'user@example.com') {
+        toastTitle = `User Login Successful`;
+        toastDescription = `Welcome, ${potentialUser.name}!`;
+        // Note: The password "123456" is not actually checked here.
+      } else if (enteredEmail === 'alice@example.com') {
+         toastDescription = `Welcome back, ${potentialUser.name}!`;
+      }
+    }
+    // For any other email, it will also "succeed" due to the mock nature.
+    // The app will continue to use mockCurrentUser (Alice) for most data displays.
+
     toast({
-      title: "Login Successful",
-      description: "Welcome back!",
+      title: toastTitle,
+      description: toastDescription,
     });
     router.push("/dashboard"); 
   }
@@ -77,7 +95,7 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input type="password" placeholder="•••••••• (e.g., 123456 for test accounts)" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -94,6 +112,9 @@ export function LoginForm() {
           Sign up
         </Link>
       </div>
+      <p className="mt-4 text-xs text-center text-muted-foreground">
+        Test accounts: admin@example.com, user@example.com (password: 123456 - not validated).
+      </p>
     </AuthCard>
   );
 }
