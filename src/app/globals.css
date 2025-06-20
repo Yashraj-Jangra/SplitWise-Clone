@@ -5,6 +5,11 @@
 @layer base {
   body {
     font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground;
+  }
+
+  * {
+    @apply border-border;
   }
 
   :root {
@@ -44,6 +49,7 @@
     --sidebar-border: 207 16% 88%; /* Subtle border */
     --sidebar-ring: 215 100% 73%; /* Primary color for focus rings */
   }
+
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -79,14 +85,5 @@
     --sidebar-accent-foreground: 0 0% 98%; /* Light text on hover */
     --sidebar-border: 240 3.7% 20%;
     --sidebar-ring: 215 100% 73%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
   }
 }
