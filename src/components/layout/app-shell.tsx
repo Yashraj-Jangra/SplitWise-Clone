@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -76,23 +77,28 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, pageTitle }: AppShellProps) {
-  const [defaultOpen, setDefaultOpen] = React.useState(true);
+  // This state will be `true` for SSR and the first client render pass.
+  // It will be updated by the useEffect hook on the client.
+  const [effectiveSidebarDefaultOpen, setEffectiveSidebarDefaultOpen] = React.useState(true);
 
   React.useEffect(() => {
+    // This effect runs only on the client, after the initial render and hydration.
+    let storedStateValue = true; // Default if cookie is not found
     if (typeof window !== "undefined") {
-      const storedState = document.cookie
+      const storedCookie = document.cookie
         .split('; ')
         .find(row => row.startsWith('sidebar_state='))
         ?.split('=')[1];
-      if (storedState) {
-        setDefaultOpen(storedState === 'true');
+      if (storedCookie) {
+        storedStateValue = storedCookie === 'true';
       }
     }
+    setEffectiveSidebarDefaultOpen(storedStateValue);
   }, []);
 
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider defaultOpen={effectiveSidebarDefaultOpen}>
       <AppSidebar />
       <SidebarInset>
         <div className="flex flex-col min-h-screen">
