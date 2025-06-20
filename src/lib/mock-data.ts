@@ -1,3 +1,4 @@
+
 import type { User, Group, Expense, Settlement, Balance } from "@/types";
 import { CURRENCY_CODE } from "./constants";
 
@@ -7,6 +8,8 @@ export const mockUsers: User[] = [
   { id: "user2", name: "Bob The Builder", email: "bob@example.com", avatarUrl: "https://placehold.co/100x100.png?text=BB" },
   { id: "user3", name: "Charlie Brown", email: "charlie@example.com", avatarUrl: "https://placehold.co/100x100.png?text=CB" },
   { id: "user4", name: "Diana Prince", email: "diana@example.com", avatarUrl: "https://placehold.co/100x100.png?text=DP" },
+  { id: "user5", name: "Sample User", email: "sample@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU" },
+  { id: "user6", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU" },
 ];
 
 // Mock Current User (Simulating logged-in user)
@@ -236,3 +239,5 @@ export function getGroupBalances(groupId: string): Balance[] {
     };
   });
 }
+
+    
