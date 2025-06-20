@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -74,6 +75,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
       createdAt: new Date().toISOString(),
       createdBy: currentUser,
       totalExpenses: 0,
+      coverImageUrl: `https://placehold.co/600x300.png?text=${encodeURIComponent(values.name)}`,
     };
     mockGroups.push(newGroup); // Add to mock data for simulation
 
@@ -188,4 +190,10 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
               <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Creating..." : "Create Group"}
               </Button>
-            </DialogFooter
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
