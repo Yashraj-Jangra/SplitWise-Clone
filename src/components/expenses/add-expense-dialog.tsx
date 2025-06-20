@@ -82,7 +82,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     },
   });
 
-  const { fields } = useFieldArray({ // `update` function removed as it's not used safely here
+  const { fields } = useFieldArray({
     control: form.control,
     name: "participants"
   });
@@ -92,64 +92,69 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   const watchParticipants = form.watch("participants");
 
   useEffect(() => {
-    const selectedParticipants = watchParticipants.filter(p => p.selected);
-    const totalAmount = watchAmount || 0;
-    const epsilon = 0.001; // Threshold for floating point comparisons
+    const currentTotalAmount = watchAmount || 0;
+    const currentSplitType = watchSplitType;
+    const currentParticipants = watchParticipants || [];
 
-    // Scenario 1: No selected participants or total amount is zero or less.
-    // All participant amounts should be zero.
-    if (!selectedParticipants.length || totalAmount <= 0) {
-        watchParticipants.forEach((participant, index) => {
-            if (participant.amountOwed !== undefined && Math.abs(participant.amountOwed - 0) > epsilon) {
-                form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
-            } else if (participant.amountOwed === undefined) {
-                form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+    const roundToTwoDP = (num: number | undefined): number => {
+        if (num === undefined || isNaN(num) || !isFinite(num)) return 0;
+        return parseFloat(num.toFixed(2));
+    };
+
+    const selectedParticipants = currentParticipants.filter(p => p.selected);
+
+    // Calculate the target amountOwed for each participant
+    const targetAmounts = currentParticipants.map(p => {
+        if (!p.selected) return 0; // Not selected, owes 0
+
+        // If selected:
+        switch (currentSplitType) {
+            case "equally":
+                return selectedParticipants.length > 0 ? roundToTwoDP(currentTotalAmount / selectedParticipants.length) : 0;
+            case "by_shares":
+                const totalShares = selectedParticipants.reduce((sum, sp) => sum + (sp.shares || 0), 0);
+                return totalShares > 0 
+                    ? roundToTwoDP((currentTotalAmount * (p.shares || 0)) / totalShares) 
+                    : (selectedParticipants.length > 0 ? roundToTwoDP(currentTotalAmount / selectedParticipants.length) : 0);
+            case "by_percentage":
+                return roundToTwoDP((currentTotalAmount * (p.percentage || 0)) / 100);
+            case "unequally":
+                // For "unequally", the user's input is the source of truth.
+                // This effect should not modify it if the participant is selected.
+                // The value is already in p.amountOwed.
+                return p.amountOwed === undefined ? 0 : p.amountOwed; // Use existing value, default to 0 if undefined
+            default:
+                return p.amountOwed === undefined ? 0 : p.amountOwed; // Fallback
+        }
+    });
+
+    // Update form values only if they differ from the target
+    currentParticipants.forEach((participant, index) => {
+        const currentFormValue = participant.amountOwed; // Raw value from form state
+        let calculatedTargetValue = targetAmounts[index]; // This is already rounded for calculated types, or raw for unequal
+
+        let shouldSetValue = false;
+
+        if (currentSplitType !== "unequally") {
+            // For calculated splits, target is rounded. Compare current (rounded) with target.
+            if (roundToTwoDP(currentFormValue) !== calculatedTargetValue) {
+                shouldSetValue = true;
             }
-        });
-        return;
-    }
-
-    // Scenario 2: Calculations based on split type
-    const calculatedParticipantValues = watchParticipants.map(p => {
-        let calculatedAmountOwed = p.amountOwed; // Default to current, important for "unequally"
-
-        if (!p.selected) {
-            calculatedAmountOwed = 0;
         } else {
-            switch (watchSplitType) {
-                case "equally":
-                    calculatedAmountOwed = totalAmount / selectedParticipants.length;
-                    break;
-                case "by_shares":
-                    const totalShares = selectedParticipants.reduce((sum, sp) => sum + (sp.shares || 0), 0);
-                    if (totalShares > 0) {
-                        calculatedAmountOwed = (totalAmount * (p.shares || 0)) / totalShares;
-                    } else { // Fallback to equal if totalShares is 0 but participants are selected
-                        calculatedAmountOwed = totalAmount / selectedParticipants.length;
-                    }
-                    break;
-                case "by_percentage":
-                    calculatedAmountOwed = (totalAmount * (p.percentage || 0)) / 100;
-                    break;
-                case "unequally":
-                    // For "unequally", amountOwed is manually set by user.
-                    // We only ensure it's 0 if not selected (handled by `!p.selected` above).
-                    break;
+            // For "unequally" and selected:
+            // targetValue is the raw p.amountOwed.
+            // We only set if participant becomes unselected (target will be 0, currentFormValue might not be).
+            if (currentFormValue !== calculatedTargetValue ) { // This means calculatedTargetValue became 0 because !p.selected
+                 shouldSetValue = true;
             }
         }
-        return { ...p, amountOwed: calculatedAmountOwed };
-    });
-
-    calculatedParticipantValues.forEach((pVal, index) => {
-        const currentOwed = watchParticipants[index].amountOwed ?? 0;
-        const newOwed = pVal.amountOwed ?? 0;
-
-        if (Math.abs(currentOwed - newOwed) > epsilon) {
-            form.setValue(`participants.${index}.amountOwed`, newOwed, { shouldValidate: true });
+        
+        if (shouldSetValue) {
+            form.setValue(`participants.${index}.amountOwed`, calculatedTargetValue, { shouldValidate: true });
         }
     });
 
-  }, [watchAmount, watchSplitType, watchParticipants, form]);
+}, [watchAmount, watchSplitType, watchParticipants, form]);
 
 
   async function onSubmit(values: AddExpenseFormValues) {
@@ -158,7 +163,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
       .map(p => ({
         user: group.members.find(m => m.id === p.userId)!,
         amountOwed: p.amountOwed || 0, 
-        share: p.shares,
+        share: p.shares, // Percentage is not directly part of ExpenseParticipant, it's used for calculation then amountOwed is stored
       }));
     
     if(values.splitType === "unequally") {
@@ -169,7 +174,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
         }
     }
      if(values.splitType === "by_percentage") {
-        const sumOfPercentages = finalParticipants.reduce((sum, p) => sum + (p.percentage || 0), 0);
+        const sumOfPercentages = finalParticipants.reduce((sum, p) => sum + (values.participants.find(vp => vp.userId === p.user.id)?.percentage || 0), 0);
         if (Math.abs(sumOfPercentages - 100) > 0.01) {
             form.setError("participants", { type: "manual", message: `Sum of percentages (${sumOfPercentages}%) must equal 100%.` });
             return;
@@ -373,7 +378,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                             <FormItem className="flex items-center space-x-2">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                               <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap">
-                                {item.name} {item.userId === currentUser.id ? "(You)" : ""}
+                                {watchParticipants[index]?.name} {watchParticipants[index]?.userId === currentUser.id ? "(You)" : ""}
                               </FormLabel>
                             </FormItem>
                           )}
@@ -425,6 +430,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                     ))}
                   </div>
                    <FormMessage>{form.formState.errors.participants?.message}</FormMessage>
+                   {form.formState.errors.participants?.root?.message && <FormMessage>{form.formState.errors.participants.root.message}</FormMessage>}
                 </FormItem>
               </div>
             </ScrollArea>
@@ -440,4 +446,3 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     </Dialog>
   );
 }
-
