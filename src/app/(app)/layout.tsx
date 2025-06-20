@@ -14,4 +14,5 @@ export default function AuthenticatedAppLayout({
 }) {
   // The pageTitle prop for AppShell can be set dynamically by child pages
   // or a default can be provided here. For now, child pages will handle it.
-  return <AppShell>{children}</AppShell
+  return <AppShell>{children}</AppShell>;
+}

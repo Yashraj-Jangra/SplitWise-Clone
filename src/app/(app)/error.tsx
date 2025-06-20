@@ -1,3 +1,4 @@
+
 "use client"; 
 
 import { useEffect } from "react";
@@ -33,7 +34,11 @@ export default function AppError({
             Error: {error.message || "An unknown error occurred."}
           </p>
           <Button onClick={() => reset()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Icons.Home className="mr-2 h-4 w-4" /> {/* Replace with RefreshCw if available */}
+            <Icons.Home className="mr-2 h-4 w-4" />
             Try Again
           </Button>
-        
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
