@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Expense } from "@/types";
@@ -84,4 +85,10 @@ export function ExpenseListItem({ expense, currentUserId }: ExpenseListItemProps
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
               <Icons.Delete className="mr-2 h-4 w-4" /> Delete
-            </Dropdown
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
