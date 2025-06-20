@@ -19,7 +19,7 @@ import {
   Wallet,
   Landmark,
   GanttChartSquare,
-  CalendarDays // Ensure CalendarDays is imported
+  CalendarDays
 } from 'lucide-react';
 
 export const Icons = {
@@ -33,13 +33,14 @@ export const Icons = {
   Home,
   Expense: CreditCard,
   Details: FileText,
-  Signup: UserPlus,
+  UserPlus, // Make UserPlus icon directly available
+  Signup: UserPlus, // Signup also uses the UserPlus icon
   Login: LogIn,
   ChevronDown,
   MoreHorizontal,
   Delete: Trash2,
   Edit: Edit3,
-  Calendar: CalendarDays, // Define Icons.Calendar
+  Calendar: CalendarDays,
   Logo: () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
       <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
