@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -81,7 +82,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     },
   });
 
-  const { fields, update } = useFieldArray({
+  const { fields } = useFieldArray({ // `update` function removed as it's not used safely here
     control: form.control,
     name: "participants"
   });
@@ -90,53 +91,65 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   const watchSplitType = form.watch("splitType");
   const watchParticipants = form.watch("participants");
 
-  // Calculate and update participant amounts based on split type
   useEffect(() => {
     const selectedParticipants = watchParticipants.filter(p => p.selected);
-    if (!selectedParticipants.length || !watchAmount || watchAmount <= 0) {
-        selectedParticipants.forEach((_, index) => {
-            const participantIndex = watchParticipants.findIndex(p => p.userId === selectedParticipants[index].userId);
-            if(participantIndex !== -1) {
-                 update(participantIndex, { ...watchParticipants[participantIndex], amountOwed: 0 });
+    const totalAmount = watchAmount || 0;
+    const epsilon = 0.001; // Threshold for floating point comparisons
+
+    // Scenario 1: No selected participants or total amount is zero or less.
+    // All participant amounts should be zero.
+    if (!selectedParticipants.length || totalAmount <= 0) {
+        watchParticipants.forEach((participant, index) => {
+            if (participant.amountOwed !== undefined && Math.abs(participant.amountOwed - 0) > epsilon) {
+                form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+            } else if (participant.amountOwed === undefined) {
+                form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
             }
         });
         return;
     }
 
-    let newParticipantValues = [...watchParticipants];
+    // Scenario 2: Calculations based on split type
+    const calculatedParticipantValues = watchParticipants.map(p => {
+        let calculatedAmountOwed = p.amountOwed; // Default to current, important for "unequally"
 
-    if (watchSplitType === "equally") {
-      const amountPerParticipant = watchAmount / selectedParticipants.length;
-      newParticipantValues = newParticipantValues.map(p => 
-        p.selected ? { ...p, amountOwed: amountPerParticipant } : { ...p, amountOwed: 0 }
-      );
-    } else if (watchSplitType === "unequally") {
-      // Amounts are manually entered, ensure sum matches total if desired
-      // For now, just lets user enter amounts
-    } else if (watchSplitType === "by_shares") {
-      const totalShares = selectedParticipants.reduce((sum, p) => sum + (p.shares || 0), 0);
-      if (totalShares > 0) {
-        newParticipantValues = newParticipantValues.map(p => 
-          p.selected ? { ...p, amountOwed: (watchAmount * (p.shares || 0)) / totalShares } : { ...p, amountOwed: 0 }
-        );
-      }
-    } else if (watchSplitType === "by_percentage") {
-        const totalPercentage = selectedParticipants.reduce((sum, p) => sum + (p.percentage || 0), 0);
-        // Ideally, percentages should sum to 100. Add validation or normalization if needed.
-        if (totalPercentage > 0) { // Allow > 100 for flexibility, or validate sum === 100
-             newParticipantValues = newParticipantValues.map(p => 
-                p.selected ? { ...p, amountOwed: (watchAmount * (p.percentage || 0)) / 100 } : { ...p, amountOwed: 0 }
-            );
+        if (!p.selected) {
+            calculatedAmountOwed = 0;
+        } else {
+            switch (watchSplitType) {
+                case "equally":
+                    calculatedAmountOwed = totalAmount / selectedParticipants.length;
+                    break;
+                case "by_shares":
+                    const totalShares = selectedParticipants.reduce((sum, sp) => sum + (sp.shares || 0), 0);
+                    if (totalShares > 0) {
+                        calculatedAmountOwed = (totalAmount * (p.shares || 0)) / totalShares;
+                    } else { // Fallback to equal if totalShares is 0 but participants are selected
+                        calculatedAmountOwed = totalAmount / selectedParticipants.length;
+                    }
+                    break;
+                case "by_percentage":
+                    calculatedAmountOwed = (totalAmount * (p.percentage || 0)) / 100;
+                    break;
+                case "unequally":
+                    // For "unequally", amountOwed is manually set by user.
+                    // We only ensure it's 0 if not selected (handled by `!p.selected` above).
+                    break;
+            }
         }
-    }
-    
-    newParticipantValues.forEach((pVal, idx) => {
-        if (watchParticipants[idx].amountOwed !== pVal.amountOwed) {
-           form.setValue(`participants.${idx}.amountOwed`, pVal.amountOwed);
+        return { ...p, amountOwed: calculatedAmountOwed };
+    });
+
+    calculatedParticipantValues.forEach((pVal, index) => {
+        const currentOwed = watchParticipants[index].amountOwed ?? 0;
+        const newOwed = pVal.amountOwed ?? 0;
+
+        if (Math.abs(currentOwed - newOwed) > epsilon) {
+            form.setValue(`participants.${index}.amountOwed`, newOwed, { shouldValidate: true });
         }
     });
 
-  }, [watchAmount, watchSplitType, watchParticipants, form, update]);
+  }, [watchAmount, watchSplitType, watchParticipants, form]);
 
 
   async function onSubmit(values: AddExpenseFormValues) {
@@ -187,12 +200,47 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
       description: `"${values.description}" for ${CURRENCY_SYMBOL}${values.amount} added to ${group.name}.`,
     });
     setOpen(false);
-    form.reset();
+    form.reset({
+        description: "",
+        amount: 0,
+        paidById: currentUser.id,
+        date: new Date(),
+        splitType: "equally",
+        participants: group.members.map(member => ({
+            userId: member.id,
+            name: member.name,
+            selected: true,
+            amountOwed: 0,
+            shares: 1,
+            percentage: 0,
+        })),
+        category: "",
+    });
     router.refresh();
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+             form.reset({
+                description: "",
+                amount: 0,
+                paidById: currentUser.id,
+                date: new Date(),
+                splitType: "equally",
+                participants: group.members.map(member => ({
+                    userId: member.id,
+                    name: member.name,
+                    selected: true,
+                    amountOwed: 0,
+                    shares: 1,
+                    percentage: 0,
+                })),
+                category: "",
+            });
+        }
+    }}>
       <DialogTrigger asChild>
         <Button>
           <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
@@ -349,7 +397,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                                 name={`participants.${index}.shares`}
                                 render={({ field }) => (
                                   <FormItem className="flex-1 min-w-[70px]">
-                                    <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8 text-xs" /></FormControl>
+                                    <FormControl><Input type="number" step="1" placeholder="Shares" {...field} defaultValue={1} className="h-8 text-xs" /></FormControl>
                                   </FormItem>
                                 )}
                               />
@@ -365,7 +413,8 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                                 )}
                                 />
                             )}
-                            {watchSplitType !== "unequally" && (
+                            {/* Display calculated amount for non-manual splits */}
+                            {(watchSplitType === "equally" || watchSplitType === "by_shares" || watchSplitType === "by_percentage") && (
                                 <div className="text-xs text-muted-foreground w-[80px] text-right">
                                 {CURRENCY_SYMBOL}{(watchParticipants[index]?.amountOwed || 0).toFixed(2)}
                                 </div>
@@ -391,3 +440,4 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     </Dialog>
   );
 }
+
