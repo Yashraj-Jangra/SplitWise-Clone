@@ -1,10 +1,11 @@
+
 "use client";
 import type { Group } from "@/types";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog"; // Assuming this will be created
-import { AddMemberDialog } from "@/components/groups/add-member-dialog"; // Assuming this will be created
+import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
+import { AddMemberDialog } from "@/components/groups/add-member-dialog";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 
 interface GroupDetailHeaderProps {
@@ -35,7 +36,7 @@ export function GroupDetailHeader({ group }: GroupDetailHeaderProps) {
             <Icons.Users className="h-4 w-4 mr-2" />
             <span>{group.members.length} Members</span>
             <span className="mx-2">·</span>
-            <Icons.Calendar className="h-4 w-4 mr-1" /> {/* Assuming Calendar icon exists or use FileText */}
+            <Icons.Calendar className="h-4 w-4 mr-1" />
             <span>Created: {new Date(group.createdAt).toLocaleDateString()}</span>
           </div>
           <div className="text-lg font-semibold text-foreground">
@@ -44,4 +45,9 @@ export function GroupDetailHeader({ group }: GroupDetailHeaderProps) {
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <AddMemberDialog group={group} />
-          <Add
+          <AddExpenseDialog group={group} />
+        </div>
+      </div>
+    </div>
+  );
+}

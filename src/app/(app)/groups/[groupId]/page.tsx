@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -121,4 +122,9 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
         </TabsContent>
 
         <TabsContent value="members">
-          <GroupMembers members={group.members
+          <GroupMembers members={group.members} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
