@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -205,3 +206,5 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}

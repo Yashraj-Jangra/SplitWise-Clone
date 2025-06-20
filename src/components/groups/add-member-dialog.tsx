@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -148,4 +149,10 @@ export function AddMemberDialog({ group }: AddMemberDialogProps) {
         ) : (
           <div className="py-8 text-center text-muted-foreground">
             <Icons.Users className="h-12 w-12 mx-auto mb-3" />
-            <p>All available users are already in
+            <p>All available users are already in this group.</p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

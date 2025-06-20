@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { User } from "@/types";
@@ -45,4 +46,10 @@ export function GroupMembers({ members }: GroupMembersProps) {
                 {/* Add action button if needed e.g. remove member */}
                 {/* <Button variant="ghost" size="icon" className="h-8 w-8"><Icons.MoreHorizontal /></Button> */}
               </div>
-            
+            ))}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+}
