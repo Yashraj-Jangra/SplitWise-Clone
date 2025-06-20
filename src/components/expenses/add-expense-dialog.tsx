@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -26,7 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, Expense, User, ExpenseParticipant } from "@/types";
-import { mockCurrentUser, mockExpenses } from "@/lib/mock-data";
+import { mockCurrentUser, mockExpenses, mockGroups } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { format }
 from "date-fns";
@@ -91,7 +91,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   const watchParticipants = form.watch("participants");
 
   // Calculate and update participant amounts based on split type
-  React.useEffect(() => {
+  useEffect(() => {
     const selectedParticipants = watchParticipants.filter(p => p.selected);
     if (!selectedParticipants.length || !watchAmount || watchAmount <= 0) {
         selectedParticipants.forEach((_, index) => {
@@ -131,7 +131,6 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     }
     
     newParticipantValues.forEach((pVal, idx) => {
-        // Only update if the calculated value is different, to prevent infinite loops
         if (watchParticipants[idx].amountOwed !== pVal.amountOwed) {
            form.setValue(`participants.${idx}.amountOwed`, pVal.amountOwed);
         }
@@ -145,14 +144,13 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
       .filter(p => p.selected)
       .map(p => ({
         user: group.members.find(m => m.id === p.userId)!,
-        amountOwed: p.amountOwed || 0, // Ensure it's a number
+        amountOwed: p.amountOwed || 0, 
         share: p.shares,
       }));
     
-    // Validate if split unequally sums up to total amount
     if(values.splitType === "unequally") {
         const sumOfOwedAmounts = finalParticipants.reduce((sum, p) => sum + p.amountOwed, 0);
-        if (Math.abs(sumOfOwedAmounts - values.amount) > 0.01) { // Tolerance for floating point
+        if (Math.abs(sumOfOwedAmounts - values.amount) > 0.01) { 
             form.setError("participants", { type: "manual", message: `Sum of amounts (${CURRENCY_SYMBOL}${sumOfOwedAmounts.toFixed(2)}) must equal total expense (${CURRENCY_SYMBOL}${values.amount.toFixed(2)}).` });
             return;
         }
@@ -179,9 +177,8 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     };
 
     console.log("Adding expense:", newExpense);
-    mockExpenses.push(newExpense); // Simulate adding to backend
+    mockExpenses.push(newExpense); 
     
-    // Update group total expenses (simulation)
     const groupToUpdate = mockGroups.find(g => g.id === group.id);
     if (groupToUpdate) groupToUpdate.totalExpenses += newExpense.amount;
 
@@ -281,7 +278,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                                 className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                                 >
                                 {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <Icons.Home className="ml-auto h-4 w-4 opacity-50" /> {/* Replace with Calendar icon */}
+                                <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                             </FormControl>
                             </PopoverTrigger>

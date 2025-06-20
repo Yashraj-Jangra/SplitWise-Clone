@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -39,7 +38,7 @@ const settlementSchema = z.object({
   notes: z.string().max(100, "Notes too long").optional(),
 }).refine(data => data.paidById !== data.paidToId, {
   message: "Payer and recipient cannot be the same person.",
-  path: ["paidToId"], // Attach error to paidToId field
+  path: ["paidToId"], 
 });
 
 type AddSettlementFormValues = z.infer<typeof settlementSchema>;
@@ -77,9 +76,8 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
     };
 
     console.log("Adding settlement:", newSettlement);
-    mockSettlements.push(newSettlement); // Simulate adding to backend
+    mockSettlements.push(newSettlement); 
     
-    // In a real app, this would trigger recalculation of balances
     
     toast({
       title: "Settlement Recorded!",
@@ -170,7 +168,7 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
                             className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                             >
                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            <Icons.Home className="ml-auto h-4 w-4 opacity-50" /> {/* Replace with Calendar icon */}
+                            <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                         </FormControl>
                         </PopoverTrigger>
