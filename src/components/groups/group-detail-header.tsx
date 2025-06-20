@@ -2,17 +2,24 @@
 "use client";
 import type { Group } from "@/types";
 import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
 import { AddMemberDialog } from "@/components/groups/add-member-dialog";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { useState, useEffect } from "react";
 
 interface GroupDetailHeaderProps {
   group: Group;
 }
 
 export function GroupDetailHeader({ group }: GroupDetailHeaderProps) {
+  const [formattedCreatedAt, setFormattedCreatedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    // This effect runs only on the client, after initial hydration
+    setFormattedCreatedAt(new Date(group.createdAt).toLocaleDateString());
+  }, [group.createdAt]);
+
   return (
     <div className="mb-6">
       <div className="relative h-48 md:h-64 rounded-lg overflow-hidden mb-6 shadow-lg">
@@ -37,7 +44,7 @@ export function GroupDetailHeader({ group }: GroupDetailHeaderProps) {
             <span>{group.members.length} Members</span>
             <span className="mx-2">·</span>
             <Icons.Calendar className="h-4 w-4 mr-1" />
-            <span>Created: {new Date(group.createdAt).toLocaleDateString()}</span>
+            <span>Created: {formattedCreatedAt !== null ? formattedCreatedAt : '...'}</span>
           </div>
           <div className="text-lg font-semibold text-foreground">
             Total Group Expenses: {CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}
