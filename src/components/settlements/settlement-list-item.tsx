@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Settlement } from "@/types";
@@ -96,4 +97,6 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    
+    </div>
+  );
+}
