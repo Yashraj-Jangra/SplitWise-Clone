@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -6,8 +7,7 @@ import { Icons } from "@/components/icons";
 import type { NavItem } from "@/types";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSidebar } from "@/components/ui/sidebar"; // Assuming this hook exists and gives sidebar state
-
+import { useSidebar } from "@/components/ui/sidebar"; 
 
 export const mainNavItems: NavItem[] = [
   {
@@ -24,13 +24,11 @@ export const mainNavItems: NavItem[] = [
     title: "Expenses",
     href: "/expenses",
     icon: "Expense",
-     // Example: Could list all user's expenses across groups
   },
   {
     title: "Settlements",
     href: "/settlements",
     icon: "Settle",
-     // Example: Could list all user's settlements
   },
 ];
 
@@ -42,7 +40,7 @@ export const settingsNavItem: NavItem = {
 
 interface NavLinksProps {
   items: NavItem[];
-  isCollapsed?: boolean; // Passed from parent if sidebar can be collapsed
+  isCollapsed?: boolean; 
 }
 
 export function NavLinks({ items, isCollapsed }: NavLinksProps) {
@@ -116,3 +114,8 @@ export function NavLinks({ items, isCollapsed }: NavLinksProps) {
               <span className="ml-auto">{item.label}</span>
             )}
           </Link>
+        );
+      })}
+    </nav>
+  );
+}

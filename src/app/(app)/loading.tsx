@@ -1,3 +1,4 @@
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icons } from "@/components/icons";
 
@@ -11,4 +12,6 @@ export default function AppLoading() {
         <Skeleton className="h-8 w-3/4" />
         <Skeleton className="h-20 w-full" />
       </div>
-    
+    </div>
+  );
+}
