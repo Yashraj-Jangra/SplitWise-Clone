@@ -19,7 +19,8 @@ import {
   Wallet,
   Landmark,
   GanttChartSquare,
-  CalendarDays
+  CalendarDays,
+  Mail
 } from 'lucide-react';
 
 export const Icons = {
@@ -33,8 +34,8 @@ export const Icons = {
   Home,
   Expense: CreditCard,
   Details: FileText,
-  UserPlus, // Make UserPlus icon directly available
-  Signup: UserPlus, // Signup also uses the UserPlus icon
+  UserPlus,
+  Signup: UserPlus,
   Login: LogIn,
   ChevronDown,
   MoreHorizontal,
@@ -52,6 +53,7 @@ export const Icons = {
   Wallet,
   Landmark,
   AppLogo: GanttChartSquare,
+  Mail,
 };
 
 export type IconName = keyof typeof Icons;
