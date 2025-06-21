@@ -22,12 +22,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { mockCurrentUser, mockGroups, mockUsers } from "@/lib/mock-data"; // For simulation
+import { mockGroups, mockUsers } from "@/lib/mock-data";
 import type { Group, User } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { useAuth } from "@/contexts/auth-context";
 
 const createGroupSchema = z.object({
   name: z.string().min(3, { message: "Group name must be at least 3 characters." }).max(50, { message: "Group name must be less than 50 characters."}),
@@ -46,22 +46,37 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const currentUser = mockCurrentUser; // Assume current user is available
+  const { currentUser } = useAuth();
   
-  // Filter out current user from selectable members, as they are added by default.
+  const form = useForm<CreateGroupFormValues>();
+
+  // Reset form when dialog opens/closes or user changes
+  useState(() => {
+    if (currentUser) {
+      form.reset({
+        name: "",
+        description: "",
+        memberIds: [currentUser.id],
+      });
+    }
+  })
+
+  if (!currentUser) {
+    return (
+      <Button variant={buttonVariant} size={buttonSize} disabled>
+        <Icons.Add className="mr-2 h-4 w-4" /> Create New Group
+      </Button>
+    )
+  }
+
   const availableMembers = mockUsers.filter(user => user.id !== currentUser.id);
 
-
-  const form = useForm<CreateGroupFormValues>({
-    resolver: zodResolver(createGroupSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      memberIds: [currentUser.id], // Current user is always part of the group
-    },
-  });
-
   async function onSubmit(values: CreateGroupFormValues) {
+    if (!currentUser) {
+        toast({ title: "Error", description: "You must be logged in to create a group.", variant: "destructive"});
+        return;
+    }
+
     console.log("Creating group with values:", values);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -77,7 +92,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
       totalExpenses: 0,
       coverImageUrl: `https://placehold.co/600x300.png?text=${encodeURIComponent(values.name)}`,
     };
-    mockGroups.push(newGroup); // Add to mock data for simulation
+    mockGroups.push(newGroup);
 
     toast({
       title: "Group Created!",
@@ -85,8 +100,8 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     });
     setOpen(false);
     form.reset();
-    router.push(`/groups/${newGroupId}`); // Navigate to the new group page
-    router.refresh(); // Refresh server components
+    router.push(`/groups/${newGroupId}`);
+    router.refresh();
   }
 
   return (
@@ -103,7 +118,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
             Fill in the details below to create your new expense-sharing group.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
+        <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
@@ -192,7 +207,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
               </Button>
             </DialogFooter>
           </form>
-        </Form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );

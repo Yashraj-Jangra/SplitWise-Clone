@@ -1,7 +1,8 @@
+
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
@@ -25,10 +26,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, Settlement } from "@/types";
-import { mockCurrentUser, mockSettlements } from "@/lib/mock-data";
+import { mockSettlements } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { useAuth } from "@/contexts/auth-context";
 
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
@@ -51,20 +53,28 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const currentUser = mockCurrentUser;
+  const { currentUser } = useAuth();
 
-  const form = useForm<AddSettlementFormValues>({
-    resolver: zodResolver(settlementSchema),
-    defaultValues: {
-      paidById: currentUser.id,
-      paidToId: "",
-      amount: 0,
-      date: new Date(),
-      notes: "",
-    },
-  });
+  const form = useForm<AddSettlementFormValues>();
+
+  useEffect(() => {
+    if (currentUser && open) {
+        form.reset({
+            paidById: currentUser.id,
+            paidToId: "",
+            amount: 0,
+            date: new Date(),
+            notes: "",
+        });
+    }
+  }, [currentUser, open, form]);
+
 
   async function onSubmit(values: AddSettlementFormValues) {
+    if (!currentUser) {
+        toast({ title: "Error", description: "You must be logged in to record a settlement.", variant: "destructive"});
+        return;
+    }
     const newSettlement: Settlement = {
       id: `set${mockSettlements.length + 1}`,
       groupId: group.id,
@@ -91,7 +101,7 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={!currentUser}>
           <Icons.Settle className="mr-2 h-4 w-4" /> Record Settlement
         </Button>
       </DialogTrigger>
@@ -102,7 +112,7 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
             Log a payment made between group members to settle debts.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
+        <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -111,11 +121,11 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Who Paid?</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger></FormControl>
                         <SelectContent>
                         {group.members.map(member => (
-                            <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser.id ? "(You)" : ""}</SelectItem>
+                            <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser?.id ? "(You)" : ""}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -129,11 +139,11 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Who Received?</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select recipient" /></SelectTrigger></FormControl>
                         <SelectContent>
                         {group.members.map(member => (
-                            <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser.id ? "(You)" : ""}</SelectItem>
+                            <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser?.id ? "(You)" : ""}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -201,7 +211,7 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
               </Button>
             </DialogFooter>
           </form>
-        </Form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );

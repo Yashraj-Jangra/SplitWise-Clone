@@ -1,11 +1,13 @@
+
 import type { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from '@/components/icons';
-import { mockExpenses, mockCurrentUser } from '@/lib/mock-data';
+import { mockExpenses } from '@/lib/mock-data';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { getCurrentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'All Expenses - SettleEase',
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AllExpensesPage() {
-  const currentUser = mockCurrentUser;
+  const currentUser = await getCurrentUser();
   // Fetch all expenses related to the current user (paid by or participated in)
   // For mock, we filter all expenses where current user is involved.
   const userExpenses = mockExpenses.filter(

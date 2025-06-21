@@ -5,10 +5,11 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
-import { mockGroups, mockCurrentUser } from '@/lib/mock-data';
+import { mockGroups } from '@/lib/mock-data';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
+import { getCurrentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'My Groups - SettleEase',
@@ -22,7 +23,7 @@ async function getUserGroups(userId: string): Promise<Group[]> {
 }
 
 export default async function GroupsPage() {
-  const currentUser = mockCurrentUser;
+  const currentUser = await getCurrentUser();
   const groups = await getUserGroups(currentUser.id);
 
   return (

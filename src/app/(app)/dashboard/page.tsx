@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { OverviewCard } from "@/components/dashboard/overview-card";
 import { RecentActivityList } from "@/components/dashboard/recent-activity-list";
@@ -5,8 +6,10 @@ import { BalanceOverviewSummary } from "@/components/dashboard/balance-overview-
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
-import { mockCurrentUser, mockGroups, mockExpenses } from "@/lib/mock-data";
+import { mockGroups, mockExpenses } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { getCurrentUser } from '@/lib/auth';
+import type { User } from '@/types';
 
 export const metadata: Metadata = {
   title: 'Dashboard - SettleEase',
@@ -42,7 +45,9 @@ async function getDashboardStats(userId: string) {
 
 
 export default async function DashboardPage() {
-  const currentUser = mockCurrentUser;
+  // On the server, we always fetch the default user. The client-side AuthProvider
+  // will manage the interactive session state.
+  const currentUser = await getCurrentUser();
   const stats = await getDashboardStats(currentUser.id);
 
   return (
@@ -102,15 +107,9 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <RecentActivityList />
-        <BalanceOverviewSummary />
+        <BalanceOverviewSummary currentUserId={currentUser.id} />
       </div>
       
     </div>
   );
 }
-
-// These are placeholder routes. In a real app, these would lead to forms/modals.
-// Example for /groups/new (src/app/(app)/groups/new/page.tsx)
-// export default function NewGroupPage() { /* return <CreateGroupForm /> or trigger dialog */ }
-// Example for /expenses/new (src/app/(app)/expenses/new/page.tsx)
-// export default function NewExpensePage() { /* return <AddExpenseForm /> or trigger dialog */ }

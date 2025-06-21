@@ -10,13 +10,7 @@ export const mockUsers: User[] = [
   { id: "user4", name: "Diana Prince", email: "diana@example.com", avatarUrl: "https://placehold.co/100x100.png?text=DP", role: "user" },
   { id: "admin001", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU", role: "admin" },
   { id: "user007", name: "Standard User", email: "user@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU", role: "user" },
-  { id: "user5", name: "Sample User", email: "sample@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU" }, // Kept for other mock data consistency
-  { id: "user6", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU" }, // Kept for other mock data consistency
 ];
-
-// Mock Current User (Simulating logged-in user) - this remains Alice by default.
-// The login form will simulate login for other users but won't dynamically change this globally in the current app setup.
-export const mockCurrentUser: User = mockUsers[0]; 
 
 // Mock Groups
 export const mockGroups: Group[] = [

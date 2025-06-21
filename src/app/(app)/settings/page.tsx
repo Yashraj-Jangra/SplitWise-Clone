@@ -1,4 +1,6 @@
 
+"use client"; // This page needs to be a client component to use hooks
+
 import type { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,15 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from '@/components/icons';
-import { mockCurrentUser } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/auth-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export const metadata: Metadata = {
-  title: 'Settings - SettleEase',
-  description: 'Manage your account settings and preferences.',
-};
+// Metadata export is not allowed in client components. 
+// We can set it in the parent layout or handle it differently if needed.
+// export const metadata: Metadata = {
+//   title: 'Settings - SettleEase',
+//   description: 'Manage your account settings and preferences.',
+// };
 
 const getInitials = (name: string) => {
+    if (!name) return "";
     const names = name.split(' ');
     let initials = names[0].substring(0, 1).toUpperCase();
     if (names.length > 1) {
@@ -25,7 +31,25 @@ const getInitials = (name: string) => {
 
 
 export default function SettingsPage() {
-  const user = mockCurrentUser;
+  const { currentUser: user, loading } = useAuth();
+
+  if (loading) {
+    return (
+        <div className="space-y-8 max-w-3xl mx-auto">
+            <Skeleton className="h-12 w-1/3" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+        </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center py-10">
+        <p>Please log in to view your settings.</p>
+      </div>
+    );
+  }
 
   // In a real app, these would be form fields handled by react-hook-form
   return (

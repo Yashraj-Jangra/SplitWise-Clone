@@ -3,10 +3,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from '@/components/icons';
-import { mockSettlements, mockCurrentUser } from '@/lib/mock-data';
+import { mockSettlements } from '@/lib/mock-data';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { getCurrentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'All Settlements - SettleEase',
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AllSettlementsPage() {
-  const currentUser = mockCurrentUser;
+  const currentUser = await getCurrentUser();
   // Fetch all settlements where the current user is either the payer or the payee
   const userSettlements = mockSettlements.filter(
     settlement => settlement.paidBy.id === currentUser.id || settlement.paidTo.id === currentUser.id

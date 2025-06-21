@@ -12,7 +12,8 @@ import { AddSettlementDialog } from '@/components/settlements/add-settlement-dia
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Icons } from "@/components/icons";
-import { getGroupById, getExpensesByGroupId, getSettlementsByGroupId, getGroupBalances, mockCurrentUser } from "@/lib/mock-data";
+import { getGroupById, getExpensesByGroupId, getSettlementsByGroupId, getGroupBalances } from "@/lib/mock-data";
+import { getCurrentUser } from '@/lib/auth';
 
 interface GroupPageParams {
   params: { groupId: string };
@@ -37,8 +38,8 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
 
   const expenses = await getExpensesByGroupId(params.groupId);
   const settlements = await getSettlementsByGroupId(params.groupId);
-  const balances = await getGroupBalances(params.groupId); // This should be calculated based on expenses and settlements
-  const currentUser = mockCurrentUser;
+  const balances = await getGroupBalances(params.groupId);
+  const currentUser = await getCurrentUser();
 
   return (
     <div className="space-y-6">
@@ -52,7 +53,6 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
                 <TabsTrigger value="balances">Balances</TabsTrigger>
                 <TabsTrigger value="members">Members ({group.members.length})</TabsTrigger>
             </TabsList>
-            {/* Contextual actions could go here, e.g., specific to active tab */}
         </div>
 
         <TabsContent value="expenses">
@@ -69,7 +69,7 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
             </CardHeader>
             <CardContent className="p-0">
               {expenses.length > 0 ? (
-                <ScrollArea className="h-[400px]"> {/* Adjust height */}
+                <ScrollArea className="h-[400px]">
                   <div className="divide-y">
                     {expenses.map((expense) => (
                       <ExpenseListItem key={expense.id} expense={expense} currentUserId={currentUser.id}/>
@@ -100,7 +100,7 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
             </CardHeader>
             <CardContent className="p-0">
               {settlements.length > 0 ? (
-                <ScrollArea className="h-[400px]"> {/* Adjust height */}
+                <ScrollArea className="h-[400px]">
                   <div className="divide-y">
                     {settlements.map((settlement) => (
                       <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={currentUser.id} />

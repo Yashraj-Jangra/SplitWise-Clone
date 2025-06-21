@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, Controller, useFieldArray, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
@@ -27,11 +27,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, Expense, User, ExpenseParticipant } from "@/types";
-import { mockCurrentUser, mockExpenses, mockGroups } from "@/lib/mock-data";
+import { mockExpenses, mockGroups } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { format }
-from "date-fns";
+import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { useAuth } from "@/contexts/auth-context";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
@@ -61,37 +61,39 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const currentUser = mockCurrentUser;
+  const { currentUser } = useAuth();
 
-  const form = useForm<AddExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      description: "",
-      amount: 0,
-      paidById: currentUser.id,
-      date: new Date(),
-      splitType: "equally",
-      participants: group.members.map(member => ({
-        userId: member.id,
-        name: member.name,
-        selected: true,
-        amountOwed: 0,
-        shares: 1, // Default to 1 share if selected
-        percentage: 0,
-      })),
-      category: "",
-    },
-  });
+  const form = useForm<AddExpenseFormValues>();
 
   const { fields } = useFieldArray({
     control: form.control,
     name: "participants"
   });
-
+  
   const watchAmount = form.watch("amount");
   const watchSplitType = form.watch("splitType");
   const watchParticipants = form.watch("participants");
-
+  
+  useEffect(() => {
+    if (currentUser && open) {
+      form.reset({
+        description: "",
+        amount: 0,
+        paidById: currentUser.id,
+        date: new Date(),
+        splitType: "equally",
+        participants: group.members.map(member => ({
+          userId: member.id,
+          name: member.name,
+          selected: true,
+          amountOwed: 0,
+          shares: 1,
+          percentage: 0,
+        })),
+        category: "",
+      });
+    }
+  }, [currentUser, open, group.members, form]);
 
   useEffect(() => {
     const currentTotalAmount = Number(form.getValues("amount")) || 0;
@@ -131,12 +133,11 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
               newCalculatedAmountOwed = (currentTotalAmount * participantPercentage) / 100;
               break;
             case "unequally":
-              // For "unequally", currentParticipantAmountOwed is the source of truth from user input
               newCalculatedAmountOwed = currentParticipantAmountOwed;
               break;
           }
         } else {
-          newCalculatedAmountOwed = 0; // No selected participants or zero total amount
+          newCalculatedAmountOwed = 0;
         }
       }
 
@@ -144,7 +145,6 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
       if (currentSplitType !== "unequally") {
         finalAmountToSet = parseFloat(newCalculatedAmountOwed.toFixed(2));
       } else {
-        // For "unequally", respect user input if selected, otherwise zero it out
         finalAmountToSet = participantSelected ? currentParticipantAmountOwed : 0;
       }
       
@@ -152,7 +152,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
 
       if (currentFormValueForParticipant !== finalAmountToSet) {
           form.setValue(`participants.${index}.amountOwed`, finalAmountToSet, {
-              shouldValidate: false, // Avoid triggering validation loops here
+              shouldValidate: false,
               shouldDirty: true,
               shouldTouch: true,
           });
@@ -162,16 +162,20 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
 
 
   async function onSubmit(values: AddExpenseFormValues) {
+    if (!currentUser) {
+        toast({ title: "Error", description: "You must be logged in to add an expense.", variant: "destructive"});
+        return;
+    }
     const finalParticipants: ExpenseParticipant[] = values.participants
       .filter(p => p.selected)
       .map(p => ({
         user: group.members.find(m => m.id === p.userId)!,
         amountOwed: Number(p.amountOwed) || 0,
-        share: Number(p.shares), // ensure share is passed
+        share: Number(p.shares),
       }));
 
     if (finalParticipants.length === 0) {
-        form.setError("participants", { type: "manual", message: "At least one participant must be selected for the expense." });
+        form.setError("participants", { type: "manual", message: "At least one participant must be selected." });
         return;
     }
 
@@ -179,9 +183,8 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
 
     if(values.splitType === "unequally") {
         const sumOfOwedAmounts = finalParticipants.reduce((sum, p) => sum + (p.amountOwed || 0), 0);
-        // Use a small epsilon for floating point comparison
         if (Math.abs(sumOfOwedAmounts - totalAmount) > 0.01 * finalParticipants.length ) {
-             form.setError("participants", { type: "manual", message: `Sum of amounts (${CURRENCY_SYMBOL}${sumOfOwedAmounts.toFixed(2)}) must equal total expense (${CURRENCY_SYMBOL}${totalAmount.toFixed(2)}). Difference: ${CURRENCY_SYMBOL}${Math.abs(sumOfOwedAmounts - totalAmount).toFixed(2)}` });
+             form.setError("participants", { type: "manual", message: `Sum of amounts (${CURRENCY_SYMBOL}${sumOfOwedAmounts.toFixed(2)}) must equal total expense (${CURRENCY_SYMBOL}${totalAmount.toFixed(2)}).` });
             return;
         }
     }
@@ -194,7 +197,6 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
             return;
         }
     }
-
 
     const newExpense: Expense = {
       id: `exp${mockExpenses.length + 1}`,
@@ -219,56 +221,18 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
       description: `"${values.description}" for ${CURRENCY_SYMBOL}${totalAmount.toFixed(2)} added to ${group.name}.`,
     });
 
-    form.reset({
-        description: "",
-        amount: 0,
-        paidById: currentUser.id,
-        date: new Date(),
-        splitType: "equally",
-        participants: group.members.map(member => ({
-            userId: member.id,
-            name: member.name,
-            selected: true,
-            amountOwed: 0,
-            shares: 1,
-            percentage: 0,
-        })),
-        category: "",
-    });
     setOpen(false);
     router.refresh();
   }
 
   const resetFormAndClose = () => {
-    form.reset({
-        description: "",
-        amount: 0,
-        paidById: currentUser.id,
-        date: new Date(),
-        splitType: "equally",
-        participants: group.members.map(member => ({
-            userId: member.id,
-            name: member.name,
-            selected: true,
-            amountOwed: 0,
-            shares: 1,
-            percentage: 0,
-        })),
-        category: "",
-    });
     setOpen(false);
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-            resetFormAndClose();
-        } else {
-            setOpen(true);
-        }
-    }}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button disabled={!currentUser}>
           <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
         </Button>
       </DialogTrigger>
@@ -279,7 +243,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
             Enter the details of the expense. It will be shared among selected group members.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
+        <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <ScrollArea className="max-h-[60vh] p-1 pr-4">
               <div className="space-y-4">
@@ -326,11 +290,11 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Paid By</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
                             <SelectContent>
                             {group.members.map(member => (
-                                <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser.id ? "(You)" : ""}</SelectItem>
+                                <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser?.id ? "(You)" : ""}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
@@ -372,7 +336,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Split Method</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select split method" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="equally">Equally</SelectItem>
@@ -399,12 +363,12 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                             <FormItem className="flex items-center space-x-2">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                               <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap">
-                                {watchParticipants[index]?.name} {watchParticipants[index]?.userId === currentUser.id ? "(You)" : ""}
+                                {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === currentUser?.id ? "(You)" : ""}
                               </FormLabel>
                             </FormItem>
                           )}
                         />
-                        {watchParticipants[index]?.selected && (
+                        {watchParticipants?.[index]?.selected && (
                           <>
                             {watchSplitType === "unequally" && (
                               <FormField
@@ -439,7 +403,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                                 )}
                                 />
                             )}
-                            {(watchSplitType === "equally" || watchSplitType === "by_shares" || watchSplitType === "by_percentage") && watchParticipants[index]?.selected && (
+                            {(watchSplitType === "equally" || watchSplitType === "by_shares" || watchSplitType === "by_percentage") && watchParticipants?.[index]?.selected && (
                                 <div className="text-xs text-muted-foreground w-[80px] text-right">
                                 {CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}
                                 </div>
@@ -461,9 +425,8 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
               </Button>
             </DialogFooter>
           </form>
-        </Form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );
 }
-
