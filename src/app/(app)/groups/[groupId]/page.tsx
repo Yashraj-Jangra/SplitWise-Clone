@@ -72,7 +72,7 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
                 <ScrollArea className="h-[400px]">
                   <div className="divide-y">
                     {expenses.map((expense) => (
-                      <ExpenseListItem key={expense.id} expense={expense} currentUserId={currentUser.id}/>
+                      <ExpenseListItem key={expense.id} expense={expense} currentUserId={currentUser.id} group={group}/>
                     ))}
                   </div>
                 </ScrollArea>

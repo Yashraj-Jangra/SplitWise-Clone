@@ -235,6 +235,28 @@ export async function updateUser(userId: string, data: Partial<Omit<User, 'id'>>
   });
 }
 
+export async function updateExpense(expenseId: string, updatedData: Omit<Expense, 'id'>): Promise<Expense | undefined> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const expenseIndex = mockExpenses.findIndex(e => e.id === expenseId);
+      if (expenseIndex !== -1) {
+        const originalExpense = mockExpenses[expenseIndex];
+        const group = mockGroups.find(g => g.id === originalExpense.groupId);
+
+        if (group) {
+          // Adjust group total expenses
+          group.totalExpenses = group.totalExpenses - originalExpense.amount + updatedData.amount;
+        }
+
+        mockExpenses[expenseIndex] = { ...updatedData, id: expenseId }; // ensure id is not changed
+        resolve(mockExpenses[expenseIndex]);
+      } else {
+        resolve(undefined);
+      }
+    }, 200);
+  });
+}
+
 // A more complex function to calculate balances for a group would exist in a real app
 export async function getGroupBalances(groupId: string): Promise<Balance[]> {
   const group = await getGroupById(groupId);
