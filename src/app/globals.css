@@ -51,24 +51,24 @@
   }
 
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 240 6% 9%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 240 5% 12%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 240 5% 12%;
     --popover-foreground: 0 0% 98%;
-    --primary: 215 100% 73%; /* Soft Blue #75A9FF */
+    --primary: 215 100% 73%;
     --primary-foreground: 220 50% 15%;
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 240 4% 18%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
+    --muted: 240 4% 18%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 27 100% 64%; /* Vibrant Orange #FF9F4A */
+    --accent: 27 100% 64%;
     --accent-foreground: 20 14% 4%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 240 4% 18%;
+    --input: 240 4% 18%;
     --ring: 215 100% 73%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -77,13 +77,13 @@
     --chart-5: 340 75% 55%;
 
     /* Dark Sidebar specific colors */
-    --sidebar-background: 240 5.9% 10%; /* Darker sidebar */
-    --sidebar-foreground: 0 0% 98%; /* Light text */
-    --sidebar-primary: 215 100% 73%; /* Soft Blue for active items */
-    --sidebar-primary-foreground: 220 50% 15%; /* Dark text on Soft Blue */
-    --sidebar-accent: 240 3.7% 15.9%; /* Darker accent for hover */
-    --sidebar-accent-foreground: 0 0% 98%; /* Light text on hover */
-    --sidebar-border: 240 3.7% 20%;
+    --sidebar-background: 240 5% 12%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 215 100% 73%;
+    --sidebar-primary-foreground: 220 50% 15%;
+    --sidebar-accent: 240 4% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 18%;
     --sidebar-ring: 215 100% 73%;
   }
 }
