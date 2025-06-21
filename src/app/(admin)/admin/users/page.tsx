@@ -15,6 +15,7 @@ import type { User } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 // Metadata can't be exported from client components. We'll set this in the layout or handle it differently.
 // export const metadata: Metadata = {
@@ -35,10 +36,6 @@ const getInitials = (name: string) => {
 function UserActions({ user }: { user: User }) {
     const { toast } = useToast();
 
-    const handleEdit = () => {
-        toast({ title: "Edit User", description: `Editing ${user.name}. (Not implemented)`});
-    }
-
     const handleDelete = () => {
         toast({ title: "Delete User", description: `Deleting ${user.name}. (Not implemented)`, variant: "destructive"});
     }
@@ -52,8 +49,10 @@ function UserActions({ user }: { user: User }) {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEdit}>
-                    <Icons.Edit className="mr-2 h-4 w-4" /> Edit
+                <DropdownMenuItem asChild>
+                    <Link href={`/admin/users/${user.id}/edit`}>
+                        <Icons.Edit className="mr-2 h-4 w-4" /> Edit
+                    </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                     <Icons.Delete className="mr-2 h-4 w-4" /> Delete

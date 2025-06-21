@@ -216,6 +216,24 @@ export async function getAllExpenses(): Promise<Expense[]> {
   return new Promise(resolve => setTimeout(() => resolve(mockExpenses), 200));
 }
 
+export async function getUserById(userId: string): Promise<User | undefined> {
+  // Simulate API call
+  return new Promise(resolve => setTimeout(() => resolve(mockUsers.find(u => u.id === userId)), 50));
+}
+
+export async function updateUser(userId: string, data: Partial<Omit<User, 'id'>>): Promise<User | undefined> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const userIndex = mockUsers.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        mockUsers[userIndex] = { ...mockUsers[userIndex], ...data };
+        resolve(mockUsers[userIndex]);
+      } else {
+        resolve(undefined);
+      }
+    }, 200);
+  });
+}
 
 // A more complex function to calculate balances for a group would exist in a real app
 export async function getGroupBalances(groupId: string): Promise<Balance[]> {
