@@ -84,3 +84,42 @@ export async function sendEmailAction(input: z.infer<typeof sendEmailSchema>) {
     return { success: false, error: `Failed to send email. Reason: ${errorMessage}` };
   }
 }
+
+
+const verifyCredentialsSchema = z.object({
+  clientId: z.string().min(1, 'Client ID is required.'),
+  clientSecret: z.string().min(1, 'Client Secret is required.'),
+  refreshToken: z.string().min(1, 'Refresh Token is required.'),
+});
+
+export async function verifyGoogleCredentialsAction(input: z.infer<typeof verifyCredentialsSchema>) {
+  const validation = verifyCredentialsSchema.safeParse(input);
+  if (!validation.success) {
+    return { success: false, error: 'Invalid input. All fields are required.' };
+  }
+  const { clientId, clientSecret, refreshToken } = validation.data;
+
+  const OAuth2 = google.auth.OAuth2;
+  const oauth2Client = new OAuth2(
+    clientId,
+    clientSecret,
+    'https://developers.google.com/oauthplayground' // This is fine for server-side
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: refreshToken,
+  });
+
+  try {
+    const { token } = await oauth2Client.getAccessToken();
+    if (!token) {
+      throw new Error("Failed to retrieve access token. Please check your credentials and consent.");
+    }
+    // If we get a token, the credentials are valid.
+    return { success: true, message: 'Credentials are valid! You can now send emails.' };
+  } catch (error) {
+    console.error('Failed to verify credentials:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return { success: false, error: `Verification failed. Reason: ${errorMessage}` };
+  }
+}
