@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
+import { classifyExpense, categoryList } from "@/lib/expense-categories";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
@@ -48,7 +49,7 @@ const expenseSchema = z.object({
     percentage: z.coerce.number().min(0, "Percentage cannot be negative").max(100, "Percentage cannot exceed 100").optional(),
   })).min(1, "At least one participant is required.")
    .refine(arr => arr.some(p => p.selected), { message: "At least one participant must be selected."}),
-  category: z.string().optional(),
+  category: z.string({ required_error: "Category is required." }),
 });
 
 type AddExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -63,7 +64,10 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   const { toast } = useToast();
   const { currentUser } = useAuth();
 
-  const form = useForm<AddExpenseFormValues>();
+  const form = useForm<AddExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
+    // defaultValues will be set in useEffect
+  });
 
   const { fields } = useFieldArray({
     control: form.control,
@@ -73,6 +77,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   const watchAmount = form.watch("amount");
   const watchSplitType = form.watch("splitType");
   const watchParticipants = form.watch("participants");
+  const watchDescription = form.watch("description");
   
   useEffect(() => {
     if (currentUser && open) {
@@ -90,10 +95,17 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
           shares: 1,
           percentage: 0,
         })),
-        category: "",
+        category: "Other",
       });
     }
   }, [currentUser, open, group.members, form]);
+
+  useEffect(() => {
+    if (watchDescription) {
+        const suggestedCategory = classifyExpense(watchDescription);
+        form.setValue("category", suggestedCategory, { shouldValidate: true });
+    }
+  }, [watchDescription, form]);
 
   useEffect(() => {
     const currentTotalAmount = Number(form.getValues("amount")) || 0;
@@ -102,7 +114,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
 
     participantsFromForm.forEach((p, index) => {
       const participantSelected = p.selected;
-      let currentParticipantAmountOwed = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
+      const currentParticipantAmountOwed = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
       const participantShares = Number(form.getValues(`participants.${index}.shares`)) || (currentSplitType === 'by_shares' && participantSelected ? 1 : 0);
       const participantPercentage = Number(form.getValues(`participants.${index}.percentage`)) || 0;
 
@@ -118,7 +130,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
               newCalculatedAmountOwed = currentTotalAmount / selectedParticipants.length;
               break;
             case "by_shares":
-              const totalShares = selectedParticipants.reduce((sum, sp, i) => {
+              const totalShares = selectedParticipants.reduce((sum, sp) => {
                  const spIndex = participantsFromForm.findIndex(item => item.userId === sp.userId);
                  const sharesValue = Number(form.getValues(`participants.${spIndex}.shares`)) || 0;
                  return sum + sharesValue;
@@ -133,7 +145,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
               newCalculatedAmountOwed = (currentTotalAmount * participantPercentage) / 100;
               break;
             case "unequally":
-              newCalculatedAmountOwed = currentParticipantAmountOwed;
+              // This is handled by user input, no calculation needed here
               break;
           }
         } else {
@@ -145,14 +157,16 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
       if (currentSplitType !== "unequally") {
         finalAmountToSet = parseFloat(newCalculatedAmountOwed.toFixed(2));
       } else {
+        // For unequal, the amount is what the user typed in if selected, otherwise 0
         finalAmountToSet = participantSelected ? currentParticipantAmountOwed : 0;
       }
       
       const currentFormValueForParticipant = parseFloat(currentParticipantAmountOwed.toFixed(2));
 
+      // Only update if the value has changed to avoid re-renders
       if (currentFormValueForParticipant !== finalAmountToSet) {
           form.setValue(`participants.${index}.amountOwed`, finalAmountToSet, {
-              shouldValidate: false,
+              shouldValidate: true, // Recalculate validations if needed
               shouldDirty: true,
               shouldTouch: true,
           });
@@ -226,6 +240,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   }
 
   const resetFormAndClose = () => {
+    form.reset();
     setOpen(false);
   }
 
@@ -271,15 +286,26 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                     )}
                     />
                     <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Category (Optional)</FormLabel>
-                        <FormControl><Input placeholder="e.g., Food, Travel" {...field} /></FormControl>
-                        <FormMessage />
+                          <FormLabel>Category</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categoryList.map((cat) => (
+                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
                         </FormItem>
-                    )}
+                      )}
                     />
                 </div>
 
@@ -376,7 +402,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                                 name={`participants.${index}.amountOwed`}
                                 render={({ field }) => (
                                   <FormItem className="flex-1 min-w-[80px]">
-                                    <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} className="h-8 text-xs" /></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} /></FormControl>
                                   </FormItem>
                                 )}
                               />
@@ -387,7 +413,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                                 name={`participants.${index}.shares`}
                                 render={({ field }) => (
                                   <FormItem className="flex-1 min-w-[70px]">
-                                    <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8 text-xs" /></FormControl>
+                                    <FormControl><Input type="number" step="1" placeholder="Shares" {...field} /></FormControl>
                                   </FormItem>
                                 )}
                               />
@@ -398,7 +424,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                                 name={`participants.${index}.percentage`}
                                 render={({ field }) => (
                                     <FormItem className="flex-1 min-w-[70px]">
-                                    <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8 text-xs" /></FormControl>
+                                    <FormControl><Input type="number" step="0.01" placeholder="%" {...field} /></FormControl>
                                     </FormItem>
                                 )}
                                 />
