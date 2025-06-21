@@ -2,34 +2,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import type { User } from '@/types';
 import { getAllUsers } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
-import { generateEmail, GenerateEmailInputSchema, GenerateEmailOutput } from '@/ai/flows/generate-email-flow';
+import { generateEmailContent, emailTypes, EmailTemplate } from '@/lib/email-templates';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/icons';
 
-const emailTypes = [
-    { value: 'welcome', label: 'Welcome Email' },
-    { value: 'password_reset', label: 'Password Reset' },
-    { value: 'expense_added', label: 'New Expense Notification' },
-    { value: 'weekly_summary', label: 'Weekly Activity Summary' },
-] as const;
-
-type EmailType = typeof emailTypes[number]['value'];
+interface EmailOutput {
+    subject: string;
+    body: string;
+}
 
 const emailFormSchema = z.object({
-  template: z.enum(['welcome', 'password_reset', 'expense_added', 'weekly_summary']),
+  template: z.enum(emailTypes.map(t => t.value) as [EmailTemplate, ...EmailTemplate[]]),
   userId: z.string().min(1, 'Please select a user.'),
 });
 
@@ -39,9 +34,8 @@ export default function ManageEmailsPage() {
     const { toast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
-    const [generating, setGenerating] = useState(false);
     const [sending, setSending] = useState(false);
-    const [preview, setPreview] = useState<GenerateEmailOutput | null>(null);
+    const [preview, setPreview] = useState<EmailOutput | null>(null);
 
     const form = useForm<EmailFormValues>({
         resolver: zodResolver(emailFormSchema),
@@ -61,29 +55,21 @@ export default function ManageEmailsPage() {
         fetchUsers();
     }, []);
 
-    async function onGenerate(values: EmailFormValues) {
-        setGenerating(true);
+    function onGenerate(values: EmailFormValues) {
         setPreview(null);
         const selectedUser = users.find(u => u.id === values.userId);
         if (!selectedUser) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find the selected user.' });
-            setGenerating(false);
             return;
         }
 
-        try {
-            const result = await generateEmail({
-                template: values.template,
-                user: { name: selectedUser.name, email: selectedUser.email },
-            });
-            setPreview(result);
-            toast({ title: 'Preview Generated', description: 'Email content is ready for review.' });
-        } catch (error) {
-            console.error('Email generation failed:', error);
-            toast({ variant: 'destructive', title: 'Generation Failed', description: 'Could not generate the email preview.' });
-        } finally {
-            setGenerating(false);
-        }
+        const result = generateEmailContent({
+            template: values.template,
+            user: { name: selectedUser.name, email: selectedUser.email },
+        });
+
+        setPreview(result);
+        toast({ title: 'Preview Generated', description: 'Email content is ready for review.' });
     }
 
     async function onSend() {
@@ -95,13 +81,13 @@ export default function ManageEmailsPage() {
 
         // --- !!! ---
         // In a real application, this is where you would use the Gmail API or a service like Nodemailer.
-        // You would need to handle OAuth2 authentication to get an access token for the user's Gmail account.
-        // This is a complex process and requires a secure place to store tokens (like a database).
+        // This is a complex process and requires a secure place to store tokens.
         // For this demo, we will just log the email to the console.
         // --- !!! ---
 
         console.log("--- SIMULATING EMAIL SEND ---");
-        console.log("To:", form.getValues('userId'));
+        const recipient = users.find(u => u.id === form.getValues('userId'));
+        console.log("To:", recipient ? recipient.email : 'N/A');
         console.log("Subject:", preview.subject);
         console.log("Body (HTML):", preview.body);
         console.log("--- END SIMULATION ---");
@@ -116,7 +102,7 @@ export default function ManageEmailsPage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-3xl font-bold font-headline text-foreground">Manage Emails</h1>
-                <p className="text-muted-foreground">Generate, customize, and send transactional emails to users.</p>
+                <p className="text-muted-foreground">Customize and send transactional emails to users.</p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
@@ -166,9 +152,8 @@ export default function ManageEmailsPage() {
                                         </FormItem>
                                     )}
                                 />
-                                <Button type="submit" className="w-full" disabled={generating || loadingUsers}>
-                                    {generating && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
-                                    {generating ? 'Generating...' : 'Generate Preview'}
+                                <Button type="submit" className="w-full" disabled={loadingUsers}>
+                                    Generate Preview
                                 </Button>
                             </form>
                         </Form>
@@ -181,14 +166,7 @@ export default function ManageEmailsPage() {
                         <CardDescription>This is how the email will look in the user's inbox.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {generating && (
-                            <div className="space-y-4">
-                                <Skeleton className="h-8 w-3/4" />
-                                <Separator />
-                                <Skeleton className="h-64 w-full" />
-                            </div>
-                        )}
-                        {!generating && !preview && (
+                        {!preview && (
                             <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-10 border-2 border-dashed rounded-lg h-full">
                                 <Icons.Mail className="h-16 w-16 mb-4" />
                                 <p className="font-semibold">No Preview Available</p>
@@ -208,7 +186,7 @@ export default function ManageEmailsPage() {
                                         <iframe
                                             srcDoc={preview.body}
                                             className="w-full h-full"
-                                            sandbox="" // sandbox for security, empty allows scripts if needed but better to avoid
+                                            sandbox="" // sandbox for security
                                             title="Email Preview"
                                         />
                                     </div>
