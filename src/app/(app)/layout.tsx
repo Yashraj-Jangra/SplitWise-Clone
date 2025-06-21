@@ -1,7 +1,6 @@
 
 import { AppShell } from "@/components/layout/app-shell";
 import type { Metadata } from 'next';
-import { AuthProvider } from "@/contexts/auth-context";
 
 export const metadata: Metadata = {
   title: 'SettleEase App', // Will be overridden by specific pages
@@ -17,8 +16,6 @@ export default function AuthenticatedAppLayout({
   // The pageTitle prop for AppShell can be set dynamically by child pages
   // or a default can be provided here. For now, child pages will handle it.
   return (
-    <AuthProvider>
-      <AppShell>{children}</AppShell>
-    </AuthProvider>
+    <AppShell>{children}</AppShell>
   );
 }
