@@ -14,6 +14,7 @@ import { generateEmailContent, emailTypes, EmailTemplate } from '@/lib/email-tem
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/icons';
@@ -176,12 +177,12 @@ export default function ManageEmailsPage() {
                         {preview && (
                             <div className="space-y-4">
                                 <div>
-                                    <FormLabel>Subject</FormLabel>
+                                    <Label>Subject</Label>
                                     <p className="font-semibold p-2 border rounded-md bg-muted/50">{preview.subject}</p>
                                 </div>
                                 <Separator />
                                 <div>
-                                    <FormLabel>Body</FormLabel>
+                                    <Label>Body</Label>
                                     <div className="w-full h-[400px] border rounded-md overflow-hidden">
                                         <iframe
                                             srcDoc={preview.body}
