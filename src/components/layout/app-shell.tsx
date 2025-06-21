@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -17,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { NavLinks, mainNavItems, settingsNavItem } from "./nav-links";
 import { UserNav } from "./user-nav";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { DynamicYear } from "./dynamic-year";
 
 function AppHeader({ pageTitle }: { pageTitle?: string }) {
@@ -56,12 +54,10 @@ function AppSidebar() {
           <Icons.AppLogo className="h-7 w-7 text-primary" />
           {!isCollapsed && <span className="text-xl font-headline text-foreground">SettleEase</span>}
         </Link>
-        {!isCollapsed && <SidebarTrigger className="ml-auto data-[state=open]:bg-sidebar-accent data-[state=closed]:bg-transparent"/>}
+        <SidebarTrigger className="ml-auto data-[state=open]:bg-sidebar-accent data-[state=closed]:bg-transparent"/>
       </SidebarHeader>
       <SidebarContent className="p-2">
-        <ScrollArea className="h-full">
-          <NavLinks items={mainNavItems} isCollapsed={isCollapsed} />
-        </ScrollArea>
+        <NavLinks items={mainNavItems} isCollapsed={isCollapsed} />
       </SidebarContent>
       <SidebarFooter className="p-2 border-t">
         <NavLinks items={[settingsNavItem]} isCollapsed={isCollapsed} />
