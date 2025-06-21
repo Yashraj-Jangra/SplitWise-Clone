@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Skeleton } from "../ui/skeleton";
 
 const getInitials = (name: string) => {
+    if (!name) return "";
     const names = name.split(' ');
     let initials = names[0].substring(0, 1).toUpperCase();
     if (names.length > 1) {
@@ -70,6 +71,17 @@ export function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {currentUser.role === 'admin' && (
+           <>
+            <DropdownMenuItem asChild>
+              <Link href="/admin/dashboard">
+                <Icons.ShieldCheck className="mr-2 h-4 w-4" />
+                <span>Admin Panel</span>
+              </Link>
+            </DropdownMenuItem>
+             <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/dashboard">

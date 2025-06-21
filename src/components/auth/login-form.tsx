@@ -46,14 +46,13 @@ export function LoginForm() {
 
         if (loggedInUser.role === 'admin') {
             toastTitle = `Admin Login Successful`;
-            toastDescription = `Welcome, ${loggedInUser.name}! (Admin privileges simulated)`;
+            toastDescription = `Welcome, ${loggedInUser.name}! Redirecting to Admin Panel.`;
+            toast({ title: toastTitle, description: toastDescription });
+            router.push("/admin/dashboard");
+        } else {
+            toast({ title: toastTitle, description: toastDescription });
+            router.push("/dashboard");
         }
-
-        toast({
-            title: toastTitle,
-            description: toastDescription,
-        });
-        router.push("/dashboard");
     } else {
         toast({
             variant: "destructive",

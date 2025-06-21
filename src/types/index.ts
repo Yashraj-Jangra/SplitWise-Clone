@@ -7,6 +7,7 @@ export interface User {
   email: string;
   avatarUrl?: string; // URL to placeholder or actual image
   role?: 'admin' | 'user'; // Added role
+  createdAt?: string; // ISO date string for when the user joined
 }
 
 export interface Group {

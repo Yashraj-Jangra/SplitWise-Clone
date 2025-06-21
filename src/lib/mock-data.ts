@@ -4,12 +4,12 @@ import { CURRENCY_CODE } from "./constants";
 
 // Mock Users
 export const mockUsers: User[] = [
-  { id: "user1", name: "Alice Wonderland", email: "alice@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AW", role: "user" },
-  { id: "user2", name: "Bob The Builder", email: "bob@example.com", avatarUrl: "https://placehold.co/100x100.png?text=BB", role: "user" },
-  { id: "user3", name: "Charlie Brown", email: "charlie@example.com", avatarUrl: "https://placehold.co/100x100.png?text=CB", role: "user" },
-  { id: "user4", name: "Diana Prince", email: "diana@example.com", avatarUrl: "https://placehold.co/100x100.png?text=DP", role: "user" },
-  { id: "admin001", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU", role: "admin" },
-  { id: "user007", name: "Standard User", email: "user@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU", role: "user" },
+  { id: "user1", name: "Alice Wonderland", email: "alice@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AW", role: "user", createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user2", name: "Bob The Builder", email: "bob@example.com", avatarUrl: "https://placehold.co/100x100.png?text=BB", role: "user", createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user3", name: "Charlie Brown", email: "charlie@example.com", avatarUrl: "https://placehold.co/100x100.png?text=CB", role: "user", createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user4", name: "Diana Prince", email: "diana@example.com", avatarUrl: "https://placehold.co/100x100.png?text=DP", role: "user", createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "admin001", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU", role: "admin", createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user007", name: "Standard User", email: "user@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU", role: "user", createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
 ];
 
 // Mock Groups
@@ -199,6 +199,23 @@ export function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
 export function getSettlementsByGroupId(groupId: string): Promise<Settlement[]> {
    return new Promise(resolve => setTimeout(() => resolve(mockSettlements.filter(s => s.groupId === groupId)), 100));
 }
+
+// --- Admin Data Functions ---
+export async function getAllUsers(): Promise<User[]> {
+  // Simulate API call
+  return new Promise(resolve => setTimeout(() => resolve(mockUsers), 200));
+}
+
+export async function getAllGroups(): Promise<Group[]> {
+  // Simulate API call
+  return new Promise(resolve => setTimeout(() => resolve(mockGroups), 200));
+}
+
+export async function getAllExpenses(): Promise<Expense[]> {
+  // Simulate API call
+  return new Promise(resolve => setTimeout(() => resolve(mockExpenses), 200));
+}
+
 
 // A more complex function to calculate balances for a group would exist in a real app
 export async function getGroupBalances(groupId: string): Promise<Balance[]> {
