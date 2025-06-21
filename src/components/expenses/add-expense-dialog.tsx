@@ -108,69 +108,81 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   }, [watchDescription, form]);
 
   useEffect(() => {
-    const currentTotalAmount = Number(form.getValues("amount")) || 0;
-    const currentSplitType = form.getValues("splitType");
-    const participantsFromForm = form.getValues("participants") || [];
+    const totalAmount = Number(form.getValues("amount")) || 0;
+    const splitType = form.getValues("splitType");
+    const allParticipants = form.getValues("participants") || [];
+    const selectedParticipants = allParticipants.filter(p => p.selected);
 
-    participantsFromForm.forEach((p, index) => {
-      const participantSelected = p.selected;
-      const currentParticipantAmountOwed = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
-      const participantShares = Number(form.getValues(`participants.${index}.shares`)) || (currentSplitType === 'by_shares' && participantSelected ? 1 : 0);
-      const participantPercentage = Number(form.getValues(`participants.${index}.percentage`)) || 0;
+    // If no amount or no one selected, zero out all amounts and stop.
+    if (totalAmount <= 0 || selectedParticipants.length === 0) {
+      allParticipants.forEach((_, index) => {
+        form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+      });
+      return;
+    }
+    
+    const newAmounts: { [userId: string]: number } = {};
 
-      let newCalculatedAmountOwed = currentParticipantAmountOwed;
-
-      if (!participantSelected) {
-        newCalculatedAmountOwed = 0;
-      } else {
-        const selectedParticipants = participantsFromForm.filter(sp => sp.selected);
-        if (selectedParticipants.length > 0 && currentTotalAmount > 0) {
-          switch (currentSplitType) {
-            case "equally":
-              newCalculatedAmountOwed = currentTotalAmount / selectedParticipants.length;
-              break;
-            case "by_shares":
-              const totalShares = selectedParticipants.reduce((sum, sp) => {
-                 const spIndex = participantsFromForm.findIndex(item => item.userId === sp.userId);
-                 const sharesValue = Number(form.getValues(`participants.${spIndex}.shares`)) || 0;
-                 return sum + sharesValue;
-              }, 0);
-              if (totalShares > 0) {
-                newCalculatedAmountOwed = (currentTotalAmount * participantShares) / totalShares;
-              } else {
-                newCalculatedAmountOwed = currentTotalAmount / selectedParticipants.length; // Fallback if totalShares is 0 and selected
-              }
-              break;
-            case "by_percentage":
-              newCalculatedAmountOwed = (currentTotalAmount * participantPercentage) / 100;
-              break;
-            case "unequally":
-              // This is handled by user input, no calculation needed here
-              break;
-          }
-        } else {
-          newCalculatedAmountOwed = 0;
+    if (splitType === 'equally' || splitType === 'by_shares') {
+        let amounts: number[] = [];
+        if (splitType === 'equally') {
+            const share = totalAmount / selectedParticipants.length;
+            amounts = selectedParticipants.map(() => share);
+        } else { // by_shares
+            const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
+            if (totalShares > 0) {
+                amounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 0)) / totalShares);
+            } else { // Fallback if all shares are 0, treat as equal split
+                const share = totalAmount / selectedParticipants.length;
+                amounts = selectedParticipants.map(() => share);
+            }
         }
-      }
 
-      let finalAmountToSet: number;
-      if (currentSplitType !== "unequally") {
-        finalAmountToSet = parseFloat(newCalculatedAmountOwed.toFixed(2));
-      } else {
-        // For unequal, the amount is what the user typed in if selected, otherwise 0
-        finalAmountToSet = participantSelected ? currentParticipantAmountOwed : 0;
-      }
-      
-      const currentFormValueForParticipant = parseFloat(currentParticipantAmountOwed.toFixed(2));
+        // Distribute remainder to ensure sum is perfect
+        const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
+        const sumOfRounded = roundedAmounts.reduce((sum, a) => sum + a, 0);
+        const remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
+        
+        if (remainder !== 0 && roundedAmounts.length > 0) {
+            roundedAmounts[0] += remainder;
+        }
+        
+        selectedParticipants.forEach((p, i) => {
+            newAmounts[p.userId] = roundedAmounts[i];
+        });
 
-      // Only update if the value has changed to avoid re-renders
-      if (currentFormValueForParticipant !== finalAmountToSet) {
-          form.setValue(`participants.${index}.amountOwed`, finalAmountToSet, {
-              shouldValidate: true, // Recalculate validations if needed
-              shouldDirty: true,
-              shouldTouch: true,
-          });
-      }
+    } else if (splitType === 'by_percentage') {
+       selectedParticipants.forEach(p => {
+          const individualAmount = (totalAmount * (Number(p.percentage) || 0)) / 100;
+          newAmounts[p.userId] = parseFloat(individualAmount.toFixed(2));
+       });
+    }
+
+    // Now, update the form state for all participants
+    allParticipants.forEach((p, index) => {
+        let finalAmountToSet: number;
+        
+        if (!p.selected) {
+            finalAmountToSet = 0;
+        } else if (splitType === 'unequally') {
+            // For unequal, the amount is what the user typed in
+            finalAmountToSet = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
+        } else {
+            // For calculated splits, use the new amount
+            finalAmountToSet = newAmounts[p.userId] || 0;
+        }
+        
+        const currentFormValue = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
+
+        // Only update if the value has changed to avoid re-renders
+        // Using a small tolerance for floating point comparison
+        if (Math.abs(currentFormValue - finalAmountToSet) > 1e-5) {
+            form.setValue(`participants.${index}.amountOwed`, finalAmountToSet, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+            });
+        }
     });
   }, [watchAmount, watchSplitType, watchParticipants, form]);
 
