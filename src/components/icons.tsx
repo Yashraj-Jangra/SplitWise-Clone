@@ -20,7 +20,8 @@ import {
   Landmark,
   GanttChartSquare,
   CalendarDays,
-  Mail
+  Mail,
+  ArrowRight
 } from 'lucide-react';
 
 export const Icons = {
@@ -54,6 +55,7 @@ export const Icons = {
   Landmark,
   AppLogo: GanttChartSquare,
   Mail,
+  ArrowRight,
 };
 
 export type IconName = keyof typeof Icons;

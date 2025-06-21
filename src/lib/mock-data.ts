@@ -271,3 +271,60 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
     };
   });
 }
+
+export interface SimplifiedSettlement {
+  from: User;
+  to: User;
+  amount: number;
+}
+
+/**
+ * Simplifies group debts to the minimum number of transactions.
+ * @param balances An array of user balances for the group.
+ * @returns An array of simplified settlements.
+ */
+export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
+    const debtors = balances
+        .filter(b => b.netBalance < 0)
+        .map(b => ({ user: b.user, amount: Math.abs(b.netBalance) }));
+
+    const creditors = balances
+        .filter(b => b.netBalance > 0)
+        .map(b => ({ user: b.user, amount: b.netBalance }));
+    
+    debtors.sort((a, b) => b.amount - a.amount);
+    creditors.sort((a, b) => b.amount - a.amount);
+
+    const settlements: SimplifiedSettlement[] = [];
+    let i = 0;
+    let j = 0;
+
+    while (i < debtors.length && j < creditors.length) {
+        const debtor = debtors[i];
+        const creditor = creditors[j];
+        const amountToSettle = Math.min(debtor.amount, creditor.amount);
+
+        // Only create settlement if amount is meaningful to avoid tiny floating point settlements
+        if (amountToSettle > 0.01) { 
+            settlements.push({
+                from: debtor.user,
+                to: creditor.user,
+                amount: amountToSettle,
+            });
+
+            debtor.amount -= amountToSettle;
+            creditor.amount -= amountToSettle;
+        }
+
+        // If a debtor's balance is settled, move to the next debtor
+        if (debtor.amount < 0.01) {
+            i++;
+        }
+        
+        // If a creditor's balance is settled, move to the next creditor
+        if (creditor.amount < 0.01) {
+            j++;
+        }
+    }
+    return settlements;
+}
