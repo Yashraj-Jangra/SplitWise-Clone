@@ -7,7 +7,7 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,7 @@ interface EditUserFormProps {
 export function EditUserForm({ user }: EditUserFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const isMainAdmin = user.email === 'jangrayash1505@gmail.com';
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
@@ -42,6 +43,16 @@ export function EditUserForm({ user }: EditUserFormProps) {
   });
 
   async function onSubmit(values: EditUserFormValues) {
+    if (isMainAdmin && values.role !== 'admin') {
+      toast({
+        variant: "destructive",
+        title: "Action Not Allowed",
+        description: "The main admin's role cannot be changed.",
+      });
+      form.setValue('role', 'admin');
+      return;
+    }
+
     const updatedUser = await updateUser(user.id, values);
 
     if (updatedUser) {
@@ -101,7 +112,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isMainAdmin}>
                         <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a role" />
@@ -112,6 +123,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                             <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                     </Select>
+                    {isMainAdmin && <FormDescription>The main admin role cannot be changed.</FormDescription>}
                   <FormMessage />
                 </FormItem>
               )}

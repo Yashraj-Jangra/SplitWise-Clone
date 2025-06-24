@@ -9,6 +9,8 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
 import { app, db, auth, firebaseError } from '@/lib/firebase'; // Use your firebase instance
 
+const ADMIN_EMAIL = 'jangrayash1505@gmail.com';
+
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   userProfile: UserProfile | null;
@@ -28,7 +30,7 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
   if (userDocSnap.exists()) {
     const data = userDocSnap.data();
     return {
-      uid: data.uid,
+      uid: docSnap.id,
       name: data.name,
       email: data.email,
       role: data.role,
@@ -67,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || user.email)?.substring(0, 2).toUpperCase()}`,
             };
             // Ensure admin role is set for the specified email
-            if (user.email === 'jangrayash1505@gmail.com') {
+            if (user.email === ADMIN_EMAIL) {
                 newUserProfile.role = 'admin';
             }
             await setDoc(doc(db, "users", user.uid), newUserProfile);
@@ -107,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatarUrl: `https://placehold.co/100x100.png?text=${name.substring(0, 2).toUpperCase()}`,
     };
     
-    if (email === 'jangrayash1505@gmail.com') {
+    if (email === ADMIN_EMAIL) {
       newUserProfile.role = 'admin';
     }
 
@@ -127,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     signup,
     logout,
-  }), [firebaseUser, userProfile, loading, login, signup, logout]);
+  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');

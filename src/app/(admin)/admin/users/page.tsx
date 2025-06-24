@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 // Metadata can't be exported from client components. We'll set this in the layout or handle it differently.
 // export const metadata: Metadata = {
@@ -35,8 +36,17 @@ const getInitials = (name: string) => {
 
 function UserActions({ user }: { user: User }) {
     const { toast } = useToast();
+    const isMainAdmin = user.email === 'jangrayash1505@gmail.com';
 
     const handleDelete = () => {
+        if (isMainAdmin) {
+            toast({
+                variant: "destructive",
+                title: "Action Not Allowed",
+                description: "The main admin account cannot be deleted.",
+            });
+            return;
+        }
         toast({ title: "Delete User", description: `Deleting ${user.name}. (Not implemented)`, variant: "destructive"});
     }
 
@@ -54,7 +64,11 @@ function UserActions({ user }: { user: User }) {
                         <Icons.Edit className="mr-2 h-4 w-4" /> Edit
                     </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                <DropdownMenuItem 
+                    onClick={handleDelete} 
+                    disabled={isMainAdmin}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                >
                     <Icons.Delete className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
             </DropdownMenuContent>
