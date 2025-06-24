@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -104,25 +105,8 @@ interface AdminShellProps {
 }
 
 export function AdminShell({ children, pageTitle }: AdminShellProps) {
-  const [effectiveSidebarDefaultOpen, setEffectiveSidebarDefaultOpen] = React.useState(true);
-
-  React.useEffect(() => {
-    let storedStateValue = true; 
-    if (typeof window !== "undefined") {
-      const storedCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('sidebar_state='))
-        ?.split('=')[1];
-      if (storedCookie) {
-        storedStateValue = storedCookie === 'true';
-      }
-    }
-    setEffectiveSidebarDefaultOpen(storedStateValue);
-  }, []);
-
-
   return (
-    <SidebarProvider defaultOpen={effectiveSidebarDefaultOpen}>
+    <SidebarProvider defaultOpen={true}>
       <AdminSidebar />
       <SidebarInset>
         <div className="flex flex-col min-h-screen">
