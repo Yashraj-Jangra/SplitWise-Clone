@@ -30,7 +30,7 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
   if (userDocSnap.exists()) {
     const data = userDocSnap.data();
     return {
-      uid: docSnap.id,
+      uid: userDocSnap.id,
       name: data.name,
       email: data.email,
       role: data.role,
