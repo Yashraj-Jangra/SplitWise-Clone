@@ -7,9 +7,12 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
-import { app, db, auth, firebaseError } from '@/lib/firebase'; // Use your firebase instance
+import { app, db, auth, firebaseError } from '@/lib/firebase';
+import { isUsernameTaken } from '@/lib/mock-data';
 
 const ADMIN_EMAIL = 'jangrayash1505@gmail.com';
+
+type SignupData = Omit<UserProfile, 'uid' | 'role' | 'createdAt' | 'avatarUrl'>;
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -17,7 +20,7 @@ interface AuthContextType {
   loading: boolean;
   firebaseError: string | null;
   login: (email: string, pass: string) => Promise<void>;
-  signup: (name: string, email: string, pass: string) => Promise<void>;
+  signup: (data: SignupData, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -31,10 +34,14 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
     const data = userDocSnap.data();
     return {
       uid: userDocSnap.id,
-      name: data.name,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      username: data.username,
       email: data.email,
       role: data.role,
       avatarUrl: data.avatarUrl,
+      mobileNumber: data.mobileNumber,
+      dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined,
       createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
     } as UserProfile;
   }
@@ -57,22 +64,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setFirebaseUser(user);
         let profile = await fetchUserProfile(user.uid);
         
-        // Self-healing: If a user is authenticated but has no profile in Firestore, create one.
         if (!profile) {
             console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
-            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt'> & {uid: string; createdAt: Timestamp} = {
+            let username = user.email?.split('@')[0] || `user${Date.now()}`;
+            let usernameIsTaken = await isUsernameTaken(username);
+            while (usernameIsTaken) {
+                username = `${user.email?.split('@')[0]}${Math.floor(Math.random() * 1000)}`;
+                usernameIsTaken = await isUsernameTaken(username);
+            }
+
+            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
                 uid: user.uid,
-                name: user.displayName || user.email?.split('@')[0] || "New User",
+                firstName: user.displayName || user.email?.split('@')[0] || "New",
+                lastName: '',
+                username: username,
                 email: user.email!,
                 role: 'user',
-                createdAt: Timestamp.now(),
-                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || user.email)?.substring(0, 2).toUpperCase()}`,
+                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || user.email || 'U')?.substring(0, 2).toUpperCase()}`,
             };
-            // Ensure admin role is set for the specified email
+            
             if (user.email === ADMIN_EMAIL) {
                 newUserProfile.role = 'admin';
             }
-            await setDoc(doc(db, "users", user.uid), newUserProfile);
+
+            await setDoc(doc(db, "users", user.uid), {
+                ...newUserProfile,
+                createdAt: Timestamp.now(),
+            });
             profile = await fetchUserProfile(user.uid);
         }
         
@@ -92,28 +110,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithEmailAndPassword(auth, email, pass);
   }, []);
 
-  const signup = useCallback(async (name: string, email: string, pass: string) => {
+  const signup = useCallback(async (data: SignupData, pass: string) => {
     if (!auth || !db) throw new Error("Firebase not configured");
 
-    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    const user = userCredential.user;
-    
-    // Create user profile in Firestore.
-    // The onAuthStateChanged listener will handle setting the userProfile state.
-    const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt'> & {uid: string; createdAt: Timestamp;} = {
-        uid: user.uid,
-        name,
-        email,
-        role: 'user', // Default role
-        createdAt: Timestamp.now(),
-        avatarUrl: `https://placehold.co/100x100.png?text=${name.substring(0, 2).toUpperCase()}`,
-    };
-    
-    if (email === ADMIN_EMAIL) {
-      newUserProfile.role = 'admin';
+    const usernameTaken = await isUsernameTaken(data.username);
+    if (usernameTaken) {
+        throw new Error("Username is already taken.");
     }
 
-    await setDoc(doc(db, "users", user.uid), newUserProfile);
+    const userCredential = await createUserWithEmailAndPassword(auth, data.email, pass);
+    const user = userCredential.user;
+    
+    const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
+        uid: user.uid,
+        ...data,
+        role: 'user', // Default role
+        avatarUrl: `https://placehold.co/100x100.png?text=${data.firstName.substring(0, 1).toUpperCase()}${data.lastName?.substring(0, 1).toUpperCase() || ''}`,
+    };
+    
+    if (data.email === ADMIN_EMAIL) {
+      newUserProfile.role = 'admin';
+    }
+    
+    const finalProfileData: any = { ...newUserProfile, createdAt: Timestamp.now() };
+    if (data.dob) {
+        finalProfileData.dob = Timestamp.fromDate(new Date(data.dob));
+    }
+
+    await setDoc(doc(db, "users", user.uid), finalProfileData);
   }, []);
 
   const logout = useCallback(async () => {

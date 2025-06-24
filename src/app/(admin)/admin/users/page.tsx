@@ -17,22 +17,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { getFullName, getInitials } from '@/lib/utils';
 
 // Metadata can't be exported from client components. We'll set this in the layout or handle it differently.
 // export const metadata: Metadata = {
 //   title: 'Manage Users - SettleEase Admin',
 //   description: 'View and manage all user accounts.',
 // };
-
-const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
 
 function UserActions({ user }: { user: UserProfile }) {
     const { toast } = useToast();
@@ -47,7 +38,7 @@ function UserActions({ user }: { user: UserProfile }) {
             });
             return;
         }
-        toast({ title: "Delete User", description: `Deleting ${user.name}. (Not implemented)`, variant: "destructive"});
+        toast({ title: "Delete User", description: `Deleting ${getFullName(user.firstName, user.lastName)}. (Not implemented)`, variant: "destructive"});
     }
 
     return (
@@ -123,6 +114,7 @@ export default function ManageUsersPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className='w-[40%]'>User</TableHead>
+                                <TableHead>Username</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Joined</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -134,14 +126,17 @@ export default function ManageUsersPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-10 w-10">
-                                                <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                                <AvatarImage src={user.avatarUrl} alt={getFullName(user.firstName, user.lastName)} />
+                                                <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
                                             </Avatar>
                                             <div>
-                                                <p className="font-medium">{user.name}</p>
+                                                <p className="font-medium">{getFullName(user.firstName, user.lastName)}</p>
                                                 <p className="text-sm text-muted-foreground">{user.email}</p>
                                             </div>
                                         </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="text-sm">@{user.username}</p>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>

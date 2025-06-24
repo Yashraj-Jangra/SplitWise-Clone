@@ -11,6 +11,7 @@ import type { Balance, Group, UserProfile } from "@/types";
 import { Skeleton } from "../ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState, useMemo } from "react";
+import { getFullName, getInitials } from "@/lib/utils";
 
 interface OverallBalance {
     user: UserProfile;
@@ -32,17 +33,6 @@ async function getOverallBalances(userId: string) {
 
     return Array.from(userBalanceMap.values());
 }
-
-
-const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
 
 export function BalanceOverviewSummary({ currentUserId }: { currentUserId: string }) {
   const [balances, setBalances] = useState<OverallBalance[]>([]);
@@ -111,10 +101,10 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                 <div key={item.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={item.user.avatarUrl} alt={item.user.name} />
-                      <AvatarFallback>{getInitials(item.user.name)}</AvatarFallback>
+                      <AvatarImage src={item.user.avatarUrl} alt={getFullName(item.user.firstName, item.user.lastName)} />
+                      <AvatarFallback>{getInitials(item.user.firstName, item.user.lastName)}</AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium">{item.user.name}</span>
+                    <span className="text-sm font-medium">{getFullName(item.user.firstName, item.user.lastName)}</span>
                   </div>
                   <span className="text-sm font-semibold text-red-600">
                     {CURRENCY_SYMBOL}{item.balance.toFixed(2)}
@@ -136,10 +126,10 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                 <div key={item.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={item.user.avatarUrl} alt={item.user.name} />
-                      <AvatarFallback>{getInitials(item.user.name)}</AvatarFallback>
+                      <AvatarImage src={item.user.avatarUrl} alt={getFullName(item.user.firstName, item.user.lastName)} />
+                      <AvatarFallback>{getInitials(item.user.firstName, item.user.lastName)}</AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium">{item.user.name}</span>
+                    <span className="text-sm font-medium">{getFullName(item.user.firstName, item.user.lastName)}</span>
                   </div>
                   <span className="text-sm font-semibold text-green-600">
                     {CURRENCY_SYMBOL}{item.balance.toFixed(2)}
@@ -155,4 +145,3 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
     </Card>
   );
 }
-

@@ -17,16 +17,7 @@ import {
 import { Icons } from "@/components/icons";
 import { useAuth } from "@/contexts/auth-context";
 import { Skeleton } from "../ui/skeleton";
-
-const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
+import { getInitials, getFullName } from "@/lib/utils";
 
 export function UserNav() {
   const router = useRouter();
@@ -54,9 +45,9 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10 border-2 border-primary/50 hover:border-primary transition-colors">
-            <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
+            <AvatarImage src={userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
             <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
-              {getInitials(userProfile.name)}
+              {getInitials(userProfile.firstName, userProfile.lastName)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -64,7 +55,7 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{userProfile.name}</p>
+            <p className="text-sm font-medium leading-none">{getFullName(userProfile.firstName, userProfile.lastName)}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {userProfile.email}
             </p>
@@ -105,4 +96,3 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
-

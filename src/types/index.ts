@@ -5,9 +5,13 @@ import { Timestamp } from "firebase/firestore";
 // Base user profile stored in Firestore
 export interface UserProfile {
   uid: string;
-  name: string;
+  firstName: string;
+  lastName?: string;
+  username: string;
   email: string;
   avatarUrl?: string;
+  mobileNumber?: string;
+  dob?: string; // ISO string for client
   role: 'admin' | 'user';
   createdAt?: string; // ISO string for client
 }
@@ -93,3 +97,4 @@ export interface NavItem {
   external?: boolean;
   label?: string
 }
+

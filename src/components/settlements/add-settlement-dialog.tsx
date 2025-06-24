@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
+import { getFullName } from "@/lib/utils";
 
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
@@ -94,8 +95,8 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
 
     try {
         await addSettlement(newSettlement);
-        const paidByName = group.members.find(m => m.uid === values.paidById)?.name;
-        const paidToName = group.members.find(m => m.uid === values.paidToId)?.name;
+        const paidByName = getFullName(group.members.find(m => m.uid === values.paidById)?.firstName, group.members.find(m => m.uid === values.paidById)?.lastName);
+        const paidToName = getFullName(group.members.find(m => m.uid === values.paidToId)?.firstName, group.members.find(m => m.uid === values.paidToId)?.lastName);
 
         toast({
         title: "Settlement Recorded!",
@@ -136,7 +137,7 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
                         <FormControl><SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger></FormControl>
                         <SelectContent>
                         {group.members.map(member => (
-                            <SelectItem key={member.uid} value={member.uid}>{member.name} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
+                            <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -154,7 +155,7 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
                         <FormControl><SelectTrigger><SelectValue placeholder="Select recipient" /></SelectTrigger></FormControl>
                         <SelectContent>
                         {group.members.map(member => (
-                            <SelectItem key={member.uid} value={member.uid}>{member.name} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
+                            <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>

@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { classifyExpense, categoryList } from "@/lib/expense-categories";
+import { getFullName } from "@/lib/utils";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
@@ -98,7 +99,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
         splitType: "equally",
         participants: group.members.map(member => ({
           userId: member.uid,
-          name: member.name,
+          name: getFullName(member.firstName, member.lastName),
           selected: true,
           amountOwed: 0,
           shares: 1,
@@ -324,7 +325,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                             <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
                             <SelectContent>
                             {group.members.map(member => (
-                                <SelectItem key={member.uid} value={member.uid}>{member.name} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
+                                <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>

@@ -16,21 +16,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { getFullName, getInitials } from '@/lib/utils';
 
 // export const metadata: Metadata = {
 //   title: 'Manage Groups - SettleEase Admin',
 //   description: 'View and manage all groups in the system.',
 // };
-
-const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
 
 function GroupActions({ group }: { group: Group }) {
     const { toast } = useToast();
@@ -122,10 +113,10 @@ export default function ManageGroupsPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
-                                                <AvatarImage src={group.createdBy.avatarUrl} alt={group.createdBy.name} />
-                                                <AvatarFallback>{getInitials(group.createdBy.name)}</AvatarFallback>
+                                                <AvatarImage src={group.createdBy.avatarUrl} alt={getFullName(group.createdBy.firstName, group.createdBy.lastName)} />
+                                                <AvatarFallback>{getInitials(group.createdBy.firstName, group.createdBy.lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <span>{group.createdBy.name}</span>
+                                            <span>{getFullName(group.createdBy.firstName, group.createdBy.lastName)}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>{group.members.length}</TableCell>

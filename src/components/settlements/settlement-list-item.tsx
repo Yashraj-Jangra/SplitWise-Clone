@@ -14,21 +14,12 @@ import { Icons } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { getFullName, getInitials } from "@/lib/utils";
 
 interface SettlementListItemProps {
   settlement: Settlement;
   currentUserId: string;
 }
-
-const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
 
 export function SettlementListItem({ settlement, currentUserId }: SettlementListItemProps) {
   const { toast } = useToast();
@@ -37,11 +28,11 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
 
   let description = "";
   if (isPayer) {
-    description = `You paid ${settlement.paidTo.name}`;
+    description = `You paid ${getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}`;
   } else if (isPayee) {
-    description = `${settlement.paidBy.name} paid you`;
+    description = `${getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} paid you`;
   } else {
-    description = `${settlement.paidBy.name} paid ${settlement.paidTo.name}`;
+    description = `${getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} paid ${getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}`;
   }
 
   const handleDelete = () => {
@@ -55,12 +46,12 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
       <div className="flex items-center gap-4">
         <div className="flex -space-x-2">
             <Avatar className="h-10 w-10 border-2 border-background rounded-full">
-            <AvatarImage src={settlement.paidBy.avatarUrl} alt={settlement.paidBy.name} />
-            <AvatarFallback>{getInitials(settlement.paidBy.name)}</AvatarFallback>
+            <AvatarImage src={settlement.paidBy.avatarUrl} alt={getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} />
+            <AvatarFallback>{getInitials(settlement.paidBy.firstName, settlement.paidBy.lastName)}</AvatarFallback>
             </Avatar>
             <Avatar className="h-10 w-10 border-2 border-background rounded-full">
-            <AvatarImage src={settlement.paidTo.avatarUrl} alt={settlement.paidTo.name} />
-            <AvatarFallback>{getInitials(settlement.paidTo.name)}</AvatarFallback>
+            <AvatarImage src={settlement.paidTo.avatarUrl} alt={getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)} />
+            <AvatarFallback>{getInitials(settlement.paidTo.firstName, settlement.paidTo.lastName)}</AvatarFallback>
             </Avatar>
         </div>
         <div className="grid gap-0.5">
@@ -93,4 +84,3 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
     </div>
   );
 }
-

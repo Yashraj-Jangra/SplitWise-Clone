@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/auth-context';
 import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { getFullName } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { userProfile, loading } = useAuth();
@@ -77,7 +78,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {userProfile.name}! Here's your financial overview.</p>
+          <p className="text-muted-foreground">Welcome back, {userProfile.firstName}! Here's your financial overview.</p>
         </div>
         <div className="flex gap-2">
           <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">

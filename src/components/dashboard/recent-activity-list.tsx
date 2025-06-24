@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,21 +8,23 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Icons } from '@/components/icons';
 import { getAllExpenses, getAllSettlements, getAllGroups } from '@/lib/mock-data';
-import type { Expense, Settlement, Group } from '@/types';
+import type { Expense, Settlement, Group, UserProfile } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getFullName } from '@/lib/utils';
 
 interface ActivityItem {
   id: string;
   type: "expense" | "settlement";
   description: string;
   amount: number;
-  user: { name: string };
+  user: UserProfile;
   groupName: string;
   groupId: string;
   date: string;
   icon: React.ReactNode;
+  paidTo?: UserProfile;
 }
 
 export function RecentActivityList() {
@@ -45,7 +48,7 @@ export function RecentActivityList() {
           type: 'expense' as const,
           description: e.description,
           amount: e.amount,
-          user: { name: e.paidBy.name },
+          user: e.paidBy,
           groupName: groupMap.get(e.groupId) || "a group",
           groupId: e.groupId,
           date: e.date,
@@ -55,9 +58,10 @@ export function RecentActivityList() {
         const settlementActivities = settlements.map((s: Settlement) => ({
           id: s.id,
           type: 'settlement' as const,
-          description: `Settled with ${s.paidTo.name}`,
+          description: `Settled with ${getFullName(s.paidTo.firstName, s.paidTo.lastName)}`,
           amount: s.amount,
-          user: { name: s.paidBy.name },
+          user: s.paidBy,
+          paidTo: s.paidTo,
           groupName: groupMap.get(s.groupId) || "a group",
           groupId: s.groupId,
           date: s.date,
@@ -136,7 +140,7 @@ export function RecentActivityList() {
                     {activity.description}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    By {activity.user.name} in {activity.groupName}
+                    By {getFullName(activity.user.firstName, activity.user.lastName)} in {activity.groupName}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(activity.date), { addSuffix: true })}

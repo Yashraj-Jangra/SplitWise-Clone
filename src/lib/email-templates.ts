@@ -1,5 +1,6 @@
 
 import type { UserProfile } from '@/types';
+import { getFullName } from './utils';
 
 export const emailTypes = [
     { value: 'welcome', label: 'Welcome Email' },
@@ -13,7 +14,8 @@ export type EmailTemplate = typeof emailTypes[number]['value'];
 interface GenerateEmailInput {
     template: EmailTemplate;
     user: {
-        name: string;
+        firstName: string;
+        lastName?: string;
         email: string;
     };
     context?: any; // For future data like expense details
@@ -54,14 +56,15 @@ const generateHtmlShell = (content: string, title: string) => `
 
 export function generateEmailContent(input: GenerateEmailInput): GenerateEmailOutput {
     const { template, user, context } = input;
+    const fullName = getFullName(user.firstName, user.lastName);
     let subject = '';
     let content = '';
 
     switch (template) {
         case 'welcome':
-            subject = `Welcome to SettleEase, ${user.name}!`;
+            subject = `Welcome to SettleEase, ${user.firstName}!`;
             content = `
-                <p>Hi ${user.name},</p>
+                <p>Hi ${user.firstName},</p>
                 <p>Welcome to SettleEase! We're thrilled to have you on board. Our app makes it simple to track, split, and settle shared expenses with friends and family.</p>
                 <p>To get started, you can create a new group or join an existing one. We hope you enjoy the hassle-free way of managing your finances.</p>
                 <p>Best,<br>The SettleEase Team</p>
@@ -71,7 +74,7 @@ export function generateEmailContent(input: GenerateEmailInput): GenerateEmailOu
         case 'password_reset':
             subject = 'Reset Your SettleEase Password';
             content = `
-                <p>Hi ${user.name},</p>
+                <p>Hi ${user.firstName},</p>
                 <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
                 <p>To reset your password, click the button below:</p>
                 <p style="text-align: center; margin: 30px 0;">
@@ -84,7 +87,7 @@ export function generateEmailContent(input: GenerateEmailInput): GenerateEmailOu
         case 'expense_added':
             subject = `New expense added in your group`;
             content = `
-                <p>Hi ${user.name},</p>
+                <p>Hi ${user.firstName},</p>
                 <p>A new expense has been added to one of your groups.</p>
                 <p><strong>Expense:</strong> ${context?.expenseName || '[Expense Description]'}</p>
                 <p><strong>Amount:</strong> ${context?.amount || '[Amount]'}</p>
@@ -95,7 +98,7 @@ export function generateEmailContent(input: GenerateEmailInput): GenerateEmailOu
         case 'weekly_summary':
             subject = 'Your Weekly SettleEase Summary';
             content = `
-                <p>Hi ${user.name},</p>
+                <p>Hi ${user.firstName},</p>
                 <p>Here's a quick summary of your activity on SettleEase this week:</p>
                 <ul>
                     <li><strong>New Expenses Added:</strong> 3</li>
@@ -108,7 +111,7 @@ export function generateEmailContent(input: GenerateEmailInput): GenerateEmailOu
 
         default:
             subject = 'Notification from SettleEase';
-            content = `<p>This is a default notification for ${user.name}.</p>`;
+            content = `<p>This is a default notification for ${fullName}.</p>`;
     }
     
     const body = generateHtmlShell(content, subject);

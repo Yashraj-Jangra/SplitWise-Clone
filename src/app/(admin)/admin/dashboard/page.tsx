@@ -15,16 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
+import { getFullName, getInitials } from '@/lib/utils';
 
 interface AdminData {
     users: UserProfile[];
@@ -128,11 +119,11 @@ export default function AdminDashboardPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-9 w-9">
-                                                <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                                <AvatarImage src={user.avatarUrl} alt={getFullName(user.firstName, user.lastName)} />
+                                                <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
                                             </Avatar>
                                             <div>
-                                                <p className="font-medium">{user.name}</p>
+                                                <p className="font-medium">{getFullName(user.firstName, user.lastName)}</p>
                                                 <p className="text-xs text-muted-foreground">{user.email}</p>
                                             </div>
                                         </div>
@@ -165,7 +156,7 @@ export default function AdminDashboardPage() {
                                     <TableRow key={group.id}>
                                         <TableCell>
                                             <p className="font-medium">{group.name}</p>
-                                            <p className="text-xs text-muted-foreground">by {group.createdBy.name}</p>
+                                            <p className="text-xs text-muted-foreground">by {getFullName(group.createdBy.firstName, group.createdBy.lastName)}</p>
                                         </TableCell>
                                         <TableCell className="text-right text-xs text-muted-foreground">{formatDistanceToNow(new Date(group.createdAt), { addSuffix: true })}</TableCell>
                                     </TableRow>

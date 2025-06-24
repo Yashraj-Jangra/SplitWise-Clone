@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/auth-context";
+import { getFullName } from "@/lib/utils";
 
 const createGroupSchema = z.object({
   name: z.string().min(3, { message: "Group name must be at least 3 characters." }).max(50, { message: "Group name must be less than 50 characters."}),
@@ -59,16 +60,14 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   });
 
   useEffect(() => {
-    // This effect ensures that if the userProfile loads after the form is initialized,
-    // the form's default values are updated correctly, especially the memberIds.
-    if (userProfile) {
+    if (userProfile && open) {
       form.reset({
         name: "",
         description: "",
         memberIds: [userProfile.uid],
       });
     }
-  }, [userProfile, form]);
+  }, [userProfile, form, open]);
 
   useEffect(() => {
     async function loadUsers() {
@@ -177,7 +176,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                        <div className="flex items-center space-x-2">
                           <Checkbox id={userProfile.uid} checked disabled />
                           <Label htmlFor={userProfile.uid} className="font-medium text-muted-foreground">
-                            {userProfile.name} (You)
+                            {getFullName(userProfile.firstName, userProfile.lastName)} (You)
                           </Label>
                         </div>
                       {availableMembers.map((member) => (
@@ -206,7 +205,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                                   />
                                 </FormControl>
                                 <FormLabel className="font-normal">
-                                  {member.name}
+                                  {getFullName(member.firstName, member.lastName)}
                                 </FormLabel>
                               </FormItem>
                             )

@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { getFullName } from '@/lib/utils';
 
 export default function EditUserPage() {
   const params = useParams();
@@ -94,7 +95,7 @@ export default function EditUserPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold font-headline text-foreground">Edit User</h1>
-        <p className="text-muted-foreground">Modify user details for {user?.name || '...'}.</p>
+        <p className="text-muted-foreground">Modify user details for {user ? getFullName(user.firstName, user.lastName) : '...'}.</p>
       </div>
       {renderContent()}
     </div>

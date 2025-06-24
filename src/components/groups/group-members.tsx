@@ -6,19 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
+import { getFullName, getInitials } from "@/lib/utils";
 
 interface GroupMembersProps {
   members: UserProfile[];
 }
-
-const getInitials = (name: string) => {
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
 
 export function GroupMembers({ members }: GroupMembersProps) {
   return (
@@ -36,11 +28,11 @@ export function GroupMembers({ members }: GroupMembersProps) {
             {members.map((member) => (
               <div key={member.uid} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={member.avatarUrl} alt={member.name} />
-                  <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                  <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
+                  <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <p className="text-sm font-medium leading-none">{member.name}</p>
+                  <p className="text-sm font-medium leading-none">{getFullName(member.firstName, member.lastName)}</p>
                   <p className="text-xs text-muted-foreground">{member.email}</p>
                 </div>
               </div>

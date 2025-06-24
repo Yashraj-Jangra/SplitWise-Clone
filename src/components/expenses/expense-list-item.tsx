@@ -17,22 +17,13 @@ import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { EditExpenseDialog } from './edit-expense-dialog';
+import { getFullName, getInitials } from '@/lib/utils';
 
 interface ExpenseListItemProps {
   expense: Expense;
   currentUserId: string; // To determine user's involvement
   group?: Group; // Optional: Pass group data to avoid re-fetching in dialog
 }
-
-const getInitials = (name: string) => {
-    if (!name) return "??";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
 
 export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListItemProps) {
   const { toast } = useToast();
@@ -52,13 +43,13 @@ export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListIt
       <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
         <div className="flex items-center gap-4">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={expense.paidBy.avatarUrl} alt={expense.paidBy.name} />
-            <AvatarFallback>{getInitials(expense.paidBy.name)}</AvatarFallback>
+            <AvatarImage src={expense.paidBy.avatarUrl} alt={getFullName(expense.paidBy.firstName, expense.paidBy.lastName)} />
+            <AvatarFallback>{getInitials(expense.paidBy.firstName, expense.paidBy.lastName)}</AvatarFallback>
           </Avatar>
           <div className="grid gap-0.5">
             <p className="text-sm font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
             <p className="text-xs text-muted-foreground">
-              Paid by {isPayer ? "You" : expense.paidBy.name} • {formatDistanceToNow(new Date(expense.date), { addSuffix: true })}
+              Paid by {isPayer ? "You" : expense.paidBy.firstName} • {formatDistanceToNow(new Date(expense.date), { addSuffix: true })}
             </p>
             {expense.category && <Badge variant="outline" className="w-fit text-xs">{expense.category}</Badge>}
           </div>

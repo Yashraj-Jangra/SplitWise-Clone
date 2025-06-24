@@ -31,12 +31,34 @@ import type {
 
 // --- User Functions ---
 
+export async function isUsernameTaken(username: string, excludeUserId?: string): Promise<boolean> {
+    const normalizedUsername = username.toLowerCase();
+    const q = query(collection(db, 'users'), where('username', '==', normalizedUsername));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        return false;
+    }
+    
+    // If we are checking for an update, we need to see if the found username belongs to a different user
+    if (excludeUserId) {
+        return querySnapshot.docs.some(doc => doc.id !== excludeUserId);
+    }
+    
+    return !querySnapshot.empty;
+}
+
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const docRef = doc(db, 'users', uid);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
     const data = docSnap.data();
-    return { ...data, uid: docSnap.id, createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() } as UserProfile;
+    return { 
+        ...data, 
+        uid: docSnap.id, 
+        createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+        dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined
+    } as UserProfile;
   }
   return null;
 }
@@ -46,13 +68,34 @@ export async function getAllUsers(): Promise<UserProfile[]> {
   const userSnapshot = await getDocs(usersCol);
   return userSnapshot.docs.map(doc => {
       const data = doc.data();
-      return { ...data, uid: doc.id, createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() } as UserProfile
+      return { 
+          ...data,
+          uid: doc.id, 
+          createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+          dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined
+      } as UserProfile
   });
 }
 
 export async function updateUser(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
+    if (data.username) {
+        const taken = await isUsernameTaken(data.username, userId);
+        if (taken) {
+            throw new Error("Username is already taken.");
+        }
+    }
+    
     const userDocRef = doc(db, "users", userId);
-    await updateDoc(userDocRef, data);
+    const updateData: { [key: string]: any } = { ...data };
+
+    if (data.dob) {
+        updateData.dob = Timestamp.fromDate(new Date(data.dob));
+    }
+
+    // Firestore doesn't like `undefined` values.
+    const cleanUpdateData = Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined));
+
+    await updateDoc(userDocRef, cleanUpdateData);
     const updatedUser = await getUserProfile(userId);
     if (!updatedUser) throw new Error("Failed to fetch updated user");
     return updatedUser;
@@ -76,7 +119,12 @@ async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
          const querySnapshot = await getDocs(usersQuery);
          return querySnapshot.docs.map(doc => {
             const data = doc.data();
-            return { ...data, uid: doc.id, createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() } as UserProfile
+            return { 
+                ...data, 
+                uid: doc.id,
+                createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+                dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined
+            } as UserProfile
          });
     });
 

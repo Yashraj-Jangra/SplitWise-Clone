@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "../ui/skeleton";
+import { getFullName } from "@/lib/utils";
 
 const addMembersSchema = z.object({
   memberIds: z.array(z.string()).min(1, { message: "Select at least one member to add." }),
@@ -134,7 +135,7 @@ export function AddMemberDialog({ group }: AddMemberDialogProps) {
                                     />
                                   </FormControl>
                                   <FormLabel className="font-normal">
-                                    {user.name} ({user.email})
+                                    {getFullName(user.firstName, user.lastName)} ({user.email})
                                   </FormLabel>
                                 </FormItem>
                               );
