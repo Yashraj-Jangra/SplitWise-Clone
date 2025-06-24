@@ -3,16 +3,17 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
-import { app, db } from '@/lib/firebase'; // Use your firebase instance
+import { app, db, auth, firebaseError } from '@/lib/firebase'; // Use your firebase instance
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  firebaseError: string | null;
   login: (email: string, pass: string) => Promise<void>;
   signup: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -20,8 +21,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// In a real app, you might want more robust user management
 const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  if (!db) return null;
   const userDocRef = doc(db, "users", uid);
   const userDocSnap = await getDoc(userDocRef);
   if (userDocSnap.exists()) {
@@ -38,27 +39,16 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
   return null;
 };
 
-// This function will create the initial admin user if they don't exist in Firestore
-const createInitialAdmin = async () => {
-    const adminEmail = "jangrayash1505@gmail.com";
-    // In a real app, you'd have a secure way to get the admin UID
-    // For now, we assume if an admin logs in, we might need to create their Firestore doc
-    // This is not a secure way to assign roles, but it's for bootstrapping the demo.
-    // A secure method would involve a backend function or manual setup in Firestore.
-    // We can't query by email easily without special indexes. This part is tricky.
-    // Let's assume signup creates the user record, and for the first user, we can manually set the role to admin in Firestore console.
-};
-// Call it once on startup
-createInitialAdmin();
-
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const auth = getAuth(app);
 
   useEffect(() => {
+    if (firebaseError || !auth) {
+        setLoading(false);
+        return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
@@ -73,13 +63,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
 
   const login = useCallback(async (email: string, pass: string) => {
+    if (!auth) throw new Error("Firebase not configured");
     await signInWithEmailAndPassword(auth, email, pass);
-  }, [auth]);
+  }, []);
 
   const signup = useCallback(async (name: string, email: string, pass: string) => {
+    if (!auth || !db) throw new Error("Firebase not configured");
+
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
     
@@ -93,7 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatarUrl: `https://placehold.co/100x100.png?text=${name.substring(0, 2).toUpperCase()}`,
     };
     
-    // Special case for the admin user on first signup
     if (email === 'jangrayash1505@gmail.com') {
       newUserProfile.role = 'admin';
     }
@@ -101,22 +93,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await setDoc(doc(db, "users", user.uid), newUserProfile);
     setUserProfile(newUserProfile as UserProfile);
 
-  }, [auth]);
+  }, []);
 
   const logout = useCallback(async () => {
+    if (!auth) throw new Error("Firebase not configured");
     await signOut(auth);
-  }, [auth]);
+  }, []);
 
   const value = {
     firebaseUser,
     userProfile,
-    // For compatibility with old components, let's create a 'currentUser'
-    currentUser: userProfile,
     loading,
+    firebaseError,
     login,
     signup,
     logout,
   };
+  
+  if (firebaseError) {
+      return (
+          <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
+              <div className="text-center max-w-2xl p-8 border rounded-lg shadow-xl bg-card">
+                  <h1 className="text-2xl font-bold text-destructive mb-4">Firebase Configuration Error</h1>
+                  <p className="mb-4 text-muted-foreground">The application could not connect to Firebase. Please check your configuration.</p>
+                  <div className="text-sm bg-muted text-destructive p-3 rounded-md text-left">
+                    <code className="font-mono whitespace-pre-wrap">{firebaseError}</code>
+                  </div>
+                  <p className="text-muted-foreground text-sm mt-6">
+                    Ensure your <code className="bg-muted text-foreground p-1 rounded">.env</code> file contains the correct Firebase project credentials and that the application has been restarted.
+                  </p>
+              </div>
+          </div>
+      );
+  }
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };

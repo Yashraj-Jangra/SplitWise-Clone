@@ -1,7 +1,7 @@
 
-import { initializeApp, getApps, getApp, FirebaseOptions } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp, FirebaseOptions, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,11 +12,27 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase.
-// Crucial: Ensure your .env file is correctly set up with your Firebase project's credentials.
-// The app will fail at runtime if these are missing or incorrect.
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+let firebaseError: string | null = null;
 
-export { app, auth, db };
+try {
+  if (!firebaseConfig.apiKey) {
+    throw new Error("Firebase API Key is missing. Please add `NEXT_PUBLIC_FIREBASE_API_KEY` to your .env file.");
+  }
+  if (!firebaseConfig.projectId) {
+     throw new Error("Firebase Project ID is missing. Please add `NEXT_PUBLIC_FIREBASE_PROJECT_ID` to your .env file.");
+  }
+  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error: any) {
+  firebaseError = error.message || "Failed to initialize Firebase. Check your .env configuration.";
+  console.error("Firebase Initialization Error:", firebaseError);
+  app = null;
+  auth = null;
+  db = null;
+}
+
+export { app, auth, db, firebaseError };
