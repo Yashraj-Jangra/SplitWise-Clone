@@ -1,3 +1,4 @@
+
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -8,7 +9,7 @@ export interface UserProfile {
   email: string;
   avatarUrl?: string;
   role: 'admin' | 'user';
-  createdAt: Timestamp;
+  createdAt?: string; // ISO string for client
 }
 
 // --- Firestore Document Types ---
@@ -54,10 +55,11 @@ export interface SettlementDocument {
 // --- Hydrated Types for Client-side Usage ---
 // These types include the full nested objects for easier display
 
-export interface Group extends Omit<GroupDocument, 'memberIds' | 'createdById'> {
+export interface Group extends Omit<GroupDocument, 'memberIds' | 'createdById' | 'createdAt'> {
   id: string; // The document ID
   members: UserProfile[];
   createdBy: UserProfile;
+  createdAt: string; // ISO string for client
 }
 
 export interface ExpenseParticipant extends Omit<ExpenseParticipantDocument, 'userId'> {

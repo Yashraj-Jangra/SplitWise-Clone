@@ -33,7 +33,7 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
       email: data.email,
       role: data.role,
       avatarUrl: data.avatarUrl,
-      createdAt: data.createdAt,
+      createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
     } as UserProfile;
   }
   return null;
@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Self-healing: If a user is authenticated but has no profile in Firestore, create one.
         if (!profile) {
             console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
-            const newUserProfile: Omit<UserProfile, 'uid'> & {uid: string} = {
+            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt'> & {uid: string; createdAt: Timestamp} = {
                 uid: user.uid,
                 name: user.displayName || user.email?.split('@')[0] || "New User",
                 email: user.email!,
@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 newUserProfile.role = 'admin';
             }
             await setDoc(doc(db, "users", user.uid), newUserProfile);
-            profile = newUserProfile as UserProfile;
+            profile = await fetchUserProfile(user.uid);
         }
         
         setUserProfile(profile);
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Create user profile in Firestore.
     // The onAuthStateChanged listener will handle setting the userProfile state.
-    const newUserProfile: Omit<UserProfile, 'uid'> & {uid: string} = {
+    const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt'> & {uid: string; createdAt: Timestamp;} = {
         uid: user.uid,
         name,
         email,

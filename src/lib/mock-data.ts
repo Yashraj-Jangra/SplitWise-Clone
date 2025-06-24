@@ -36,7 +36,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
     const data = docSnap.data();
-    return { ...data, uid: docSnap.id } as UserProfile;
+    return { ...data, uid: docSnap.id, createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() } as UserProfile;
   }
   return null;
 }
@@ -44,7 +44,10 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 export async function getAllUsers(): Promise<UserProfile[]> {
   const usersCol = collection(db, 'users');
   const userSnapshot = await getDocs(usersCol);
-  return userSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile));
+  return userSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { ...data, uid: doc.id, createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() } as UserProfile
+  });
 }
 
 export async function updateUser(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
@@ -71,7 +74,10 @@ async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
     const userPromises = chunks.map(async (chunk) => {
          const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', chunk));
          const querySnapshot = await getDocs(usersQuery);
-         return querySnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile));
+         return querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return { ...data, uid: doc.id, createdAt: (data.createdAt as Timestamp)?.toDate().toISOString() } as UserProfile
+         });
     });
 
     const results = await Promise.all(userPromises);
@@ -107,7 +113,7 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
     return {
         ...groupData,
         id: groupSnap.id,
-        createdAt: (groupData.createdAt as Timestamp),
+        createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
         members,
         createdBy,
     };
@@ -128,7 +134,7 @@ export async function getGroupsByUserId(userId: string): Promise<Group[]> {
             return {
                 ...groupData,
                 id: docSnap.id,
-                createdAt: (groupData.createdAt as Timestamp),
+                createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
                 members,
                 createdBy
             }
@@ -158,7 +164,7 @@ export async function getAllGroups(): Promise<Group[]> {
             return {
                 ...groupData,
                 id: groupData.id,
-                createdAt: (groupData.createdAt as Timestamp),
+                createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
                 members,
                 createdBy
             }
