@@ -52,8 +52,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       localStorage.setItem('currentUserId', user.id);
       setCurrentUser(user);
-    } else {
-      console.error("Invalid credentials");
     }
     setLoading(false);
     return user;
