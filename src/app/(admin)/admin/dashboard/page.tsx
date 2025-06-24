@@ -1,5 +1,8 @@
 
-import type { Metadata } from 'next';
+'use client';
+
+import { useState, useEffect } from 'react';
+import type { UserProfile, Group, Expense } from '@/types';
 import { OverviewCard } from "@/components/dashboard/overview-card";
 import { getAllUsers, getAllGroups, getAllExpenses } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -10,11 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, formatDistanceToNow } from 'date-fns';
-
-export const metadata: Metadata = {
-  title: 'Admin Dashboard - SettleEase',
-  description: 'Manage users, groups, and system settings.',
-};
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const getInitials = (name: string) => {
     if (!name) return "";
@@ -26,15 +26,70 @@ const getInitials = (name: string) => {
     return initials;
 };
 
-export default async function AdminDashboardPage() {
-    const [users, groups, expenses] = await Promise.all([
-        getAllUsers(),
-        getAllGroups(),
-        getAllExpenses(),
-    ]);
+interface AdminData {
+    users: UserProfile[];
+    groups: Group[];
+    expenses: Expense[];
+}
 
+export default function AdminDashboardPage() {
+    const [data, setData] = useState<AdminData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [users, groups, expenses] = await Promise.all([
+                    getAllUsers(),
+                    getAllGroups(),
+                    getAllExpenses(),
+                ]);
+                setData({ users, groups, expenses });
+            } catch (error) {
+                console.error("Error fetching admin data:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Failed to load dashboard",
+                    description: "Could not fetch admin data. You might be missing permissions.",
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [toast]);
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-1/3" />
+                    <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+                </div>
+                <div className="grid gap-6 lg:grid-cols-2">
+                    <Skeleton className="h-80 w-full" />
+                    <Skeleton className="h-80 w-full" />
+                </div>
+            </div>
+        );
+    }
+    
+    if (!data) {
+         return (
+             <div className="text-center p-10">
+                <p>Failed to load data. Please try again later.</p>
+             </div>
+         )
+    }
+
+    const { users, groups, expenses } = data;
     const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
-
     const recentUsers = [...users].sort((a,b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 5);
     const recentGroups = [...groups].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
@@ -69,7 +124,7 @@ export default async function AdminDashboardPage() {
                         </TableHeader>
                          <TableBody>
                             {recentUsers.map(user => (
-                                <TableRow key={user.id}>
+                                <TableRow key={user.uid}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-9 w-9">
