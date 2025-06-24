@@ -6,7 +6,7 @@ import { BalanceOverviewSummary } from "@/components/dashboard/balance-overview-
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
-import { mockGroups, mockExpenses } from "@/lib/mock-data";
+import { getAllGroups, getAllExpenses } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { getCurrentUser } from '@/lib/auth';
 import type { User } from '@/types';
@@ -18,22 +18,20 @@ export const metadata: Metadata = {
 
 // Dummy data fetching functions for dashboard stats
 async function getDashboardStats(userId: string) {
-  // In a real app, fetch this data from your backend
-  const totalGroups = mockGroups.filter(g => g.members.some(m => m.id === userId)).length;
+  const allGroups = await getAllGroups();
+  const allExpenses = await getAllExpenses();
+
+  const totalGroups = allGroups.filter(g => g.members.some(m => m.id === userId)).length;
   
-  const userExpenses = mockExpenses.filter(e => e.paidBy.id === userId || e.participants.some(p => p.user.id === userId));
+  const userExpenses = allExpenses.filter(e => e.paidBy.id === userId || e.participants.some(p => p.user.id === userId));
   const totalSpentByCurrentUser = userExpenses
     .filter(e => e.paidBy.id === userId)
     .reduce((sum, e) => sum + e.amount, 0);
 
   // This is a very simplified "You Owe" / "Owed to You". Real calculation is complex.
-  // Using simplified values for display
-  let totalOwedToUser = 0;
-  let totalUserOwes = 0;
-   if (userId === "user1") { // Alice
-      totalOwedToUser = 750; 
-      totalUserOwes = 300;
-  }
+  // We'll calculate this properly in the balance summary component. For now, it's 0.
+  const totalOwedToUser = 0;
+  const totalUserOwes = 0;
 
   return {
     totalGroups,
@@ -91,8 +89,6 @@ export default async function DashboardPage() {
           iconName="Wallet"
           isCurrency
           description={`Across all groups in ${CURRENCY_SYMBOL}.`}
-          trend="up"
-          trendValue="From 3 people"
         />
         <OverviewCard
           title="You Owe"
@@ -100,8 +96,6 @@ export default async function DashboardPage() {
           iconName="Landmark"
           isCurrency
           description={`Across all groups in ${CURRENCY_SYMBOL}.`}
-          trend="down"
-          trendValue="To 1 person"
         />
       </div>
 

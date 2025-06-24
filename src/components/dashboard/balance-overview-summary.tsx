@@ -4,32 +4,48 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { mockUserBalances, mockUsers } from "@/lib/mock-data";
+import { getGroupBalances, mockUsers } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { Icons } from "@/components/icons";
-import type { Balance } from "@/types";
+import type { Balance, Group } from "@/types";
 import { Skeleton } from "../ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
+import { useEffect, useState } from "react";
 
-// This is a simplified version. Real balance calculation is complex.
-// We'll show what the current user owes and is owed.
-function getOverallBalanceSummary(userId: string): { totalOwedToUser: number; totalUserOwes: number } {
-  let totalOwedToUser = 0;
-  let totalUserOwes = 0;
-  
-  // This is a placeholder logic.
-  // For mock, let's generate some concrete examples for specific users
-  if (userId === "user1") { // Alice
-      totalOwedToUser = 500 + 250; // Bob owes 500, Charlie owes 250
-      totalUserOwes = 300; // Alice owes Diana 300
-  }
-  if (userId === "user2") { // Bob
-      totalOwedToUser = 150;
-      totalUserOwes = 650;
-  }
+// In a real app, this would be an API call
+async function getOverallBalances(userId: string) {
+    let totalOwedToUser = 0;
+    let totalUserOwes = 0;
+    // In a real app, you'd fetch all groups for the user
+    // for now we use the mock data which is in-memory
+    const { mockGroups } = await import('@/lib/mock-data');
+    const userGroups = mockGroups.filter(g => g.members.some(m => m.id === userId));
 
-  return { totalOwedToUser, totalUserOwes };
+    const allGroupBalances = await Promise.all(
+        userGroups.map(group => getGroupBalances(group.id))
+    );
+
+    const owesYou: { user: any, amount: number, avatarUrl?: string }[] = [];
+    const youOwe: { user: any, amount: number, avatarUrl?: string }[] = [];
+    const userBalanceMap = new Map<string, { user: any, balance: number }>();
+
+
+    allGroupBalances.flat().forEach(balance => {
+        if (balance.user.id === userId) {
+            if (balance.netBalance > 0) totalOwedToUser += balance.netBalance;
+            if (balance.netBalance < 0) totalUserOwes += Math.abs(balance.netBalance);
+        } else { // Other users
+             const otherUserBalance = (userBalanceMap.get(balance.user.id)?.balance || 0) + balance.netBalance;
+             userBalanceMap.set(balance.user.id, { user: balance.user, balance: otherUserBalance });
+        }
+    });
+    
+    // This part is a simplification. A true "who owes you" requires simplifying debts across all groups.
+    // For this dashboard view, we'll keep it simple.
+
+    return { totalOwedToUser, totalUserOwes, owesYou, youOwe };
 }
+
 
 const getInitials = (name: string) => {
     if (!name) return "";
@@ -43,25 +59,26 @@ const getInitials = (name: string) => {
 
 export function BalanceOverviewSummary({ currentUserId }: { currentUserId: string }) {
   const { currentUser, loading } = useAuth();
-  
-  // The server-side rendered page provides `currentUserId` for the initial render.
-  // The client-side `useAuth` hook provides the interactive user.
-  // We prioritize the client-side user once it has loaded.
+  const [balances, setBalances] = useState({ totalOwedToUser: 0, totalUserOwes: 0, youOwe: [], owesYou: [] });
+  const [balanceLoading, setBalanceLoading] = useState(true);
+
   const displayUserId = !loading && currentUser ? currentUser.id : currentUserId;
 
-  const { totalOwedToUser, totalUserOwes } = getOverallBalanceSummary(displayUserId);
-  const netBalance = totalOwedToUser - totalUserOwes;
+  useEffect(() => {
+    async function fetchData() {
+        if (displayUserId) {
+            setBalanceLoading(true);
+            const summary = await getOverallBalances(displayUserId);
+            setBalances(summary);
+            setBalanceLoading(false);
+        }
+    }
+    fetchData();
+  }, [displayUserId]);
 
-  // Mocked detailed balances for "Who you owe" and "Who owes you" - this should also be dynamic
-  const youOwe = displayUserId === 'user1' ? [
-    { user: mockUsers[3], amount: 300, avatarUrl: mockUsers[3].avatarUrl }, // Diana
-  ] : [];
-  const owesYou = displayUserId === 'user1' ? [
-    { user: mockUsers[1], amount: 500, avatarUrl: mockUsers[1].avatarUrl }, // Bob
-    { user: mockUsers[2], amount: 250, avatarUrl: mockUsers[2].avatarUrl }, // Charlie
-  ] : [];
+  const netBalance = balances.totalOwedToUser - balances.totalUserOwes;
 
-  if (loading) {
+  if (loading || balanceLoading) {
     return <Card className="col-span-1 lg:col-span-2"><CardHeader><Skeleton className="h-6 w-1/2" /><Skeleton className="h-4 w-3/4 mt-2" /></CardHeader><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
   }
 
@@ -79,11 +96,11 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
       <CardContent className="grid md:grid-cols-2 gap-6">
         <div>
           <h3 className="text-lg font-semibold mb-3 text-red-600 flex items-center">
-            <Icons.Home className="h-5 w-5 mr-2 rotate-45"/> Who You Owe ({CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)})
+            <Icons.Home className="h-5 w-5 mr-2 rotate-45"/> Who You Owe ({CURRENCY_SYMBOL}{balances.totalUserOwes.toFixed(2)})
           </h3>
           <ScrollArea className="h-[150px] pr-3">
-            {youOwe.length > 0 ? (
-              youOwe.map((item) => (
+            {balances.youOwe.length > 0 ? (
+              balances.youOwe.map((item) => (
                 <div key={item.user.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
@@ -104,11 +121,11 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
         </div>
         <div>
           <h3 className="text-lg font-semibold mb-3 text-green-600 flex items-center">
-            <Icons.Home className="h-5 w-5 mr-2 rotate-[225deg]"/> Who Owes You ({CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)})
+            <Icons.Home className="h-5 w-5 mr-2 rotate-[225deg]"/> Who Owes You ({CURRENCY_SYMBOL}{balances.totalOwedToUser.toFixed(2)})
           </h3>
           <ScrollArea className="h-[150px] pr-3">
-            {owesYou.length > 0 ? (
-              owesYou.map((item) => (
+            {balances.owesYou.length > 0 ? (
+              balances.owesYou.map((item) => (
                 <div key={item.user.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">

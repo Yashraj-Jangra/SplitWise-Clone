@@ -7,7 +7,7 @@ import type { User } from "@/types";
 export async function getCurrentUser(): Promise<User> {
   // For now, we'll simulate by returning a specific user from our mock data.
   // This ensures all server components render data for "Alice" consistently.
-  const user = mockUsers.find(u => u.id === 'user1');
+  const user = mockUsers.find(u => u.email === 'jangrayash1505@gmail.com');
   if (!user) {
     // This should not happen in the mock setup, but it's good practice.
     throw new Error("Default current user for server rendering not found.");
