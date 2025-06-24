@@ -59,8 +59,14 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   });
 
   useEffect(() => {
+    // This effect ensures that if the userProfile loads after the form is initialized,
+    // the form's default values are updated correctly, especially the memberIds.
     if (userProfile) {
-      form.reset({ memberIds: [userProfile.uid] });
+      form.reset({
+        name: "",
+        description: "",
+        memberIds: [userProfile.uid],
+      });
     }
   }, [userProfile, form]);
 
@@ -105,7 +111,11 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
           description: `The group "${values.name}" has been successfully created.`,
         });
         setOpen(false);
-        form.reset();
+        form.reset({
+          name: "",
+          description: "",
+          memberIds: [userProfile.uid],
+        });
         router.push(`/groups/${newGroupId}`);
         router.refresh();
     } catch(error) {
