@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from "@/components/ui/label";
 
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
