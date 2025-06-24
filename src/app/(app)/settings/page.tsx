@@ -31,7 +31,7 @@ const getInitials = (name: string) => {
 
 
 export default function SettingsPage() {
-  const { currentUser: user, loading } = useAuth();
+  const { userProfile: user, loading } = useAuth();
 
   if (loading) {
     return (

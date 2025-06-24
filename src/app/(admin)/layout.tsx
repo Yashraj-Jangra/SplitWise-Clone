@@ -16,15 +16,15 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { currentUser, loading } = useAuth();
+  const { userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!currentUser || currentUser.role !== 'admin')) {
+    if (!loading && (!userProfile || userProfile.role !== 'admin')) {
       // Redirect non-admins or non-logged-in users to the user dashboard
       router.replace('/dashboard');
     }
-  }, [currentUser, loading, router]);
+  }, [userProfile, loading, router]);
 
   if (loading) {
     // Show a loading state while checking auth
@@ -41,7 +41,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!userProfile || userProfile.role !== 'admin') {
     // This state is very brief before the redirect, but it's a good practice
     // to have a fallback UI instead of rendering children that might flash.
     return (
