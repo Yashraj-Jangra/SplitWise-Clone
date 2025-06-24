@@ -48,7 +48,7 @@ function QuickActionsWidget() {
     return (
         <Card className="col-span-1 md:col-span-2 lg:col-span-1 flex flex-col justify-center items-center p-6 bg-card hover:bg-muted/50 transition-colors">
             <CardTitle className="text-lg font-semibold mb-4">Quick Actions</CardTitle>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap justify-center gap-4">
                 <CreateGroupDialog buttonVariant="outline" />
                 {/* The AddExpenseDialog needs a group to function, so it can't be a direct quick action without a selection mechanism */}
                 <Button variant="outline" disabled>
