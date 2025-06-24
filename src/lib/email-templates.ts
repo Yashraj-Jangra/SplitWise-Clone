@@ -1,4 +1,5 @@
-import type { User } from '@/types';
+
+import type { UserProfile } from '@/types';
 
 export const emailTypes = [
     { value: 'welcome', label: 'Welcome Email' },

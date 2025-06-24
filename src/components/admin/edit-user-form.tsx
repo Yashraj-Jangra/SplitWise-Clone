@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import type { User } from "@/types";
+import type { UserProfile } from "@/types";
 import { updateUser } from "@/lib/mock-data";
 import { Icons } from "@/components/icons";
 
@@ -25,7 +25,7 @@ const editUserSchema = z.object({
 type EditUserFormValues = z.infer<typeof editUserSchema>;
 
 interface EditUserFormProps {
-  user: User;
+  user: UserProfile;
 }
 
 export function EditUserForm({ user }: EditUserFormProps) {
@@ -53,7 +53,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
       return;
     }
 
-    const updatedUser = await updateUser(user.id, values);
+    const updatedUser = await updateUser(user.uid, values);
 
     if (updatedUser) {
       toast({

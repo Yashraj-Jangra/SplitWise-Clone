@@ -4,8 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { EditUserForm } from '@/components/admin/edit-user-form';
-import { getUserById } from '@/lib/mock-data';
-import type { User } from '@/types';
+import { getUserProfile } from '@/lib/mock-data';
+import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ export default function EditUserPage() {
   const params = useParams();
   const userId = params.userId as string;
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function EditUserPage() {
     async function fetchUser() {
       try {
         setLoading(true);
-        const fetchedUser = await getUserById(userId);
+        const fetchedUser = await getUserProfile(userId);
         if (fetchedUser) {
           setUser(fetchedUser);
         } else {

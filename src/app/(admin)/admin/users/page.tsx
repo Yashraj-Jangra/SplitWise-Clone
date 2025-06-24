@@ -11,7 +11,7 @@ import { Icons } from "@/components/icons";
 import { getAllUsers } from "@/lib/mock-data";
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
-import type { User } from '@/types';
+import type { UserProfile } from '@/types';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +34,7 @@ const getInitials = (name: string) => {
     return initials;
 };
 
-function UserActions({ user }: { user: User }) {
+function UserActions({ user }: { user: UserProfile }) {
     const { toast } = useToast();
     const isMainAdmin = user.email === 'jangrayash1505@gmail.com';
 
@@ -60,7 +60,7 @@ function UserActions({ user }: { user: User }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                    <Link href={`/admin/users/${user.id}/edit`}>
+                    <Link href={`/admin/users/${user.uid}/edit`}>
                         <Icons.Edit className="mr-2 h-4 w-4" /> Edit
                     </Link>
                 </DropdownMenuItem>
@@ -77,7 +77,7 @@ function UserActions({ user }: { user: User }) {
 }
 
 export default function ManageUsersPage() {
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -130,7 +130,7 @@ export default function ManageUsersPage() {
                         </TableHeader>
                         <TableBody>
                             {users.map(user => (
-                                <TableRow key={user.id}>
+                                <TableRow key={user.uid}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-10 w-10">

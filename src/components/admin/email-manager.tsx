@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import type { User } from '@/types';
+import type { UserProfile } from '@/types';
 import { getAllUsers } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import { generateEmailContent, emailTypes, EmailTemplate } from '@/lib/email-templates';
@@ -38,7 +38,7 @@ interface EmailManagerProps {
 
 export function EmailManager({ isConfigured }: EmailManagerProps) {
     const { toast } = useToast();
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
     const [sending, setSending] = useState(false);
     const [preview, setPreview] = useState<EmailOutput | null>(null);
@@ -63,7 +63,7 @@ export function EmailManager({ isConfigured }: EmailManagerProps) {
 
     function onGenerate(values: EmailFormValues) {
         setPreview(null);
-        const selectedUser = users.find(u => u.id === values.userId);
+        const selectedUser = users.find(u => u.uid === values.userId);
         if (!selectedUser) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find the selected user.' });
             return;
@@ -85,7 +85,7 @@ export function EmailManager({ isConfigured }: EmailManagerProps) {
         }
         setSending(true);
 
-        const recipient = users.find(u => u.id === form.getValues('userId'));
+        const recipient = users.find(u => u.uid === form.getValues('userId'));
         if (!recipient) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find the selected user.' });
             setSending(false);
@@ -146,7 +146,7 @@ export function EmailManager({ isConfigured }: EmailManagerProps) {
                                             <SelectContent>
                                                 {loadingUsers ? <SelectItem value="loading" disabled>Loading users...</SelectItem> :
                                                     users.map(user => (
-                                                        <SelectItem key={user.id} value={user.id}>{user.name} ({user.email})</SelectItem>
+                                                        <SelectItem key={user.uid} value={user.uid}>{user.name} ({user.email})</SelectItem>
                                                     ))
                                                 }
                                             </SelectContent>
