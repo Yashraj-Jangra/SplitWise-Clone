@@ -36,8 +36,10 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
     notFound();
   }
 
-  const expenses = await getExpensesByGroupId(params.groupId);
-  const settlements = await getSettlementsByGroupId(params.groupId);
+  const expenses = (await getExpensesByGroupId(params.groupId))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const settlements = (await getSettlementsByGroupId(params.groupId))
+    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const balances = await getGroupBalances(params.groupId);
   const currentUser = await getCurrentUser();
 
