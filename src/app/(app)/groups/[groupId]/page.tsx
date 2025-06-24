@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -14,11 +13,12 @@ import { AddSettlementDialog } from '@/components/settlements/add-settlement-dia
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Icons } from "@/components/icons";
-import { getGroupById, getExpensesByGroupId, getSettlementsByGroupId, getGroupBalances } from "@/lib/mock-data";
+import { getGroupById, getExpensesByGroupId, getSettlementsByGroupId, getGroupBalances, SimplifiedSettlement, simplifyDebts } from "@/lib/mock-data";
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, Settlement, Balance } from '@/types';
 import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
+
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -73,7 +73,7 @@ export default function GroupDetailPage() {
       <GroupDetailHeader group={group} />
 
       <Tabs defaultValue="expenses" className="w-full">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
             <TabsList>
                 <TabsTrigger value="expenses">Expenses ({expenses.length})</TabsTrigger>
                 <TabsTrigger value="settlements">Settlements ({settlements.length})</TabsTrigger>
@@ -81,24 +81,24 @@ export default function GroupDetailPage() {
                 <TabsTrigger value="members">Members ({group.members.length})</TabsTrigger>
                 <TabsTrigger value="analysis">Analysis</TabsTrigger>
             </TabsList>
+            <div className="flex gap-2">
+                <AddExpenseDialog group={group} onExpenseAdded={loadGroupData} />
+            </div>
         </div>
 
         <TabsContent value="expenses">
           <Card>
-            <CardHeader className="flex flex-row justify-between items-center">
-              <div>
+            <CardHeader>
                 <CardTitle className="flex items-center">
                     <Icons.Expense className="h-5 w-5 mr-2 text-primary" />
                     Expenses
                 </CardTitle>
                 <CardDescription>All expenses recorded in this group.</CardDescription>
-              </div>
-              <AddExpenseDialog group={group} onExpenseAdded={loadGroupData} />
             </CardHeader>
             <CardContent className="p-0">
               {expenses.length > 0 ? (
                 <ScrollArea className="h-[400px]">
-                  <div className="divide-y">
+                  <div className="divide-y divide-border">
                     {expenses.map((expense) => (
                       <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile.uid} group={group}/>
                     ))}
@@ -129,7 +129,7 @@ export default function GroupDetailPage() {
             <CardContent className="p-0">
               {settlements.length > 0 ? (
                 <ScrollArea className="h-[400px]">
-                  <div className="divide-y">
+                  <div className="divide-y divide-border">
                     {settlements.map((settlement) => (
                       <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={userProfile.uid} />
                     ))}

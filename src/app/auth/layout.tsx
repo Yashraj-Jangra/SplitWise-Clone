@@ -7,9 +7,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 animated-gradient-bg">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <div className="absolute top-6 left-6 z-10">
-        <Link href="/" className="flex items-center text-primary hover:text-primary/80 transition-colors">
+        <Link href="/" className="flex items-center text-foreground hover:text-muted-foreground transition-colors">
           <Icons.AppLogo className="h-8 w-8 mr-2" />
           <span className="text-xl font-semibold font-headline">SettleEase</span>
         </Link>

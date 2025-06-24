@@ -13,6 +13,8 @@ import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 interface ActivityItem {
   id: string;
@@ -52,7 +54,7 @@ export function RecentActivityList() {
           groupName: groupMap.get(e.groupId) || "a group",
           groupId: e.groupId,
           date: e.date,
-          icon: <Icons.Expense className="h-5 w-5 text-blue-500" />,
+          icon: <Icons.Expense className="h-5 w-5 text-primary" />,
         }));
 
         const settlementActivities = settlements.map((s: Settlement) => ({
@@ -65,12 +67,12 @@ export function RecentActivityList() {
           groupName: groupMap.get(s.groupId) || "a group",
           groupId: s.groupId,
           date: s.date,
-          icon: <Icons.Settle className="h-5 w-5 text-green-500" />,
+          icon: <Icons.Settle className="h-5 w-5 text-green-400" />,
         }));
 
         const combined = [...expenseActivities, ...settlementActivities]
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice(0, 10);
+          .slice(0, 15);
 
         setActivities(combined);
       } catch (error) {
@@ -85,10 +87,10 @@ export function RecentActivityList() {
 
   if (loading) {
     return (
-        <Card>
+        <Card className="lg:col-span-3">
             <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
+                <CardDescription>Latest expenses and settlements across all groups.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
                 {[...Array(5)].map((_, i) => (
@@ -108,10 +110,9 @@ export function RecentActivityList() {
 
   if (!activities.length) {
     return (
-      <Card>
+      <Card className="lg:col-span-3">
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>No recent activities to display.</CardDescription>
         </CardHeader>
         <CardContent className="text-center text-muted-foreground py-8">
           <Icons.Details className="h-12 w-12 mx-auto mb-2" />
@@ -122,49 +123,40 @@ export function RecentActivityList() {
   }
 
   return (
-    <Card>
+    <Card className="lg:col-span-3">
       <CardHeader>
         <CardTitle>Recent Activity</CardTitle>
-        <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
+        <CardDescription>Latest expenses and settlements across all groups.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[350px]">
-          <div className="divide-y">
+        <ScrollArea className="h-[400px]">
+          <div className="divide-y divide-border">
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
-                <div className="p-2 bg-muted rounded-full">
-                  {activity.icon}
-                </div>
+                 <Avatar className="h-10 w-10">
+                    <AvatarImage src={activity.user.avatarUrl} />
+                 </Avatar>
                 <div className="grid gap-1 flex-1">
                   <p className="text-sm font-medium leading-none truncate">
                     {activity.description}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    By {getFullName(activity.user.firstName, activity.user.lastName)} in {activity.groupName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(activity.date), { addSuffix: true })}
+                    <span className="font-semibold">{getFullName(activity.user.firstName, activity.user.lastName)}</span> in <Link href={`/groups/${activity.groupId}`} className="hover:underline">{activity.groupName}</Link>
                   </p>
                 </div>
-                <div className={`text-sm font-semibold ${activity.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
-                  {activity.type === 'expense' ? '-' : '+'}{CURRENCY_SYMBOL}{activity.amount.toFixed(2)}
+                <div className="flex flex-col items-end">
+                    <div className={`text-sm font-semibold ${activity.type === 'expense' ? 'text-foreground' : 'text-green-400'}`}>
+                    {activity.type === 'expense' ? '-' : '+'}{CURRENCY_SYMBOL}{activity.amount.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(activity.date), { addSuffix: true })}
+                    </p>
                 </div>
-                <Button variant="ghost" size="icon" asChild className="ml-auto h-8 w-8">
-                  <Link href={`/groups/${activity.groupId}`}>
-                    <Icons.ChevronDown className="h-4 w-4 rotate-[-90deg]" />
-                    <span className="sr-only">View Details</span>
-                  </Link>
-                </Button>
               </div>
             ))}
           </div>
         </ScrollArea>
       </CardContent>
-       <CardFooter className="pt-4">
-        <Button variant="outline" className="w-full" asChild>
-          <Link href="/expenses">View All Activity</Link>
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
