@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 interface GroupBalancesProps {
   balances: Balance[];
   group: Group;
+  onSettlementAdded: () => void;
 }
 
 const getInitials = (name: string) => {
@@ -30,7 +31,7 @@ const getInitials = (name: string) => {
     return initials;
 };
 
-export function GroupBalances({ balances, group }: GroupBalancesProps) {
+export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalancesProps) {
   const [isSimplified, setIsSimplified] = useState(false);
 
   const simplifiedSettlements = useMemo(() => {
@@ -142,10 +143,9 @@ export function GroupBalances({ balances, group }: GroupBalancesProps) {
         )}
         
         <div className="pt-4 border-t flex justify-end">
-            <AddSettlementDialog group={group} onSettlementAdded={() => { /* TODO: Refresh data */}} />
+            <AddSettlementDialog group={group} onSettlementAdded={onSettlementAdded} />
         </div>
       </CardContent>
     </Card>
   );
 }
-

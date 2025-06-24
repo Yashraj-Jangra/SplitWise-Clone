@@ -56,7 +56,7 @@ type AddExpenseFormValues = z.infer<typeof expenseSchema>;
 
 interface AddExpenseDialogProps {
   group: Group;
-  onExpenseAdded: () => void;
+  onExpenseAdded?: () => void;
 }
 
 export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProps) {
@@ -67,6 +67,15 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
 
   const form = useForm<AddExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
+    defaultValues: {
+        description: "",
+        amount: 0,
+        paidById: userProfile?.uid || "",
+        date: new Date(),
+        splitType: "equally",
+        participants: [],
+        category: "Other",
+    }
   });
 
   const { fields } = useFieldArray({
@@ -232,7 +241,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
         description: `"${values.description}" for ${CURRENCY_SYMBOL}${totalAmount.toFixed(2)} added to ${group.name}.`,
         });
         setOpen(false);
-        onExpenseAdded(); // Callback to refresh parent data
+        if (onExpenseAdded) onExpenseAdded(); // Callback to refresh parent data
         router.refresh(); // Also trigger a server refresh
     } catch (error) {
         toast({ title: "Error", description: "Failed to add expense.", variant: "destructive" });
@@ -451,4 +460,3 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     </Dialog>
   );
 }
-

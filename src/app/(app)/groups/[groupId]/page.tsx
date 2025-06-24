@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GroupDetailHeader } from "@/components/groups/group-detail-header";
@@ -30,38 +30,38 @@ export default function GroupDetailPage() {
   const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadGroupData = useCallback(async () => {
     if (!groupId) return;
-
-    async function loadGroupData() {
-        setLoading(true);
-        try {
-            const [groupData, expensesData, settlementsData, balancesData] = await Promise.all([
-                getGroupById(groupId),
-                getExpensesByGroupId(groupId),
-                getSettlementsByGroupId(groupId),
-                getGroupBalances(groupId),
-            ]);
-            
-            if (!groupData) {
-                notFound();
-                return;
-            }
-
-            setGroup(groupData);
-            setExpenses(expensesData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-            setSettlements(settlementsData.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-            setBalances(balancesData);
-
-        } catch (error) {
-            console.error("Failed to load group data", error);
-            // Handle error state
-        } finally {
-            setLoading(false);
+    setLoading(true);
+    try {
+        const [groupData, expensesData, settlementsData, balancesData] = await Promise.all([
+            getGroupById(groupId),
+            getExpensesByGroupId(groupId),
+            getSettlementsByGroupId(groupId),
+            getGroupBalances(groupId),
+        ]);
+        
+        if (!groupData) {
+            notFound();
+            return;
         }
+
+        setGroup(groupData);
+        setExpenses(expensesData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        setSettlements(settlementsData.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        setBalances(balancesData);
+
+    } catch (error) {
+        console.error("Failed to load group data", error);
+        // Handle error state
+    } finally {
+        setLoading(false);
     }
-    loadGroupData();
   }, [groupId]);
+
+  useEffect(() => {
+    loadGroupData();
+  }, [loadGroupData]);
 
   if (loading || !group || !userProfile) {
     return <GroupDetailLoading />;
@@ -91,7 +91,7 @@ export default function GroupDetailPage() {
                 </CardTitle>
                 <CardDescription>All expenses recorded in this group.</CardDescription>
               </div>
-              <AddExpenseDialog group={group} onExpenseAdded={() => { /* re-fetch data */ }} />
+              <AddExpenseDialog group={group} onExpenseAdded={loadGroupData} />
             </CardHeader>
             <CardContent className="p-0">
               {expenses.length > 0 ? (
@@ -122,7 +122,7 @@ export default function GroupDetailPage() {
                 </CardTitle>
                 <CardDescription>All settlements made in this group.</CardDescription>
               </div>
-              <AddSettlementDialog group={group} onSettlementAdded={() => { /* re-fetch data */ }} />
+              <AddSettlementDialog group={group} onSettlementAdded={loadGroupData} />
             </CardHeader>
             <CardContent className="p-0">
               {settlements.length > 0 ? (
@@ -144,7 +144,7 @@ export default function GroupDetailPage() {
         </TabsContent>
 
         <TabsContent value="balances">
-          <GroupBalances balances={balances} group={group} />
+          <GroupBalances balances={balances} group={group} onSettlementAdded={loadGroupData} />
         </TabsContent>
 
         <TabsContent value="members">

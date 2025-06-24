@@ -56,7 +56,16 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
   const { toast } = useToast();
   const { userProfile } = useAuth();
 
-  const form = useForm<AddSettlementFormValues>();
+  const form = useForm<AddSettlementFormValues>({
+    resolver: zodResolver(settlementSchema),
+    defaultValues: {
+      paidById: "",
+      paidToId: "",
+      amount: 0,
+      date: new Date(),
+      notes: "",
+    },
+  });
 
   useEffect(() => {
     if (userProfile && open) {
@@ -218,4 +227,3 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
     </Dialog>
   );
 }
-

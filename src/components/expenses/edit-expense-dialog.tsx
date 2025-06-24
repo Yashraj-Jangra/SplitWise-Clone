@@ -70,6 +70,15 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   const form = useForm<EditExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
+    defaultValues: {
+        description: "",
+        amount: 0,
+        paidById: "",
+        date: new Date(),
+        splitType: "equally",
+        participants: [],
+        category: "Other",
+    },
   });
 
   const { fields } = useFieldArray({
@@ -506,4 +515,3 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     </Dialog>
   );
 }
-
