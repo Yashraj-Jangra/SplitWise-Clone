@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
@@ -53,7 +53,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       if (user) {
         setFirebaseUser(user);
-        const profile = await fetchUserProfile(user.uid);
+        let profile = await fetchUserProfile(user.uid);
+        
+        // Self-healing: If a user is authenticated but has no profile in Firestore, create one.
+        if (!profile) {
+            console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
+            const newUserProfile: Omit<UserProfile, 'uid'> & {uid: string} = {
+                uid: user.uid,
+                name: user.displayName || user.email?.split('@')[0] || "New User",
+                email: user.email!,
+                role: 'user',
+                createdAt: Timestamp.now(),
+                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || user.email)?.substring(0, 2).toUpperCase()}`,
+            };
+            // Ensure admin role is set for the specified email
+            if (user.email === 'jangrayash1505@gmail.com') {
+                newUserProfile.role = 'admin';
+            }
+            await setDoc(doc(db, "users", user.uid), newUserProfile);
+            profile = newUserProfile as UserProfile;
+        }
+        
         setUserProfile(profile);
       } else {
         setFirebaseUser(null);
@@ -76,7 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
     
-    // Create user profile in Firestore
+    // Create user profile in Firestore.
+    // The onAuthStateChanged listener will handle setting the userProfile state.
     const newUserProfile: Omit<UserProfile, 'uid'> & {uid: string} = {
         uid: user.uid,
         name,
@@ -91,8 +112,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     await setDoc(doc(db, "users", user.uid), newUserProfile);
-    setUserProfile(newUserProfile as UserProfile);
-
   }, []);
 
   const logout = useCallback(async () => {
@@ -100,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signOut(auth);
   }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     firebaseUser,
     userProfile,
     loading,
@@ -108,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     signup,
     logout,
-  };
+  }), [firebaseUser, userProfile, loading, login, signup, logout]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');
