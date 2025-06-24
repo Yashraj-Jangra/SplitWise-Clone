@@ -111,6 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   if (firebaseError) {
+      const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');
+      
       return (
           <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
               <div className="text-center max-w-2xl p-8 border rounded-lg shadow-xl bg-card">
@@ -119,9 +121,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   <div className="text-sm bg-muted text-destructive p-3 rounded-md text-left">
                     <code className="font-mono whitespace-pre-wrap">{firebaseError}</code>
                   </div>
-                  <p className="text-muted-foreground text-sm mt-6">
-                    Ensure your <code className="bg-muted text-foreground p-1 rounded">.env</code> file contains the correct Firebase project credentials and that the application has been restarted.
-                  </p>
+
+                  {isConfigNotFoundError ? (
+                     <div className="mt-6 text-yellow-300 bg-yellow-900/50 border border-yellow-400/50 rounded-lg p-4">
+                        <p className="font-semibold text-base">Action Required</p>
+                        <p className="text-sm mt-2">
+                            This error usually means you haven't enabled the correct sign-in method in your Firebase project.
+                            <br /><br />
+                            Please go to the <strong>Firebase Console</strong>, navigate to <strong>Authentication</strong> &gt; <strong>Sign-in method</strong>, and enable the <strong>Email/Password</strong> provider.
+                        </p>
+                     </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm mt-6">
+                        Ensure your <code className="bg-muted text-foreground p-1 rounded">.env</code> file contains the correct Firebase project credentials and that the application has been restarted.
+                    </p>
+                  )}
               </div>
           </div>
       );
