@@ -30,6 +30,11 @@ export const mainNavItems: NavItem[] = [
     href: "/settlements",
     icon: "Settle",
   },
+  {
+    title: "Analysis",
+    href: "/analysis",
+    icon: "Analysis",
+  }
 ];
 
 export const settingsNavItem: NavItem = {

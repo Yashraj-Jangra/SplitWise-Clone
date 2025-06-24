@@ -21,7 +21,8 @@ import {
   GanttChartSquare,
   CalendarDays,
   Mail,
-  ArrowRight
+  ArrowRight,
+  PieChart
 } from 'lucide-react';
 
 export const Icons = {
@@ -56,6 +57,7 @@ export const Icons = {
   AppLogo: GanttChartSquare,
   Mail,
   ArrowRight,
+  Analysis: PieChart,
 };
 
 export type IconName = keyof typeof Icons;

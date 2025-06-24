@@ -18,6 +18,7 @@ import { getGroupById, getExpensesByGroupId, getSettlementsByGroupId, getGroupBa
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, Settlement, Balance } from '@/types';
 import GroupDetailLoading from './loading'; // Import loading component
+import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -78,6 +79,7 @@ export default function GroupDetailPage() {
                 <TabsTrigger value="settlements">Settlements ({settlements.length})</TabsTrigger>
                 <TabsTrigger value="balances">Balances</TabsTrigger>
                 <TabsTrigger value="members">Members ({group.members.length})</TabsTrigger>
+                <TabsTrigger value="analysis">Analysis</TabsTrigger>
             </TabsList>
         </div>
 
@@ -150,6 +152,11 @@ export default function GroupDetailPage() {
         <TabsContent value="members">
           <GroupMembers members={group.members} />
         </TabsContent>
+
+        <TabsContent value="analysis">
+            <GroupAnalysisCharts expenses={expenses} members={group.members} />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
