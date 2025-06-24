@@ -3,12 +3,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User } from '@/types';
-import { mockUsers } from '@/lib/mock-data'; // We'll still use this for lookup
+import { mockUsers, verifyUserCredentials } from '@/lib/mock-data'; // We'll still use this for lookup
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  login: (email: string) => Promise<User | null>;
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
 }
 
@@ -17,13 +17,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // In a real app, you would fetch user data from an API
 const fetchUserById = async (id: string): Promise<User | null> => {
   const user = mockUsers.find(u => u.id === id);
-  return user || null;
+  if (!user) return null;
+  // Make sure we don't include password in the client-side user object
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword as User;
 };
-
-const findUserByEmail = async (email: string): Promise<User | null> => {
-  const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-  return user || null;
-}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -48,15 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
-  const login = useCallback(async (email: string) => {
+  const login = useCallback(async (email: string, password_sent: string) => {
     setLoading(true);
-    const user = await findUserByEmail(email);
+    const user = await verifyUserCredentials(email, password_sent);
     if (user) {
       localStorage.setItem('currentUserId', user.id);
       setCurrentUser(user);
     } else {
-      // In a real app, you'd throw an error here
-      console.error("User not found");
+      console.error("Invalid credentials");
     }
     setLoading(false);
     return user;

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { AuthCard } from "./auth-card";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
+import { createUser } from "@/lib/mock-data";
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters long." }),
@@ -36,13 +38,11 @@ export function SignupForm() {
 
   // Simulate signup
   async function onSubmit(values: SignupFormValues) {
-    // In a real app, you'd call your auth API here
     console.log("Signup attempt with:", values);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Call API to create user
+    await createUser(values);
 
-    // Simulate success
     toast({
       title: "Account Created!",
       description: "You can now log in with your new account.",

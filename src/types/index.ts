@@ -5,6 +5,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string;
   avatarUrl?: string; // URL to placeholder or actual image
   role?: 'admin' | 'user'; // Added role
   createdAt?: string; // ISO date string for when the user joined

@@ -36,9 +36,8 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: LoginFormValues) {
-    // NOTE: The password is not actually validated in this mock setup.
-    // In a real app, you'd send both email and password to your auth API.
-    const loggedInUser = await login(values.email);
+    // The password is now validated against the mock data.
+    const loggedInUser = await login(values.email, values.password);
 
     if (loggedInUser) {
         let toastTitle = "Login Successful";
@@ -57,9 +56,10 @@ export function LoginForm() {
         toast({
             variant: "destructive",
             title: "Login Failed",
-            description: "No user found with that email. Please try again.",
+            description: "Invalid email or password. Please try again.",
         });
-        form.setError("email", { type: "manual", message: "User not found."});
+        form.setError("email", { type: "manual", message: " "});
+        form.setError("password", { type: "manual", message: " "});
     }
   }
 
@@ -91,7 +91,7 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="•••••••• (e.g., 123456)" {...field} />
+                  <Input type="password" placeholder="••••••••" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -108,8 +108,8 @@ export function LoginForm() {
           Sign up
         </Link>
       </div>
-      <p className="mt-4 text-xs text-center text-muted-foreground">
-        Test accounts: alice@example.com, bob@example.com, admin@example.com.
+       <p className="mt-4 text-xs text-center text-muted-foreground">
+        Test accounts (e.g., alice@example.com) have a password of "123456".
       </p>
     </AuthCard>
   );

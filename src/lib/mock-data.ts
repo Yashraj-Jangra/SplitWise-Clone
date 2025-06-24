@@ -4,12 +4,12 @@ import { CURRENCY_CODE } from "./constants";
 
 // Mock Users
 export const mockUsers: User[] = [
-  { id: "user1", name: "Alice Wonderland", email: "alice@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AW", role: "user", createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "user2", name: "Bob The Builder", email: "bob@example.com", avatarUrl: "https://placehold.co/100x100.png?text=BB", role: "user", createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "user3", name: "Charlie Brown", email: "charlie@example.com", avatarUrl: "https://placehold.co/100x100.png?text=CB", role: "user", createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "user4", name: "Diana Prince", email: "diana@example.com", avatarUrl: "https://placehold.co/100x100.png?text=DP", role: "user", createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "admin001", name: "Admin User", email: "admin@example.com", avatarUrl: "https://placehold.co/100x100.png?text=AU", role: "admin", createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString() },
-  { id: "user007", name: "Standard User", email: "user@example.com", avatarUrl: "https://placehold.co/100x100.png?text=SU", role: "user", createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user1", name: "Alice Wonderland", email: "alice@example.com", password: "123456", avatarUrl: "https://placehold.co/100x100.png?text=AW", role: "user", createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user2", name: "Bob The Builder", email: "bob@example.com", password: "123456", avatarUrl: "https://placehold.co/100x100.png?text=BB", role: "user", createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user3", name: "Charlie Brown", email: "charlie@example.com", password: "123456", avatarUrl: "https://placehold.co/100x100.png?text=CB", role: "user", createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user4", name: "Diana Prince", email: "diana@example.com", password: "123456", avatarUrl: "https://placehold.co/100x100.png?text=DP", role: "user", createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "admin001", name: "Admin User", email: "admin@example.com", password: "123456", avatarUrl: "https://placehold.co/100x100.png?text=AU", role: "admin", createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString() },
+  { id: "user007", name: "Standard User", email: "user@example.com", password: "123456", avatarUrl: "https://placehold.co/100x100.png?text=SU", role: "user", createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
 ];
 
 // Mock Groups
@@ -199,6 +199,41 @@ export function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
 export function getSettlementsByGroupId(groupId: string): Promise<Settlement[]> {
    return new Promise(resolve => setTimeout(() => resolve(mockSettlements.filter(s => s.groupId === groupId)), 100));
 }
+
+export async function verifyUserCredentials(email: string, password_sent: string): Promise<User | null> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+        const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (user && user.password === password_sent) {
+            // In a real app, never return the password hash
+            const { password, ...userWithoutPassword } = user;
+            resolve(userWithoutPassword as User);
+        } else {
+            resolve(null);
+        }
+    }, 200);
+  });
+}
+
+export async function createUser(data: Omit<User, 'id'|'avatarUrl'|'createdAt'|'role'>): Promise<User> {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const newUser: User = {
+                id: `user${mockUsers.length + 1}`,
+                name: data.name,
+                email: data.email,
+                password: data.password,
+                role: 'user',
+                createdAt: new Date().toISOString(),
+                avatarUrl: `https://placehold.co/100x100.png?text=${data.name.substring(0, 2).toUpperCase()}`,
+            };
+            mockUsers.push(newUser);
+            const { password, ...userWithoutPassword } = newUser;
+            resolve(userWithoutPassword as User);
+        }, 200)
+    });
+}
+
 
 // --- Admin Data Functions ---
 export async function getAllUsers(): Promise<User[]> {
