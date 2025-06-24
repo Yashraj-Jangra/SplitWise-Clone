@@ -27,7 +27,7 @@ export function OverviewCard({
   const Icon = Icons[iconName];
 
   return (
-    <Card className={className}>
+    <Card className="hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}

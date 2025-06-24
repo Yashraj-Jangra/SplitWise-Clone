@@ -65,17 +65,17 @@ export default function GroupsPage() {
       ) : groups.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {groups.map((group) => (
-            <Card key={group.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
+            <Card key={group.id} className="flex flex-col hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2 transition-all duration-300">
               <CardHeader className="relative p-0 h-40">
                 <Image
                   src={group.coverImageUrl || `https://placehold.co/600x300.png?text=${encodeURIComponent(group.name)}`}
                   alt={group.name}
-                  layout="fill"
+                  fill
                   objectFit="cover"
-                  className="rounded-t-lg"
+                  className="rounded-t-xl"
                   data-ai-hint="group event"
                 />
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent rounded-t-lg"></div>
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent rounded-t-xl"></div>
                  <CardTitle className="absolute bottom-4 left-4 text-xl font-headline text-white">
                     {group.name}
                   </CardTitle>
@@ -94,7 +94,7 @@ export default function GroupsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Button asChild className="w-full">
                   <Link href={`/groups/${group.id}`}>View Group</Link>
                 </Button>
               </CardFooter>
@@ -120,4 +120,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-
