@@ -1,131 +1,375 @@
 
-import type { User, Group, Expense, Settlement, Balance } from "@/types";
-import { CURRENCY_CODE } from "./constants";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  Timestamp,
+  writeBatch,
+  arrayUnion,
+  arrayRemove,
+  documentId,
+} from 'firebase/firestore';
+import { db } from './firebase';
+import type {
+  UserProfile,
+  Group,
+  GroupDocument,
+  Expense,
+  ExpenseDocument,
+  Settlement,
+  SettlementDocument,
+  Balance,
+  ExpenseParticipant,
+  ExpenseParticipantDocument,
+} from '@/types';
 
-// This is now our persistent in-memory "database".
-// It starts with one admin user and empty data.
-export let mockUsers: User[] = [
-  { 
-    id: "admin001", 
-    name: "Admin User", 
-    email: "jangrayash1505@gmail.com", 
-    password: "U_r_An_IdIoT_101", 
-    avatarUrl: "https://placehold.co/100x100.png?text=AU", 
-    role: "admin", 
-    createdAt: new Date().toISOString() 
-  },
-];
+// --- User Functions ---
 
-export let mockGroups: Group[] = [];
-export let mockExpenses: Expense[] = [];
-export let mockSettlements: Settlement[] = [];
-
-
-export function getGroupById(groupId: string): Promise<Group | undefined> {
-  return new Promise(resolve => setTimeout(() => resolve(mockGroups.find(g => g.id === groupId)), 100));
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const docRef = doc(db, 'users', uid);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    return { ...data, uid: docSnap.id } as UserProfile;
+  }
+  return null;
 }
 
-export function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
-  return new Promise(resolve => setTimeout(() => resolve(mockExpenses.filter(e => e.groupId === groupId)), 100));
+export async function getAllUsers(): Promise<UserProfile[]> {
+  const usersCol = collection(db, 'users');
+  const userSnapshot = await getDocs(usersCol);
+  return userSnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile));
 }
 
-export function getSettlementsByGroupId(groupId: string): Promise<Settlement[]> {
-   return new Promise(resolve => setTimeout(() => resolve(mockSettlements.filter(s => s.groupId === groupId)), 100));
+export async function updateUser(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
+    const userDocRef = doc(db, "users", userId);
+    await updateDoc(userDocRef, data);
+    const updatedUser = await getUserProfile(userId);
+    if (!updatedUser) throw new Error("Failed to fetch updated user");
+    return updatedUser;
 }
 
-export async function verifyUserCredentials(email: string, password_sent: string): Promise<User | null> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-        const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (user && user.password === password_sent) {
-            // In a real app, never return the password hash
-            const { password, ...userWithoutPassword } = user;
-            resolve(userWithoutPassword as User);
-        } else {
-            resolve(null);
-        }
-    }, 200);
-  });
+// --- Hydration / Joining Functions ---
+
+async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
+    if (uids.length === 0) return [];
+    
+    const uniqueUids = [...new Set(uids)];
+    if (uniqueUids.length === 0) return [];
+    
+    // Firestore 'in' query is limited to 30 items. We need to chunk it.
+    const chunks: string[][] = [];
+    for (let i = 0; i < uniqueUids.length; i += 30) {
+        chunks.push(uniqueUids.slice(i, i + 30));
+    }
+
+    const userPromises = chunks.map(async (chunk) => {
+         const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', chunk));
+         const querySnapshot = await getDocs(usersQuery);
+         return querySnapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile));
+    });
+
+    const results = await Promise.all(userPromises);
+    return results.flat();
 }
 
-export async function createUser(data: Omit<User, 'id'|'avatarUrl'|'createdAt'|'role'>): Promise<User> {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            const newUser: User = {
-                id: `user${mockUsers.length + 1}`,
-                name: data.name,
-                email: data.email,
-                password: data.password,
-                role: 'user',
-                createdAt: new Date().toISOString(),
-                avatarUrl: `https://placehold.co/100x100.png?text=${data.name.substring(0, 2).toUpperCase()}`,
-            };
-            mockUsers.push(newUser);
-            const { password, ...userWithoutPassword } = newUser;
-            resolve(userWithoutPassword as User);
-        }, 200)
+// --- Group Functions ---
+
+export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | 'totalExpenses'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'groups'), {
+        ...groupData,
+        totalExpenses: 0,
+        createdAt: Timestamp.now(),
+    });
+    return docRef.id;
+}
+
+export async function getGroupById(groupId: string): Promise<Group | null> {
+    const groupDocRef = doc(db, "groups", groupId);
+    const groupSnap = await getDoc(groupDocRef);
+
+    if (!groupSnap.exists()) return null;
+
+    const groupData = groupSnap.data() as GroupDocument;
+    
+    const [members, createdBy] = await Promise.all([
+        hydrateUsers(groupData.memberIds),
+        getUserProfile(groupData.createdById)
+    ]);
+
+    if (!createdBy) throw new Error("Created by user not found for group");
+
+    return {
+        ...groupData,
+        id: groupSnap.id,
+        createdAt: (groupData.createdAt as Timestamp),
+        members,
+        createdBy,
+    };
+}
+
+export async function getGroupsByUserId(userId: string): Promise<Group[]> {
+    const q = query(collection(db, 'groups'), where('memberIds', 'array-contains', userId));
+    const querySnapshot = await getDocs(q);
+
+    const groups: Group[] = await Promise.all(
+        querySnapshot.docs.map(async (docSnap) => {
+            const groupData = docSnap.data() as GroupDocument;
+             const [members, createdBy] = await Promise.all([
+                hydrateUsers(groupData.memberIds),
+                getUserProfile(groupData.createdById)
+            ]);
+            if (!createdBy) return null; // Should not happen
+            return {
+                ...groupData,
+                id: docSnap.id,
+                createdAt: (groupData.createdAt as Timestamp),
+                members,
+                createdBy
+            }
+        })
+    );
+    return groups.filter((g): g is Group => g !== null);
+}
+
+export async function getAllGroups(): Promise<Group[]> {
+    const groupsCol = collection(db, 'groups');
+    const groupSnapshot = await getDocs(groupsCol);
+    
+    // Optimize by fetching all users that could be creators or members
+    const allUserIds = new Set<string>();
+    const groupDocs = groupSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GroupDocument & {id: string}));
+    groupDocs.forEach(g => {
+        allUserIds.add(g.createdById);
+        g.memberIds.forEach(mid => allUserIds.add(mid));
+    });
+    const allUsers = await hydrateUsers(Array.from(allUserIds));
+    const userMap = new Map(allUsers.map(u => [u.uid, u]));
+
+    const groups: Group[] = groupDocs.map((groupData) => {
+            const createdBy = userMap.get(groupData.createdById);
+            if (!createdBy) return null; // Should not happen
+            const members = groupData.memberIds.map(id => userMap.get(id)).filter(u => u) as UserProfile[];
+
+            return {
+                ...groupData,
+                id: groupData.id,
+                createdAt: (groupData.createdAt as Timestamp),
+                members,
+                createdBy
+            }
+        });
+    return groups.filter((g): g is Group => g !== null);
+}
+
+export async function addMembersToGroup(groupId: string, memberIds: string[]): Promise<void> {
+    const groupDocRef = doc(db, 'groups', groupId);
+    await updateDoc(groupDocRef, {
+        memberIds: arrayUnion(...memberIds)
     });
 }
 
 
-// --- Admin Data Functions ---
-export async function getAllUsers(): Promise<User[]> {
-  // Simulate API call
-  return new Promise(resolve => setTimeout(() => resolve(mockUsers), 200));
+// --- Expense Functions ---
+
+export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }): Promise<string> {
+    const participantIds = expenseData.participants.map(p => p.userId);
+    const docRef = await addDoc(collection(db, 'expenses'), {
+        ...expenseData,
+        participantIds,
+        date: Timestamp.fromDate(expenseData.date),
+    });
+
+    // Update group total
+    const groupDocRef = doc(db, 'groups', expenseData.groupId);
+    const groupSnap = await getDoc(groupDocRef);
+    if(groupSnap.exists()){
+        const currentTotal = groupSnap.data().totalExpenses || 0;
+        await updateDoc(groupDocRef, {
+            totalExpenses: currentTotal + expenseData.amount
+        });
+    }
+
+    return docRef.id;
 }
 
-export async function getAllGroups(): Promise<Group[]> {
-  // Simulate API call
-  return new Promise(resolve => setTimeout(() => resolve(mockGroups), 200));
+
+export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }): Promise<void> {
+    const participantIds = expenseData.participants.map(p => p.userId);
+    const expenseDocRef = doc(db, 'expenses', expenseId);
+    await updateDoc(expenseDocRef, {
+        ...expenseData,
+        participantIds,
+        date: Timestamp.fromDate(expenseData.date)
+    });
+
+    // Update group total
+    const groupDocRef = doc(db, 'groups', expenseData.groupId);
+    const groupSnap = await getDoc(groupDocRef);
+    if(groupSnap.exists()){
+        const currentTotal = groupSnap.data().totalExpenses || 0;
+        const newTotal = currentTotal - oldAmount + expenseData.amount;
+        await updateDoc(groupDocRef, {
+            totalExpenses: newTotal
+        });
+    }
+}
+
+
+export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
+    const q = query(collection(db, 'expenses'), where('groupId', '==', groupId));
+    const querySnapshot = await getDocs(q);
+
+    const expenses: Expense[] = await Promise.all(
+        querySnapshot.docs.map(async (docSnap) => {
+            const expenseData = docSnap.data() as ExpenseDocument;
+            const userIds = [expenseData.paidById, ...expenseData.participants.map(p => p.userId)];
+            const uniqueUserIds = [...new Set(userIds)];
+            const users = await hydrateUsers(uniqueUserIds);
+            const userMap = new Map(users.map(u => [u.uid, u]));
+            
+            const paidBy = userMap.get(expenseData.paidById);
+            if (!paidBy) return null;
+
+            const participants = expenseData.participants.map(p => {
+                const user = userMap.get(p.userId);
+                return user ? { ...p, user } : null;
+            }).filter((p): p is ExpenseParticipant => p !== null);
+
+
+            return {
+                ...expenseData,
+                id: docSnap.id,
+                date: (expenseData.date as Timestamp).toDate().toISOString(),
+                paidBy,
+                participants
+            }
+        })
+    );
+     return expenses.filter((e): e is Expense => e !== null);
+}
+
+export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
+  const expensesRef = collection(db, 'expenses');
+  const paidByQuery = query(expensesRef, where('paidById', '==', userId));
+  const memberQuery = query(expensesRef, where('participantIds', 'array-contains', userId)); 
+  
+  const [paidBySnapshot, memberSnapshot] = await Promise.all([
+      getDocs(paidByQuery),
+      getDocs(memberQuery)
+  ]);
+  
+  const expenseMap = new Map<string, ExpenseDocument>();
+  paidBySnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
+  memberSnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
+
+  const expenses: Expense[] = await Promise.all(
+    Array.from(expenseMap.entries()).map(async ([id, expenseData]) => {
+        const userIds = [expenseData.paidById, ...expenseData.participants.map((p: any) => p.userId)];
+        const uniqueUserIds = [...new Set(userIds)];
+        const users = await hydrateUsers(uniqueUserIds);
+        const userMap = new Map(users.map(u => [u.uid, u]));
+        const paidBy = userMap.get(expenseData.paidById);
+        if (!paidBy) return null;
+        const participants = expenseData.participants.map((p: any) => {
+            const user = userMap.get(p.userId);
+            return user ? { ...p, user } : null;
+        }).filter((p: any): p is ExpenseParticipant => p !== null);
+        return {
+            ...expenseData,
+            id: id,
+            date: (expenseData.date as Timestamp).toDate().toISOString(),
+            paidBy,
+            participants
+        }
+    })
+  );
+  return expenses.filter((e): e is Expense => e !== null);
 }
 
 export async function getAllExpenses(): Promise<Expense[]> {
-  // Simulate API call
-  return new Promise(resolve => setTimeout(() => resolve(mockExpenses), 200));
-}
+  const expensesCol = collection(db, 'expenses');
+  const expenseSnapshot = await getDocs(expensesCol);
 
-export async function getUserById(userId: string): Promise<User | undefined> {
-  // Simulate API call
-  return new Promise(resolve => setTimeout(() => resolve(mockUsers.find(u => u.id === userId)), 50));
-}
+  // To avoid N+1 queries, get all users first
+  const allUsers = await getAllUsers();
+  const userMap = new Map(allUsers.map(u => [u.uid, u]));
 
-export async function updateUser(userId: string, data: Partial<Omit<User, 'id'>>): Promise<User | undefined> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      const userIndex = mockUsers.findIndex(u => u.id === userId);
-      if (userIndex !== -1) {
-        mockUsers[userIndex] = { ...mockUsers[userIndex], ...data };
-        resolve(mockUsers[userIndex]);
-      } else {
-        resolve(undefined);
+  const expenses: Expense[] = expenseSnapshot.docs.map((docSnap) => {
+      const expenseData = docSnap.data() as ExpenseDocument;
+      
+      const paidBy = userMap.get(expenseData.paidById);
+      if (!paidBy) return null;
+
+      const participants = expenseData.participants.map(p => {
+          const user = userMap.get(p.userId);
+          return user ? { ...p, user } : null;
+      }).filter((p): p is ExpenseParticipant => p !== null);
+
+      return {
+          ...expenseData,
+          id: docSnap.id,
+          date: (expenseData.date as Timestamp).toDate().toISOString(),
+          paidBy,
+          participants
       }
-    }, 200);
-  });
+  }).filter((e): e is Expense => e !== null);
+  
+  return expenses;
 }
 
-export async function updateExpense(expenseId: string, updatedData: Omit<Expense, 'id'>): Promise<Expense | undefined> {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      const expenseIndex = mockExpenses.findIndex(e => e.id === expenseId);
-      if (expenseIndex !== -1) {
-        const originalExpense = mockExpenses[expenseIndex];
-        const group = mockGroups.find(g => g.id === originalExpense.groupId);
 
-        if (group) {
-          // Adjust group total expenses
-          group.totalExpenses = group.totalExpenses - originalExpense.amount + updatedData.amount;
-        }
+// --- Settlement Functions ---
 
-        mockExpenses[expenseIndex] = { ...updatedData, id: expenseId }; // ensure id is not changed
-        resolve(mockExpenses[expenseIndex]);
-      } else {
-        resolve(undefined);
-      }
-    }, 200);
-  });
+export async function addSettlement(settlementData: Omit<SettlementDocument, 'date'> & { date: Date }): Promise<string> {
+    const docRef = await addDoc(collection(db, 'settlements'), {
+        ...settlementData,
+        date: Timestamp.fromDate(settlementData.date),
+    });
+    return docRef.id;
 }
 
-// A more complex function to calculate balances for a group would exist in a real app
+
+export async function getSettlementsByGroupId(groupId: string): Promise<Settlement[]> {
+    const q = query(collection(db, 'settlements'), where('groupId', '==', groupId));
+    const querySnapshot = await getDocs(q);
+    
+    // To optimize, fetch all possible users once.
+    const userIds = new Set<string>();
+    querySnapshot.docs.forEach(doc => {
+        const data = doc.data() as SettlementDocument;
+        userIds.add(data.paidById);
+        userIds.add(data.paidToId);
+    });
+    const users = await hydrateUsers(Array.from(userIds));
+    const userMap = new Map(users.map(u => [u.uid, u]));
+
+    const settlements: Settlement[] = querySnapshot.docs.map((docSnap) => {
+            const settlementData = docSnap.data() as SettlementDocument;
+            const paidBy = userMap.get(settlementData.paidById);
+            const paidTo = userMap.get(settlementData.paidToId);
+
+            if (!paidBy || !paidTo) return null;
+            return {
+                ...settlementData,
+                id: docSnap.id,
+                date: (settlementData.date as Timestamp).toDate().toISOString(),
+                paidBy,
+                paidTo
+            };
+        }).filter((s): s is Settlement => s !== null);
+
+    return settlements;
+}
+
+// --- Balance Calculation ---
+
 export async function getGroupBalances(groupId: string): Promise<Balance[]> {
   const group = await getGroupById(groupId);
   if (!group) return [];
@@ -133,46 +377,43 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
   const settlements = await getSettlementsByGroupId(groupId);
 
   const memberBalances: Record<string, number> = {};
-  group.members.forEach(member => memberBalances[member.id] = 0);
+  group.members.forEach(member => memberBalances[member.uid] = 0);
 
   expenses.forEach(expense => {
-    // Add to payer's balance (they are owed this amount initially)
-    memberBalances[expense.paidBy.id] += expense.amount;
-    // Subtract from each participant's balance (they owe their share)
+    if(memberBalances[expense.paidBy.uid] !== undefined) {
+        memberBalances[expense.paidBy.uid] += expense.amount;
+    }
     expense.participants.forEach(p => {
-      memberBalances[p.user.id] -= p.amountOwed;
+      if(memberBalances[p.user.uid] !== undefined) {
+        memberBalances[p.user.uid] -= p.amountOwed;
+      }
     });
   });
 
   settlements.forEach(settlement => {
-    memberBalances[settlement.paidBy.id] -= settlement.amount; // Payer's balance decreases
-    memberBalances[settlement.paidTo.id] += settlement.amount;   // Payee's balance increases
+     if(memberBalances[settlement.paidBy.uid] !== undefined) {
+        memberBalances[settlement.paidBy.uid] -= settlement.amount;
+    }
+    if(memberBalances[settlement.paidTo.id] !== undefined) {
+        memberBalances[settlement.paidTo.id] += settlement.amount;
+    }
   });
   
-  // This is a simplified net balance. True "who owes whom" is more complex.
-  // For this mock, we'll just show net balances and a placeholder for detailed debts.
   return group.members.map(member => {
-    const netBalance = parseFloat(memberBalances[member.id].toFixed(2));
+    const netBalance = parseFloat((memberBalances[member.uid] || 0).toFixed(2));
     return {
       user: member,
-      owes: netBalance < 0 ? [{ to: {id: "group", name: "Group Total", email:"", role: "user"}, amount: Math.abs(netBalance) }] : [],
-      owedBy: netBalance > 0 ? [{ from: {id: "group", name: "Group Total", email:"", role: "user"}, amount: netBalance }] : [],
       netBalance: netBalance,
     };
   });
 }
 
 export interface SimplifiedSettlement {
-  from: User;
-  to: User;
+  from: UserProfile;
+  to: UserProfile;
   amount: number;
 }
 
-/**
- * Simplifies group debts to the minimum number of transactions.
- * @param balances An array of user balances for the group.
- * @returns An array of simplified settlements.
- */
 export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
     const debtors = balances
         .filter(b => b.netBalance < 0)
@@ -194,7 +435,6 @@ export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
         const creditor = creditors[j];
         const amountToSettle = Math.min(debtor.amount, creditor.amount);
 
-        // Only create settlement if amount is meaningful to avoid tiny floating point settlements
         if (amountToSettle > 0.01) { 
             settlements.push({
                 from: debtor.user,
@@ -206,15 +446,8 @@ export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
             creditor.amount -= amountToSettle;
         }
 
-        // If a debtor's balance is settled, move to the next debtor
-        if (debtor.amount < 0.01) {
-            i++;
-        }
-        
-        // If a creditor's balance is settled, move to the next creditor
-        if (creditor.amount < 0.01) {
-            j++;
-        }
+        if (debtor.amount < 0.01) i++;
+        if (creditor.amount < 0.01) j++;
     }
     return settlements;
 }

@@ -4,46 +4,33 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getGroupBalances, mockUsers } from "@/lib/mock-data";
+import { getGroupBalances, getGroupsByUserId } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { Icons } from "@/components/icons";
-import type { Balance, Group } from "@/types";
+import type { Balance, Group, UserProfile } from "@/types";
 import { Skeleton } from "../ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
-// In a real app, this would be an API call
+interface OverallBalance {
+    user: UserProfile;
+    balance: number;
+}
+
 async function getOverallBalances(userId: string) {
-    let totalOwedToUser = 0;
-    let totalUserOwes = 0;
-    // In a real app, you'd fetch all groups for the user
-    // for now we use the mock data which is in-memory
-    const { mockGroups } = await import('@/lib/mock-data');
-    const userGroups = mockGroups.filter(g => g.members.some(m => m.id === userId));
+    const userGroups = await getGroupsByUserId(userId);
+    const allGroupBalancesPromises = userGroups.map(group => getGroupBalances(group.id));
+    const allGroupBalances = await Promise.all(allGroupBalancesPromises);
 
-    const allGroupBalances = await Promise.all(
-        userGroups.map(group => getGroupBalances(group.id))
-    );
-
-    const owesYou: { user: any, amount: number, avatarUrl?: string }[] = [];
-    const youOwe: { user: any, amount: number, avatarUrl?: string }[] = [];
-    const userBalanceMap = new Map<string, { user: any, balance: number }>();
-
+    const userBalanceMap = new Map<string, OverallBalance>();
 
     allGroupBalances.flat().forEach(balance => {
-        if (balance.user.id === userId) {
-            if (balance.netBalance > 0) totalOwedToUser += balance.netBalance;
-            if (balance.netBalance < 0) totalUserOwes += Math.abs(balance.netBalance);
-        } else { // Other users
-             const otherUserBalance = (userBalanceMap.get(balance.user.id)?.balance || 0) + balance.netBalance;
-             userBalanceMap.set(balance.user.id, { user: balance.user, balance: otherUserBalance });
-        }
+        const existing = userBalanceMap.get(balance.user.uid) || { user: balance.user, balance: 0 };
+        existing.balance += balance.netBalance;
+        userBalanceMap.set(balance.user.uid, existing);
     });
-    
-    // This part is a simplification. A true "who owes you" requires simplifying debts across all groups.
-    // For this dashboard view, we'll keep it simple.
 
-    return { totalOwedToUser, totalUserOwes, owesYou, youOwe };
+    return Array.from(userBalanceMap.values());
 }
 
 
@@ -58,27 +45,47 @@ const getInitials = (name: string) => {
 };
 
 export function BalanceOverviewSummary({ currentUserId }: { currentUserId: string }) {
-  const { currentUser, loading } = useAuth();
-  const [balances, setBalances] = useState({ totalOwedToUser: 0, totalUserOwes: 0, youOwe: [], owesYou: [] });
+  const [balances, setBalances] = useState<OverallBalance[]>([]);
   const [balanceLoading, setBalanceLoading] = useState(true);
-
-  const displayUserId = !loading && currentUser ? currentUser.id : currentUserId;
 
   useEffect(() => {
     async function fetchData() {
-        if (displayUserId) {
+        if (currentUserId) {
             setBalanceLoading(true);
-            const summary = await getOverallBalances(displayUserId);
+            const summary = await getOverallBalances(currentUserId);
             setBalances(summary);
             setBalanceLoading(false);
         }
     }
     fetchData();
-  }, [displayUserId]);
+  }, [currentUserId]);
 
-  const netBalance = balances.totalOwedToUser - balances.totalUserOwes;
+  const { owesYou, youOwe, totalOwedToUser, totalUserOwes, netBalance } = useMemo(() => {
+    const owesYouList: OverallBalance[] = [];
+    const youOweList: OverallBalance[] = [];
+    let totalOwed = 0;
+    let totalOwes = 0;
 
-  if (loading || balanceLoading) {
+    balances.forEach(item => {
+        if (item.user.uid === currentUserId) return;
+        if (item.balance > 0) youOweList.push({ user: item.user, balance: -item.balance });
+        if (item.balance < 0) owesYouList.push({ user: item.user, balance: -item.balance });
+    });
+
+    owesYouList.forEach(item => totalOwed += item.balance);
+    youOweList.forEach(item => totalOwes += item.balance);
+    
+    return {
+        owesYou: owesYouList,
+        youOwe: youOweList,
+        totalOwedToUser: totalOwed,
+        totalUserOwes: totalOwes,
+        netBalance: totalOwed - totalOwes
+    };
+  }, [balances, currentUserId]);
+
+
+  if (balanceLoading) {
     return <Card className="col-span-1 lg:col-span-2"><CardHeader><Skeleton className="h-6 w-1/2" /><Skeleton className="h-4 w-3/4 mt-2" /></CardHeader><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
   }
 
@@ -96,21 +103,21 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
       <CardContent className="grid md:grid-cols-2 gap-6">
         <div>
           <h3 className="text-lg font-semibold mb-3 text-red-600 flex items-center">
-            <Icons.Home className="h-5 w-5 mr-2 rotate-45"/> Who You Owe ({CURRENCY_SYMBOL}{balances.totalUserOwes.toFixed(2)})
+            <Icons.Home className="h-5 w-5 mr-2 rotate-45"/> You Owe ({CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)})
           </h3>
           <ScrollArea className="h-[150px] pr-3">
-            {balances.youOwe.length > 0 ? (
-              balances.youOwe.map((item) => (
-                <div key={item.user.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+            {youOwe.length > 0 ? (
+              youOwe.map((item) => (
+                <div key={item.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={item.avatarUrl} alt={item.user.name} />
+                      <AvatarImage src={item.user.avatarUrl} alt={item.user.name} />
                       <AvatarFallback>{getInitials(item.user.name)}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm font-medium">{item.user.name}</span>
                   </div>
                   <span className="text-sm font-semibold text-red-600">
-                    {CURRENCY_SYMBOL}{item.amount.toFixed(2)}
+                    {CURRENCY_SYMBOL}{item.balance.toFixed(2)}
                   </span>
                 </div>
               ))
@@ -121,21 +128,21 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
         </div>
         <div>
           <h3 className="text-lg font-semibold mb-3 text-green-600 flex items-center">
-            <Icons.Home className="h-5 w-5 mr-2 rotate-[225deg]"/> Who Owes You ({CURRENCY_SYMBOL}{balances.totalOwedToUser.toFixed(2)})
+            <Icons.Home className="h-5 w-5 mr-2 rotate-[225deg]"/> Who Owes You ({CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)})
           </h3>
           <ScrollArea className="h-[150px] pr-3">
-            {balances.owesYou.length > 0 ? (
-              balances.owesYou.map((item) => (
-                <div key={item.user.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+            {owesYou.length > 0 ? (
+              owesYou.map((item) => (
+                <div key={item.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={item.avatarUrl} alt={item.user.name} />
+                      <AvatarImage src={item.user.avatarUrl} alt={item.user.name} />
                       <AvatarFallback>{getInitials(item.user.name)}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm font-medium">{item.user.name}</span>
                   </div>
                   <span className="text-sm font-semibold text-green-600">
-                    {CURRENCY_SYMBOL}{item.amount.toFixed(2)}
+                    {CURRENCY_SYMBOL}{item.balance.toFixed(2)}
                   </span>
                 </div>
               ))
@@ -148,3 +155,4 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
     </Card>
   );
 }
+

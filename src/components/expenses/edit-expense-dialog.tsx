@@ -25,7 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import type { Group, Expense, User, ExpenseParticipant } from "@/types";
+import type { Group, Expense, UserProfile, ExpenseParticipantDocument, ExpenseDocument } from "@/types";
 import { getGroupById, updateExpense } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -64,7 +64,7 @@ interface EditExpenseDialogProps {
 export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup }: EditExpenseDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { userProfile } = useAuth();
   const [group, setGroup] = useState<Group | null>(initialGroup || null);
   const [isGroupLoading, setIsGroupLoading] = useState(false);
 
@@ -97,11 +97,11 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   }, [initialGroup, expense.groupId, open]);
   
   useEffect(() => {
-    if (group && currentUser && open) {
+    if (group && userProfile && open) {
         const participantData = group.members.map(member => {
-            const existingParticipant = expense.participants.find(p => p.user.id === member.id);
+            const existingParticipant = expense.participants.find(p => p.user.uid === member.uid);
             return {
-                userId: member.id,
+                userId: member.uid,
                 name: member.name,
                 selected: !!existingParticipant,
                 amountOwed: existingParticipant?.amountOwed || 0,
@@ -124,14 +124,14 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         form.reset({
             description: expense.description,
             amount: expense.amount,
-            paidById: expense.paidBy.id,
+            paidById: expense.paidBy.uid,
             date: new Date(expense.date),
             splitType: expense.splitType,
             participants: participantData,
             category: expense.category || 'Other',
         });
     }
-  }, [group, currentUser, open, expense, form]);
+  }, [group, userProfile, open, expense, form]);
 
   useEffect(() => {
     if (watchDescription) {
@@ -216,12 +216,12 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
 
   async function onSubmit(values: EditExpenseFormValues) {
-    if (!currentUser || !group) return;
+    if (!userProfile || !group) return;
 
-    const finalParticipants: ExpenseParticipant[] = values.participants
+    const finalParticipants: ExpenseParticipantDocument[] = values.participants
       .filter(p => p.selected)
       .map(p => ({
-        user: group.members.find(m => m.id === p.userId)!,
+        userId: p.userId,
         amountOwed: Number(p.amountOwed) || 0,
         share: Number(p.shares),
       }));
@@ -250,26 +250,29 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
     }
 
-    const updatedExpenseData = {
+    const updatedExpenseData: Omit<ExpenseDocument, 'date'> & { date: Date } = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
-      paidBy: group.members.find(m => m.id === values.paidById)!,
-      date: values.date.toISOString(),
+      paidById: values.paidById,
+      date: values.date,
       splitType: values.splitType,
       participants: finalParticipants,
       category: values.category,
     };
 
-    await updateExpense(expense.id, updatedExpenseData);
+    try {
+        await updateExpense(expense.id, expense.amount, updatedExpenseData);
+        toast({
+        title: "Expense Updated!",
+        description: `"${values.description}" has been successfully updated.`,
+        });
 
-    toast({
-      title: "Expense Updated!",
-      description: `"${values.description}" has been successfully updated.`,
-    });
-
-    onOpenChange(false);
-    router.refresh();
+        onOpenChange(false);
+        router.refresh();
+    } catch(error) {
+        toast({ title: "Error", description: "Failed to update expense", variant: "destructive"})
+    }
   }
   
   const renderContent = () => {
@@ -354,7 +357,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                             <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
                             <SelectContent>
                             {group.members.map(member => (
-                                <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser?.id ? "(You)" : ""}</SelectItem>
+                                <SelectItem key={member.uid} value={member.uid}>{member.name} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
@@ -423,7 +426,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                             <FormItem className="flex items-center space-x-2">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                               <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap">
-                                {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === currentUser?.id ? "(You)" : ""}
+                                {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === userProfile?.uid ? "(You)" : ""}
                               </FormLabel>
                             </FormItem>
                           )}
@@ -503,3 +506,4 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     </Dialog>
   );
 }
+

@@ -1,30 +1,52 @@
 
-import type { Metadata } from 'next';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
-import { mockGroups } from '@/lib/mock-data';
+import { getGroupsByUserId } from '@/lib/mock-data';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
-import { getCurrentUser } from '@/lib/auth';
+import { useAuth } from '@/contexts/auth-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export const metadata: Metadata = {
-  title: 'My Groups - SettleEase',
-  description: 'View and manage your expense groups.',
-};
-
-async function getUserGroups(userId: string): Promise<Group[]> {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return mockGroups.filter(group => group.members.some(member => member.id === userId));
+function GroupSkeleton() {
+    return (
+        <Card className="flex flex-col">
+            <CardHeader className="relative p-0 h-40">
+                <Skeleton className="h-full w-full rounded-t-lg" />
+            </CardHeader>
+            <CardContent className="pt-4 flex-grow space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-1/2" />
+            </CardContent>
+            <CardFooter>
+                <Skeleton className="h-10 w-full" />
+            </CardFooter>
+        </Card>
+    )
 }
 
-export default async function GroupsPage() {
-  const currentUser = await getCurrentUser();
-  const groups = await getUserGroups(currentUser.id);
+export default function GroupsPage() {
+  const { userProfile } = useAuth();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadGroups() {
+        if (!userProfile?.uid) return;
+        setLoading(true);
+        const userGroups = await getGroupsByUserId(userProfile.uid);
+        setGroups(userGroups);
+        setLoading(false);
+    }
+    loadGroups();
+  }, [userProfile]);
 
   return (
     <div className="space-y-6">
@@ -36,7 +58,11 @@ export default async function GroupsPage() {
         <CreateGroupDialog />
       </div>
 
-      {groups.length > 0 ? (
+      {loading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...Array(4)].map((_, i) => <GroupSkeleton key={i} />)}
+        </div>
+      ) : groups.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {groups.map((group) => (
             <Card key={group.id} className="flex flex-col hover:shadow-lg transition-shadow duration-300">
@@ -94,3 +120,4 @@ export default async function GroupsPage() {
     </div>
   );
 }
+

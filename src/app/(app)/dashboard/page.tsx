@@ -1,59 +1,71 @@
 
-import type { Metadata } from 'next';
+'use client';
+
+import { useEffect, useState } from 'react';
 import { OverviewCard } from "@/components/dashboard/overview-card";
 import { RecentActivityList } from "@/components/dashboard/recent-activity-list";
 import { BalanceOverviewSummary } from "@/components/dashboard/balance-overview-summary";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Icons } from "@/components/icons";
-import { getAllGroups, getAllExpenses } from "@/lib/mock-data";
+import { getGroupsByUserId, getExpensesByUserId } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from '@/lib/constants';
-import { getCurrentUser } from '@/lib/auth';
-import type { User } from '@/types';
+import { useAuth } from '@/contexts/auth-context';
+import type { UserProfile } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export const metadata: Metadata = {
-  title: 'Dashboard - SettleEase',
-  description: 'Overview of your expenses, groups, and balances.',
-};
+export default function DashboardPage() {
+  const { userProfile, loading } = useAuth();
+  const [stats, setStats] = useState({ totalGroups: 0, totalSpent: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
 
-// Dummy data fetching functions for dashboard stats
-async function getDashboardStats(userId: string) {
-  const allGroups = await getAllGroups();
-  const allExpenses = await getAllExpenses();
+  useEffect(() => {
+    async function getDashboardStats(userId: string) {
+      setStatsLoading(true);
+      const [groups, expenses] = await Promise.all([
+        getGroupsByUserId(userId),
+        getExpensesByUserId(userId),
+      ]);
+      const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+      setStats({ totalGroups: groups.length, totalSpent });
+      setStatsLoading(false);
+    }
 
-  const totalGroups = allGroups.filter(g => g.members.some(m => m.id === userId)).length;
-  
-  const userExpenses = allExpenses.filter(e => e.paidBy.id === userId || e.participants.some(p => p.user.id === userId));
-  const totalSpentByCurrentUser = userExpenses
-    .filter(e => e.paidBy.id === userId)
-    .reduce((sum, e) => sum + e.amount, 0);
+    if (userProfile?.uid) {
+      getDashboardStats(userProfile.uid);
+    }
+  }, [userProfile]);
 
-  // This is a very simplified "You Owe" / "Owed to You". Real calculation is complex.
-  // We'll calculate this properly in the balance summary component. For now, it's 0.
-  const totalOwedToUser = 0;
-  const totalUserOwes = 0;
-
-  return {
-    totalGroups,
-    totalSpent: totalSpentByCurrentUser, // Total amount the current user has personally paid for expenses
-    netOwedToUser: totalOwedToUser, // What others owe the current user
-    netUserOwes: totalUserOwes,     // What the current user owes others
-  };
-}
-
-
-export default async function DashboardPage() {
-  // On the server, we always fetch the default user. The client-side AuthProvider
-  // will manage the interactive session state.
-  const currentUser = await getCurrentUser();
-  const stats = await getDashboardStats(currentUser.id);
+  if (loading || !userProfile) {
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <Skeleton className="h-8 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <div className="flex gap-2">
+                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-10 w-32" />
+                </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+            </div>
+            <div className="grid gap-6 lg:grid-cols-3">
+                <Skeleton className="h-96 w-full" />
+                <Skeleton className="h-64 w-full lg:col-span-2" />
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {currentUser.name}! Here's your financial overview.</p>
+          <p className="text-muted-foreground">Welcome back, {userProfile.name}! Here's your financial overview.</p>
         </div>
         <div className="flex gap-2">
           <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -70,38 +82,44 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <OverviewCard
-          title="Total Groups"
-          value={stats.totalGroups}
-          iconName="Users"
-          description="Number of groups you are part of."
-        />
-        <OverviewCard
-          title="Total You've Paid"
-          value={stats.totalSpent.toFixed(2)}
-          iconName="Currency"
-          isCurrency
-          description={`Sum of expenses you paid for in ${CURRENCY_SYMBOL}.`}
-        />
-        <OverviewCard
-          title="Owed to You"
-          value={stats.netOwedToUser.toFixed(2)}
-          iconName="Wallet"
-          isCurrency
-          description={`Across all groups in ${CURRENCY_SYMBOL}.`}
-        />
-        <OverviewCard
-          title="You Owe"
-          value={stats.netUserOwes.toFixed(2)}
-          iconName="Landmark"
-          isCurrency
-          description={`Across all groups in ${CURRENCY_SYMBOL}.`}
-        />
+        {statsLoading ? (
+            [...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)
+        ) : (
+        <>
+            <OverviewCard
+            title="Total Groups"
+            value={stats.totalGroups}
+            iconName="Users"
+            description="Number of groups you are part of."
+            />
+            <OverviewCard
+            title="Total You've Paid"
+            value={stats.totalSpent.toFixed(2)}
+            iconName="Currency"
+            isCurrency
+            description={`Sum of expenses you paid for in ${CURRENCY_SYMBOL}.`}
+            />
+            <OverviewCard
+            title="Owed to You"
+            value="--"
+            iconName="Wallet"
+            isCurrency
+            description={`Calculated in Balance Summary`}
+            />
+            <OverviewCard
+            title="You Owe"
+            value="--"
+            iconName="Landmark"
+            isCurrency
+            description={`Calculated in Balance Summary`}
+            />
+        </>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <RecentActivityList />
-        <BalanceOverviewSummary currentUserId={currentUser.id} />
+        <BalanceOverviewSummary currentUserId={userProfile.uid} />
       </div>
       
     </div>

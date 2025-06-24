@@ -21,6 +21,7 @@ interface SettlementListItemProps {
 }
 
 const getInitials = (name: string) => {
+    if (!name) return "";
     const names = name.split(' ');
     let initials = names[0].substring(0, 1).toUpperCase();
     if (names.length > 1) {
@@ -31,8 +32,8 @@ const getInitials = (name: string) => {
 
 export function SettlementListItem({ settlement, currentUserId }: SettlementListItemProps) {
   const { toast } = useToast();
-  const isPayer = settlement.paidBy.id === currentUserId;
-  const isPayee = settlement.paidTo.id === currentUserId;
+  const isPayer = settlement.paidBy.uid === currentUserId;
+  const isPayee = settlement.paidTo.uid === currentUserId;
 
   let description = "";
   if (isPayer) {
@@ -48,12 +49,6 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
     toast({ title: "Settlement Deleted", description: `Settlement of ${CURRENCY_SYMBOL}${settlement.amount} has been removed.` });
     // Here you would call an API and update state/refresh
   };
-
-  // Editing settlements might be complex (e.g., re-calculating balances), often deletion is preferred.
-  const handleEdit = () => {
-    toast({ title: "Edit Settlement", description: `Editing settlement. (Not implemented)` });
-  };
-
 
   return (
     <div className="flex items-center justify-between p-4 border-b hover:bg-muted/50 transition-colors">
@@ -89,8 +84,6 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {/* Edit might not be applicable or simple for settlements */}
-            {/* <DropdownMenuItem onClick={handleEdit}><Icons.Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem> */}
             <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
               <Icons.Delete className="mr-2 h-4 w-4" /> Delete
             </DropdownMenuItem>
@@ -100,3 +93,4 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
     </div>
   );
 }
+

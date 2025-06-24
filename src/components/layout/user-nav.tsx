@@ -30,13 +30,13 @@ const getInitials = (name: string) => {
 
 export function UserNav() {
   const router = useRouter();
-  const { currentUser, logout, loading } = useAuth();
+  const { userProfile, logout, loading } = useAuth();
 
   if (loading) {
     return <Skeleton className="h-10 w-10 rounded-full" />;
   }
 
-  if (!currentUser) {
+  if (!userProfile) {
     return (
         <Button asChild>
             <Link href="/auth/login">Login</Link>
@@ -44,8 +44,8 @@ export function UserNav() {
     )
   }
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/auth/login");
   };
 
@@ -54,9 +54,9 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10 border-2 border-primary/50 hover:border-primary transition-colors">
-            <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />
+            <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
             <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
-              {getInitials(currentUser.name)}
+              {getInitials(userProfile.name)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -64,14 +64,14 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+            <p className="text-sm font-medium leading-none">{userProfile.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {currentUser.email}
+              {userProfile.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {currentUser.role === 'admin' && (
+        {userProfile.role === 'admin' && (
            <>
             <DropdownMenuItem asChild>
               <Link href="/admin/dashboard">
@@ -105,3 +105,4 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
+

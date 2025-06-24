@@ -26,8 +26,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import type { Group, Expense, User, ExpenseParticipant } from "@/types";
-import { mockExpenses, mockGroups } from "@/lib/mock-data";
+import type { Group, Expense, UserProfile, ExpenseParticipantDocument, ExpenseDocument } from "@/types";
+import { addExpense } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
@@ -56,17 +56,17 @@ type AddExpenseFormValues = z.infer<typeof expenseSchema>;
 
 interface AddExpenseDialogProps {
   group: Group;
+  onExpenseAdded: () => void;
 }
 
-export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { userProfile } = useAuth();
 
   const form = useForm<AddExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
-    // defaultValues will be set in useEffect
   });
 
   const { fields } = useFieldArray({
@@ -80,15 +80,15 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
   const watchDescription = form.watch("description");
   
   useEffect(() => {
-    if (currentUser && open) {
+    if (userProfile && open) {
       form.reset({
         description: "",
         amount: 0,
-        paidById: currentUser.id,
+        paidById: userProfile.uid,
         date: new Date(),
         splitType: "equally",
         participants: group.members.map(member => ({
-          userId: member.id,
+          userId: member.uid,
           name: member.name,
           selected: true,
           amountOwed: 0,
@@ -98,7 +98,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
         category: "Other",
       });
     }
-  }, [currentUser, open, group.members, form]);
+  }, [userProfile, open, group.members, form]);
 
   useEffect(() => {
     if (watchDescription) {
@@ -113,7 +113,6 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     const allParticipants = form.getValues("participants") || [];
     const selectedParticipants = allParticipants.filter(p => p.selected);
 
-    // If no amount or no one selected, zero out all amounts and stop.
     if (totalAmount <= 0 || selectedParticipants.length === 0) {
       allParticipants.forEach((_, index) => {
         form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
@@ -138,7 +137,6 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
             }
         }
 
-        // Distribute remainder to ensure sum is perfect
         const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
         const sumOfRounded = roundedAmounts.reduce((sum, a) => sum + a, 0);
         const remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
@@ -158,24 +156,18 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
        });
     }
 
-    // Now, update the form state for all participants
     allParticipants.forEach((p, index) => {
         let finalAmountToSet: number;
-        
         if (!p.selected) {
             finalAmountToSet = 0;
         } else if (splitType === 'unequally') {
-            // For unequal, the amount is what the user typed in
             finalAmountToSet = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
         } else {
-            // For calculated splits, use the new amount
             finalAmountToSet = newAmounts[p.userId] || 0;
         }
         
         const currentFormValue = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
 
-        // Only update if the value has changed to avoid re-renders
-        // Using a small tolerance for floating point comparison
         if (Math.abs(currentFormValue - finalAmountToSet) > 1e-5) {
             form.setValue(`participants.${index}.amountOwed`, finalAmountToSet, {
                 shouldValidate: true,
@@ -188,14 +180,12 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
 
 
   async function onSubmit(values: AddExpenseFormValues) {
-    if (!currentUser) {
-        toast({ title: "Error", description: "You must be logged in to add an expense.", variant: "destructive"});
-        return;
-    }
-    const finalParticipants: ExpenseParticipant[] = values.participants
+    if (!userProfile) return;
+
+    const finalParticipants: ExpenseParticipantDocument[] = values.participants
       .filter(p => p.selected)
       .map(p => ({
-        user: group.members.find(m => m.id === p.userId)!,
+        userId: p.userId,
         amountOwed: Number(p.amountOwed) || 0,
         share: Number(p.shares),
       }));
@@ -224,42 +214,35 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
         }
     }
 
-    const newExpense: Expense = {
-      id: `exp${mockExpenses.length + 1}`,
+    const newExpense: Omit<ExpenseDocument, 'date'> & {date: Date} = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
-      paidBy: group.members.find(m => m.id === values.paidById)!,
-      date: values.date.toISOString(),
+      paidById: values.paidById,
+      date: values.date,
       splitType: values.splitType,
       participants: finalParticipants,
       category: values.category,
     };
-
-    console.log("Adding expense:", newExpense);
-    mockExpenses.push(newExpense);
-
-    const groupToUpdate = mockGroups.find(g => g.id === group.id);
-    if (groupToUpdate) groupToUpdate.totalExpenses += newExpense.amount;
-
-    toast({
-      title: "Expense Added!",
-      description: `"${values.description}" for ${CURRENCY_SYMBOL}${totalAmount.toFixed(2)} added to ${group.name}.`,
-    });
-
-    setOpen(false);
-    router.refresh();
-  }
-
-  const resetFormAndClose = () => {
-    form.reset();
-    setOpen(false);
+    
+    try {
+        await addExpense(newExpense);
+        toast({
+        title: "Expense Added!",
+        description: `"${values.description}" for ${CURRENCY_SYMBOL}${totalAmount.toFixed(2)} added to ${group.name}.`,
+        });
+        setOpen(false);
+        onExpenseAdded(); // Callback to refresh parent data
+        router.refresh(); // Also trigger a server refresh
+    } catch (error) {
+        toast({ title: "Error", description: "Failed to add expense.", variant: "destructive" });
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={!currentUser}>
+        <Button disabled={!userProfile}>
           <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
         </Button>
       </DialogTrigger>
@@ -332,7 +315,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                             <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
                             <SelectContent>
                             {group.members.map(member => (
-                                <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser?.id ? "(You)" : ""}</SelectItem>
+                                <SelectItem key={member.uid} value={member.uid}>{member.name} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
@@ -401,7 +384,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
                             <FormItem className="flex items-center space-x-2">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                               <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap">
-                                {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === currentUser?.id ? "(You)" : ""}
+                                {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === userProfile?.uid ? "(You)" : ""}
                               </FormLabel>
                             </FormItem>
                           )}
@@ -457,7 +440,7 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
               </div>
             </ScrollArea>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={resetFormAndClose}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Adding..." : "Add Expense"}
               </Button>
@@ -468,3 +451,4 @@ export function AddExpenseDialog({ group }: AddExpenseDialogProps) {
     </Dialog>
   );
 }
+

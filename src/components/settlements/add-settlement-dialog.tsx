@@ -25,8 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import type { Group, Settlement } from "@/types";
-import { mockSettlements } from "@/lib/mock-data";
+import type { Group, Settlement, SettlementDocument } from "@/types";
+import { addSettlement } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
@@ -47,61 +47,63 @@ type AddSettlementFormValues = z.infer<typeof settlementSchema>;
 
 interface AddSettlementDialogProps {
   group: Group;
+  onSettlementAdded: () => void;
 }
 
-export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
+export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { userProfile } = useAuth();
 
   const form = useForm<AddSettlementFormValues>();
 
   useEffect(() => {
-    if (currentUser && open) {
+    if (userProfile && open) {
         form.reset({
-            paidById: currentUser.id,
+            paidById: userProfile.uid,
             paidToId: "",
             amount: 0,
             date: new Date(),
             notes: "",
         });
     }
-  }, [currentUser, open, form]);
+  }, [userProfile, open, form]);
 
 
   async function onSubmit(values: AddSettlementFormValues) {
-    if (!currentUser) {
-        toast({ title: "Error", description: "You must be logged in to record a settlement.", variant: "destructive"});
-        return;
-    }
-    const newSettlement: Settlement = {
-      id: `set${mockSettlements.length + 1}`,
+    if (!userProfile) return;
+
+    const newSettlement: Omit<SettlementDocument, 'date'> & {date: Date} = {
       groupId: group.id,
-      paidBy: group.members.find(m => m.id === values.paidById)!,
-      paidTo: group.members.find(m => m.id === values.paidToId)!,
+      paidById: values.paidById,
+      paidToId: values.paidToId,
       amount: values.amount,
-      date: values.date.toISOString(),
+      date: values.date,
       notes: values.notes,
     };
 
-    console.log("Adding settlement:", newSettlement);
-    mockSettlements.push(newSettlement); 
-    
-    
-    toast({
-      title: "Settlement Recorded!",
-      description: `Payment from ${newSettlement.paidBy.name} to ${newSettlement.paidTo.name} of ${CURRENCY_SYMBOL}${values.amount} recorded.`,
-    });
-    setOpen(false);
-    form.reset();
-    router.refresh();
+    try {
+        await addSettlement(newSettlement);
+        const paidByName = group.members.find(m => m.uid === values.paidById)?.name;
+        const paidToName = group.members.find(m => m.uid === values.paidToId)?.name;
+
+        toast({
+        title: "Settlement Recorded!",
+        description: `Payment from ${paidByName} to ${paidToName} of ${CURRENCY_SYMBOL}${values.amount} recorded.`,
+        });
+        setOpen(false);
+        onSettlementAdded();
+        router.refresh();
+    } catch (error) {
+        toast({ title: "Error", description: "Failed to record settlement.", variant: "destructive" });
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" disabled={!currentUser}>
+        <Button variant="outline" disabled={!userProfile}>
           <Icons.Settle className="mr-2 h-4 w-4" /> Record Settlement
         </Button>
       </DialogTrigger>
@@ -125,7 +127,7 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
                         <FormControl><SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger></FormControl>
                         <SelectContent>
                         {group.members.map(member => (
-                            <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser?.id ? "(You)" : ""}</SelectItem>
+                            <SelectItem key={member.uid} value={member.uid}>{member.name} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -143,7 +145,7 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
                         <FormControl><SelectTrigger><SelectValue placeholder="Select recipient" /></SelectTrigger></FormControl>
                         <SelectContent>
                         {group.members.map(member => (
-                            <SelectItem key={member.id} value={member.id}>{member.name} {member.id === currentUser?.id ? "(You)" : ""}</SelectItem>
+                            <SelectItem key={member.uid} value={member.uid}>{member.name} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
                         ))}
                         </SelectContent>
                     </Select>
@@ -216,3 +218,4 @@ export function AddSettlementDialog({ group }: AddSettlementDialogProps) {
     </Dialog>
   );
 }
+

@@ -1,6 +1,8 @@
 
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { notFound, useParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GroupDetailHeader } from "@/components/groups/group-detail-header";
 import { ExpenseListItem } from "@/components/expenses/expense-list-item";
@@ -13,35 +15,57 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Icons } from "@/components/icons";
 import { getGroupById, getExpensesByGroupId, getSettlementsByGroupId, getGroupBalances } from "@/lib/mock-data";
-import { getCurrentUser } from '@/lib/auth';
+import { useAuth } from '@/contexts/auth-context';
+import type { Group, Expense, Settlement, Balance } from '@/types';
+import GroupDetailLoading from './loading'; // Import loading component
 
-interface GroupPageParams {
-  params: { groupId: string };
-}
+export default function GroupDetailPage() {
+  const params = useParams();
+  const groupId = params.groupId as string;
+  const { userProfile } = useAuth();
+  
+  const [group, setGroup] = useState<Group | null>(null);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [balances, setBalances] = useState<Balance[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export async function generateMetadata({ params }: GroupPageParams): Promise<Metadata> {
-  const group = await getGroupById(params.groupId);
-  if (!group) {
-    return { title: 'Group Not Found - SettleEase' };
+  useEffect(() => {
+    if (!groupId) return;
+
+    async function loadGroupData() {
+        setLoading(true);
+        try {
+            const [groupData, expensesData, settlementsData, balancesData] = await Promise.all([
+                getGroupById(groupId),
+                getExpensesByGroupId(groupId),
+                getSettlementsByGroupId(groupId),
+                getGroupBalances(groupId),
+            ]);
+            
+            if (!groupData) {
+                notFound();
+                return;
+            }
+
+            setGroup(groupData);
+            setExpenses(expensesData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setSettlements(settlementsData.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setBalances(balancesData);
+
+        } catch (error) {
+            console.error("Failed to load group data", error);
+            // Handle error state
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadGroupData();
+  }, [groupId]);
+
+  if (loading || !group || !userProfile) {
+    return <GroupDetailLoading />;
   }
-  return {
-    title: `${group.name} - SettleEase`,
-    description: `Details for group: ${group.name}. ${group.description || ''}`,
-  };
-}
-
-export default async function GroupDetailPage({ params }: GroupPageParams) {
-  const group = await getGroupById(params.groupId);
-  if (!group) {
-    notFound();
-  }
-
-  const expenses = (await getExpensesByGroupId(params.groupId))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const settlements = (await getSettlementsByGroupId(params.groupId))
-    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const balances = await getGroupBalances(params.groupId);
-  const currentUser = await getCurrentUser();
 
   return (
     <div className="space-y-6">
@@ -67,14 +91,14 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
                 </CardTitle>
                 <CardDescription>All expenses recorded in this group.</CardDescription>
               </div>
-              <AddExpenseDialog group={group} />
+              <AddExpenseDialog group={group} onExpenseAdded={() => { /* re-fetch data */ }} />
             </CardHeader>
             <CardContent className="p-0">
               {expenses.length > 0 ? (
                 <ScrollArea className="h-[400px]">
                   <div className="divide-y">
                     {expenses.map((expense) => (
-                      <ExpenseListItem key={expense.id} expense={expense} currentUserId={currentUser.id} group={group}/>
+                      <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile.uid} group={group}/>
                     ))}
                   </div>
                 </ScrollArea>
@@ -98,14 +122,14 @@ export default async function GroupDetailPage({ params }: GroupPageParams) {
                 </CardTitle>
                 <CardDescription>All settlements made in this group.</CardDescription>
               </div>
-              <AddSettlementDialog group={group} />
+              <AddSettlementDialog group={group} onSettlementAdded={() => { /* re-fetch data */ }} />
             </CardHeader>
             <CardContent className="p-0">
               {settlements.length > 0 ? (
                 <ScrollArea className="h-[400px]">
                   <div className="divide-y">
                     {settlements.map((settlement) => (
-                      <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={currentUser.id} />
+                      <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={userProfile.uid} />
                     ))}
                   </div>
                 </ScrollArea>

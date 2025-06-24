@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { FirebaseError } from 'firebase/app';
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { AuthCard } from "./auth-card";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { createUser } from "@/lib/mock-data";
+import { useAuth } from "@/contexts/auth-context";
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters long." }),
@@ -26,6 +27,7 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 export function SignupForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const { signup } = useAuth();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -36,18 +38,29 @@ export function SignupForm() {
     },
   });
 
-  // Simulate signup
   async function onSubmit(values: SignupFormValues) {
-    console.log("Signup attempt with:", values);
-
-    // Call API to create user
-    await createUser(values);
-
-    toast({
-      title: "Account Created!",
-      description: "You can now log in with your new account.",
-    });
-    router.push("/auth/login");
+    try {
+      await signup(values.name, values.email, values.password);
+      toast({
+        title: "Account Created!",
+        description: "You can now log in with your new account.",
+      });
+      router.push("/auth/login");
+    } catch (error) {
+      let description = "An unknown error occurred.";
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/email-already-in-use') {
+          description = "This email address is already in use.";
+        } else {
+          description = `Signup failed: ${error.message}`;
+        }
+      }
+      toast({
+        variant: "destructive",
+        title: "Signup Failed",
+        description,
+      });
+    }
   }
 
   return (

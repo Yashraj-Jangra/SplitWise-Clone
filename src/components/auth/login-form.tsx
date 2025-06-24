@@ -14,10 +14,11 @@ import { AuthCard } from "./auth-card";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import { FirebaseError } from "firebase/app";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters long." }),
+  password: z.string().min(1, { message: "Password is required." }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -36,30 +37,34 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: LoginFormValues) {
-    // The password is now validated against the mock data.
-    const loggedInUser = await login(values.email, values.password);
-
-    if (loggedInUser) {
-        let toastTitle = "Login Successful";
-        let toastDescription = `Welcome back, ${loggedInUser.name}!`;
-
-        if (loggedInUser.role === 'admin') {
-            toastTitle = `Admin Login Successful`;
-            toastDescription = `Welcome, ${loggedInUser.name}! Redirecting to Admin Panel.`;
-            toast({ title: toastTitle, description: toastDescription });
-            router.push("/admin/dashboard");
-        } else {
-            toast({ title: toastTitle, description: toastDescription });
-            router.push("/dashboard");
+    try {
+      await login(values.email, values.password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      // The auth context will redirect via the layout components
+      router.push("/dashboard");
+    } catch (error) {
+      let description = "An unknown error occurred. Please try again.";
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            description = "Invalid email or password. Please try again.";
+            break;
+          default:
+            description = `Login failed: ${error.message}`;
         }
-    } else {
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "Invalid email or password. Please try again.",
-        });
-        form.setError("email", { type: "manual", message: " "});
-        form.setError("password", { type: "manual", message: " "});
+      }
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: description,
+      });
+       form.setError("email", { type: "manual", message: " "});
+       form.setError("password", { type: "manual", message: " "});
     }
   }
 
@@ -108,9 +113,6 @@ export function LoginForm() {
           Sign up
         </Link>
       </div>
-       <p className="mt-4 text-xs text-center text-muted-foreground">
-        Test accounts (e.g., alice@example.com) have a password of "123456".
-      </p>
     </AuthCard>
   );
 }

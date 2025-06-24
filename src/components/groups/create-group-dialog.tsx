@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,8 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { mockGroups, mockUsers } from "@/lib/mock-data";
-import type { Group, User } from "@/types";
+import { createGroup, getAllUsers } from "@/lib/mock-data";
+import type { UserProfile, GroupDocument } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,22 +46,35 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { userProfile } = useAuth();
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   
-  const form = useForm<CreateGroupFormValues>();
+  const form = useForm<CreateGroupFormValues>({
+    resolver: zodResolver(createGroupSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      memberIds: userProfile ? [userProfile.uid] : [],
+    },
+  });
 
-  // Reset form when dialog opens/closes or user changes
-  useState(() => {
-    if (currentUser) {
-      form.reset({
-        name: "",
-        description: "",
-        memberIds: [currentUser.id],
-      });
+  useEffect(() => {
+    if (userProfile) {
+      form.reset({ memberIds: [userProfile.uid] });
     }
-  })
+  }, [userProfile, form]);
 
-  if (!currentUser) {
+  useEffect(() => {
+    async function loadUsers() {
+        if (open) {
+            const users = await getAllUsers();
+            setAllUsers(users);
+        }
+    }
+    loadUsers();
+  }, [open]);
+
+  if (!userProfile) {
     return (
       <Button variant={buttonVariant} size={buttonSize} disabled>
         <Icons.Add className="mr-2 h-4 w-4" /> Create New Group
@@ -69,39 +82,35 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     )
   }
 
-  const availableMembers = mockUsers.filter(user => user.id !== currentUser.id);
+  const availableMembers = allUsers.filter(user => user.uid !== userProfile.uid);
 
   async function onSubmit(values: CreateGroupFormValues) {
-    if (!currentUser) {
+    if (!userProfile) {
         toast({ title: "Error", description: "You must be logged in to create a group.", variant: "destructive"});
         return;
     }
 
-    console.log("Creating group with values:", values);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const newGroupId = `group${mockGroups.length + 1}`;
-    const newGroup: Group = {
-      id: newGroupId,
-      name: values.name,
-      description: values.description,
-      members: mockUsers.filter(u => values.memberIds.includes(u.id)),
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser,
-      totalExpenses: 0,
-      coverImageUrl: `https://placehold.co/600x300.png?text=${encodeURIComponent(values.name)}`,
+    const groupData: Omit<GroupDocument, 'createdAt' | 'totalExpenses'> = {
+        name: values.name,
+        description: values.description,
+        memberIds: values.memberIds,
+        createdById: userProfile.uid,
+        coverImageUrl: `https://placehold.co/600x300.png?text=${encodeURIComponent(values.name)}`,
     };
-    mockGroups.push(newGroup);
 
-    toast({
-      title: "Group Created!",
-      description: `The group "${values.name}" has been successfully created.`,
-    });
-    setOpen(false);
-    form.reset();
-    router.push(`/groups/${newGroupId}`);
-    router.refresh();
+    try {
+        const newGroupId = await createGroup(groupData);
+        toast({
+          title: "Group Created!",
+          description: `The group "${values.name}" has been successfully created.`,
+        });
+        setOpen(false);
+        form.reset();
+        router.push(`/groups/${newGroupId}`);
+        router.refresh();
+    } catch(error) {
+        toast({ title: "Error", description: "Failed to create group.", variant: "destructive" });
+    }
   }
 
   return (
@@ -156,31 +165,31 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                   <ScrollArea className="h-[150px] border rounded-md p-2">
                     <div className="space-y-2">
                        <div className="flex items-center space-x-2">
-                          <Checkbox id={currentUser.id} checked disabled />
-                          <Label htmlFor={currentUser.id} className="font-medium text-muted-foreground">
-                            {currentUser.name} (You)
+                          <Checkbox id={userProfile.uid} checked disabled />
+                          <Label htmlFor={userProfile.uid} className="font-medium text-muted-foreground">
+                            {userProfile.name} (You)
                           </Label>
                         </div>
                       {availableMembers.map((member) => (
                         <FormField
-                          key={member.id}
+                          key={member.uid}
                           control={form.control}
                           name="memberIds"
                           render={({ field }) => {
                             return (
                               <FormItem
-                                key={member.id}
+                                key={member.uid}
                                 className="flex flex-row items-center space-x-3 space-y-0"
                               >
                                 <FormControl>
                                   <Checkbox
-                                    checked={field.value?.includes(member.id)}
+                                    checked={field.value?.includes(member.uid)}
                                     onCheckedChange={(checked) => {
                                       return checked
-                                        ? field.onChange([...(field.value || []), member.id])
+                                        ? field.onChange([...(field.value || []), member.uid])
                                         : field.onChange(
                                             field.value?.filter(
-                                              (value) => value !== member.id
+                                              (value) => value !== member.uid
                                             )
                                           )
                                     }}

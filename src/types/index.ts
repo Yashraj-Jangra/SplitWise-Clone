@@ -1,63 +1,86 @@
-
 import type { IconName } from "@/components/icons";
+import { Timestamp } from "firebase/firestore";
 
-export interface User {
-  id: string;
+// Base user profile stored in Firestore
+export interface UserProfile {
+  uid: string;
   name: string;
   email: string;
-  password?: string;
-  avatarUrl?: string; // URL to placeholder or actual image
-  role?: 'admin' | 'user'; // Added role
-  createdAt?: string; // ISO date string for when the user joined
+  avatarUrl?: string;
+  role: 'admin' | 'user';
+  createdAt: Timestamp;
 }
 
-export interface Group {
-  id: string;
+// --- Firestore Document Types ---
+
+export interface GroupDocument {
   name: string;
   description?: string;
-  members: User[];
-  createdAt: string; // ISO date string
-  createdBy: User;
-  totalExpenses: number; // Sum of all expenses in this group
-  coverImageUrl?: string; // URL to placeholder or actual image
+  memberIds: string[]; // Array of user uids
+  createdAt: Timestamp;
+  createdById: string; // user uid
+  totalExpenses: number;
+  coverImageUrl?: string;
 }
 
-export type ExpenseSplitType = "equally" | "unequally" | "by_shares" | "by_percentage";
-
-export interface ExpenseParticipant {
-  user: User;
-  amountOwed: number; // Amount this participant owes for this expense
-  share?: number; // For by_shares or by_percentage splits
+export interface ExpenseParticipantDocument {
+  userId: string;
+  amountOwed: number;
+  share?: number;
 }
 
-export interface Expense {
-  id: string;
+export interface ExpenseDocument {
   groupId: string;
   description: string;
   amount: number;
-  paidBy: User;
-  date: string; // ISO date string
-  splitType: ExpenseSplitType;
-  participants: ExpenseParticipant[];
-  category?: string; // Optional category like "Food", "Travel"
-  receiptImageUrl?: string; // URL to placeholder or actual image
+  paidById: string;
+  date: Timestamp;
+  splitType: "equally" | "unequally" | "by_shares" | "by_percentage";
+  participants: ExpenseParticipantDocument[];
+  participantIds: string[]; // For querying
+  category?: string;
+  receiptImageUrl?: string;
 }
 
-export interface Settlement {
-  id: string;
+export interface SettlementDocument {
   groupId: string;
-  paidBy: User;
-  paidTo: User;
+  paidById: string;
+  paidToId: string;
   amount: number;
-  date: string; // ISO date string
+  date: Timestamp;
   notes?: string;
 }
 
+// --- Hydrated Types for Client-side Usage ---
+// These types include the full nested objects for easier display
+
+export interface Group extends Omit<GroupDocument, 'memberIds' | 'createdById'> {
+  id: string; // The document ID
+  members: UserProfile[];
+  createdBy: UserProfile;
+}
+
+export interface ExpenseParticipant extends Omit<ExpenseParticipantDocument, 'userId'> {
+    user: UserProfile;
+}
+
+export interface Expense extends Omit<ExpenseDocument, 'paidById' | 'participants' | 'date'> {
+    id: string;
+    paidBy: UserProfile;
+    participants: ExpenseParticipant[];
+    date: string; // ISO string for client
+}
+
+export interface Settlement extends Omit<SettlementDocument, 'paidById' | 'paidToId' | 'date'> {
+    id: string;
+    paidBy: UserProfile;
+    paidTo: UserProfile;
+    date: string; // ISO string for client
+}
+
 export interface Balance {
-  user: User;
-  owes: Array<{ to: User; amount: number }>; // Who this user owes
-  owedBy: Array<{ from: User; amount: number }>; // Who owes this user
-  netBalance: number; // Positive if owed money, negative if owes money
+  user: UserProfile;
+  netBalance: number;
 }
 
 export interface NavItem {

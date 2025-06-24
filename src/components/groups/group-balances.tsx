@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { Balance, User, Group } from "@/types";
-import { simplifyDebts, type SimplifiedSettlement } from "@/lib/mock-data";
+import type { Balance, UserProfile, Group, SimplifiedSettlement } from "@/types";
+import { simplifyDebts } from "@/lib/mock-data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -103,7 +103,7 @@ export function GroupBalances({ balances, group }: GroupBalancesProps) {
               <h4 className="font-semibold mb-2 text-red-600">Members Who Owe</h4>
               <ScrollArea className="h-[180px] pr-2">
                 {membersWhoOwe.length > 0 ? membersWhoOwe.map(balance => (
-                  <div key={balance.user.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                  <div key={balance.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={balance.user.avatarUrl} />
@@ -123,7 +123,7 @@ export function GroupBalances({ balances, group }: GroupBalancesProps) {
               <h4 className="font-semibold mb-2 text-green-600">Members Who Are Owed</h4>
                <ScrollArea className="h-[180px] pr-2">
                 {membersOwed.length > 0 ? membersOwed.map(balance => (
-                  <div key={balance.user.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                  <div key={balance.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={balance.user.avatarUrl} />
@@ -142,9 +142,10 @@ export function GroupBalances({ balances, group }: GroupBalancesProps) {
         )}
         
         <div className="pt-4 border-t flex justify-end">
-            <AddSettlementDialog group={group} />
+            <AddSettlementDialog group={group} onSettlementAdded={() => { /* TODO: Refresh data */}} />
         </div>
       </CardContent>
     </Card>
   );
 }
+

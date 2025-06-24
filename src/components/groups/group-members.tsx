@@ -1,14 +1,14 @@
 
 "use client";
 
-import type { User } from "@/types";
+import type { UserProfile } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
 
 interface GroupMembersProps {
-  members: User[];
+  members: UserProfile[];
 }
 
 const getInitials = (name: string) => {
@@ -34,7 +34,7 @@ export function GroupMembers({ members }: GroupMembersProps) {
         <ScrollArea className="h-[200px]"> {/* Adjust height as needed */}
           <div className="divide-y">
             {members.map((member) => (
-              <div key={member.id} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
+              <div key={member.uid} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={member.avatarUrl} alt={member.name} />
                   <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
@@ -43,8 +43,6 @@ export function GroupMembers({ members }: GroupMembersProps) {
                   <p className="text-sm font-medium leading-none">{member.name}</p>
                   <p className="text-xs text-muted-foreground">{member.email}</p>
                 </div>
-                {/* Add action button if needed e.g. remove member */}
-                {/* <Button variant="ghost" size="icon" className="h-8 w-8"><Icons.MoreHorizontal /></Button> */}
               </div>
             ))}
           </div>

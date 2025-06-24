@@ -25,6 +25,7 @@ interface ExpenseListItemProps {
 }
 
 const getInitials = (name: string) => {
+    if (!name) return "??";
     const names = name.split(' ');
     let initials = names[0].substring(0, 1).toUpperCase();
     if (names.length > 1) {
@@ -36,9 +37,9 @@ const getInitials = (name: string) => {
 export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListItemProps) {
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const currentUserParticipation = expense.participants.find(p => p.user.id === currentUserId);
+  const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
   const amountUserOwes = currentUserParticipation ? currentUserParticipation.amountOwed : 0;
-  const isPayer = expense.paidBy.id === currentUserId;
+  const isPayer = expense.paidBy.uid === currentUserId;
 
   const handleDelete = () => {
     // Simulate delete
