@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
@@ -22,6 +22,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   signup: (data: SignupData, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,15 +73,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 username = `${user.email?.split('@')[0]}${Math.floor(Math.random() * 1000)}`;
                 usernameIsTaken = await isUsernameTaken(username);
             }
+            
+            const nameParts = user.displayName?.split(' ') || [];
+            const firstName = nameParts[0] || user.email?.split('@')[0] || 'New';
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
             const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
                 uid: user.uid,
-                firstName: user.displayName || user.email?.split('@')[0] || "New",
-                lastName: '',
+                firstName: firstName,
+                lastName: lastName,
                 username: username,
                 email: user.email!,
                 role: 'user',
-                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || user.email || 'U')?.substring(0, 2).toUpperCase()}`,
+                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(firstName)?.substring(0, 1).toUpperCase()}${lastName?.substring(0,1).toUpperCase() || ''}`,
             };
             
             if (user.email === ADMIN_EMAIL) {
@@ -145,6 +150,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signOut(auth);
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    if (!auth) throw new Error("Firebase not configured");
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  }, []);
+
   const value = useMemo(() => ({
     firebaseUser,
     userProfile,
@@ -153,7 +164,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     signup,
     logout,
-  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout]);
+    loginWithGoogle,
+  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout, loginWithGoogle]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');
