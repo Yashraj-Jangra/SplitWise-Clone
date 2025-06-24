@@ -7,6 +7,7 @@ import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
 import { AddMemberDialog } from "@/components/groups/add-member-dialog";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useState, useEffect } from "react";
+import { format } from 'date-fns';
 
 interface GroupDetailHeaderProps {
   group: Group;
@@ -17,12 +18,11 @@ export function GroupDetailHeader({ group }: GroupDetailHeaderProps) {
 
   useEffect(() => {
     // This effect runs only on the client, after initial hydration,
-    // and only once on mount due to the empty dependency array.
-    // This is safe as group.createdAt is static for this component instance.
+    // to prevent a server/client mismatch with date formatting.
     if (group && group.createdAt) {
-      setFormattedCreatedAt(new Date(group.createdAt).toLocaleDateString());
+      setFormattedCreatedAt(format(new Date(group.createdAt), "PPP"));
     }
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, [group.createdAt]);
 
   return (
     <div className="mb-6">
