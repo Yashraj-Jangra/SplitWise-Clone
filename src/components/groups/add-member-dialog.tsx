@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,11 +20,12 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import type { Group, User } from "@/types";
-import { mockUsers, mockGroups } from "@/lib/mock-data"; // For simulation
+import type { Group, UserProfile } from "@/types";
+import { getAllUsers, addMembersToGroup } from "@/lib/mock-data";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "../ui/skeleton";
 
 const addMembersSchema = z.object({
   memberIds: z.array(z.string()).min(1, { message: "Select at least one member to add." }),
@@ -40,10 +41,8 @@ export function AddMemberDialog({ group }: AddMemberDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-
-  const existingMemberIds = group.members.map(m => m.id);
-  // Filter out users who are already members of the group
-  const availableUsersToAdd = mockUsers.filter(user => !existingMemberIds.includes(user.id));
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const form = useForm<AddMembersFormValues>({
     resolver: zodResolver(addMembersSchema),
@@ -51,23 +50,29 @@ export function AddMemberDialog({ group }: AddMemberDialogProps) {
       memberIds: [],
     },
   });
+  
+  useEffect(() => {
+    async function loadUsers() {
+      if (open) {
+        setLoading(true);
+        const users = await getAllUsers();
+        setAllUsers(users);
+        setLoading(false);
+      }
+    }
+    loadUsers();
+  }, [open]);
+
+  const existingMemberIds = group.members.map(m => m.uid);
+  // Filter out users who are already members of the group
+  const availableUsersToAdd = allUsers.filter(user => !existingMemberIds.includes(user.uid));
 
   async function onSubmit(values: AddMembersFormValues) {
-    console.log(`Adding members to group ${group.name}:`, values.memberIds);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const membersToAdd = mockUsers.filter(u => values.memberIds.includes(u.id));
-    
-    // Update mock group data
-    const groupToUpdate = mockGroups.find(g => g.id === group.id);
-    if (groupToUpdate) {
-      groupToUpdate.members.push(...membersToAdd);
-    }
+    await addMembersToGroup(group.id, values.memberIds);
 
     toast({
       title: "Members Added!",
-      description: `${membersToAdd.length} new member(s) added to "${group.name}".`,
+      description: `${values.memberIds.length} new member(s) added to "${group.name}".`,
     });
     setOpen(false);
     form.reset();
@@ -88,7 +93,11 @@ export function AddMemberDialog({ group }: AddMemberDialogProps) {
             Select users to add to this group.
           </DialogDescription>
         </DialogHeader>
-        {availableUsersToAdd.length > 0 ? (
+        {loading ? (
+            <div className="space-y-2 py-4">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+            </div>
+        ) : availableUsersToAdd.length > 0 ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -101,24 +110,24 @@ export function AddMemberDialog({ group }: AddMemberDialogProps) {
                       <div className="space-y-2">
                         {availableUsersToAdd.map((user) => (
                           <FormField
-                            key={user.id}
+                            key={user.uid}
                             control={form.control}
                             name="memberIds"
                             render={({ field }) => {
                               return (
                                 <FormItem
-                                  key={user.id}
+                                  key={user.uid}
                                   className="flex flex-row items-center space-x-3 space-y-0"
                                 >
                                   <FormControl>
                                     <Checkbox
-                                      checked={field.value?.includes(user.id)}
+                                      checked={field.value?.includes(user.uid)}
                                       onCheckedChange={(checked) => {
                                         return checked
-                                          ? field.onChange([...(field.value || []), user.id])
+                                          ? field.onChange([...(field.value || []), user.uid])
                                           : field.onChange(
                                               field.value?.filter(
-                                                (value) => value !== user.id
+                                                (value) => value !== user.uid
                                               )
                                             );
                                       }}

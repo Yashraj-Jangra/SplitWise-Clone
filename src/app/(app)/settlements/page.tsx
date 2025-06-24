@@ -1,25 +1,40 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from '@/components/icons';
-import { mockSettlements } from '@/lib/mock-data';
+import { getSettlementsByUserId } from '@/lib/mock-data';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { getCurrentUser } from '@/lib/auth';
+import { useAuth } from '@/contexts/auth-context';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Settlement } from '@/types';
 
-export const metadata: Metadata = {
-  title: 'All Settlements - SettleEase',
-  description: 'View all your settlements across all groups.',
-};
 
-export default async function AllSettlementsPage() {
-  const currentUser = await getCurrentUser();
-  // Fetch all settlements where the current user is either the payer or the payee
-  const userSettlements = mockSettlements.filter(
-    settlement => settlement.paidBy.id === currentUser.id || settlement.paidTo.id === currentUser.id
-  ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+// export const metadata: Metadata = {
+//   title: 'All Settlements - SettleEase',
+//   description: 'View all your settlements across all groups.',
+// };
+
+export default function AllSettlementsPage() {
+  const { userProfile } = useAuth();
+  const [userSettlements, setUserSettlements] = useState<Settlement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSettlements() {
+      if (!userProfile?.uid) return;
+      setLoading(true);
+      const settlements = await getSettlementsByUserId(userProfile.uid);
+      setUserSettlements(settlements.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setLoading(false);
+    }
+    loadSettlements();
+  }, [userProfile]);
 
   return (
     <div className="space-y-6">
@@ -28,8 +43,6 @@ export default async function AllSettlementsPage() {
           <h1 className="text-3xl font-bold font-headline text-foreground">My Settlements</h1>
           <p className="text-muted-foreground">A consolidated view of all your payment settlements.</p>
         </div>
-        {/* This button might link to a page or open a dialog to select a group first */}
-        {/* For now, it's a placeholder or could link to the general groups page */}
         <Button asChild>
             <Link href="/groups"> 
              <Icons.Settle className="mr-2 h-4 w-4" /> Record New Settlement
@@ -43,11 +56,15 @@ export default async function AllSettlementsPage() {
           <CardDescription>Showing {userSettlements.length} settlements you are involved in.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          {userSettlements.length > 0 ? (
+          {loading ? (
+             <div className="p-4 space-y-4">
+                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+          ) : userSettlements.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height as needed */}
               <div className="divide-y">
                 {userSettlements.map((settlement) => (
-                  <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={currentUser.id} />
+                  <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={userProfile!.uid} />
                 ))}
               </div>
             </ScrollArea>

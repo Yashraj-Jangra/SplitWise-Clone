@@ -12,13 +12,9 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Crucial check to ensure Firebase is configured before initialization.
-// This provides a clear error message to the developer if the .env file is not set up.
-if (!firebaseConfig.apiKey) {
-    throw new Error('Firebase API Key is missing. Please add `NEXT_PUBLIC_FIREBASE_API_KEY` to your .env file.');
-}
-
-// Initialize Firebase
+// Initialize Firebase.
+// Crucial: Ensure your .env file is correctly set up with your Firebase project's credentials.
+// The app will fail at runtime if these are missing or incorrect.
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);

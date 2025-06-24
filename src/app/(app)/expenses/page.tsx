@@ -1,27 +1,39 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
 import type { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from '@/components/icons';
-import { mockExpenses } from '@/lib/mock-data';
+import { getExpensesByUserId } from '@/lib/mock-data';
+import type { Expense } from '@/types';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { getCurrentUser } from '@/lib/auth';
+import { useAuth } from '@/contexts/auth-context';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export const metadata: Metadata = {
-  title: 'All Expenses - SettleEase',
-  description: 'View all your expenses across all groups.',
-};
+// export const metadata: Metadata = {
+//   title: 'All Expenses - SettleEase',
+//   description: 'View all your expenses across all groups.',
+// };
 
-export default async function AllExpensesPage() {
-  const currentUser = await getCurrentUser();
-  // Fetch all expenses related to the current user (paid by or participated in)
-  // For mock, we filter all expenses where current user is involved.
-  const userExpenses = mockExpenses.filter(
-    expense => expense.paidBy.id === currentUser.id || 
-               expense.participants.some(p => p.user.id === currentUser.id)
-  ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+export default function AllExpensesPage() {
+  const { userProfile } = useAuth();
+  const [userExpenses, setUserExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadExpenses() {
+      if (!userProfile?.uid) return;
+      setLoading(true);
+      const expenses = await getExpensesByUserId(userProfile.uid);
+      setUserExpenses(expenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setLoading(false);
+    }
+    loadExpenses();
+  }, [userProfile]);
 
   return (
     <div className="space-y-6">
@@ -43,11 +55,15 @@ export default async function AllExpensesPage() {
           <CardDescription>Showing {userExpenses.length} expenses you are involved in.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          {userExpenses.length > 0 ? (
+          {loading ? (
+            <div className="p-4 space-y-4">
+                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+          ) : userExpenses.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height */}
               <div className="divide-y">
                 {userExpenses.map((expense) => (
-                  <ExpenseListItem key={expense.id} expense={expense} currentUserId={currentUser.id} />
+                  <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} />
                 ))}
               </div>
             </ScrollArea>

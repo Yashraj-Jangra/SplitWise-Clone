@@ -63,7 +63,6 @@ async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
     const uniqueUids = [...new Set(uids)];
     if (uniqueUids.length === 0) return [];
     
-    // Firestore 'in' query is limited to 30 items. We need to chunk it.
     const chunks: string[][] = [];
     for (let i = 0; i < uniqueUids.length; i += 30) {
         chunks.push(uniqueUids.slice(i, i + 30));
@@ -142,7 +141,6 @@ export async function getAllGroups(): Promise<Group[]> {
     const groupsCol = collection(db, 'groups');
     const groupSnapshot = await getDocs(groupsCol);
     
-    // Optimize by fetching all users that could be creators or members
     const allUserIds = new Set<string>();
     const groupDocs = groupSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GroupDocument & {id: string}));
     groupDocs.forEach(g => {
@@ -154,7 +152,7 @@ export async function getAllGroups(): Promise<Group[]> {
 
     const groups: Group[] = groupDocs.map((groupData) => {
             const createdBy = userMap.get(groupData.createdById);
-            if (!createdBy) return null; // Should not happen
+            if (!createdBy) return null;
             const members = groupData.memberIds.map(id => userMap.get(id)).filter(u => u) as UserProfile[];
 
             return {
@@ -186,7 +184,6 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
         date: Timestamp.fromDate(expenseData.date),
     });
 
-    // Update group total
     const groupDocRef = doc(db, 'groups', expenseData.groupId);
     const groupSnap = await getDoc(groupDocRef);
     if(groupSnap.exists()){
@@ -209,7 +206,6 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
         date: Timestamp.fromDate(expenseData.date)
     });
 
-    // Update group total
     const groupDocRef = doc(db, 'groups', expenseData.groupId);
     const groupSnap = await getDoc(groupDocRef);
     if(groupSnap.exists()){
@@ -297,13 +293,18 @@ export async function getAllExpenses(): Promise<Expense[]> {
   const expensesCol = collection(db, 'expenses');
   const expenseSnapshot = await getDocs(expensesCol);
 
-  // To avoid N+1 queries, get all users first
-  const allUsers = await getAllUsers();
+  const allUserIds = new Set<string>();
+  const expenseDocs = expenseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpenseDocument & {id: string}));
+  
+  expenseDocs.forEach(expense => {
+    allUserIds.add(expense.paidById);
+    expense.participants.forEach(p => allUserIds.add(p.userId));
+  });
+
+  const allUsers = await hydrateUsers(Array.from(allUserIds));
   const userMap = new Map(allUsers.map(u => [u.uid, u]));
 
-  const expenses: Expense[] = expenseSnapshot.docs.map((docSnap) => {
-      const expenseData = docSnap.data() as ExpenseDocument;
-      
+  const expenses: Expense[] = expenseDocs.map((expenseData) => {
       const paidBy = userMap.get(expenseData.paidById);
       if (!paidBy) return null;
 
@@ -314,7 +315,7 @@ export async function getAllExpenses(): Promise<Expense[]> {
 
       return {
           ...expenseData,
-          id: docSnap.id,
+          id: expenseData.id,
           date: (expenseData.date as Timestamp).toDate().toISOString(),
           paidBy,
           participants
@@ -340,7 +341,6 @@ export async function getSettlementsByGroupId(groupId: string): Promise<Settleme
     const q = query(collection(db, 'settlements'), where('groupId', '==', groupId));
     const querySnapshot = await getDocs(q);
     
-    // To optimize, fetch all possible users once.
     const userIds = new Set<string>();
     querySnapshot.docs.forEach(doc => {
         const data = doc.data() as SettlementDocument;
@@ -362,6 +362,76 @@ export async function getSettlementsByGroupId(groupId: string): Promise<Settleme
                 date: (settlementData.date as Timestamp).toDate().toISOString(),
                 paidBy,
                 paidTo
+            };
+        }).filter((s): s is Settlement => s !== null);
+
+    return settlements;
+}
+
+export async function getSettlementsByUserId(userId: string): Promise<Settlement[]> {
+    const paidByQuery = query(collection(db, 'settlements'), where('paidById', '==', userId));
+    const paidToQuery = query(collection(db, 'settlements'), where('paidToId', '==', userId));
+
+    const [paidBySnapshot, paidToSnapshot] = await Promise.all([
+        getDocs(paidByQuery),
+        getDocs(paidToQuery)
+    ]);
+
+    const settlementMap = new Map<string, SettlementDocument>();
+    paidBySnapshot.docs.forEach(doc => settlementMap.set(doc.id, doc.data() as SettlementDocument));
+    paidToSnapshot.docs.forEach(doc => settlementMap.set(doc.id, doc.data() as SettlementDocument));
+
+    const allUserIds = new Set<string>();
+    settlementMap.forEach(s => {
+        allUserIds.add(s.paidById);
+        allUserIds.add(s.paidToId);
+    });
+
+    const allUsers = await hydrateUsers(Array.from(allUserIds));
+    const userMap = new Map(allUsers.map(u => [u.uid, u]));
+
+    const settlements: Settlement[] = Array.from(settlementMap.entries()).map(([id, settlementData]) => {
+        const paidBy = userMap.get(settlementData.paidById);
+        const paidTo = userMap.get(settlementData.paidToId);
+        if (!paidBy || !paidTo) return null;
+
+        return {
+            ...settlementData,
+            id: id,
+            date: (settlementData.date as Timestamp).toDate().toISOString(),
+            paidBy,
+            paidTo,
+        };
+    }).filter((s): s is Settlement => s !== null);
+
+    return settlements;
+}
+
+export async function getAllSettlements(): Promise<Settlement[]> {
+    const settlementsCol = collection(db, 'settlements');
+    const settlementSnapshot = await getDocs(settlementsCol);
+    
+    const allUserIds = new Set<string>();
+    const settlementDocs = settlementSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SettlementDocument & {id: string}));
+    settlementDocs.forEach(s => {
+        allUserIds.add(s.paidById);
+        allUserIds.add(s.paidToId);
+    });
+
+    const allUsers = await hydrateUsers(Array.from(allUserIds));
+    const userMap = new Map(allUsers.map(u => [u.uid, u]));
+
+    const settlements: Settlement[] = settlementDocs.map((settlementData) => {
+            const paidBy = userMap.get(settlementData.paidById);
+            const paidTo = userMap.get(settlementData.paidToId);
+            if (!paidBy || !paidTo) return null;
+
+            return {
+                ...settlementData,
+                id: settlementData.id,
+                date: (settlementData.date as Timestamp).toDate().toISOString(),
+                paidBy,
+                paidTo,
             };
         }).filter((s): s is Settlement => s !== null);
 
