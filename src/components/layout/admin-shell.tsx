@@ -80,7 +80,7 @@ function AdminSidebar() {
   const isCollapsed = !open; 
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r">
+    <Sidebar collapsible="icon" variant="inset" side="left" className="border-r">
       <SidebarHeader className="p-4 flex items-center justify-between">
         <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold" aria-label="SettleEase Admin Home">
           <Icons.AppLogo className="h-7 w-7 text-primary" />
@@ -111,7 +111,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
       <SidebarInset>
         <div className="flex flex-col min-h-screen">
           <AdminHeader pageTitle={pageTitle} />
-          <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background">
+          <main className="flex-1 p-4 md:p-6 lg:p-8">
             {children}
           </main>
           <footer className="py-4 px-6 text-center text-xs text-muted-foreground border-t">

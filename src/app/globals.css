@@ -39,13 +39,13 @@
     --chart-5: 45 93% 55%;
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 5% 10%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 4% 15%;
+    --sidebar-background: 240 5% 5%; /* App 'chrome' color for inset variant */
+    --sidebar-foreground: 0 0% 80%; /* Slightly dimmer foreground for less emphasis */
+    --sidebar-primary: 217 91% 60%; /* Active item bg - vibrant blue */
+    --sidebar-primary-foreground: 0 0% 98%; /* Active item text */
+    --sidebar-accent: 240 4% 15%; /* Hover item bg */
+    --sidebar-accent-foreground: 0 0% 98%; /* Hover item text */
+    --sidebar-border: 240 4% 10%; /* Subtle border */
     --sidebar-ring: 217 91% 60%;
   }
 
@@ -76,13 +76,13 @@
     --chart-5: 45 93% 55%;
 
     /* Dark Sidebar specific colors */
-    --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 5% 10%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 4% 15%;
+    --sidebar-background: 240 5% 5%; /* App 'chrome' color for inset variant */
+    --sidebar-foreground: 0 0% 80%; /* Slightly dimmer foreground for less emphasis */
+    --sidebar-primary: 217 91% 60%; /* Active item bg - vibrant blue */
+    --sidebar-primary-foreground: 0 0% 98%; /* Active item text */
+    --sidebar-accent: 240 4% 15%; /* Hover item bg */
+    --sidebar-accent-foreground: 0 0% 98%; /* Hover item text */
+    --sidebar-border: 240 4% 10%; /* Subtle border */
     --sidebar-ring: 217 91% 60%;
   }
 }

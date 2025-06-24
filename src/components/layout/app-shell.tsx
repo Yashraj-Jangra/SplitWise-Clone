@@ -49,7 +49,7 @@ function AppSidebar() {
   const isCollapsed = !open; 
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r">
+    <Sidebar collapsible="icon" variant="inset" side="left" className="border-r">
       <SidebarHeader className="p-4 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold" aria-label="SettleEase Home">
           <Icons.AppLogo className="h-7 w-7 text-primary" />
