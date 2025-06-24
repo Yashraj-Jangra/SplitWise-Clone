@@ -13,28 +13,40 @@ import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
 import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const { userProfile, loading } = useAuth();
+  const { toast } = useToast();
   const [stats, setStats] = useState({ totalGroups: 0, totalSpent: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     async function getDashboardStats(userId: string) {
       setStatsLoading(true);
-      const [groups, expenses] = await Promise.all([
-        getGroupsByUserId(userId),
-        getExpensesByUserId(userId),
-      ]);
-      const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
-      setStats({ totalGroups: groups.length, totalSpent });
-      setStatsLoading(false);
+      try {
+        const [groups, expenses] = await Promise.all([
+          getGroupsByUserId(userId),
+          getExpensesByUserId(userId),
+        ]);
+        const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+        setStats({ totalGroups: groups.length, totalSpent });
+      } catch (error: any) {
+        console.error("Failed to fetch dashboard stats:", error);
+        toast({
+          variant: "destructive",
+          title: "Error fetching data",
+          description: "Could not load dashboard stats. This may be a permission issue. Please check your Firestore rules.",
+        });
+      } finally {
+        setStatsLoading(false);
+      }
     }
 
     if (userProfile?.uid) {
       getDashboardStats(userProfile.uid);
     }
-  }, [userProfile]);
+  }, [userProfile, toast]);
 
   if (loading || !userProfile) {
     return (
