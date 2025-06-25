@@ -29,7 +29,7 @@ export default function HomePage() {
 
       <div className="mt-16 w-full max-w-6xl z-10 animate-in fade-in zoom-in-95 duration-1000 delay-700">
         <Image 
-          src="https://placehold.co/1200x675.png" 
+          src="https://images.unsplash.com/photo-1554672723-b208dc85134f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtb25leSUyMGJ1cm5pbmd8ZW58MHx8fHwxNzUwODY2NjgyfDA&ixlib=rb-4.1.0&q=80&w=1080" 
           alt="SettleEase Dashboard Mockup" 
           width={1200} 
           height={675} 
