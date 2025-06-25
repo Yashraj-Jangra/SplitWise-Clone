@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Icons } from '@/components/icons';
-import { getAllExpenses, getAllSettlements, getAllGroups } from '@/lib/mock-data';
+import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId } from '@/lib/mock-data';
 import type { Expense, Settlement, Group, UserProfile } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/auth-context';
 
 
 interface ActivityItem {
@@ -30,17 +31,20 @@ interface ActivityItem {
 }
 
 export function RecentActivityList() {
+  const { userProfile } = useAuth();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchRecentActivity() {
+      if (!userProfile?.uid) return;
+
       setLoading(true);
       try {
         const [expenses, settlements, groups] = await Promise.all([
-          getAllExpenses(),
-          getAllSettlements(),
-          getAllGroups(),
+          getExpensesByUserId(userProfile.uid),
+          getSettlementsByUserId(userProfile.uid),
+          getGroupsByUserId(userProfile.uid),
         ]);
         
         const groupMap = new Map(groups.map(g => [g.id, g.name]));
@@ -83,14 +87,14 @@ export function RecentActivityList() {
     }
 
     fetchRecentActivity();
-  }, []);
+  }, [userProfile]);
 
   if (loading) {
     return (
         <Card className="lg:col-span-3">
             <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest expenses and settlements across all groups.</CardDescription>
+                <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
                 {[...Array(5)].map((_, i) => (
@@ -116,7 +120,8 @@ export function RecentActivityList() {
         </CardHeader>
         <CardContent className="text-center text-muted-foreground py-8">
           <Icons.Details className="h-12 w-12 mx-auto mb-2" />
-          <p>Start adding expenses or settling up!</p>
+          <p>Your recent activity will show up here.</p>
+          <p>Start by adding an expense or settling up in a group!</p>
         </CardContent>
       </Card>
     );
@@ -126,7 +131,7 @@ export function RecentActivityList() {
     <Card className="lg:col-span-3">
       <CardHeader>
         <CardTitle>Recent Activity</CardTitle>
-        <CardDescription>Latest expenses and settlements across all groups.</CardDescription>
+        <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[400px]">
