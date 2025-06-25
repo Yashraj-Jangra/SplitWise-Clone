@@ -1,67 +1,73 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- Helper Functions ---
-    function isAuthenticated() {
+
+    // Checks if a user is authenticated.
+    function isUserAuthenticated() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // Checks if the authenticated user has the 'admin' role. Involves one document read.
+    function isUserAdmin() {
+      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    
-    // Checks if the requesting user is a member of a specific group.
+
+    // Checks if the authenticated user is a member of a specific group. Involves one document read.
     function isGroupMember(groupId) {
-      return isAuthenticated() && get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+      // Use exists() to prevent errors if the group document doesn't exist yet (e.g., in a transaction).
+      return isUserAuthenticated() && exists(/databases/$(database)/documents/groups/$(groupId)) &&
+             request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
     }
     
     // --- Collection Rules ---
 
-    // User Profiles
+    // USERS collection
     match /users/{userId} {
-      // Any authenticated user can view other user profiles.
-      // This is needed to display names/avatars of members within a group.
-      allow read: if isAuthenticated();
+      // Allow any authenticated user to read any profile (needed for member lists, names, avatars).
+      allow read: if isUserAuthenticated();
       
-      // A user can create their own profile document.
-      // Rule prevents a user from creating a profile for someone else or assigning an admin role.
-      allow create: if isOwner(userId)
-                    && request.resource.data.uid == userId
-                    && (request.resource.data.role == 'user' || request.resource.data.email == 'jangrayash1505@gmail.com');
-      
-      // A user can update their own profile, but cannot change their role.
-      allow update: if isOwner(userId) 
-                    && request.resource.data.role == resource.data.role;
+      // Allow a user to create/update their own profile, or an admin to do so.
+      allow write: if isUserAuthenticated() && request.auth.uid == userId || isUserAdmin();
     }
-    
-    // Groups
+
+    // GROUPS collection
     match /groups/{groupId} {
-      // Allow read/update if the user is a member of the group.
-      allow read, update: if isGroupMember(groupId);
+      // Allow reading a group if the user's UID is in the `memberIds` array.
+      // This is efficient for queries like `where('memberIds', 'array-contains', uid)`.
+      allow read: if (isUserAuthenticated() && request.auth.uid in resource.data.memberIds) || isUserAdmin();
       
-      // Allow create if the user is including themselves as a member in the new group.
-      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.memberIds;
+      // Allow any authenticated user to create a group.
+      allow create: if isUserAuthenticated();
+      
+      // Allow the group's creator or an admin to update/delete the group.
+      allow update, delete: if (isUserAuthenticated() && request.auth.uid == resource.data.createdById) || isUserAdmin();
     }
-    
-    // Expenses
+
+    // EXPENSES collection
     match /expenses/{expenseId} {
-      // Allow read/update/delete if user is a member of the expense's parent group.
-      allow read, update, delete: if isGroupMember(get(/databases/$(database)/documents/expenses/$(expenseId)).data.groupId);
+      // Allow reading an expense if the user is a member of its parent group.
+      allow read: if isGroupMember(resource.data.groupId) || isUserAdmin();
       
-      // Allow create if user is a member of the group they're adding the expense to.
-      allow create: if isGroupMember(request.resource.data.groupId);
+      // Allow creating an expense if the user is a member of the parent group.
+      // `request.resource.data` is used for write operations (create, update, delete).
+      allow create: if isGroupMember(request.resource.data.groupId) || isUserAdmin();
+
+      // Allow updating/deleting an expense if the user paid for it OR is an admin.
+      allow update, delete: if (isUserAuthenticated() && request.auth.uid == resource.data.paidById) || isUserAdmin();
     }
-    
-    // Settlements
+
+    // SETTLEMENTS collection
     match /settlements/{settlementId} {
-      // Allow read/delete if user is a member of the settlement's parent group.
-      allow read, delete: if isGroupMember(get(/databases/$(database)/documents/settlements/$(settlementId)).data.groupId);
+      // Allow reading a settlement if the user is a member of its parent group.
+      allow read: if isGroupMember(resource.data.groupId) || isUserAdmin();
       
-      // Allow create if user is a member of the group they're adding the settlement to.
-      allow create: if isGroupMember(request.resource.data.groupId);
+      // Allow creating a settlement if the user is a member of the parent group.
+      allow create: if isGroupMember(request.resource.data.groupId) || isUserAdmin();
+      
+      // Allow deleting a settlement only if the user made the payment OR is an admin.
+      allow update, delete: if (isUserAuthenticated() && (request.auth.uid == resource.data.paidById || request.auth.uid == resource.data.paidToId)) || isUserAdmin();
     }
   }
 }
