@@ -7,8 +7,8 @@ import { Card } from '@/components/ui/card';
 
 export default function HomePage() {
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-6 animated-gradient-bg">
-      <div className="text-center max-w-4xl mx-auto z-10">
+    <main className="flex flex-col items-center justify-center min-h-screen p-6 animated-gradient-bg overflow-x-hidden">
+      <div className="text-center max-w-4xl mx-auto z-10 pt-20">
         <div className="flex justify-center mb-8 animate-in fade-in slide-in-from-top-12 duration-1000">
           <Icons.AppLogo className="h-20 w-20 text-primary" />
         </div>
@@ -28,7 +28,6 @@ export default function HomePage() {
       </div>
 
       <div className="mt-16 w-full max-w-6xl z-10 animate-in fade-in zoom-in-95 duration-1000 delay-700">
-        <Card className='p-2 md:p-4 bg-card/50 backdrop-blur-sm border-border/20'>
         <Image 
           src="https://placehold.co/1200x675.png" 
           alt="SettleEase Dashboard Mockup" 
@@ -37,28 +36,27 @@ export default function HomePage() {
           className="rounded-lg shadow-2xl shadow-primary/10"
           data-ai-hint="dashboard finance dark modern"
         />
-        </Card>
       </div>
 
-      <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl w-full z-10 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
+      <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full z-10 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
         <FeatureCard
-          icon={<Icons.Users className="h-8 w-8 text-primary" />}
+          icon={<Icons.Users className="h-8 w-8" />}
           title="Group Management"
           description="Easily create groups and invite members. Keep all shared expenses organized in one place."
         />
         <FeatureCard
-          icon={<Icons.Expense className="h-8 w-8 text-primary" />}
+          icon={<Icons.Expense className="h-8 w-8" />}
           title="Expense Tracking"
           description="Log expenses quickly with various split options. Supports multiple currencies for all transactions."
         />
         <FeatureCard
-          icon={<Icons.Settle className="h-8 w-8 text-primary" />}
+          icon={<Icons.Settle className="h-8 w-8" />}
           title="Easy Settlements"
           description="Automated balance calculations show who owes whom. Record payments and track settlements."
         />
       </div>
 
-      <footer className="mt-20 text-center text-muted-foreground z-10">
+      <footer className="mt-20 text-center text-muted-foreground z-10 pb-10">
         <p>&copy; <DynamicYear /> SettleEase. Simplify your shared expenses.</p>
       </footer>
     </main>
@@ -73,12 +71,12 @@ interface FeatureCardProps {
 
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <div className="p-6 rounded-xl hover:-translate-y-2 transition-all duration-300">
-      <div className="flex justify-center mb-4">
+    <Card className="p-8 bg-card/50 backdrop-blur-sm border-border/20 text-center hover:-translate-y-2 transition-transform duration-300 flex flex-col items-center">
+      <div className="flex-shrink-0 flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary mb-6">
         {icon}
       </div>
-      <h3 className="text-xl font-headline font-semibold text-foreground mb-2 text-center">{title}</h3>
-      <p className="text-muted-foreground text-sm text-center">{description}</p>
-    </div>
+      <h3 className="text-xl font-headline font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground text-sm flex-grow">{description}</p>
+    </Card>
   );
 }
