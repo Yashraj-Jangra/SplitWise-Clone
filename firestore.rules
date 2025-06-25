@@ -2,57 +2,83 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the caller is an admin
+    // Helper function to check if a user is a member of a group
+    function isMemberOf(groupId) {
+      // Ensure the user is authenticated before checking membership
+      return request.auth != null && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+    }
+
+    // Helper function to check if the user is an admin
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Helper function to check if the caller is a member of a specific group
-    function isGroupMember(groupId) {
-      return get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
-    }
-
-    // Users can read other user profiles and list all users to invite them to groups.
+    // USERS collection rules
     match /users/{userId} {
-      allow list, get: if request.auth != null;
+      // ANY authenticated user can get a list of all users to invite them to groups.
+      // Admins can also list all users.
+      allow list: if request.auth != null;
+
+      // Users can GET their own profile. Admins can get any profile.
+      allow get: if request.auth.uid == userId || isAdmin();
+
+      // A user can CREATE their own profile document (happens on signup).
       allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
-      allow delete: if isAdmin();
+      
+      // Users can UPDATE their own profile. Admins can update any profile.
+      allow update: if request.auth.uid == userId || isAdmin();
     }
 
+    // GROUPS collection rules
     match /groups/{groupId} {
-      allow get: if isGroupMember(groupId);
-      // Users can only list the groups they are members of. This query is used on the /groups page.
-      allow list: if request.query.get('memberIds_array_contains') == request.auth.uid;
-      allow create: if request.auth != null &&
-                      request.resource.data.createdById == request.auth.uid &&
-                      request.auth.uid in request.resource.data.memberIds;
-      // Any group member can add other members.
-      allow update: if isGroupMember(groupId);
-      // Only the group creator or an admin can delete a group.
-      allow delete: if request.auth.uid == resource.data.createdById || isAdmin();
+      // Users can GET, UPDATE, or DELETE a group document if they are a member.
+      // Admins have full access.
+      allow read, update, delete: if isMemberOf(groupId) || isAdmin();
+
+      // Any authenticated user can CREATE a group, as long as they include themselves as a member.
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.memberIds;
+      
+      // This rule specifically allows the query used to fetch the user's groups:
+      // query(..., where('memberIds', 'array-contains', 'user-uid'))
+      allow list: if (request.auth != null && request.query.where.path == "memberIds" && request.query.where.op == "array-contains" && request.query.where.value == request.auth.uid) || isAdmin();
     }
 
+    // EXPENSES collection rules
     match /expenses/{expenseId} {
-      // A user can read or modify a single expense if they are a member of the group it belongs to.
-      allow get, create, update, delete: if isGroupMember(request.resource.data.groupId);
+      // Users can GET an expense if they are a member of the group it belongs to.
+      allow get: if isMemberOf(resource.data.groupId) || isAdmin();
 
-      // Users can list expenses if the query is for a group they belong to,
-      // or if it's a query for expenses they paid for or participated in.
-      allow list: if (request.query.get('groupId') != null && isGroupMember(request.query.get('groupId'))) ||
-                    (request.query.get('paidById') == request.auth.uid) ||
-                    (request.query.get('participantIds_array_contains') == request.auth.uid);
+      // Users can CREATE, UPDATE, or DELETE an expense if they are a member of the group.
+      allow write: if isMemberOf(request.resource.data.groupId) || isAdmin();
+
+      // This complex rule allows the three different ways the app queries for lists of expenses.
+      allow list: if (
+        // Case 1: Fetching expenses for a specific group page.
+        (request.query.where.path == 'groupId' && isMemberOf(request.query.where.value)) ||
+        // Case 2: Fetching expenses paid by the current user.
+        (request.query.where.path == 'paidById' && request.query.where.op == '==' && request.query.where.value == request.auth.uid) ||
+        // Case 3: Fetching expenses where the current user was a participant.
+        (request.query.where.path == 'participantIds' && request.query.where.op == 'array-contains' && request.query.where.value == request.auth.uid)
+      ) || isAdmin();
     }
 
+    // SETTLEMENTS collection rules
     match /settlements/{settlementId} {
-      // A user can read or modify a single settlement if they are a member of the group it belongs to.
-      allow get, create, update, delete: if isGroupMember(request.resource.data.groupId);
+      // Users can GET a settlement if they are a member of the group it belongs to.
+      allow get: if isMemberOf(resource.data.groupId) || isAdmin();
 
-      // Users can list settlements if the query is for a group they belong to,
-      // or if it's a query for settlements they paid or received.
-      allow list: if (request.query.get('groupId') != null && isGroupMember(request.query.get('groupId'))) ||
-                    (request.query.get('paidById') == request.auth.uid) ||
-                    (request.query.get('paidToId') == request.auth.uid);
+      // Users can CREATE, UPDATE, or DELETE a settlement if they are a member of the group.
+      allow write: if isMemberOf(request.resource.data.groupId) || isAdmin();
+
+      // This complex rule allows the three different ways the app queries for lists of settlements.
+      allow list: if (
+        // Case 1: Fetching settlements for a specific group page.
+        (request.query.where.path == 'groupId' && isMemberOf(request.query.where.value)) ||
+        // Case 2: Fetching settlements paid by the current user.
+        (request.query.where.path == 'paidById' && request.query.where.op == '==' && request.query.where.value == request.auth.uid) ||
+        // Case 3: Fetching settlements paid to the current user.
+        (request.query.where.path == 'paidToId' && request.query.where.op == '==' && request.query.where.value == request.auth.uid)
+      ) || isAdmin();
     }
   }
 }
