@@ -100,7 +100,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
         description: values.description,
         memberIds: values.memberIds,
         createdById: userProfile.uid,
-        coverImageUrl: `https://placehold.co/600x300.png?text=${encodeURIComponent(values.name)}`,
+        coverImageUrl: 'https://placehold.co/600x400.png',
     };
 
     try {
