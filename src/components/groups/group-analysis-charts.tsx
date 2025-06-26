@@ -77,7 +77,11 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     const spendingByDateAndUser = filteredExpenses.reduce((acc, expense) => {
         const day = format(new Date(expense.date), 'yyyy-MM-dd');
         if (!acc[day]) acc[day] = {};
-        acc[day][expense.paidBy.uid] = (acc[day][expense.paidBy.uid] || 0) + expense.amount;
+        
+        expense.participants.forEach(participant => {
+            acc[day][participant.user.uid] = (acc[day][participant.user.uid] || 0) + participant.amountOwed;
+        });
+
         return acc;
     }, {} as Record<string, Record<string, number>>);
 
@@ -95,16 +99,18 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     });
   }, [filteredExpenses, members, date]);
 
-  const totalPaidByMember = useMemo(() => {
+  const totalShareByMember = useMemo(() => {
     const data = members.reduce((acc, member) => {
       acc[member.uid] = { name: getFullName(member.firstName, member.lastName), total: 0 };
       return acc;
     }, {} as Record<string, { name: string; total: number }>);
 
     filteredExpenses.forEach(expense => {
-      if (data[expense.paidBy.uid]) {
-        data[expense.paidBy.uid].total += expense.amount;
-      }
+      expense.participants.forEach(participant => {
+        if (data[participant.user.uid]) {
+          data[participant.user.uid].total += participant.amountOwed;
+        }
+      });
     });
 
     return Object.values(data).filter(d => d.total > 0).sort((a,b) => b.total - a.total);
@@ -133,7 +139,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   }, [members]);
 
   const barChartConfig = {
-    total: { label: 'Total Paid', color: 'hsl(var(--chart-1))' },
+    total: { label: 'Total Share', color: 'hsl(var(--chart-1))' },
   } satisfies ChartConfig;
 
   if (expenses.length === 0) {
@@ -203,8 +209,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
 
       <Card>
         <CardHeader>
-          <CardTitle>Daily Spending Comparison</CardTitle>
-          <CardDescription>Comparing total amount paid by each member per day.</CardDescription>
+          <CardTitle>Daily Expense Share</CardTitle>
+          <CardDescription>Comparing each member's share of expenses per day.</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={userChartConfig} className="h-[400px] w-full">
@@ -234,12 +240,12 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Who Paid?</CardTitle>
-            <CardDescription>Total amount paid by each member for the selected period.</CardDescription>
+            <CardTitle>Total Expense Share by Member</CardTitle>
+            <CardDescription>Each member's total share of expenses for the selected period.</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={barChartConfig} className="h-[300px] w-full">
-              <BarChart data={totalPaidByMember} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
+              <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
                 <XAxis type="number" hide />
                 <YAxis
                   dataKey="name"
@@ -255,7 +261,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                  <Bar dataKey="total" radius={4}>
-                    {totalPaidByMember.map((entry, index) => (
+                    {totalShareByMember.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
                 </Bar>
