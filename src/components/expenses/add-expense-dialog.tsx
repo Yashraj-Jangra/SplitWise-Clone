@@ -304,7 +304,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
         }
     }
 
-    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds'> & {date: Date} = {
+    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds'> & {date: Date} = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,

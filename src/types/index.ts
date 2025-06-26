@@ -48,6 +48,7 @@ export interface ExpenseDocument {
   splitType: "equally" | "unequally" | "by_shares" | "by_percentage";
   participants: ExpenseParticipantDocument[];
   participantIds: string[]; // For querying
+  groupMemberIds: string[]; // For security rules
   category?: string;
   receiptImageUrl?: string;
 }
@@ -59,6 +60,7 @@ export interface SettlementDocument {
   amount: number;
   date: Timestamp;
   notes?: string;
+  groupMemberIds: string[]; // For security rules
 }
 
 export type HistoryEventType = 'expense_created' | 'expense_updated' | 'expense_deleted' | 'settlement_created' | 'settlement_deleted' | 'group_created' | 'member_added' | 'expense_restored';
@@ -71,6 +73,7 @@ export interface HistoryEventDocument {
   description: string;
   data?: any; // Store old/new data, or deleted data
   restored?: boolean;
+  groupMemberIds: string[]; // For security rules
 }
 
 

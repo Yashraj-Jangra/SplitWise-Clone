@@ -339,7 +339,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
     }
 
-    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date } = {
+    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds'> & { date: Date } = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,

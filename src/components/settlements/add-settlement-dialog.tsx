@@ -84,7 +84,7 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
   async function onSubmit(values: AddSettlementFormValues) {
     if (!userProfile) return;
 
-    const newSettlement: Omit<SettlementDocument, 'date'> & {date: Date} = {
+    const newSettlement: Omit<SettlementDocument, 'date' | 'groupMemberIds'> & {date: Date} = {
       groupId: group.id,
       paidById: values.paidById,
       paidToId: values.paidToId,

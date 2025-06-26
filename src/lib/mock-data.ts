@@ -262,22 +262,27 @@ export async function hardDeleteGroup(groupId: string): Promise<void> {
 
 // --- Expense Functions ---
 
-export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }, actorId: string): Promise<string> {
+export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds'> & { date: Date }, actorId: string): Promise<string> {
+    const groupDocRef = doc(db, 'groups', expenseData.groupId);
+    const groupSnap = await getDoc(groupDocRef);
+
+    if(!groupSnap.exists()){
+        throw new Error("Group not found to add expense.");
+    }
+    const groupData = groupSnap.data() as GroupDocument;
+    
     const participantIds = expenseData.participants.map(p => p.userId);
     const docRef = await addDoc(collection(db, 'expenses'), {
         ...expenseData,
         participantIds,
+        groupMemberIds: groupData.memberIds,
         date: Timestamp.fromDate(expenseData.date),
     });
 
-    const groupDocRef = doc(db, 'groups', expenseData.groupId);
-    const groupSnap = await getDoc(groupDocRef);
-    if(groupSnap.exists()){
-        const currentTotal = groupSnap.data().totalExpenses || 0;
-        await updateDoc(groupDocRef, {
-            totalExpenses: currentTotal + expenseData.amount
-        });
-    }
+    const currentTotal = groupSnap.data().totalExpenses || 0;
+    await updateDoc(groupDocRef, {
+        totalExpenses: currentTotal + expenseData.amount
+    });
     
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
@@ -289,27 +294,31 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
 }
 
 
-export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }, actorId: string): Promise<void> {
+export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds'> & { date: Date }, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
     const expenseSnap = await getDoc(expenseDocRef);
     const oldData = expenseSnap.exists() ? expenseSnap.data() : null;
+
+    const groupDocRef = doc(db, 'groups', expenseData.groupId);
+    const groupSnap = await getDoc(groupDocRef);
+    if(!groupSnap.exists()){
+        throw new Error("Group not found to update expense.");
+    }
+    const groupData = groupSnap.data() as GroupDocument;
 
     const participantIds = expenseData.participants.map(p => p.userId);
     await updateDoc(expenseDocRef, {
         ...expenseData,
         participantIds,
+        groupMemberIds: groupData.memberIds,
         date: Timestamp.fromDate(expenseData.date)
     });
 
-    const groupDocRef = doc(db, 'groups', expenseData.groupId);
-    const groupSnap = await getDoc(groupDocRef);
-    if(groupSnap.exists()){
-        const currentTotal = groupSnap.data().totalExpenses || 0;
-        const newTotal = currentTotal - oldAmount + expenseData.amount;
-        await updateDoc(groupDocRef, {
-            totalExpenses: newTotal
-        });
-    }
+    const currentTotal = groupSnap.data().totalExpenses || 0;
+    const newTotal = currentTotal - oldAmount + expenseData.amount;
+    await updateDoc(groupDocRef, {
+        totalExpenses: newTotal
+    });
 
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
@@ -328,13 +337,11 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
 
     const batch = writeBatch(db);
 
-    if (groupDocRef) {
-        const groupSnap = await getDoc(groupDocRef);
-        if (groupSnap.exists()) {
-            const currentTotal = groupSnap.data().totalExpenses || 0;
-            const newTotal = currentTotal - amount;
-            batch.update(groupDocRef, { totalExpenses: newTotal < 0 ? 0 : newTotal });
-        }
+    const groupSnap = await getDoc(groupDocRef);
+    if (groupSnap.exists()) {
+        const currentTotal = groupSnap.data().totalExpenses || 0;
+        const newTotal = currentTotal - amount;
+        batch.update(groupDocRef, { totalExpenses: newTotal < 0 ? 0 : newTotal });
     }
 
     batch.delete(expenseDocRef);
@@ -473,9 +480,17 @@ export async function getAllExpenses(): Promise<Expense[]> {
 
 // --- Settlement Functions ---
 
-export async function addSettlement(settlementData: Omit<SettlementDocument, 'date'> & { date: Date }): Promise<string> {
+export async function addSettlement(settlementData: Omit<SettlementDocument, 'date' | 'groupMemberIds'> & { date: Date }): Promise<string> {
+    const groupDocRef = doc(db, 'groups', settlementData.groupId);
+    const groupSnap = await getDoc(groupDocRef);
+    if (!groupSnap.exists()) {
+        throw new Error("Group not found to add settlement.");
+    }
+    const groupData = groupSnap.data() as GroupDocument;
+    
     const docRef = await addDoc(collection(db, 'settlements'), {
         ...settlementData,
+        groupMemberIds: groupData.memberIds,
         date: Timestamp.fromDate(settlementData.date),
     });
     return docRef.id;
@@ -672,6 +687,10 @@ export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
 // --- History/Audit Log Functions ---
 async function logHistoryEvent(groupId: string, eventType: string, actorId: string, description: string, data?: any) {
   try {
+    const groupDocRef = doc(db, 'groups', groupId);
+    const groupSnap = await getDoc(groupDocRef);
+    const groupMemberIds = groupSnap.exists() ? (groupSnap.data() as GroupDocument).memberIds : [];
+    
     await addDoc(collection(db, 'history'), {
       groupId,
       eventType,
@@ -680,6 +699,7 @@ async function logHistoryEvent(groupId: string, eventType: string, actorId: stri
       data: data || null,
       timestamp: Timestamp.now(),
       restored: false,
+      groupMemberIds: groupMemberIds,
     });
   } catch (error) {
     console.error("Failed to log history event:", error);
