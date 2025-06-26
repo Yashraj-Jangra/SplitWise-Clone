@@ -53,7 +53,7 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-        await deleteExpense(expense.id, expense.groupId, expense.amount);
+        await deleteExpense(expense.id, expense.groupId, expense.amount, currentUserId);
         toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
         setIsDeleteDialogOpen(false);
         if (onActionComplete) {

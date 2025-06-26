@@ -297,7 +297,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     };
 
     try {
-        await updateExpense(expense.id, expense.amount, updatedExpenseData);
+        await updateExpense(expense.id, expense.amount, updatedExpenseData, userProfile.uid);
         toast({
         title: "Expense Updated!",
         description: `"${values.description}" has been successfully updated.`,

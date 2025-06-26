@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -18,6 +19,7 @@ import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, Settlement, Balance } from '@/types';
 import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
+import { GroupHistoryTab } from '@/components/groups/group-history';
 
 
 export default function GroupDetailPage() {
@@ -80,6 +82,7 @@ export default function GroupDetailPage() {
                 <TabsTrigger value="balances">Balances</TabsTrigger>
                 <TabsTrigger value="members">Members ({group.members.length})</TabsTrigger>
                 <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
             <div className="flex gap-2">
                 <AddExpenseDialog group={group} onExpenseAdded={loadGroupData} />
@@ -155,6 +158,10 @@ export default function GroupDetailPage() {
 
         <TabsContent value="analysis">
             <GroupAnalysisCharts expenses={expenses} members={group.members} />
+        </TabsContent>
+
+        <TabsContent value="history">
+            <GroupHistoryTab groupId={group.id} onActionComplete={loadGroupData} />
         </TabsContent>
 
       </Tabs>

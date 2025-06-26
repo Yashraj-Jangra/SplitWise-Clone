@@ -14,6 +14,7 @@ import {
   arrayUnion,
   arrayRemove,
   documentId,
+  orderBy,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
@@ -27,7 +28,10 @@ import type {
   Balance,
   ExpenseParticipant,
   ExpenseParticipantDocument,
+  HistoryEvent,
+  HistoryEventDocument,
 } from '@/types';
+import { getFullName } from './utils';
 
 // --- User Functions ---
 
@@ -230,7 +234,7 @@ export async function addMembersToGroup(groupId: string, memberIds: string[]): P
 
 // --- Expense Functions ---
 
-export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }): Promise<string> {
+export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }, actorId: string): Promise<string> {
     const participantIds = expenseData.participants.map(p => p.userId);
     const docRef = await addDoc(collection(db, 'expenses'), {
         ...expenseData,
@@ -246,14 +250,23 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
             totalExpenses: currentTotal + expenseData.amount
         });
     }
+    
+    const actor = await getUserProfile(actorId);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const description = `${actorName} added expense "${expenseData.description}".`;
+    await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id, amount: expenseData.amount });
+
 
     return docRef.id;
 }
 
 
-export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }): Promise<void> {
-    const participantIds = expenseData.participants.map(p => p.userId);
+export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds'> & { date: Date }, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
+    const expenseSnap = await getDoc(expenseDocRef);
+    const oldData = expenseSnap.exists() ? expenseSnap.data() : null;
+
+    const participantIds = expenseData.participants.map(p => p.userId);
     await updateDoc(expenseDocRef, {
         ...expenseData,
         participantIds,
@@ -269,24 +282,41 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
             totalExpenses: newTotal
         });
     }
+
+    const actor = await getUserProfile(actorId);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const description = `${actorName} updated expense "${expenseData.description}".`;
+    await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, { expenseId, before: oldData, after: expenseData });
+
 }
 
-export async function deleteExpense(expenseId: string, groupId: string, amount: number): Promise<void> {
+export async function deleteExpense(expenseId: string, groupId: string, amount: number, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
     const groupDocRef = doc(db, 'groups', groupId);
+    const expenseSnap = await getDoc(expenseDocRef);
+
+    if (!expenseSnap.exists()) return;
+    const deletedExpenseData = { ...expenseSnap.data() };
 
     const batch = writeBatch(db);
 
-    const groupSnap = await getDoc(groupDocRef);
-    if (groupSnap.exists()) {
-        const currentTotal = groupSnap.data().totalExpenses || 0;
-        const newTotal = currentTotal - amount;
-        batch.update(groupDocRef, { totalExpenses: newTotal < 0 ? 0 : newTotal });
+    if (groupDocRef) {
+        const groupSnap = await getDoc(groupDocRef);
+        if (groupSnap.exists()) {
+            const currentTotal = groupSnap.data().totalExpenses || 0;
+            const newTotal = currentTotal - amount;
+            batch.update(groupDocRef, { totalExpenses: newTotal < 0 ? 0 : newTotal });
+        }
     }
 
     batch.delete(expenseDocRef);
 
     await batch.commit();
+
+    const actor = await getUserProfile(actorId);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const description = `${actorName} deleted expense "${deletedExpenseData.description}".`;
+    await logHistoryEvent(groupId, 'expense_deleted', actorId, description, deletedExpenseData);
 }
 
 
@@ -592,4 +622,84 @@ export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
         if (creditor.amount < 0.01) j++;
     }
     return settlements;
+}
+
+// --- History/Audit Log Functions ---
+async function logHistoryEvent(groupId: string, eventType: string, actorId: string, description: string, data?: any) {
+  try {
+    await addDoc(collection(db, 'history'), {
+      groupId,
+      eventType,
+      actorId,
+      description,
+      data: data || null,
+      timestamp: Timestamp.now(),
+      restored: false,
+    });
+  } catch (error) {
+    console.error("Failed to log history event:", error);
+  }
+}
+
+export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent[]> {
+  const q = query(collection(db, 'history'), where('groupId', '==', groupId), orderBy('timestamp', 'desc'));
+  const querySnapshot = await getDocs(q);
+
+  const historyDocs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HistoryEventDocument & { id: string }));
+  
+  const actorIds = [...new Set(historyDocs.map(h => h.actorId))];
+  const actors = await hydrateUsers(actorIds);
+  const actorMap = new Map(actors.map(u => [u.uid, u]));
+
+  const historyEvents: HistoryEvent[] = historyDocs.map(doc => {
+    const actor = actorMap.get(doc.actorId);
+    if (!actor) return null; // Should not happen if data is clean
+    return {
+      ...doc,
+      timestamp: (doc.timestamp as Timestamp).toDate().toISOString(),
+      actor,
+    };
+  }).filter((h): h is HistoryEvent => h !== null);
+
+  return historyEvents;
+}
+
+export async function restoreExpense(historyEventId: string, actorId: string): Promise<string | null> {
+    const historyDocRef = doc(db, 'history', historyEventId);
+    const historySnap = await getDoc(historyDocRef);
+    
+    if (!historySnap.exists()) {
+        throw new Error("History event not found.");
+    }
+    
+    const historyData = historySnap.data() as HistoryEventDocument;
+    if (historyData.eventType !== 'expense_deleted' || !historyData.data) {
+        throw new Error("This history event cannot be restored.");
+    }
+    
+    const expenseToRestore = historyData.data;
+    // Convert Firestore Timestamps back to JS Dates for addExpense function
+    if (expenseToRestore.date && expenseToRestore.date instanceof Timestamp) {
+        expenseToRestore.date = expenseToRestore.date.toDate();
+    }
+    
+    // The data for a deleted expense is the full ExpenseDocument. We need to pass this to addExpense.
+    const newExpenseId = await addExpense(expenseToRestore, actorId);
+
+    if (newExpenseId) {
+        await updateDoc(historyDocRef, { restored: true });
+        
+        const actor = await getUserProfile(actorId);
+        const restoreDescription = `${getFullName(actor?.firstName, actor?.lastName)} restored expense "${expenseToRestore.description}".`;
+        await logHistoryEvent(expenseToRestore.groupId, 'expense_restored', actorId, restoreDescription, { restoredFromHistoryId: historyEventId, newExpenseId });
+
+        return newExpenseId;
+    }
+    
+    return null;
+}
+
+export async function deleteHistoryEvent(historyEventId: string): Promise<void> {
+    const historyDocRef = doc(db, 'history', historyEventId);
+    await deleteDoc(historyDocRef);
 }

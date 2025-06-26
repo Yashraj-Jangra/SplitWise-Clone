@@ -56,6 +56,19 @@ export interface SettlementDocument {
   notes?: string;
 }
 
+export type HistoryEventType = 'expense_created' | 'expense_updated' | 'expense_deleted' | 'settlement_created' | 'settlement_deleted' | 'group_created' | 'member_added' | 'expense_restored';
+
+export interface HistoryEventDocument {
+  groupId: string;
+  eventType: HistoryEventType;
+  timestamp: Timestamp;
+  actorId: string; // The user who performed the action
+  description: string;
+  data?: any; // Store old/new data, or deleted data
+  restored?: boolean;
+}
+
+
 // --- Hydrated Types for Client-side Usage ---
 // These types include the full nested objects for easier display
 
@@ -98,3 +111,8 @@ export interface NavItem {
   label?: string
 }
 
+export interface HistoryEvent extends Omit<HistoryEventDocument, 'timestamp' | 'actorId'> {
+    id: string;
+    timestamp: string; // ISO string
+    actor: UserProfile;
+}

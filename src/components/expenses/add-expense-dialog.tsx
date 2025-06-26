@@ -261,7 +261,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     };
     
     try {
-        await addExpense(newExpense);
+        await addExpense(newExpense, userProfile.uid);
         toast({
         title: "Expense Added!",
         description: `"${values.description}" for ${CURRENCY_SYMBOL}${totalAmount.toFixed(2)} added to ${group.name}.`,
