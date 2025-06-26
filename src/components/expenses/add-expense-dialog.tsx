@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, Controller, useFieldArray, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -187,6 +187,21 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     });
   }, [watchAmount, watchSplitType, watchParticipants, form]);
 
+  const runningTotal = useMemo(() => {
+    const participants = watchParticipants || [];
+    const splitType = watchSplitType;
+
+    if (splitType === 'unequally') {
+      const sum = participants.filter(p => p.selected).reduce((acc, p) => acc + (Number(p.amountOwed) || 0), 0);
+      return { type: 'amount', sum };
+    }
+    if (splitType === 'by_percentage') {
+      const sum = participants.filter(p => p.selected).reduce((acc, p) => acc + (Number(p.percentage) || 0), 0);
+      return { type: 'percentage', sum };
+    }
+    return { type: 'none', sum: 0 };
+  }, [watchParticipants, watchSplitType]);
+
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;
@@ -255,7 +270,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
           <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">Add New Expense to "{group.name}"</DialogTitle>
           <DialogDescription>
@@ -263,21 +278,21 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <ScrollArea className="max-h-[60vh] p-1 pr-4">
-              <div className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <ScrollArea className="max-h-[65vh] p-1 pr-4">
+              <div className="space-y-6 py-2">
                 <FormField
                   control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Description</FormLabel>
-                      <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} /></FormControl>
+                      <FormControl><Input placeholder="e.g., Dinner, Movie Tickets, Rent" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                     control={form.control}
                     name="amount"
@@ -295,6 +310,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Category</FormLabel>
+                           <FormDescription className="sr-only">Suggested category based on description</FormDescription>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
@@ -313,7 +329,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                     control={form.control}
                     name="paidById"
@@ -337,7 +353,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                     name="date"
                     render={({ field }) => (
                         <FormItem className="flex flex-col pt-2">
-                        <FormLabel className="mb-[0.6rem]">Date</FormLabel>
+                        <FormLabel className="mb-1.5">Date</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
@@ -381,74 +397,80 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                 />
 
                 <FormItem>
-                  <FormLabel>Participants</FormLabel>
-                  <FormDescription>Select who participated and how the expense is split.</FormDescription>
-                  <div className="space-y-2 rounded-md border p-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                        <FormLabel>Participants</FormLabel>
+                        <FormDescription>Select who to include in this expense.</FormDescription>
+                    </div>
+                  </div>
+                  <div className="space-y-3 rounded-md border p-4">
                     {fields.map((item, index) => (
-                      <div key={item.id} className="flex items-center justify-between gap-2 p-1 rounded hover:bg-muted/50">
+                      <div key={item.id} className="grid grid-cols-12 items-center gap-2 rounded p-1 hover:bg-muted/50">
                         <FormField
                           control={form.control}
                           name={`participants.${index}.selected`}
                           render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
+                            <FormItem className="flex items-center space-x-2 col-span-6 sm:col-span-5">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap">
+                              <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap truncate">
                                 {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === userProfile?.uid ? "(You)" : ""}
                               </FormLabel>
                             </FormItem>
                           )}
                         />
-                        {watchParticipants?.[index]?.selected && (
-                          <>
-                            {watchSplitType === "unequally" && (
-                              <FormField
-                                control={form.control}
-                                name={`participants.${index}.amountOwed`}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1 min-w-[80px]">
-                                    <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} /></FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            )}
-                            {watchSplitType === "by_shares" && (
-                              <FormField
-                                control={form.control}
-                                name={`participants.${index}.shares`}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1 min-w-[70px]">
-                                    <FormControl><Input type="number" step="1" placeholder="Shares" {...field} /></FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            )}
-                            {watchSplitType === "by_percentage" && (
+                        <div className="col-span-6 sm:col-span-4">
+                            {watchParticipants?.[index]?.selected && (
+                            <>
+                                {watchSplitType === "unequally" && (
                                 <FormField
-                                control={form.control}
-                                name={`participants.${index}.percentage`}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1 min-w-[70px]">
-                                    <FormControl><Input type="number" step="0.01" placeholder="%" {...field} /></FormControl>
-                                    </FormItem>
-                                )}
+                                    control={form.control}
+                                    name={`participants.${index}.amountOwed`}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} className="h-8"/></FormControl> )}
                                 />
+                                )}
+                                {watchSplitType === "by_shares" && (
+                                <FormField
+                                    control={form.control}
+                                    name={`participants.${index}.shares`}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8"/></FormControl> )}
+                                />
+                                )}
+                                {watchSplitType === "by_percentage" && (
+                                    <FormField
+                                    control={form.control}
+                                    name={`participants.${index}.percentage`}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8"/></FormControl> )}
+                                    />
+                                )}
+                            </>
                             )}
-                            {(watchSplitType === "equally" || watchSplitType === "by_shares" || watchSplitType === "by_percentage") && watchParticipants?.[index]?.selected && (
-                                <div className="text-xs text-muted-foreground w-[80px] text-right">
-                                {CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}
-                                </div>
+                        </div>
+                        <div className="col-span-12 sm:col-span-3 text-right text-sm font-medium text-muted-foreground">
+                            {watchParticipants?.[index]?.selected && watchAmount > 0 && (
+                                <span>{CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}</span>
                             )}
-                          </>
-                        )}
+                        </div>
                       </div>
                     ))}
                   </div>
+                   <div className="text-right text-sm mt-2 pr-2">
+                        {runningTotal.type === 'amount' && (
+                            <p className={cn(Math.abs(runningTotal.sum - watchAmount) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                                Total Allocated: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)}
+                            </p>
+                        )}
+                        {runningTotal.type === 'percentage' && (
+                            <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                                Total Percentage: {runningTotal.sum.toFixed(2)}%
+                            </p>
+                        )}
+                    </div>
                    <FormMessage>{form.formState.errors.participants?.message}</FormMessage>
                    {form.formState.errors.participants?.root?.message && <FormMessage>{form.formState.errors.participants.root.message}</FormMessage>}
                 </FormItem>
               </div>
             </ScrollArea>
-            <DialogFooter>
+            <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? "Adding..." : "Add Expense"}
@@ -460,3 +482,4 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     </Dialog>
   );
 }
+
