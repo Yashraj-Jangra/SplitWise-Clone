@@ -1,57 +1,91 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- User Data ---
-    // Users can read their own profile.
-    // Users can update their own profile.
-    // Any authenticated user can see a list of other users for inviting purposes.
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow get: if request.auth != null;
-      allow list: if request.auth != null;
-      allow update: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
-    }
-    
-    // --- Group Data ---
-    // A user can only read/write group data if their UID is in the group's 'memberIds' list.
-    match /groups/{groupId} {
-      allow read: if request.auth != null && request.auth.uid in resource.data.memberIds;
-      allow create: if request.auth.uid == request.resource.data.createdById;
-      allow update: if request.auth != null && request.auth.uid in resource.data.memberIds;
-    }
-    
-    // --- Expense Data ---
-    // A user can read an expense if they are a member of the group the expense belongs to.
-    // A user can create an expense if they are a member of the group.
-    // A user can update/delete an expense if they are a member of the group (simplification for now).
-    match /expenses/{expenseId} {
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds;
-      
-      // Allow list queries only if the user is a member of the queried group
-      allow list: if request.auth != null && request.query.limit <= 100 &&
-                   (
-                     (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'groupId' && request.query.filters[0].op.string_value == '==' && get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds) ||
-                     (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'participantIds' && request.query.filters[0].op.string_value == 'array-contains' && request.query.filters[0].value.string_value == request.auth.uid) ||
-                     (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'paidById' && request.query.filters[0].op.string_value == '==' && request.query.filters[0].value.string_value == request.auth.uid)
-                   );
-    }
-    
-    // --- Settlement Data ---
-    // A user can read a settlement if they are a member of the group the settlement belongs to.
-    // A user can create a settlement if they are a member of the group.
-    match /settlements/{settlementId} {
-       allow read, write: if request.auth != null && get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds;
 
-      // Allow list queries for settlements based on group membership or direct involvement
-      allow list: if request.auth != null && request.query.limit <= 100 &&
-                  (
-                    (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'groupId' && request.query.filters[0].op.string_value == '==' && get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds) ||
-                    (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'paidById' && request.query.filters[0].op.string_value == '==' && request.query.filters[0].value.string_value == request.auth.uid) ||
-                    (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'paidToId' && request.query.filters[0].op.string_value == '==' && request.query.filters[0].value.string_value == request.auth.uid)
-                  );
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      // An admin role must exist on the user's profile document.
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isGroupMember(groupId) {
+      // The user's UID must be in the group's memberIds list.
+      let group = get(/databases/$(database)/documents/groups/$(groupId));
+      return isSignedIn() && request.auth.uid in group.data.memberIds;
+    }
+
+    function incomingData() {
+      return request.resource.data;
+    }
+    
+    function existingData() {
+      return resource.data;
+    }
+    
+    // --- User Profiles ---
+    match /users/{userId} {
+      // Admins and the user themselves can read/write.
+      allow read, write: if isAdmin() || isUser(userId);
+      
+      // Any signed-in user can list users (for inviting to groups).
+      allow list: if isSignedIn();
+    }
+
+    // --- Groups ---
+    match /groups/{groupId} {
+      // Admins or group members can read a specific group.
+      allow read: if isAdmin() || isGroupMember(groupId);
+      
+      // A user can list groups if their query is for groups they are a member of.
+      // Firestore security rules check this automatically on `array-contains` queries.
+      allow list: if isSignedIn();
+      
+      // A user can create a group if they are the creator and are including themselves as a member.
+      allow create: if isSignedIn()
+                    && isUser(incomingData().createdById)
+                    && request.auth.uid in incomingData().memberIds;
+
+      // Admins or group members can update a group (e.g., add members).
+      allow update: if isAdmin() || isGroupMember(groupId);
+
+      // Only admins can delete a group.
+      allow delete: if isAdmin();
+    }
+
+    // --- Expenses ---
+    match /expenses/{expenseId} {
+       // Admins or members of the expense's group can read it.
+      allow read: if isAdmin() || isGroupMember(existingData().groupId);
+
+      // A user can query expenses. The application's queries will filter by groupId or participantIds.
+      allow list: if isSignedIn();
+
+      // Admins or members of the group can create, update, or delete expenses for that group.
+      allow create: if isSignedIn() && isGroupMember(incomingData().groupId);
+      allow update, delete: if isAdmin() || isGroupMember(existingData().groupId);
+    }
+    
+    // --- Settlements ---
+    match /settlements/{settlementId} {
+      // Admins or members of the settlement's group can read it.
+      allow read: if isAdmin() || isGroupMember(existingData().groupId);
+      
+      // A user can query settlements.
+      allow list: if isSignedIn();
+      
+      // Admins or members of the group can create, update, or delete settlements for that group.
+      allow create: if isSignedIn() && isGroupMember(incomingData().groupId);
+      allow update, delete: if isAdmin() || isGroupMember(existingData().groupId);
     }
   }
 }
