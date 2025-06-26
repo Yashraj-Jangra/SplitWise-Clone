@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Expense, Group } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Icons } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { formatDistanceToNow } from "date-fns";
@@ -18,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { getFullName, getInitials } from '@/lib/utils';
+import { deleteExpense } from '@/lib/mock-data';
 
 interface ExpenseListItemProps {
   expense: Expense;
@@ -27,15 +40,31 @@ interface ExpenseListItemProps {
 
 export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListItemProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
   const amountUserOwes = currentUserParticipation ? currentUserParticipation.amountOwed : 0;
   const isPayer = expense.paidBy.uid === currentUserId;
 
-  const handleDelete = () => {
-    // Simulate delete
-    toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
-    // Here you would call an API and update state/refresh
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+        await deleteExpense(expense.id, expense.groupId, expense.amount);
+        toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
+        setIsDeleteDialogOpen(false);
+        router.refresh();
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error Deleting Expense",
+            description: "Failed to delete the expense. Please try again.",
+        });
+    } finally {
+        setIsDeleting(false);
+    }
   };
 
   return (
@@ -72,16 +101,35 @@ export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListIt
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+              <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
                 <Icons.Edit className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+              <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
                 <Icons.Delete className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the expense "{expense.description}" and recalculate group balances.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+              Delete Expense
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <EditExpenseDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}

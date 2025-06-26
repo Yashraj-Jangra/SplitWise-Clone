@@ -271,6 +271,24 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
     }
 }
 
+export async function deleteExpense(expenseId: string, groupId: string, amount: number): Promise<void> {
+    const expenseDocRef = doc(db, 'expenses', expenseId);
+    const groupDocRef = doc(db, 'groups', groupId);
+
+    const batch = writeBatch(db);
+
+    const groupSnap = await getDoc(groupDocRef);
+    if (groupSnap.exists()) {
+        const currentTotal = groupSnap.data().totalExpenses || 0;
+        const newTotal = currentTotal - amount;
+        batch.update(groupDocRef, { totalExpenses: newTotal < 0 ? 0 : newTotal });
+    }
+
+    batch.delete(expenseDocRef);
+
+    await batch.commit();
+}
+
 
 export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
     const q = query(collection(db, 'expenses'), where('groupId', '==', groupId));
