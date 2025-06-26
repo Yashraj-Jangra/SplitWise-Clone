@@ -28,6 +28,11 @@ export interface GroupDocument {
   coverImageUrl?: string;
 }
 
+export interface ExpensePayerDocument {
+  userId: string;
+  amount: number;
+}
+
 export interface ExpenseParticipantDocument {
   userId: string;
   amountOwed: number;
@@ -38,7 +43,7 @@ export interface ExpenseDocument {
   groupId: string;
   description: string;
   amount: number;
-  paidById: string;
+  payers: ExpensePayerDocument[];
   date: Timestamp;
   splitType: "equally" | "unequally" | "by_shares" | "by_percentage";
   participants: ExpenseParticipantDocument[];
@@ -79,13 +84,17 @@ export interface Group extends Omit<GroupDocument, 'memberIds' | 'createdById' |
   createdAt: string; // ISO string for client
 }
 
+export interface ExpensePayer extends Omit<ExpensePayerDocument, 'userId'> {
+    user: UserProfile;
+}
+
 export interface ExpenseParticipant extends Omit<ExpenseParticipantDocument, 'userId'> {
     user: UserProfile;
 }
 
-export interface Expense extends Omit<ExpenseDocument, 'paidById' | 'participants' | 'date'> {
+export interface Expense extends Omit<ExpenseDocument, 'payers' | 'participants' | 'date'> {
     id: string;
-    paidBy: UserProfile;
+    payers: ExpensePayer[];
     participants: ExpenseParticipant[];
     date: string; // ISO string for client
 }

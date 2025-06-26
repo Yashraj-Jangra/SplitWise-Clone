@@ -27,7 +27,7 @@ import type {
   SettlementDocument,
   Balance,
   ExpenseParticipant,
-  ExpenseParticipantDocument,
+  ExpensePayer,
   HistoryEvent,
   HistoryEventDocument,
 } from '@/types';
@@ -317,7 +317,7 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
     const description = `${actorName} deleted expense "${deletedExpenseData.description}" (was ${CURRENCY_SYMBOL}${amount.toFixed(2)}).`;
-    await logHistoryEvent(groupId, 'expense_deleted', actorId, description, { ...deletedExpenseData, expenseId: expenseId });
+    await logHistoryEvent(groupId, 'expense_deleted', actorId, { ...deletedExpenseData, expenseId: expenseId });
 }
 
 
@@ -328,25 +328,31 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
     const expenses: Expense[] = await Promise.all(
         querySnapshot.docs.map(async (docSnap) => {
             const expenseData = docSnap.data() as ExpenseDocument;
-            const userIds = [expenseData.paidById, ...expenseData.participants.map(p => p.userId)];
+            const userIds = [
+                ...expenseData.payers.map(p => p.userId), 
+                ...expenseData.participants.map(p => p.userId)
+            ];
             const uniqueUserIds = [...new Set(userIds)];
             const users = await hydrateUsers(uniqueUserIds);
             const userMap = new Map(users.map(u => [u.uid, u]));
             
-            const paidBy = userMap.get(expenseData.paidById);
-            if (!paidBy) return null;
+            const payers = expenseData.payers.map(p => {
+                const user = userMap.get(p.userId);
+                return user ? { ...p, user } : null;
+            }).filter((p): p is ExpensePayer => p !== null);
+            
+            if (payers.length === 0) return null;
 
             const participants = expenseData.participants.map(p => {
                 const user = userMap.get(p.userId);
                 return user ? { ...p, user } : null;
             }).filter((p): p is ExpenseParticipant => p !== null);
 
-
             return {
                 ...expenseData,
                 id: docSnap.id,
                 date: (expenseData.date as Timestamp).toDate().toISOString(),
-                paidBy,
+                payers,
                 participants
             }
         })
@@ -356,35 +362,40 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
 
 export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
   const expensesRef = collection(db, 'expenses');
-  const paidByQuery = query(expensesRef, where('paidById', '==', userId));
   const memberQuery = query(expensesRef, where('participantIds', 'array-contains', userId)); 
   
-  const [paidBySnapshot, memberSnapshot] = await Promise.all([
-      getDocs(paidByQuery),
-      getDocs(memberQuery)
-  ]);
+  const memberSnapshot = await getDocs(memberQuery);
   
   const expenseMap = new Map<string, ExpenseDocument>();
-  paidBySnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
   memberSnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
 
   const expenses: Expense[] = await Promise.all(
     Array.from(expenseMap.entries()).map(async ([id, expenseData]) => {
-        const userIds = [expenseData.paidById, ...expenseData.participants.map((p: any) => p.userId)];
+        const userIds = [
+            ...expenseData.payers.map(p => p.userId), 
+            ...expenseData.participants.map(p => p.userId)
+        ];
         const uniqueUserIds = [...new Set(userIds)];
         const users = await hydrateUsers(uniqueUserIds);
         const userMap = new Map(users.map(u => [u.uid, u]));
-        const paidBy = userMap.get(expenseData.paidById);
-        if (!paidBy) return null;
-        const participants = expenseData.participants.map((p: any) => {
+
+        const payers = expenseData.payers.map(p => {
+                const user = userMap.get(p.userId);
+                return user ? { ...p, user } : null;
+            }).filter((p): p is ExpensePayer => p !== null);
+        
+        if (payers.length === 0) return null;
+        
+        const participants = expenseData.participants.map((p) => {
             const user = userMap.get(p.userId);
             return user ? { ...p, user } : null;
-        }).filter((p: any): p is ExpenseParticipant => p !== null);
+        }).filter((p): p is ExpenseParticipant => p !== null);
+
         return {
             ...expenseData,
             id: id,
             date: (expenseData.date as Timestamp).toDate().toISOString(),
-            paidBy,
+            payers,
             participants
         }
     })
@@ -400,7 +411,7 @@ export async function getAllExpenses(): Promise<Expense[]> {
   const expenseDocs = expenseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpenseDocument & {id: string}));
   
   expenseDocs.forEach(expense => {
-    allUserIds.add(expense.paidById);
+    expense.payers.forEach(p => allUserIds.add(p.userId));
     expense.participants.forEach(p => allUserIds.add(p.userId));
   });
 
@@ -408,8 +419,12 @@ export async function getAllExpenses(): Promise<Expense[]> {
   const userMap = new Map(allUsers.map(u => [u.uid, u]));
 
   const expenses: Expense[] = expenseDocs.map((expenseData) => {
-      const paidBy = userMap.get(expenseData.paidById);
-      if (!paidBy) return null;
+      const payers = expenseData.payers.map(p => {
+          const user = userMap.get(p.userId);
+          return user ? { ...p, user } : null;
+      }).filter((p): p is ExpensePayer => p !== null);
+
+      if (payers.length === 0) return null;
 
       const participants = expenseData.participants.map(p => {
           const user = userMap.get(p.userId);
@@ -420,7 +435,7 @@ export async function getAllExpenses(): Promise<Expense[]> {
           ...expenseData,
           id: expenseData.id,
           date: (expenseData.date as Timestamp).toDate().toISOString(),
-          paidBy,
+          payers,
           participants
       }
   }).filter((e): e is Expense => e !== null);
@@ -553,9 +568,11 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
   group.members.forEach(member => memberBalances[member.uid] = 0);
 
   expenses.forEach(expense => {
-    if(memberBalances[expense.paidBy.uid] !== undefined) {
-        memberBalances[expense.paidBy.uid] += expense.amount;
-    }
+    expense.payers.forEach(payer => {
+        if(memberBalances[payer.user.uid] !== undefined) {
+            memberBalances[payer.user.uid] += payer.amount;
+        }
+    });
     expense.participants.forEach(p => {
       if(memberBalances[p.user.uid] !== undefined) {
         memberBalances[p.user.uid] -= p.amountOwed;

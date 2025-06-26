@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { getFullName, getInitials } from '@/lib/utils';
 import { deleteExpense } from '@/lib/mock-data';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface ExpenseListItemProps {
   expense: Expense;
@@ -48,7 +49,20 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
   const amountUserOwes = currentUserParticipation ? currentUserParticipation.amountOwed : 0;
-  const isPayer = expense.paidBy.uid === currentUserId;
+  const isPayer = expense.payers.some(p => p.user.uid === currentUserId);
+  
+  const getPayerText = () => {
+    if (expense.payers.length === 1) {
+        const payer = expense.payers[0].user;
+        return `Paid by ${payer.uid === currentUserId ? 'You' : getFullName(payer.firstName, payer.lastName)}`;
+    } else if (expense.payers.length > 1) {
+        const otherPayersCount = expense.payers.length - 1;
+        const firstPayer = expense.payers[0].user;
+        const firstPayerName = firstPayer.uid === currentUserId ? 'You' : getFullName(firstPayer.firstName, firstPayer.lastName);
+        return `Paid by ${firstPayerName} & ${otherPayersCount} other${otherPayersCount > 1 ? 's' : ''}`;
+    }
+    return "Paid by Unknown";
+  }
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -72,18 +86,52 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
     }
   };
 
+  const renderAvatars = () => {
+    const visiblePayers = expense.payers.slice(0, 2);
+    const hiddenPayersCount = expense.payers.length - visiblePayers.length;
+
+    return (
+        <TooltipProvider>
+            <div className="flex -space-x-2">
+                {visiblePayers.map(payer => (
+                    <Tooltip key={payer.user.uid}>
+                        <TooltipTrigger asChild>
+                            <Avatar className="h-10 w-10 border-2 border-background">
+                                <AvatarImage src={payer.user.avatarUrl} alt={getFullName(payer.user.firstName, payer.user.lastName)} />
+                                <AvatarFallback>{getInitials(payer.user.firstName, payer.user.lastName)}</AvatarFallback>
+                            </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{getFullName(payer.user.firstName, payer.user.lastName)} paid {CURRENCY_SYMBOL}{payer.amount.toFixed(2)}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                ))}
+                {hiddenPayersCount > 0 && (
+                    <Tooltip>
+                         <TooltipTrigger asChild>
+                            <Avatar className="h-10 w-10 border-2 border-background">
+                                <AvatarFallback>+{hiddenPayersCount}</AvatarFallback>
+                            </Avatar>
+                        </TooltipTrigger>
+                         <TooltipContent>
+                            <p>And {hiddenPayersCount} more payer(s)</p>
+                        </TooltipContent>
+                    </Tooltip>
+                )}
+            </div>
+        </TooltipProvider>
+    )
+  }
+
   return (
     <>
       <div id={`expense-${expense.id}`} className="flex items-center justify-between p-4 hover:bg-muted/50">
         <div className="flex items-center gap-4">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={expense.paidBy.avatarUrl} alt={getFullName(expense.paidBy.firstName, expense.paidBy.lastName)} />
-            <AvatarFallback>{getInitials(expense.paidBy.firstName, expense.paidBy.lastName)}</AvatarFallback>
-          </Avatar>
+          {renderAvatars()}
           <div className="grid gap-0.5">
             <p className="text-sm font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
             <p className="text-xs text-muted-foreground">
-              Paid by {isPayer ? "You" : expense.paidBy.firstName} • {formatDistanceToNow(new Date(expense.date), { addSuffix: true })}
+              {getPayerText()} • {formatDistanceToNow(new Date(expense.date), { addSuffix: true })}
             </p>
             {expense.category && <Badge variant="outline" className="w-fit text-xs">{expense.category}</Badge>}
           </div>
@@ -94,8 +142,8 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
             {currentUserParticipation && !isPayer && (
               <p className="text-xs text-red-600">You owe: {CURRENCY_SYMBOL}{amountUserOwes.toFixed(2)}</p>
             )}
-            {isPayer && (
-              <p className="text-xs text-green-600">You paid</p>
+            {isPayer && currentUserParticipation && currentUserParticipation.amountOwed < expense.amount && (
+              <p className="text-xs text-green-600">You get back: {CURRENCY_SYMBOL}{(expense.payers.find(p => p.user.uid === currentUserId)!.amount - amountUserOwes).toFixed(2)}</p>
             )}
           </div>
           <DropdownMenu>

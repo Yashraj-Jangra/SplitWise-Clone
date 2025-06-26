@@ -22,12 +22,11 @@ interface ActivityItem {
   type: "expense" | "settlement";
   description: string;
   amount: number;
-  user: UserProfile;
+  actors: UserProfile[]; // Can be multiple for payers
   groupName: string;
   groupId: string;
   date: string;
   icon: React.ReactNode;
-  paidTo?: UserProfile;
 }
 
 export function RecentActivityList() {
@@ -54,7 +53,7 @@ export function RecentActivityList() {
           type: 'expense' as const,
           description: e.description,
           amount: e.amount,
-          user: e.paidBy,
+          actors: e.payers.map(p => p.user),
           groupName: groupMap.get(e.groupId) || "a group",
           groupId: e.groupId,
           date: e.date,
@@ -66,8 +65,7 @@ export function RecentActivityList() {
           type: 'settlement' as const,
           description: `Settled with ${getFullName(s.paidTo.firstName, s.paidTo.lastName)}`,
           amount: s.amount,
-          user: s.paidBy,
-          paidTo: s.paidTo,
+          actors: [s.paidBy],
           groupName: groupMap.get(s.groupId) || "a group",
           groupId: s.groupId,
           date: s.date,
@@ -88,6 +86,14 @@ export function RecentActivityList() {
 
     fetchRecentActivity();
   }, [userProfile]);
+
+  const getActorText = (actors: UserProfile[], type: 'expense' | 'settlement') => {
+      if (actors.length === 0) return 'Someone';
+      if (actors.length === 1) {
+          return getFullName(actors[0].firstName, actors[0].lastName);
+      }
+      return `${getFullName(actors[0].firstName, actors[0].lastName)} & ${actors.length - 1} other${actors.length > 2 ? 's' : ''}`
+  }
 
   if (loading) {
     return (
@@ -139,14 +145,15 @@ export function RecentActivityList() {
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={activity.user.avatarUrl} />
+                    <AvatarImage src={activity.actors[0].avatarUrl} />
+                    <AvatarFallback>{activity.actors[0].firstName[0]}</AvatarFallback>
                  </Avatar>
                 <div className="grid gap-1 flex-1">
                   <p className="text-sm font-medium leading-none truncate">
                     {activity.description}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    <span className="font-semibold">{getFullName(activity.user.firstName, activity.user.lastName)}</span> in <Link href={`/groups/${activity.groupId}`} className="hover:underline">{activity.groupName}</Link>
+                    <span className="font-semibold">{getActorText(activity.actors, activity.type)}</span> in <Link href={`/groups/${activity.groupId}`} className="hover:underline">{activity.groupName}</Link>
                   </p>
                 </div>
                 <div className="flex flex-col items-end">

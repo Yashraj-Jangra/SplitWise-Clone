@@ -23,10 +23,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import type { Group, Expense, UserProfile, ExpenseParticipantDocument, ExpenseDocument } from "@/types";
+import type { Group, ExpensePayerDocument, ExpenseParticipantDocument, ExpenseDocument } from "@/types";
 import { addExpense } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -38,20 +38,46 @@ import { getFullName } from "@/lib/utils";
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
   amount: z.coerce.number().positive("Amount must be positive."),
-  paidById: z.string().min(1, "Payer is required."),
-  date: z.date({ required_error: "Date is required."}),
+  date: z.date({ required_error: "Date is required." }),
+  paymentType: z.enum(['single', 'multiple']).default('single'),
+  singlePayerId: z.string().optional(),
+  multiPayers: z.array(z.object({
+    userId: z.string(),
+    name: z.string(),
+    amount: z.coerce.number().optional(),
+  })).optional(),
   splitType: z.enum(["equally", "unequally", "by_shares", "by_percentage"]),
   participants: z.array(z.object({
     userId: z.string(),
-    name: z.string(), // For display
+    name: z.string(),
     selected: z.boolean(),
     amountOwed: z.coerce.number().optional(),
     shares: z.coerce.number().min(0, "Shares cannot be negative").optional(),
     percentage: z.coerce.number().min(0, "Percentage cannot be negative").max(100, "Percentage cannot exceed 100").optional(),
   })).min(1, "At least one participant is required.")
-   .refine(arr => arr.some(p => p.selected), { message: "At least one participant must be selected."}),
+   .refine(arr => arr.some(p => p.selected), { message: "At least one participant must be selected." }),
   category: z.string({ required_error: "Category is required." }),
+}).superRefine((data, ctx) => {
+    if (data.paymentType === 'single') {
+        if (!data.singlePayerId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "A payer must be selected.",
+                path: ["singlePayerId"]
+            });
+        }
+    } else { // multiple
+        const totalPaid = data.multiPayers?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+        if (Math.abs(totalPaid - data.amount) > 0.01) {
+             ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `The sum of payments (${CURRENCY_SYMBOL}${totalPaid.toFixed(2)}) must equal the total expense amount (${CURRENCY_SYMBOL}${data.amount.toFixed(2)}).`,
+                path: ["multiPayers"]
+            });
+        }
+    }
 });
+
 
 type AddExpenseFormValues = z.infer<typeof expenseSchema>;
 
@@ -69,37 +95,48 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
   const form = useForm<AddExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
-        description: "",
-        amount: 0,
-        paidById: userProfile?.uid || "",
-        date: new Date(),
-        splitType: "equally",
-        participants: [],
-        category: "Other",
+      description: "",
+      amount: 0,
+      date: new Date(),
+      paymentType: 'single',
+      singlePayerId: userProfile?.uid || "",
+      splitType: "equally",
+      participants: [],
+      category: "Other",
     }
   });
-  
+
   const watchAmount = form.watch("amount");
   const watchSplitType = form.watch("splitType");
   const watchParticipants = form.watch("participants");
   const watchDescription = form.watch("description");
-  
+  const watchPaymentType = form.watch("paymentType");
+  const watchMultiPayers = form.watch("multiPayers");
+
   const participantDeps = JSON.stringify(
     watchParticipants?.map(p => ({
-        selected: p.selected,
-        shares: watchSplitType === 'by_shares' ? p.shares : undefined,
-        percentage: watchSplitType === 'by_percentage' ? p.percentage : undefined,
-        amountOwed: watchSplitType === 'unequally' ? p.amountOwed : undefined,
+      selected: p.selected,
+      shares: watchSplitType === 'by_shares' ? p.shares : undefined,
+      percentage: watchSplitType === 'by_percentage' ? p.percentage : undefined,
+      amountOwed: watchSplitType === 'unequally' ? p.amountOwed : undefined,
     }))
   );
+
+  const multiPayersDep = JSON.stringify(watchMultiPayers);
 
   useEffect(() => {
     if (userProfile && open) {
       form.reset({
         description: "",
         amount: 0,
-        paidById: userProfile.uid,
         date: new Date(),
+        paymentType: 'single',
+        singlePayerId: userProfile.uid,
+        multiPayers: group.members.map(member => ({
+            userId: member.uid,
+            name: getFullName(member.firstName, member.lastName),
+            amount: 0,
+        })),
         splitType: "equally",
         participants: group.members.map(member => ({
           userId: member.uid,
@@ -197,6 +234,12 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
         }
     });
   }, [watchAmount, watchSplitType, participantDeps, form]);
+  
+  const totalPaid = useMemo(() => {
+    return watchMultiPayers?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
+  }, [multiPayersDep]);
+
+  const amountRemainingToPay = watchAmount - totalPaid;
 
   const runningTotal = useMemo(() => {
     const participants = watchParticipants || [];
@@ -216,6 +259,18 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;
+
+    let payers: ExpensePayerDocument[] = [];
+    if (values.paymentType === 'single' && values.singlePayerId) {
+        payers = [{ userId: values.singlePayerId, amount: values.amount }];
+    } else {
+        payers = values.multiPayers?.filter(p => p.amount && p.amount > 0).map(p => ({ userId: p.userId, amount: p.amount! })) || [];
+    }
+
+    if (payers.length === 0) {
+        form.setError("paymentType", { type: "manual", message: "At least one payer must be specified."});
+        return;
+    }
 
     const finalParticipants: ExpenseParticipantDocument[] = values.participants
       .filter(p => p.selected)
@@ -249,11 +304,11 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
         }
     }
 
-    const newExpense: Omit<ExpenseDocument, 'date'> & {date: Date} = {
+    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds'> & {date: Date} = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
-      paidById: values.paidById,
+      payers: payers,
       date: values.date,
       splitType: values.splitType,
       participants: finalParticipants,
@@ -338,38 +393,18 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                       )}
                     />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                    control={form.control}
-                    name="paidById"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Paid By</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                            {group.members.map(member => (
-                                <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
+                 <FormField
                     control={form.control}
                     name="date"
                     render={({ field }) => (
                         <FormItem className="flex flex-col">
-                        <FormLabel className="mb-1.5">Date</FormLabel>
+                        <FormLabel>Date</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
                                 <Button
                                 variant={"outline"}
-                                className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                className={cn("pl-3 text-left font-normal w-full", !field.value && "text-muted-foreground")}
                                 >
                                 {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                 <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
@@ -384,7 +419,87 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                         </FormItem>
                     )}
                     />
-                </div>
+
+                <FormField
+                  control={form.control}
+                  name="paymentType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Payment Method</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex space-x-4"
+                        >
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="single" /></FormControl>
+                            <FormLabel className="font-normal">Single Payer</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="multiple" /></FormControl>
+                            <FormLabel className="font-normal">Multiple Payers</FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {watchPaymentType === 'single' && (
+                    <FormField
+                        control={form.control}
+                        name="singlePayerId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Paid By</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                {group.members.map(member => (
+                                    <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+
+                 {watchPaymentType === 'multiple' && (
+                     <FormItem>
+                        <div className="flex justify-between items-center">
+                            <FormLabel>Payers</FormLabel>
+                            <p className={cn("text-sm font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-green-500')}>
+                                {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
+                                 amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} overpaid` :
+                                 'All assigned'}
+                            </p>
+                        </div>
+                        <div className="space-y-3 rounded-md border p-4 max-h-48 overflow-y-auto">
+                            {form.getValues('multiPayers')?.map((item, index) => (
+                                <div key={item.userId} className="flex items-center justify-between gap-4">
+                                     <FormLabel className="font-normal whitespace-nowrap truncate flex-1">
+                                        {item.name} {item.userId === userProfile?.uid ? "(You)" : ""}
+                                      </FormLabel>
+                                       <FormField
+                                            control={form.control}
+                                            name={`multiPayers.${index}.amount`}
+                                            render={({ field }) => (
+                                                <FormControl>
+                                                    <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 w-28 text-right"/>
+                                                </FormControl>
+                                            )}
+                                        />
+                                </div>
+                            ))}
+                        </div>
+                         <FormMessage>{form.formState.errors.multiPayers?.message}</FormMessage>
+                     </FormItem>
+                 )}
+
 
                 <FormField
                   control={form.control}
@@ -413,7 +528,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
                         <FormDescription>Select who to include in this expense.</FormDescription>
                     </div>
                   </div>
-                  <div className="space-y-3 rounded-md border p-4">
+                  <div className="space-y-3 rounded-md border p-4 max-h-48 overflow-y-auto">
                     {form.getValues('participants').map((item, index) => (
                       <div key={item.userId} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 rounded p-1 hover:bg-muted/50">
                         <FormField
