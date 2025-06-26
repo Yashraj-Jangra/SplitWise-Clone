@@ -154,12 +154,14 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   useEffect(() => {
     if (!open) return;
+    
     const totalAmount = Number(form.getValues("amount")) || 0;
     const splitType = form.getValues("splitType");
     const allParticipants = form.getValues("participants") || [];
     const selectedParticipants = allParticipants.filter(p => p.selected);
+    const numSelected = selectedParticipants.length;
 
-    if (totalAmount <= 0 || selectedParticipants.length === 0) {
+    if (totalAmount <= 0 || numSelected === 0) {
       allParticipants.forEach((_, index) => {
         form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
       });
@@ -168,45 +170,41 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     
     const newAmounts: { [userId: string]: number } = {};
 
-    if (splitType === 'equally' || splitType === 'by_shares') {
-        let amounts: number[] = [];
-        if (splitType === 'equally') {
-            const share = totalAmount / selectedParticipants.length;
-            amounts = selectedParticipants.map(() => share);
-        } else {
-            const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
-            if (totalShares > 0) {
-                amounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 0)) / totalShares);
-            } else {
-                const share = totalAmount / selectedParticipants.length;
-                amounts = selectedParticipants.map(() => share);
-            }
-        }
+     if (splitType === 'equally' || splitType === 'by_shares' || splitType === 'by_percentage') {
+        let rawAmounts: number[];
 
-        const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
-        const sumOfRounded = roundedAmounts.reduce((sum, a) => sum + a, 0);
+        if (splitType === 'equally') {
+            const share = totalAmount / numSelected;
+            rawAmounts = selectedParticipants.map(() => share);
+        } else if (splitType === 'by_shares') {
+            const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 1), 0);
+            if (totalShares > 0) {
+                rawAmounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 1)) / totalShares);
+            } else {
+                const share = totalAmount / numSelected;
+                rawAmounts = selectedParticipants.map(() => share);
+            }
+        } else { // by_percentage
+            const percentages = selectedParticipants.map(p => Number(p.percentage) || 0);
+            rawAmounts = percentages.map(p => (totalAmount * p) / 100);
+        }
+        
+        const roundedAmounts = rawAmounts.map(amount => parseFloat(amount.toFixed(2)));
+        const sumOfRounded = roundedAmounts.reduce((sum, amount) => sum + amount, 0);
         let remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
         
-        if (remainder !== 0 && roundedAmounts.length > 0) {
-            for(let i=0; i<Math.abs(remainder * 100); i++) {
-               roundedAmounts[i % roundedAmounts.length] += Math.sign(remainder) * 0.01
-            }
+        for (let i = 0; i < Math.abs(remainder * 100); i++) {
+            const index = i % numSelected;
+            roundedAmounts[index] = parseFloat((roundedAmounts[index] + (0.01 * Math.sign(remainder))).toFixed(2));
         }
-        
+
         selectedParticipants.forEach((p, i) => {
             newAmounts[p.userId] = roundedAmounts[i];
         });
-
-    } else if (splitType === 'by_percentage') {
-       selectedParticipants.forEach(p => {
-          const individualAmount = (totalAmount * (Number(p.percentage) || 0)) / 100;
-          newAmounts[p.userId] = parseFloat(individualAmount.toFixed(2));
-       });
     }
 
     allParticipants.forEach((p, index) => {
         let finalAmountToSet: number;
-        
         if (!p.selected) {
             finalAmountToSet = 0;
         } else if (splitType === 'unequally') {
@@ -216,9 +214,9 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
         
         const currentFormValue = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
-        if (Math.abs(currentFormValue - finalAmountToSet) > 1e-5) {
+        if (Math.abs(currentFormValue - finalAmountToSet) > 1e-9) {
             form.setValue(`participants.${index}.amountOwed`, finalAmountToSet, {
-                shouldValidate: true, shouldDirty: true, shouldTouch: true,
+                shouldValidate: true, shouldDirty: true
             });
         }
     });

@@ -122,8 +122,9 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     const splitType = form.getValues("splitType");
     const allParticipants = form.getValues("participants") || [];
     const selectedParticipants = allParticipants.filter(p => p.selected);
+    const numSelected = selectedParticipants.length;
 
-    if (totalAmount <= 0 || selectedParticipants.length === 0) {
+    if (totalAmount <= 0 || numSelected === 0) {
       allParticipants.forEach((_, index) => {
         form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
       });
@@ -132,38 +133,37 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     
     const newAmounts: { [userId: string]: number } = {};
 
-    if (splitType === 'equally' || splitType === 'by_shares') {
-        let amounts: number[] = [];
+    if (splitType === 'equally' || splitType === 'by_shares' || splitType === 'by_percentage') {
+        let rawAmounts: number[];
+
         if (splitType === 'equally') {
-            const share = totalAmount / selectedParticipants.length;
-            amounts = selectedParticipants.map(() => share);
-        } else { // by_shares
-            const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
+            const share = totalAmount / numSelected;
+            rawAmounts = selectedParticipants.map(() => share);
+        } else if (splitType === 'by_shares') {
+            const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 1), 0);
             if (totalShares > 0) {
-                amounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 0)) / totalShares);
-            } else { // Fallback if all shares are 0, treat as equal split
-                const share = totalAmount / selectedParticipants.length;
-                amounts = selectedParticipants.map(() => share);
+                rawAmounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 1)) / totalShares);
+            } else {
+                const share = totalAmount / numSelected;
+                rawAmounts = selectedParticipants.map(() => share);
             }
+        } else { // by_percentage
+            const percentages = selectedParticipants.map(p => Number(p.percentage) || 0);
+            rawAmounts = percentages.map(p => (totalAmount * p) / 100);
+        }
+        
+        const roundedAmounts = rawAmounts.map(amount => parseFloat(amount.toFixed(2)));
+        const sumOfRounded = roundedAmounts.reduce((sum, amount) => sum + amount, 0);
+        let remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
+        
+        for (let i = 0; i < Math.abs(remainder * 100); i++) {
+            const index = i % numSelected;
+            roundedAmounts[index] = parseFloat((roundedAmounts[index] + (0.01 * Math.sign(remainder))).toFixed(2));
         }
 
-        const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
-        const sumOfRounded = roundedAmounts.reduce((sum, a) => sum + a, 0);
-        const remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
-        
-        if (remainder !== 0 && roundedAmounts.length > 0) {
-            roundedAmounts[0] += remainder;
-        }
-        
         selectedParticipants.forEach((p, i) => {
             newAmounts[p.userId] = roundedAmounts[i];
         });
-
-    } else if (splitType === 'by_percentage') {
-       selectedParticipants.forEach(p => {
-          const individualAmount = (totalAmount * (Number(p.percentage) || 0)) / 100;
-          newAmounts[p.userId] = parseFloat(individualAmount.toFixed(2));
-       });
     }
 
     allParticipants.forEach((p, index) => {
@@ -178,11 +178,10 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
         
         const currentFormValue = Number(form.getValues(`participants.${index}.amountOwed`)) || 0;
 
-        if (Math.abs(currentFormValue - finalAmountToSet) > 1e-5) {
+        if (Math.abs(currentFormValue - finalAmountToSet) > 1e-9) {
             form.setValue(`participants.${index}.amountOwed`, finalAmountToSet, {
                 shouldValidate: true,
                 shouldDirty: true,
-                shouldTouch: true,
             });
         }
     });
