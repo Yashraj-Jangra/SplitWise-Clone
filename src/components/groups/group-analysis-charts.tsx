@@ -12,7 +12,7 @@ import { Icons } from '../icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subDays, eachDayOfInterval, startOfDay, isValid } from 'date-fns';
+import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, isValid } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -64,7 +64,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     return validExpenses.filter(expense => {
       const expenseDate = new Date(expense.date);
       const isInCategory = selectedCategory === 'all' || (expense.category || 'Other') === selectedCategory;
-      const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= startOfDay(date.to!);
+      const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= endOfDay(date.to!);
       return isInCategory && isInDateRange;
     });
   }, [validExpenses, date, selectedCategory]);
@@ -288,3 +288,4 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     </div>
   );
 }
+
