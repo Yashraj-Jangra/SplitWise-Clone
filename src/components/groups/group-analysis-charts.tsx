@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import type { Expense, UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
+import { Line, LineChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { getFullName } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -214,25 +214,23 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
         </CardHeader>
         <CardContent>
           <ChartContainer config={userChartConfig} className="h-[400px] w-full">
-            <AreaChart data={userSpendingOverTime} accessibilityLayer margin={{ left: 20, right: 12 }}>
+            <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: 20, right: 12 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`} />
                 <Tooltip content={<ChartTooltipContent indicator="dot" />} />
                 <Legend />
                 {members.map(member => (
-                    <Area
+                    <Line
                         key={member.uid}
                         dataKey={member.uid}
-                        type="natural"
-                        fill={`var(--color-${member.uid})`}
-                        fillOpacity={0.2}
+                        type="linear"
                         stroke={`var(--color-${member.uid})`}
-                        stackId="a"
+                        strokeWidth={2}
                         name={getFullName(member.firstName, member.lastName)}
                     />
                 ))}
-            </AreaChart>
+            </LineChart>
           </ChartContainer>
         </CardContent>
       </Card>
@@ -294,4 +292,3 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     </div>
   );
 }
-
