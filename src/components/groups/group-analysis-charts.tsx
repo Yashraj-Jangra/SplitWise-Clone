@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import type { Expense, UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { getFullName } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -81,8 +81,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
             date: format(d, 'MMM d'),
         };
         members.forEach(member => {
-            const memberName = getFullName(member.firstName, member.lastName);
-            entry[memberName] = spendingByDateAndUser[dayKey]?.[member.uid] || 0;
+            entry[member.uid] = spendingByDateAndUser[dayKey]?.[member.uid] || 0;
         });
         return entry;
     });
@@ -117,9 +116,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
 
   const userChartConfig = useMemo(() => {
     return members.reduce((acc, member, index) => {
-        const memberName = getFullName(member.firstName, member.lastName);
-        acc[memberName] = {
-            label: memberName,
+        acc[member.uid] = {
+            label: getFullName(member.firstName, member.lastName),
             color: CHART_COLORS[index % CHART_COLORS.length]
         };
         return acc;
@@ -209,12 +207,11 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 <Tooltip content={<ChartTooltipContent indicator="dot" />} />
                 <Legend />
                 {members.map(member => {
-                    const memberName = getFullName(member.firstName, member.lastName);
-                    const color = userChartConfig[memberName]?.color;
+                    const color = userChartConfig[member.uid]?.color;
                     return (
                         <Area
                             key={member.uid}
-                            dataKey={memberName}
+                            dataKey={member.uid}
                             type="natural"
                             fill={color}
                             fillOpacity={0.2}
@@ -251,7 +248,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                   cursor={false}
                   content={<ChartTooltipContent indicator="dot" />}
                 />
-                 <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={4}>
+                 <Bar dataKey="total" fill="var(--color-total)" radius={4}>
                     {totalPaidByMember.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
