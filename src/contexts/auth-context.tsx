@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
@@ -23,6 +23,7 @@ interface AuthContextType {
   signup: (data: SignupData, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -167,6 +168,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithPopup(auth, provider);
   }, []);
 
+  const sendPasswordResetEmail = useCallback(async (email: string) => {
+    if (!auth) throw new Error("Firebase not configured");
+    await firebaseSendPasswordResetEmail(auth, email);
+  }, []);
+
   const value = useMemo(() => ({
     firebaseUser,
     userProfile,
@@ -176,7 +182,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signup,
     logout,
     loginWithGoogle,
-  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout, loginWithGoogle]);
+    sendPasswordResetEmail,
+  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout, loginWithGoogle, sendPasswordResetEmail]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');

@@ -36,11 +36,6 @@ const adminNavItems: NavItem[] = [
     href: "/admin/groups",
     icon: "Details",
   },
-    {
-    title: "Manage Emails",
-    href: "/admin/emails",
-    icon: "Mail",
-  },
 ];
 
 const returnToAppNavItem: NavItem = {
