@@ -18,7 +18,6 @@ import { AuthCard } from "./auth-card";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
-import { isUsernameTaken } from "@/lib/mock-data";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -28,10 +27,7 @@ const signupSchema = z.object({
   username: z.string()
     .min(3, { message: "Username must be at least 3 characters." })
     .max(20, { message: "Username must be less than 20 characters." })
-    .regex(/^[a-zA-Z0-9_]+$/, { message: "Username can only contain letters, numbers, and underscores."})
-    .refine(async (username) => {
-        return !(await isUsernameTaken(username));
-    }, {message: "This username is already taken."}),
+    .regex(/^[a-zA-Z0-9_]+$/, { message: "Username can only contain letters, numbers, and underscores."}),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters long." }),
   mobileNumber: z.string().optional(),
@@ -78,7 +74,13 @@ export function SignupForm() {
           description = `Signup failed: ${error.message}`;
         }
       } else if (error instanceof Error) {
-        description = error.message;
+        // This will now catch the username error from the context
+        if (error.message.toLowerCase().includes("username")) {
+            description = error.message;
+            form.setError("username", { type: "manual", message: description });
+        } else {
+            description = error.message;
+        }
       }
       toast({
         variant: "destructive",
@@ -268,4 +270,3 @@ export function SignupForm() {
     </AuthCard>
   );
 }
-

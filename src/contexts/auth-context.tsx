@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
@@ -117,32 +117,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = useCallback(async (data: SignupData, pass: string) => {
     if (!auth || !db) throw new Error("Firebase not configured");
-
-    const usernameTaken = await isUsernameTaken(data.username);
-    if (usernameTaken) {
-        throw new Error("Username is already taken.");
-    }
-
+    
+    // 1. Create the auth user first. This also signs them in.
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, pass);
     const user = userCredential.user;
-    
-    const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
-        uid: user.uid,
-        ...data,
-        role: 'user', // Default role
-        avatarUrl: `https://placehold.co/100x100.png?text=${data.firstName.substring(0, 1).toUpperCase()}${data.lastName?.substring(0, 1).toUpperCase() || ''}`,
-    };
-    
-    if (data.email === ADMIN_EMAIL) {
-      newUserProfile.role = 'admin';
-    }
-    
-    const finalProfileData: any = { ...newUserProfile, createdAt: Timestamp.now() };
-    if (data.dob) {
-        finalProfileData.dob = Timestamp.fromDate(new Date(data.dob));
-    }
 
-    await setDoc(doc(db, "users", user.uid), finalProfileData);
+    try {
+        // 2. Now that user is authenticated, check if username is taken.
+        const usernameTaken = await isUsernameTaken(data.username, user.uid);
+        if (usernameTaken) {
+            throw new Error("Username is already taken.");
+        }
+        
+        // 3. If username is available, create the user profile document.
+        const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
+            uid: user.uid,
+            ...data,
+            role: 'user',
+            avatarUrl: `https://placehold.co/100x100.png?text=${data.firstName.substring(0, 1).toUpperCase()}${data.lastName?.substring(0, 1).toUpperCase() || ''}`,
+        };
+        
+        if (data.email === ADMIN_EMAIL) {
+          newUserProfile.role = 'admin';
+        }
+        
+        const finalProfileData: any = { ...newUserProfile, createdAt: Timestamp.now() };
+        if (data.dob) {
+            finalProfileData.dob = Timestamp.fromDate(new Date(data.dob));
+        }
+
+        await setDoc(doc(db, "users", user.uid), finalProfileData);
+
+    } catch (error) {
+        // 4. If profile creation fails (e.g. username taken), delete the auth user to prevent orphans.
+        await deleteUser(user);
+        // Re-throw the original error to be caught by the form's onSubmit handler.
+        throw error;
+    }
   }, []);
 
   const logout = useCallback(async () => {
