@@ -83,11 +83,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     },
   });
 
-  const { fields } = useFieldArray({
-    control: form.control,
-    name: "participants"
-  });
-  
   const watchAmount = form.watch("amount");
   const watchSplitType = form.watch("splitType");
   const watchParticipants = form.watch("participants");
@@ -340,9 +335,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     return (
          <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <ScrollArea className="max-h-[60vh] p-1 pr-4">
-              <div className="space-y-4">
+          <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto -mx-6 px-6">
+              <div className="space-y-4 py-4">
                 <FormField
                   control={form.control}
                   name="description"
@@ -413,8 +407,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                     control={form.control}
                     name="date"
                     render={({ field }) => (
-                        <FormItem className="flex flex-col pt-2">
-                        <FormLabel className="mb-[0.6rem]">Date</FormLabel>
+                        <FormItem className="flex flex-col">
+                        <FormLabel className="mb-1.5">Date</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                             <FormControl>
@@ -446,10 +440,10 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select split method" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="equally">Equally</SelectItem>
-                          <SelectItem value="unequally">Unequally (enter amounts)</SelectItem>
-                          <SelectItem value="by_shares">By Shares</SelectItem>
-                          <SelectItem value="by_percentage">By Percentage</SelectItem>
+                          <SelectItem value="equally">Split Equally</SelectItem>
+                          <SelectItem value="unequally">Enter Amounts Manually</SelectItem>
+                          <SelectItem value="by_shares">Split by Shares</SelectItem>
+                          <SelectItem value="by_percentage">Split by Percentage</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -460,52 +454,52 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                 <FormItem>
                   <FormLabel>Participants</FormLabel>
                   <FormDescription>Select who participated and how the expense is split.</FormDescription>
-                  <div className="space-y-2 rounded-md border p-3">
-                    {fields.map((item, index) => (
-                      <div key={item.id} className="grid grid-cols-12 items-center gap-2 p-1 rounded hover:bg-muted/50">
+                  <div className="space-y-3 rounded-md border p-4">
+                     {form.getValues('participants').map((item, index) => (
+                      <div key={item.userId} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 rounded p-1 hover:bg-muted/50">
                         <FormField
                           control={form.control}
                           name={`participants.${index}.selected`}
                           render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2 col-span-6 sm:col-span-5">
+                            <FormItem className="flex items-center space-x-3 flex-grow min-w-[150px]">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                               <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap truncate">
-                                {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === userProfile?.uid ? "(You)" : ""}
+                                {item.name} {item.userId === userProfile?.uid ? "(You)" : ""}
                               </FormLabel>
                             </FormItem>
                           )}
                         />
-                        <div className="col-span-6 sm:col-span-4">
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-auto pl-7 sm:pl-0">
                             {watchParticipants?.[index]?.selected && (
                             <>
                                 {watchSplitType === "unequally" && (
                                 <FormField
                                     control={form.control}
                                     name={`participants.${index}.amountOwed`}
-                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} className="h-8"/></FormControl> )}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} className="h-8 w-24"/></FormControl> )}
                                 />
                                 )}
                                 {watchSplitType === "by_shares" && (
                                 <FormField
                                     control={form.control}
                                     name={`participants.${index}.shares`}
-                                    render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8"/></FormControl> )}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8 w-24"/></FormControl> )}
                                 />
                                 )}
                                 {watchSplitType === "by_percentage" && (
                                     <FormField
                                     control={form.control}
                                     name={`participants.${index}.percentage`}
-                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8"/></FormControl> )}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8 w-24"/></FormControl> )}
                                     />
                                 )}
                             </>
                             )}
-                        </div>
-                        <div className="col-span-12 sm:col-span-3 text-right text-sm font-medium text-muted-foreground">
-                            {(watchSplitType !== 'unequally') && watchParticipants?.[index]?.selected && watchAmount > 0 && (
-                                <span>{CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}</span>
-                            )}
+                             <div className="w-20 text-right text-sm font-medium text-muted-foreground">
+                              {(watchSplitType !== 'unequally') && watchParticipants?.[index]?.selected && watchAmount > 0 && (
+                                  <span>{CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}</span>
+                              )}
+                             </div>
                         </div>
                       </div>
                     ))}
@@ -526,13 +520,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                    {form.formState.errors.participants?.root?.message && <FormMessage>{form.formState.errors.participants.root.message}</FormMessage>}
                 </FormItem>
               </div>
-            </ScrollArea>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
           </form>
         </FormProvider>
     )
@@ -540,7 +527,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">Edit Expense</DialogTitle>
           <DialogDescription>
@@ -548,6 +535,12 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
           </DialogDescription>
         </DialogHeader>
         {renderContent()}
+        <DialogFooter className="border-t pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button type="submit" form="edit-expense-form" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
