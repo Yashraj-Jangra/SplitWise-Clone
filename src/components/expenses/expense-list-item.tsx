@@ -36,9 +36,10 @@ interface ExpenseListItemProps {
   expense: Expense;
   currentUserId: string; // To determine user's involvement
   group?: Group; // Optional: Pass group data to avoid re-fetching in dialog
+  onActionComplete?: () => void;
 }
 
-export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListItemProps) {
+export function ExpenseListItem({ expense, currentUserId, group, onActionComplete }: ExpenseListItemProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -55,7 +56,11 @@ export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListIt
         await deleteExpense(expense.id, expense.groupId, expense.amount);
         toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
         setIsDeleteDialogOpen(false);
-        router.refresh();
+        if (onActionComplete) {
+            onActionComplete();
+        } else {
+            router.refresh();
+        }
     } catch (error) {
         toast({
             variant: "destructive",
@@ -135,6 +140,7 @@ export function ExpenseListItem({ expense, currentUserId, group }: ExpenseListIt
         onOpenChange={setIsEditDialogOpen}
         expense={expense}
         group={group}
+        onActionComplete={onActionComplete}
       />
     </>
   );

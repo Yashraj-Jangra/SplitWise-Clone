@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from '@/components/icons';
@@ -24,16 +23,17 @@ export default function AllExpensesPage() {
   const [userExpenses, setUserExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadExpenses = useCallback(async () => {
+    if (!userProfile?.uid) return;
+    setLoading(true);
+    const expenses = await getExpensesByUserId(userProfile.uid);
+    setUserExpenses(expenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    setLoading(false);
+  }, [userProfile?.uid]);
+
   useEffect(() => {
-    async function loadExpenses() {
-      if (!userProfile?.uid) return;
-      setLoading(true);
-      const expenses = await getExpensesByUserId(userProfile.uid);
-      setUserExpenses(expenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      setLoading(false);
-    }
     loadExpenses();
-  }, [userProfile]);
+  }, [loadExpenses]);
 
   return (
     <div className="space-y-6">
@@ -63,7 +63,7 @@ export default function AllExpensesPage() {
             <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height */}
               <div className="divide-y">
                 {userExpenses.map((expense) => (
-                  <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} />
+                  <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} onActionComplete={loadExpenses} />
                 ))}
               </div>
             </ScrollArea>

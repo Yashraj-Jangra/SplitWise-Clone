@@ -60,9 +60,10 @@ interface EditExpenseDialogProps {
   onOpenChange: (open: boolean) => void;
   expense: Expense;
   group?: Group;
+  onActionComplete?: () => void;
 }
 
-export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup }: EditExpenseDialogProps) {
+export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup, onActionComplete }: EditExpenseDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { userProfile } = useAuth();
@@ -277,7 +278,11 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         });
 
         onOpenChange(false);
-        router.refresh();
+        if (onActionComplete) {
+            onActionComplete();
+        } else {
+            router.refresh();
+        }
     } catch(error) {
         toast({ title: "Error", description: "Failed to update expense", variant: "destructive"})
     }

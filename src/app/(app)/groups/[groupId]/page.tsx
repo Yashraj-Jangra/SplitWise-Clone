@@ -100,7 +100,7 @@ export default function GroupDetailPage() {
                 <ScrollArea className="h-[400px]">
                   <div className="divide-y divide-border">
                     {expenses.map((expense) => (
-                      <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile.uid} group={group}/>
+                      <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile.uid} group={group} onActionComplete={loadGroupData}/>
                     ))}
                   </div>
                 </ScrollArea>
