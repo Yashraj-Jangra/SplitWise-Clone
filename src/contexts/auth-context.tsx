@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
@@ -25,6 +25,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ...newUserProfile,
                 createdAt: Timestamp.now(),
             });
+            await sendEmailVerification(user); // Send verification email for new Google users
             profile = await fetchUserProfile(user.uid);
         }
         
@@ -149,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         await setDoc(doc(db, "users", user.uid), finalProfileData);
+        await sendEmailVerification(user); // Send verification email on signup
 
     } catch (error) {
         // 4. If profile creation fails (e.g. username taken), delete the auth user to prevent orphans.
@@ -185,6 +188,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await firebaseSendPasswordResetEmail(auth, email);
   }, []);
 
+  const resendVerificationEmail = useCallback(async () => {
+    if (!auth?.currentUser) throw new Error("You must be logged in to resend a verification email.");
+    await sendEmailVerification(auth.currentUser);
+  }, []);
+
+
   const value = useMemo(() => ({
     firebaseUser,
     userProfile,
@@ -195,7 +204,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     loginWithGoogle,
     sendPasswordResetEmail,
-  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout, loginWithGoogle, sendPasswordResetEmail]);
+    resendVerificationEmail,
+  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');
