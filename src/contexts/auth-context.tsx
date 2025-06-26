@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
@@ -165,7 +166,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle = useCallback(async () => {
     if (!auth) throw new Error("Firebase not configured");
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        if (error instanceof FirebaseError) {
+            if (error.code === 'auth/operation-not-allowed') {
+                console.error("Firebase Auth Error: Google Sign-In is likely not enabled in the Firebase console.");
+                throw new Error("Google Sign-In is not enabled. Please check your Firebase console configuration.");
+            }
+        }
+        // Re-throw other errors to be handled by the UI component
+        throw error;
+    }
   }, []);
 
   const sendPasswordResetEmail = useCallback(async (email: string) => {
