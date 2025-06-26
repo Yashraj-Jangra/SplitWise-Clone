@@ -32,6 +32,8 @@ export default function GroupDetailPage() {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('expenses');
+  const [targetExpenseId, setTargetExpenseId] = useState<string | null>(null);
 
   const loadGroupData = useCallback(async () => {
     if (!groupId) return;
@@ -65,6 +67,26 @@ export default function GroupDetailPage() {
   useEffect(() => {
     loadGroupData();
   }, [loadGroupData]);
+  
+  useEffect(() => {
+    // Handles scrolling to and highlighting an expense when navigated from history
+    if (activeTab === 'expenses' && targetExpenseId) {
+      const element = document.getElementById(`expense-${targetExpenseId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('bg-primary/20', 'transition-all', 'duration-1000', 'rounded-lg');
+        setTimeout(() => {
+          element.classList.remove('bg-primary/20', 'rounded-lg');
+        }, 2000);
+      }
+      setTargetExpenseId(null);
+    }
+  }, [activeTab, targetExpenseId]);
+
+  const handleViewExpense = (expenseId: string) => {
+    setTargetExpenseId(expenseId);
+    setActiveTab('expenses');
+  };
 
   if (loading || !group || !userProfile) {
     return <GroupDetailLoading />;
@@ -74,7 +96,7 @@ export default function GroupDetailPage() {
     <div className="space-y-6">
       <GroupDetailHeader group={group} />
 
-      <Tabs defaultValue="expenses" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
             <TabsList>
                 <TabsTrigger value="expenses">Expenses ({expenses.length})</TabsTrigger>
@@ -161,7 +183,7 @@ export default function GroupDetailPage() {
         </TabsContent>
 
         <TabsContent value="history">
-            <GroupHistoryTab groupId={group.id} onActionComplete={loadGroupData} />
+            <GroupHistoryTab groupId={group.id} onActionComplete={loadGroupData} onViewExpense={handleViewExpense} />
         </TabsContent>
 
       </Tabs>

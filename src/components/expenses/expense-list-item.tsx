@@ -74,7 +74,7 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
 
   return (
     <>
-      <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+      <div id={`expense-${expense.id}`} className="flex items-center justify-between p-4 hover:bg-muted/50">
         <div className="flex items-center gap-4">
           <Avatar className="h-10 w-10">
             <AvatarImage src={expense.paidBy.avatarUrl} alt={getFullName(expense.paidBy.firstName, expense.paidBy.lastName)} />

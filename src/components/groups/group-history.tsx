@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface GroupHistoryTabProps {
   groupId: string;
   onActionComplete: () => void;
+  onViewExpense: (expenseId: string) => void;
 }
 
 const eventIcons: { [key: string]: React.ReactNode } = {
@@ -38,7 +39,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   default: <Icons.History className="h-4 w-4 text-muted-foreground" />,
 };
 
-function HistoryEventItem({ event, onActionComplete }: { event: HistoryEvent; onActionComplete: () => void }) {
+function HistoryEventItem({ event, onActionComplete, onViewExpense }: { event: HistoryEvent; onActionComplete: () => void; onViewExpense: (expenseId: string) => void; }) {
     const { userProfile } = useAuth();
     const { toast } = useToast();
     const [isRestoring, setIsRestoring] = useState(false);
@@ -76,6 +77,13 @@ function HistoryEventItem({ event, onActionComplete }: { event: HistoryEvent; on
     const canRestore = event.eventType === 'expense_deleted' && !event.restored;
     const canDelete = userProfile?.role === 'admin';
 
+    let viewableExpenseId: string | null = null;
+    if ((event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId) {
+        viewableExpenseId = event.data.expenseId;
+    } else if (event.eventType === 'expense_restored' && event.data?.newExpenseId) {
+        viewableExpenseId = event.data.newExpenseId;
+    }
+
     return (
         <TooltipProvider>
             <div className="flex items-center gap-4 p-3 hover:bg-muted/50 transition-colors">
@@ -88,7 +96,19 @@ function HistoryEventItem({ event, onActionComplete }: { event: HistoryEvent; on
                         {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                     {viewableExpenseId && (
+                         <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onViewExpense(viewableExpenseId!)}>
+                                    <Icons.ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>View Expense</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
                     {canRestore && (
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -137,7 +157,7 @@ function HistoryEventItem({ event, onActionComplete }: { event: HistoryEvent; on
 }
 
 
-export function GroupHistoryTab({ groupId, onActionComplete }: GroupHistoryTabProps) {
+export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: GroupHistoryTabProps) {
   const [history, setHistory] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -196,7 +216,7 @@ export function GroupHistoryTab({ groupId, onActionComplete }: GroupHistoryTabPr
           <ScrollArea className="h-[400px]">
             <div className="divide-y divide-border">
                 {history.map(event => (
-                    <HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} />
+                    <HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} />
                 ))}
             </div>
           </ScrollArea>

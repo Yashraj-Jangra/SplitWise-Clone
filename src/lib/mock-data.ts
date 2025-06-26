@@ -32,6 +32,7 @@ import type {
   HistoryEventDocument,
 } from '@/types';
 import { getFullName } from './utils';
+import { CURRENCY_SYMBOL } from './constants';
 
 // --- User Functions ---
 
@@ -253,8 +254,8 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
     
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
-    const description = `${actorName} added expense "${expenseData.description}".`;
-    await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id, amount: expenseData.amount });
+    const description = `${actorName} added expense "${expenseData.description}" for ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}.`;
+    await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id });
 
 
     return docRef.id;
@@ -285,7 +286,7 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
 
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
-    const description = `${actorName} updated expense "${expenseData.description}".`;
+    const description = `${actorName} updated expense "${expenseData.description}" (amount from ${CURRENCY_SYMBOL}${oldAmount.toFixed(2)} to ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}).`;
     await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, { expenseId, before: oldData, after: expenseData });
 
 }
@@ -296,7 +297,7 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
     const expenseSnap = await getDoc(expenseDocRef);
 
     if (!expenseSnap.exists()) return;
-    const deletedExpenseData = { ...expenseSnap.data() };
+    const deletedExpenseData = expenseSnap.data();
 
     const batch = writeBatch(db);
 
@@ -315,8 +316,8 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
 
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
-    const description = `${actorName} deleted expense "${deletedExpenseData.description}".`;
-    await logHistoryEvent(groupId, 'expense_deleted', actorId, description, deletedExpenseData);
+    const description = `${actorName} deleted expense "${deletedExpenseData.description}" (was ${CURRENCY_SYMBOL}${amount.toFixed(2)}).`;
+    await logHistoryEvent(groupId, 'expense_deleted', actorId, description, { ...deletedExpenseData, expenseId: expenseId });
 }
 
 
@@ -690,7 +691,7 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
         await updateDoc(historyDocRef, { restored: true });
         
         const actor = await getUserProfile(actorId);
-        const restoreDescription = `${getFullName(actor?.firstName, actor?.lastName)} restored expense "${expenseToRestore.description}".`;
+        const restoreDescription = `${getFullName(actor?.firstName, actor?.lastName)} restored expense "${expenseToRestore.description}" for ${CURRENCY_SYMBOL}${(expenseToRestore.amount || 0).toFixed(2)}.`;
         await logHistoryEvent(expenseToRestore.groupId, 'expense_restored', actorId, restoreDescription, { restoredFromHistoryId: historyEventId, newExpenseId });
 
         return newExpenseId;
