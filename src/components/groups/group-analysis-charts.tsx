@@ -48,6 +48,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   
   const [date, setDate] = useState<DateRange | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [memberChartCategory, setMemberChartCategory] = useState<string>('all');
   
   useEffect(() => {
     setDate({ from: minDate, to: maxDate });
@@ -100,12 +101,21 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   }, [filteredExpenses, members, date]);
 
   const totalShareByMember = useMemo(() => {
+    if (!date?.from || !isValid(date.from) || !date.to || !isValid(date.to)) return [];
+
+    const memberChartExpenses = validExpenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= endOfDay(date.to!);
+      const isInCategory = memberChartCategory === 'all' || (expense.category || 'Other') === memberChartCategory;
+      return isInDateRange && isInCategory;
+    });
+
     const data = members.reduce((acc, member) => {
       acc[member.uid] = { name: getFullName(member.firstName, member.lastName), total: 0 };
       return acc;
     }, {} as Record<string, { name: string; total: number }>);
 
-    filteredExpenses.forEach(expense => {
+    memberChartExpenses.forEach(expense => {
       expense.participants.forEach(participant => {
         if (data[participant.user.uid]) {
           data[participant.user.uid].total += participant.amountOwed;
@@ -114,7 +124,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     });
 
     return Object.values(data).filter(d => d.total > 0).sort((a,b) => b.total - a.total);
-  }, [filteredExpenses, members]);
+  }, [validExpenses, members, date, memberChartCategory]);
 
   const expensesByCategory = useMemo(() => {
     const data = filteredExpenses.reduce((acc, expense) => {
@@ -162,8 +172,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     <div className="space-y-6">
        <Card>
         <CardHeader>
-          <CardTitle>Analysis Filters</CardTitle>
-          <CardDescription>Refine the charts by date and category.</CardDescription>
+          <CardTitle>Global Filters</CardTitle>
+          <CardDescription>Refine the charts below by date and category.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
             <Popover>
@@ -210,7 +220,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
       <Card>
         <CardHeader>
           <CardTitle>Daily Expense Share</CardTitle>
-          <CardDescription>Comparing each member's share of expenses per day.</CardDescription>
+          <CardDescription>Comparing each member's share of expenses per day. Affected by global filters.</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={userChartConfig} className="h-[400px] w-full">
@@ -218,7 +228,9 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`} />
-                <Tooltip content={<ChartTooltipContent indicator="dot" />} />
+                <Tooltip
+                    content={<ChartTooltipContent indicator="dot" nameKey="name"/>}
+                />
                 <Legend />
                 {members.map(member => (
                     <Line
@@ -227,6 +239,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                         type="linear"
                         stroke={`var(--color-${member.uid})`}
                         strokeWidth={2}
+                        dot={false}
                         name={getFullName(member.firstName, member.lastName)}
                     />
                 ))}
@@ -237,10 +250,24 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Total Expense Share by Member</CardTitle>
-            <CardDescription>Each member's total share of expenses for the selected period.</CardDescription>
-          </CardHeader>
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                    <div>
+                        <CardTitle>Total Share by Member</CardTitle>
+                        <CardDescription>Each member's total share of expenses.</CardDescription>
+                    </div>
+                    <Select value={memberChartCategory} onValueChange={setMemberChartCategory}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {uniqueCategories.map(cat => (
+                                <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardHeader>
           <CardContent>
             <ChartContainer config={barChartConfig} className="h-[300px] w-full">
               <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
@@ -253,6 +280,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                   tickMargin={5}
                   width={80}
                   className="text-xs"
+                  stroke="hsl(var(--muted-foreground))"
                 />
                 <Tooltip
                   cursor={false}
@@ -277,7 +305,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 <ChartContainer config={barChartConfig} className="h-[300px] w-full">
                 <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={100} className="text-xs" />
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={100} className="text-xs" stroke="hsl(var(--muted-foreground))"/>
                     <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                     <Bar dataKey="total" radius={4}>
                         {expensesByCategory.map((entry, index) => (
