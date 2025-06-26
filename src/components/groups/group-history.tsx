@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getFullName } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface GroupHistoryTabProps {
   groupId: string;
@@ -77,7 +77,7 @@ function HistoryEventItem({ event, onActionComplete }: { event: HistoryEvent; on
     const canDelete = userProfile?.role === 'admin';
 
     return (
-        <>
+        <TooltipProvider>
             <div className="flex items-center gap-4 p-3 hover:bg-muted/50 transition-colors">
                 <div className="flex-shrink-0">
                     {eventIcons[event.eventType] || eventIcons.default}
@@ -132,7 +132,7 @@ function HistoryEventItem({ event, onActionComplete }: { event: HistoryEvent; on
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </TooltipProvider>
     );
 }
 
@@ -140,13 +140,24 @@ function HistoryEventItem({ event, onActionComplete }: { event: HistoryEvent; on
 export function GroupHistoryTab({ groupId, onActionComplete }: GroupHistoryTabProps) {
   const [history, setHistory] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
-    const historyEvents = await getHistoryByGroupId(groupId);
-    setHistory(historyEvents);
-    setLoading(false);
-  }, [groupId]);
+    try {
+        const historyEvents = await getHistoryByGroupId(groupId);
+        setHistory(historyEvents);
+    } catch (error) {
+        console.error("Failed to fetch group history:", error);
+        toast({
+            variant: "destructive",
+            title: "Failed to load history",
+            description: "Could not fetch the activity log for this group."
+        })
+    } finally {
+        setLoading(false);
+    }
+  }, [groupId, toast]);
 
   useEffect(() => {
     fetchHistory();
