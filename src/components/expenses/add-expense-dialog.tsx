@@ -216,7 +216,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
       return { type: 'percentage', sum };
     }
     return { type: 'none', sum: 0 };
-  }, [watchParticipants, watchSplitType]);
+  }, [participantDeps, watchSplitType, watchAmount]);
 
 
   async function onSubmit(values: AddExpenseFormValues) {

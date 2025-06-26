@@ -239,6 +239,21 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     });
   }, [watchAmount, watchSplitType, participantDeps, form, open]);
 
+  const runningTotal = useMemo(() => {
+    const participants = watchParticipants || [];
+    const splitType = watchSplitType;
+
+    if (splitType === 'unequally') {
+      const sum = participants.filter(p => p.selected).reduce((acc, p) => acc + (Number(p.amountOwed) || 0), 0);
+      return { type: 'amount', sum };
+    }
+    if (splitType === 'by_percentage') {
+      const sum = participants.filter(p => p.selected).reduce((acc, p) => acc + (Number(p.percentage) || 0), 0);
+      return { type: 'percentage', sum };
+    }
+    return { type: 'none', sum: 0 };
+  }, [participantDeps, watchSplitType, watchAmount]);
+
 
   async function onSubmit(values: EditExpenseFormValues) {
     if (!userProfile || !group) return;
@@ -447,64 +462,66 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                   <FormDescription>Select who participated and how the expense is split.</FormDescription>
                   <div className="space-y-2 rounded-md border p-3">
                     {fields.map((item, index) => (
-                      <div key={item.id} className="flex items-center justify-between gap-2 p-1 rounded hover:bg-muted/50">
+                      <div key={item.id} className="grid grid-cols-12 items-center gap-2 p-1 rounded hover:bg-muted/50">
                         <FormField
                           control={form.control}
                           name={`participants.${index}.selected`}
                           render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
+                            <FormItem className="flex items-center space-x-2 col-span-6 sm:col-span-5">
                               <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap">
+                              <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap truncate">
                                 {watchParticipants?.[index]?.name} {watchParticipants?.[index]?.userId === userProfile?.uid ? "(You)" : ""}
                               </FormLabel>
                             </FormItem>
                           )}
                         />
-                        {watchParticipants?.[index]?.selected && (
-                          <>
-                            {watchSplitType === "unequally" && (
-                              <FormField
-                                control={form.control}
-                                name={`participants.${index}.amountOwed`}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1 min-w-[80px]">
-                                    <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} /></FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            )}
-                            {watchSplitType === "by_shares" && (
-                              <FormField
-                                control={form.control}
-                                name={`participants.${index}.shares`}
-                                render={({ field }) => (
-                                  <FormItem className="flex-1 min-w-[70px]">
-                                    <FormControl><Input type="number" step="1" placeholder="Shares" {...field} /></FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            )}
-                            {watchSplitType === "by_percentage" && (
+                        <div className="col-span-6 sm:col-span-4">
+                            {watchParticipants?.[index]?.selected && (
+                            <>
+                                {watchSplitType === "unequally" && (
                                 <FormField
-                                control={form.control}
-                                name={`participants.${index}.percentage`}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1 min-w-[70px]">
-                                    <FormControl><Input type="number" step="0.01" placeholder="%" {...field} /></FormControl>
-                                    </FormItem>
-                                )}
+                                    control={form.control}
+                                    name={`participants.${index}.amountOwed`}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} className="h-8"/></FormControl> )}
                                 />
+                                )}
+                                {watchSplitType === "by_shares" && (
+                                <FormField
+                                    control={form.control}
+                                    name={`participants.${index}.shares`}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8"/></FormControl> )}
+                                />
+                                )}
+                                {watchSplitType === "by_percentage" && (
+                                    <FormField
+                                    control={form.control}
+                                    name={`participants.${index}.percentage`}
+                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8"/></FormControl> )}
+                                    />
+                                )}
+                            </>
                             )}
-                            {(watchSplitType === "equally" || watchSplitType === "by_shares" || watchSplitType === "by_percentage") && watchParticipants?.[index]?.selected && (
-                                <div className="text-xs text-muted-foreground w-[80px] text-right">
-                                {CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}
-                                </div>
+                        </div>
+                        <div className="col-span-12 sm:col-span-3 text-right text-sm font-medium text-muted-foreground">
+                            {(watchSplitType !== 'unequally') && watchParticipants?.[index]?.selected && watchAmount > 0 && (
+                                <span>{CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}</span>
                             )}
-                          </>
-                        )}
+                        </div>
                       </div>
                     ))}
                   </div>
+                   <div className="text-right text-sm mt-2 pr-2">
+                        {runningTotal.type === 'amount' && (
+                            <p className={cn(Math.abs(runningTotal.sum - watchAmount) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                                Total Allocated: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)}
+                            </p>
+                        )}
+                        {runningTotal.type === 'percentage' && (
+                            <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                                Total Percentage: {runningTotal.sum.toFixed(2)}%
+                            </p>
+                        )}
+                    </div>
                    <FormMessage>{form.formState.errors.participants?.message}</FormMessage>
                    {form.formState.errors.participants?.root?.message && <FormMessage>{form.formState.errors.participants.root.message}</FormMessage>}
                 </FormItem>
@@ -523,7 +540,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">Edit Expense</DialogTitle>
           <DialogDescription>
