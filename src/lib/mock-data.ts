@@ -534,10 +534,10 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
 
   settlements.forEach(settlement => {
      if(memberBalances[settlement.paidBy.uid] !== undefined) {
-        memberBalances[settlement.paidBy.uid] -= settlement.amount;
+        memberBalances[settlement.paidBy.uid] += settlement.amount;
     }
     if(memberBalances[settlement.paidTo.uid] !== undefined) {
-        memberBalances[settlement.paidTo.uid] += settlement.amount;
+        memberBalances[settlement.paidTo.uid] -= settlement.amount;
     }
   });
   

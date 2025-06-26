@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { AddSettlementDialog } from "@/components/settlements/add-settlement-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { getFullName, getInitials } from "@/lib/utils";
 
 
 interface GroupBalancesProps {
@@ -20,16 +21,6 @@ interface GroupBalancesProps {
   group: Group;
   onSettlementAdded: () => void;
 }
-
-const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    let initials = names[0].substring(0, 1).toUpperCase();
-    if (names.length > 1) {
-      initials += names[names.length - 1].substring(0, 1).toUpperCase();
-    }
-    return initials;
-};
 
 export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalancesProps) {
   const [isSimplified, setIsSimplified] = useState(false);
@@ -76,20 +67,20 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                          <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-9 w-9">
-                                    <AvatarImage src={s.from.avatarUrl} alt={s.from.name} />
-                                    <AvatarFallback>{getInitials(s.from.name)}</AvatarFallback>
+                                    <AvatarImage src={s.from.avatarUrl} alt={getFullName(s.from.firstName, s.from.lastName)} />
+                                    <AvatarFallback>{getInitials(s.from.firstName, s.from.lastName)}</AvatarFallback>
                                 </Avatar>
-                                <span className="font-medium">{s.from.name}</span>
+                                <span className="font-medium">{getFullName(s.from.firstName, s.from.lastName)}</span>
                             </div>
                             <div className="flex flex-col items-center text-sm text-muted-foreground">
                                 <span className="font-bold text-foreground">{CURRENCY_SYMBOL}{s.amount.toFixed(2)}</span>
                                 <Icons.ArrowRight className="h-5 w-5 text-primary" />
                             </div>
                             <div className="flex items-center gap-3 justify-end">
-                                <span className="font-medium text-right">{s.to.name}</span>
+                                <span className="font-medium text-right">{getFullName(s.to.firstName, s.to.lastName)}</span>
                                 <Avatar className="h-9 w-9">
-                                    <AvatarImage src={s.to.avatarUrl} alt={s.to.name} />
-                                    <AvatarFallback>{getInitials(s.to.name)}</AvatarFallback>
+                                    <AvatarImage src={s.to.avatarUrl} alt={getFullName(s.to.firstName, s.to.lastName)} />
+                                    <AvatarFallback>{getInitials(s.to.firstName, s.to.lastName)}</AvatarFallback>
                                 </Avatar>
                             </div>
                         </div>
@@ -108,9 +99,9 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={balance.user.avatarUrl} />
-                        <AvatarFallback>{getInitials(balance.user.name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(balance.user.firstName, balance.user.lastName)}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{balance.user.name}</span>
+                      <span className="text-sm">{getFullName(balance.user.firstName, balance.user.lastName)}</span>
                     </div>
                     <span className="text-sm font-semibold text-red-600">
                       Owes {CURRENCY_SYMBOL}{Math.abs(balance.netBalance).toFixed(2)}
@@ -128,9 +119,9 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={balance.user.avatarUrl} />
-                        <AvatarFallback>{getInitials(balance.user.name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(balance.user.firstName, balance.user.lastName)}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{balance.user.name}</span>
+                      <span className="text-sm">{getFullName(balance.user.firstName, balance.user.lastName)}</span>
                     </div>
                     <span className="text-sm font-semibold text-green-600">
                       Is Owed {CURRENCY_SYMBOL}{balance.netBalance.toFixed(2)}
