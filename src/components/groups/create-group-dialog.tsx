@@ -91,16 +91,8 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     loadUsers();
   }, [open]);
 
-  if (!userProfile) {
-    return (
-      <Button variant={buttonVariant} size={buttonSize} disabled>
-        <Icons.Add className="mr-2 h-4 w-4" /> Create New Group
-      </Button>
-    )
-  }
-  
   const searchResults = useMemo(() => {
-    if (!searchTerm) return [];
+    if (!searchTerm || !userProfile) return [];
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     const selectedMemberIds = selectedMembers.map(m => m.uid);
 
@@ -112,6 +104,14 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     ).slice(0, 5); // Limit results
   }, [searchTerm, allUsers, userProfile, selectedMembers]);
 
+  if (!userProfile) {
+    return (
+      <Button variant={buttonVariant} size={buttonSize} disabled>
+        <Icons.Add className="mr-2 h-4 w-4" /> Create New Group
+      </Button>
+    )
+  }
+  
   const handleSelectMember = (member: UserProfile) => {
     const newSelectedMembers = [...selectedMembers, member];
     setSelectedMembers(newSelectedMembers);
@@ -287,4 +287,3 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     </Dialog>
   );
 }
-
