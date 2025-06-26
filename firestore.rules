@@ -4,88 +4,62 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function isSignedIn() {
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      // An admin role must exist on the user's profile document.
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
+    // Helper function to check if a user is a member of a group
     function isGroupMember(groupId) {
-      // The user's UID must be in the group's memberIds list.
-      let group = get(/databases/$(database)/documents/groups/$(groupId));
-      return isSignedIn() && request.auth.uid in group.data.memberIds;
+      return get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.has(request.auth.uid);
+    }
+    
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      // Check for the existence of the user document before accessing its data.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function incomingData() {
-      return request.resource.data;
-    }
-    
-    function existingData() {
-      return resource.data;
-    }
-    
-    // --- User Profiles ---
+    // Users can read/update their own profile.
+    // Anyone can create a user profile (signup).
+    // Authenticated users can read other users' profiles (for displaying names, etc.)
     match /users/{userId} {
-      // Admins and the user themselves can read/write.
-      allow read, write: if isAdmin() || isUser(userId);
-      
-      // Any signed-in user can list users (for inviting to groups).
-      allow list: if isSignedIn();
+      allow read: if isAuthenticated();
+      allow create: if true;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // --- Groups ---
+    // Groups can be read/updated by their members.
     match /groups/{groupId} {
-      // Admins or group members can read a specific group.
-      allow read: if isAdmin() || isGroupMember(groupId);
-      
-      // A user can list groups if their query is for groups they are a member of.
-      // Firestore security rules check this automatically on `array-contains` queries.
-      allow list: if isSignedIn();
-      
-      // A user can create a group if they are the creator and are including themselves as a member.
-      allow create: if isSignedIn()
-                    && isUser(incomingData().createdById)
-                    && request.auth.uid in incomingData().memberIds;
-
-      // Admins or group members can update a group (e.g., add members).
-      allow update: if isAdmin() || isGroupMember(groupId);
-
-      // Only admins can delete a group.
-      allow delete: if isAdmin();
+      allow read, update, delete: if isAuthenticated() && isGroupMember(groupId);
+      allow create: if isAuthenticated();
     }
 
-    // --- Expenses ---
+    // Expenses can be read/created/updated/deleted by group members.
     match /expenses/{expenseId} {
-       // Admins or members of the expense's group can read it.
-      allow read: if isAdmin() || isGroupMember(existingData().groupId);
+      // `resource` is the document *before* the operation.
+      // `request.resource` is the document *after* the operation.
+      allow read, delete: if isAuthenticated() && isGroupMember(resource.data.groupId);
+      allow create: if isAuthenticated() && isGroupMember(request.resource.data.groupId);
+      allow update: if isAuthenticated() && isGroupMember(request.resource.data.groupId);
+    }
 
-      // A user can query expenses. The application's queries will filter by groupId or participantIds.
-      allow list: if isSignedIn();
-
-      // Admins or members of the group can create, update, or delete expenses for that group.
-      allow create: if isSignedIn() && isGroupMember(incomingData().groupId);
-      allow update, delete: if isAdmin() || isGroupMember(existingData().groupId);
+    // Settlements can be read/created by group members.
+    match /settlements/{settlementId} {
+      allow read: if isAuthenticated() && isGroupMember(resource.data.groupId);
+      allow create: if isAuthenticated() && isGroupMember(request.resource.data.groupId);
+      // Settlements are generally immutable, but let's allow updates/deletes by group members for now.
+      allow update, delete: if isAuthenticated() && isGroupMember(resource.data.groupId);
     }
     
-    // --- Settlements ---
-    match /settlements/{settlementId} {
-      // Admins or members of the settlement's group can read it.
-      allow read: if isAdmin() || isGroupMember(existingData().groupId);
-      
-      // A user can query settlements.
-      allow list: if isSignedIn();
-      
-      // Admins or members of the group can create, update, or delete settlements for that group.
-      allow create: if isSignedIn() && isGroupMember(incomingData().groupId);
-      allow update, delete: if isAdmin() || isGroupMember(existingData().groupId);
+    // History can be read by group members.
+    // Creation is handled by backend logic (simulated here), so we'll allow creation by group members.
+    // Deletion is restricted to admins.
+    match /history/{historyId} {
+        allow read: if isAuthenticated() && isGroupMember(resource.data.groupId);
+        allow create: if isAuthenticated() && isGroupMember(request.resource.data.groupId);
+        allow delete: if isAuthenticated() && isAdmin();
     }
   }
 }
