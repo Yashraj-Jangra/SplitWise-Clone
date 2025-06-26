@@ -26,23 +26,50 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { getFullName, getInitials } from '@/lib/utils';
-import { hardDeleteGroupAction } from "@/lib/actions/group";
 import { useAuth } from "@/contexts/auth-context";
+import { writeBatch, query, collection, where, getDocs, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-function GroupActions({ group, onGroupDeleted, actorId }: { group: Group, onGroupDeleted: (groupId: string) => void, actorId: string }) {
+function GroupActions({ group, onGroupDeleted }: { group: Group, onGroupDeleted: (groupId: string) => void }) {
     const { toast } = useToast();
+    const { userProfile } = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const handleDelete = async () => {
+        if (userProfile?.role !== 'admin') {
+            toast({ title: "Unauthorized", description: "You do not have permission to delete groups.", variant: "destructive"});
+            return;
+        }
+
         setIsDeleting(true);
-        const result = await hardDeleteGroupAction(group.id, actorId);
-        if (result.success) {
+        try {
+            const batch = writeBatch(db);
+
+            // Find and delete all related documents
+            const collectionsToDelete = ['expenses', 'settlements', 'history'];
+            for (const collectionName of collectionsToDelete) {
+                const q = query(collection(db, collectionName), where('groupId', '==', group.id));
+                const snapshot = await getDocs(q);
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+            }
+
+            // Delete the group itself
+            const groupDocRef = doc(db, 'groups', group.id);
+            batch.delete(groupDocRef);
+
+            await batch.commit();
+            
             toast({ title: "Group Deleted", description: `The group "${group.name}" and all its data have been permanently deleted.`});
             onGroupDeleted(group.id);
-        } else {
-             toast({ title: "Error", description: result.error, variant: "destructive"});
+
+        } catch (error) {
+             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+             toast({ title: "Error Deleting Group", description: errorMessage, variant: "destructive"});
         }
+        
         setIsDeleting(false);
         setIsDeleteDialogOpen(false);
     }
@@ -166,7 +193,7 @@ export default function ManageGroupsPage() {
                                     <TableCell>{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</TableCell>
                                     <TableCell>{format(new Date(group.createdAt), "PPP")}</TableCell>
                                     <TableCell className="text-right">
-                                        <GroupActions group={group} onGroupDeleted={handleGroupDeleted} actorId={userProfile.uid} />
+                                        <GroupActions group={group} onGroupDeleted={handleGroupDeleted} />
                                     </TableCell>
                                 </TableRow>
                             ))}
