@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, FormProvider, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -93,6 +93,15 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   const watchParticipants = form.watch("participants");
   const watchDescription = form.watch("description");
 
+  const participantDeps = JSON.stringify(
+    watchParticipants?.map(p => ({
+        selected: p.selected,
+        shares: watchSplitType === 'by_shares' ? p.shares : undefined,
+        percentage: watchSplitType === 'by_percentage' ? p.percentage : undefined,
+        amountOwed: watchSplitType === 'unequally' ? p.amountOwed : undefined,
+    }))
+  );
+
   useEffect(() => {
     if (!initialGroup && open) {
         setIsGroupLoading(true);
@@ -163,8 +172,10 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const numSelected = selectedParticipants.length;
 
     if (totalAmount <= 0 || numSelected === 0) {
-      allParticipants.forEach((_, index) => {
-        form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+      allParticipants.forEach((p, index) => {
+        if (p.amountOwed !== 0) {
+            form.setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+        }
       });
       return;
     }
@@ -187,7 +198,12 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             }
         } else { // by_percentage
             const percentages = selectedParticipants.map(p => Number(p.percentage) || 0);
-            rawAmounts = percentages.map(p => (totalAmount * p) / 100);
+            const totalPercentage = percentages.reduce((sum, p) => sum + p, 0);
+             if (totalPercentage > 0) {
+                 rawAmounts = percentages.map(p => (totalAmount * p) / totalPercentage);
+            } else {
+                 rawAmounts = selectedParticipants.map(() => totalAmount / numSelected);
+            }
         }
         
         const roundedAmounts = rawAmounts.map(amount => parseFloat(amount.toFixed(2)));
@@ -221,7 +237,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             });
         }
     });
-  }, [watchAmount, watchSplitType, watchParticipants, form, open]);
+  }, [watchAmount, watchSplitType, participantDeps, form, open]);
 
 
   async function onSubmit(values: EditExpenseFormValues) {
