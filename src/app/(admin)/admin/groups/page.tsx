@@ -27,15 +27,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { getFullName, getInitials } from '@/lib/utils';
 import { hardDeleteGroupAction } from "@/lib/actions/group";
+import { useAuth } from "@/contexts/auth-context";
 
-function GroupActions({ group, onGroupDeleted }: { group: Group, onGroupDeleted: (groupId: string) => void }) {
+function GroupActions({ group, onGroupDeleted, actorId }: { group: Group, onGroupDeleted: (groupId: string) => void, actorId: string }) {
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const handleDelete = async () => {
         setIsDeleting(true);
-        const result = await hardDeleteGroupAction(group.id);
+        const result = await hardDeleteGroupAction(group.id, actorId);
         if (result.success) {
             toast({ title: "Group Deleted", description: `The group "${group.name}" and all its data have been permanently deleted.`});
             onGroupDeleted(group.id);
@@ -91,6 +92,7 @@ function GroupActions({ group, onGroupDeleted }: { group: Group, onGroupDeleted:
 export default function ManageGroupsPage() {
     const [groups, setGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
+    const { userProfile } = useAuth();
 
     const fetchGroups = async () => {
         setLoading(true);
@@ -107,7 +109,7 @@ export default function ManageGroupsPage() {
         setGroups(prev => prev.filter(g => g.id !== groupId));
     };
 
-    if (loading) {
+    if (loading || !userProfile) {
         return (
             <div className="space-y-6">
                 <Skeleton className="h-10 w-1/3" />
@@ -164,7 +166,7 @@ export default function ManageGroupsPage() {
                                     <TableCell>{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</TableCell>
                                     <TableCell>{format(new Date(group.createdAt), "PPP")}</TableCell>
                                     <TableCell className="text-right">
-                                        <GroupActions group={group} onGroupDeleted={handleGroupDeleted} />
+                                        <GroupActions group={group} onGroupDeleted={handleGroupDeleted} actorId={userProfile.uid} />
                                     </TableCell>
                                 </TableRow>
                             ))}
