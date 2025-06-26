@@ -1,84 +1,57 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if a user is a member of a group
-    function isMemberOf(groupId) {
-      // Ensure the user is authenticated before checking membership
-      return request.auth != null && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
-    }
-
-    // Helper function to check if the user is an admin
-    function isAdmin() {
-        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // USERS collection rules
+    
+    // --- User Data ---
+    // Users can read their own profile.
+    // Users can update their own profile.
+    // Any authenticated user can see a list of other users for inviting purposes.
     match /users/{userId} {
-      // ANY authenticated user can get a list of all users to invite them to groups.
-      // Admins can also list all users.
+      allow read: if request.auth != null;
+      allow get: if request.auth != null;
       allow list: if request.auth != null;
-
-      // Users can GET their own profile. Admins can get any profile.
-      allow get: if request.auth.uid == userId || isAdmin();
-
-      // A user can CREATE their own profile document (happens on signup).
+      allow update: if request.auth.uid == userId;
       allow create: if request.auth.uid == userId;
-      
-      // Users can UPDATE their own profile. Admins can update any profile.
-      allow update: if request.auth.uid == userId || isAdmin();
     }
-
-    // GROUPS collection rules
+    
+    // --- Group Data ---
+    // A user can only read/write group data if their UID is in the group's 'memberIds' list.
     match /groups/{groupId} {
-      // Users can GET, UPDATE, or DELETE a group document if they are a member.
-      // Admins have full access.
-      allow read, update, delete: if isMemberOf(groupId) || isAdmin();
-
-      // Any authenticated user can CREATE a group, as long as they include themselves as a member.
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.memberIds;
-      
-      // This rule specifically allows the query used to fetch the user's groups:
-      // query(..., where('memberIds', 'array-contains', 'user-uid'))
-      allow list: if (request.auth != null && request.query.where.path == "memberIds" && request.query.where.op == "array-contains" && request.query.where.value == request.auth.uid) || isAdmin();
+      allow read: if request.auth != null && request.auth.uid in resource.data.memberIds;
+      allow create: if request.auth.uid == request.resource.data.createdById;
+      allow update: if request.auth != null && request.auth.uid in resource.data.memberIds;
     }
-
-    // EXPENSES collection rules
+    
+    // --- Expense Data ---
+    // A user can read an expense if they are a member of the group the expense belongs to.
+    // A user can create an expense if they are a member of the group.
+    // A user can update/delete an expense if they are a member of the group (simplification for now).
     match /expenses/{expenseId} {
-      // Users can GET an expense if they are a member of the group it belongs to.
-      allow get: if isMemberOf(resource.data.groupId) || isAdmin();
-
-      // Users can CREATE, UPDATE, or DELETE an expense if they are a member of the group.
-      allow write: if isMemberOf(request.resource.data.groupId) || isAdmin();
-
-      // This complex rule allows the three different ways the app queries for lists of expenses.
-      allow list: if (
-        // Case 1: Fetching expenses for a specific group page.
-        (request.query.where.path == 'groupId' && isMemberOf(request.query.where.value)) ||
-        // Case 2: Fetching expenses paid by the current user.
-        (request.query.where.path == 'paidById' && request.query.where.op == '==' && request.query.where.value == request.auth.uid) ||
-        // Case 3: Fetching expenses where the current user was a participant.
-        (request.query.where.path == 'participantIds' && request.query.where.op == 'array-contains' && request.query.where.value == request.auth.uid)
-      ) || isAdmin();
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds;
+      
+      // Allow list queries only if the user is a member of the queried group
+      allow list: if request.auth != null && request.query.limit <= 100 &&
+                   (
+                     (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'groupId' && request.query.filters[0].op.string_value == '==' && get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds) ||
+                     (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'participantIds' && request.query.filters[0].op.string_value == 'array-contains' && request.query.filters[0].value.string_value == request.auth.uid) ||
+                     (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'paidById' && request.query.filters[0].op.string_value == '==' && request.query.filters[0].value.string_value == request.auth.uid)
+                   );
     }
-
-    // SETTLEMENTS collection rules
+    
+    // --- Settlement Data ---
+    // A user can read a settlement if they are a member of the group the settlement belongs to.
+    // A user can create a settlement if they are a member of the group.
     match /settlements/{settlementId} {
-      // Users can GET a settlement if they are a member of the group it belongs to.
-      allow get: if isMemberOf(resource.data.groupId) || isAdmin();
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds;
 
-      // Users can CREATE, UPDATE, or DELETE a settlement if they are a member of the group.
-      allow write: if isMemberOf(request.resource.data.groupId) || isAdmin();
-
-      // This complex rule allows the three different ways the app queries for lists of settlements.
-      allow list: if (
-        // Case 1: Fetching settlements for a specific group page.
-        (request.query.where.path == 'groupId' && isMemberOf(request.query.where.value)) ||
-        // Case 2: Fetching settlements paid by the current user.
-        (request.query.where.path == 'paidById' && request.query.where.op == '==' && request.query.where.value == request.auth.uid) ||
-        // Case 3: Fetching settlements paid to the current user.
-        (request.query.where.path == 'paidToId' && request.query.where.op == '==' && request.query.where.value == request.auth.uid)
-      ) || isAdmin();
+      // Allow list queries for settlements based on group membership or direct involvement
+      allow list: if request.auth != null && request.query.limit <= 100 &&
+                  (
+                    (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'groupId' && request.query.filters[0].op.string_value == '==' && get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds[0].size() > 0 && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.query.filters[0].value.string_value)).data.memberIds) ||
+                    (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'paidById' && request.query.filters[0].op.string_value == '==' && request.query.filters[0].value.string_value == request.auth.uid) ||
+                    (request.query.filters.size() > 0 && request.query.filters[0].field.string_value == 'paidToId' && request.query.filters[0].op.string_value == '==' && request.query.filters[0].value.string_value == request.auth.uid)
+                  );
     }
   }
 }
