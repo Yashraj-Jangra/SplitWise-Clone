@@ -329,21 +329,21 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
         querySnapshot.docs.map(async (docSnap) => {
             const expenseData = docSnap.data() as ExpenseDocument;
             const userIds = [
-                ...expenseData.payers.map(p => p.userId), 
-                ...expenseData.participants.map(p => p.userId)
+                ...(expenseData.payers || []).map(p => p.userId), 
+                ...(expenseData.participants || []).map(p => p.userId)
             ];
             const uniqueUserIds = [...new Set(userIds)];
             const users = await hydrateUsers(uniqueUserIds);
             const userMap = new Map(users.map(u => [u.uid, u]));
             
-            const payers = expenseData.payers.map(p => {
+            const payers = (expenseData.payers || []).map(p => {
                 const user = userMap.get(p.userId);
                 return user ? { ...p, user } : null;
             }).filter((p): p is ExpensePayer => p !== null);
             
             if (payers.length === 0) return null;
 
-            const participants = expenseData.participants.map(p => {
+            const participants = (expenseData.participants || []).map(p => {
                 const user = userMap.get(p.userId);
                 return user ? { ...p, user } : null;
             }).filter((p): p is ExpenseParticipant => p !== null);
@@ -372,21 +372,21 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
   const expenses: Expense[] = await Promise.all(
     Array.from(expenseMap.entries()).map(async ([id, expenseData]) => {
         const userIds = [
-            ...expenseData.payers.map(p => p.userId), 
-            ...expenseData.participants.map(p => p.userId)
+            ...(expenseData.payers || []).map(p => p.userId), 
+            ...(expenseData.participants || []).map(p => p.userId)
         ];
         const uniqueUserIds = [...new Set(userIds)];
         const users = await hydrateUsers(uniqueUserIds);
         const userMap = new Map(users.map(u => [u.uid, u]));
 
-        const payers = expenseData.payers.map(p => {
+        const payers = (expenseData.payers || []).map(p => {
                 const user = userMap.get(p.userId);
                 return user ? { ...p, user } : null;
             }).filter((p): p is ExpensePayer => p !== null);
         
         if (payers.length === 0) return null;
         
-        const participants = expenseData.participants.map((p) => {
+        const participants = (expenseData.participants || []).map((p) => {
             const user = userMap.get(p.userId);
             return user ? { ...p, user } : null;
         }).filter((p): p is ExpenseParticipant => p !== null);
@@ -411,22 +411,22 @@ export async function getAllExpenses(): Promise<Expense[]> {
   const expenseDocs = expenseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpenseDocument & {id: string}));
   
   expenseDocs.forEach(expense => {
-    expense.payers.forEach(p => allUserIds.add(p.userId));
-    expense.participants.forEach(p => allUserIds.add(p.userId));
+    (expense.payers || []).forEach(p => allUserIds.add(p.userId));
+    (expense.participants || []).forEach(p => allUserIds.add(p.userId));
   });
 
   const allUsers = await hydrateUsers(Array.from(allUserIds));
   const userMap = new Map(allUsers.map(u => [u.uid, u]));
 
   const expenses: Expense[] = expenseDocs.map((expenseData) => {
-      const payers = expenseData.payers.map(p => {
+      const payers = (expenseData.payers || []).map(p => {
           const user = userMap.get(p.userId);
           return user ? { ...p, user } : null;
       }).filter((p): p is ExpensePayer => p !== null);
 
       if (payers.length === 0) return null;
 
-      const participants = expenseData.participants.map(p => {
+      const participants = (expenseData.participants || []).map(p => {
           const user = userMap.get(p.userId);
           return user ? { ...p, user } : null;
       }).filter((p): p is ExpenseParticipant => p !== null);
