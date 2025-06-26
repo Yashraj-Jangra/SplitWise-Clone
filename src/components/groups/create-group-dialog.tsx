@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
@@ -24,11 +25,11 @@ import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { createGroup, getAllUsers } from "@/lib/mock-data";
 import type { UserProfile, GroupDocument } from "@/types";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/auth-context";
-import { getFullName } from "@/lib/utils";
+import { getFullName, getInitials } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "../ui/skeleton";
 
 const createGroupSchema = z.object({
   name: z.string().min(3, { message: "Group name must be at least 3 characters." }).max(50, { message: "Group name must be less than 50 characters."}),
@@ -49,7 +50,12 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   const { toast } = useToast();
   const { userProfile } = useAuth();
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  
+  const [loading, setLoading] = useState(true);
+
+  // New state for search functionality
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState<UserProfile[]>([]);
+
   const form = useForm<CreateGroupFormValues>({
     resolver: zodResolver(createGroupSchema),
     defaultValues: {
@@ -59,6 +65,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     },
   });
 
+  // Reset state when dialog opens
   useEffect(() => {
     if (userProfile && open) {
       form.reset({
@@ -66,14 +73,19 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
         description: "",
         memberIds: [userProfile.uid],
       });
+      setSearchTerm("");
+      setSelectedMembers([]);
     }
   }, [userProfile, form, open]);
 
+  // Load users when dialog opens
   useEffect(() => {
     async function loadUsers() {
         if (open) {
+            setLoading(true);
             const users = await getAllUsers();
             setAllUsers(users);
+            setLoading(false);
         }
     }
     loadUsers();
@@ -86,8 +98,33 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
       </Button>
     )
   }
+  
+  const searchResults = useMemo(() => {
+    if (!searchTerm) return [];
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const selectedMemberIds = selectedMembers.map(m => m.uid);
 
-  const availableMembers = allUsers.filter(user => user.uid !== userProfile.uid);
+    return allUsers.filter(user =>
+      user.uid !== userProfile.uid && // Exclude self
+      !selectedMemberIds.includes(user.uid) && // Exclude already selected
+      (getFullName(user.firstName, user.lastName).toLowerCase().includes(lowerCaseSearchTerm) ||
+       user.email.toLowerCase().includes(lowerCaseSearchTerm))
+    ).slice(0, 5); // Limit results
+  }, [searchTerm, allUsers, userProfile, selectedMembers]);
+
+  const handleSelectMember = (member: UserProfile) => {
+    const newSelectedMembers = [...selectedMembers, member];
+    setSelectedMembers(newSelectedMembers);
+    form.setValue('memberIds', [userProfile.uid, ...newSelectedMembers.map(m => m.uid)], { shouldValidate: true });
+    setSearchTerm(""); // Clear search input
+  };
+
+  const handleRemoveMember = (memberToRemove: UserProfile) => {
+    const newSelectedMembers = selectedMembers.filter(m => m.uid !== memberToRemove.uid);
+    setSelectedMembers(newSelectedMembers);
+    form.setValue('memberIds', [userProfile.uid, ...newSelectedMembers.map(m => m.uid)], { shouldValidate: true });
+  };
+
 
   async function onSubmit(values: CreateGroupFormValues) {
     if (!userProfile) {
@@ -110,11 +147,6 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
           description: `The group "${values.name}" has been successfully created.`,
         });
         setOpen(false);
-        form.reset({
-          name: "",
-          description: "",
-          memberIds: [userProfile.uid],
-        });
         router.push(`/groups/${newGroupId}`);
         router.refresh();
     } catch(error) {
@@ -170,50 +202,75 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
               render={() => (
                 <FormItem>
                   <FormLabel>Add Members</FormLabel>
-                  <FormDescription>Select members to add to this group. You are automatically included.</FormDescription>
-                  <ScrollArea className="h-[150px] border rounded-md p-2">
-                    <div className="space-y-2">
-                       <div className="flex items-center space-x-2">
-                          <Checkbox id={userProfile.uid} checked disabled />
-                          <Label htmlFor={userProfile.uid} className="font-medium text-muted-foreground">
-                            {getFullName(userProfile.firstName, userProfile.lastName)} (You)
-                          </Label>
+                  <FormDescription>Search for users to invite. You are automatically included.</FormDescription>
+                  <div className="relative">
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pr-8"
+                      disabled={loading}
+                    />
+                     <Icons.Users className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  </div>
+                  {searchResults.length > 0 && (
+                    <div className="border rounded-md mt-1 absolute bg-background z-10 w-full sm:w-[calc(100%-2rem)]">
+                      {searchResults.map(user => (
+                        <div
+                          key={user.uid}
+                          onClick={() => handleSelectMember(user)}
+                          className="flex items-center gap-2 p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.avatarUrl} alt={getFullName(user.firstName, user.lastName)} />
+                            <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{getFullName(user.firstName, user.lastName)}</p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
                         </div>
-                      {availableMembers.map((member) => (
-                        <FormField
-                          key={member.uid}
-                          control={form.control}
-                          name="memberIds"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={member.uid}
-                                className="flex flex-row items-center space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(member.uid)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), member.uid])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== member.uid
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {getFullName(member.firstName, member.lastName)}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
                       ))}
                     </div>
-                  </ScrollArea>
+                  )}
+                  
+                  <div className="pt-2 min-h-[9.5rem]">
+                    <FormLabel className="text-xs text-muted-foreground">Members to be added</FormLabel>
+                    <ScrollArea className="h-32 mt-2">
+                       <div className="space-y-2 p-2 border rounded-md">
+                          <div className="flex items-center justify-between p-1 pr-2 rounded-md bg-muted/50">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
+                                <AvatarFallback>{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium">{getFullName(userProfile.firstName, userProfile.lastName)} (You)</span>
+                            </div>
+                          </div>
+                          {selectedMembers.map(member => (
+                            <div key={member.uid} className="flex items-center justify-between p-1 pr-2 rounded-md bg-muted/50">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
+                                  <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleRemoveMember(member)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                       </div>
+                    </ScrollArea>
+                  </div>
+
                   <FormMessage />
                 </FormItem>
               )}
@@ -230,3 +287,4 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     </Dialog>
   );
 }
+
