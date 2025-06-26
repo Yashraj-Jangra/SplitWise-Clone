@@ -1,39 +1,121 @@
 
 "use client";
-import type { Group } from "@/types";
+import type { Group, UserProfile, Balance } from "@/types";
 import { Icons } from "@/components/icons";
 import Image from "next/image";
 import { AddMemberDialog } from "@/components/groups/add-member-dialog";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { useState, useEffect } from "react";
-import { format } from 'date-fns';
+import { useState } from "react";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { archiveGroupAction } from "@/lib/actions/group";
 
 interface GroupDetailHeaderProps {
   group: Group;
+  user: UserProfile;
+  balances: Balance[];
 }
 
-export function GroupDetailHeader({ group }: GroupDetailHeaderProps) {
+export function GroupDetailHeader({ group, user, balances }: GroupDetailHeaderProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const isCreator = user.uid === group.createdById;
+  const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
+
+  const handleArchive = async () => {
+    setIsDeleting(true);
+    const result = await archiveGroupAction(group.id, user.uid);
+    if (result.success) {
+      toast({ title: "Group Archived", description: `The group "${group.name}" has been archived and is now read-only.`});
+      router.push('/groups');
+      router.refresh();
+    } else {
+      toast({ title: "Error", description: result.error, variant: "destructive"});
+    }
+    setIsDeleting(false);
+    setIsDeleteDialogOpen(false);
+  }
+
+  const deleteButton = (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div tabIndex={0}> 
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)} 
+              disabled={!isSettled || isDeleting}
+              className="w-full"
+            >
+              <Icons.Delete className="mr-2 h-4 w-4" />
+              Archive Group
+            </Button>
+          </div>
+        </TooltipTrigger>
+        {!isSettled && (
+          <TooltipContent>
+            <p>You can only archive a group once all debts are settled.</p>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
 
   return (
-     <div className="p-6 bg-card rounded-xl border border-border/50">
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-            <div>
-                <h1 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-1">{group.name}</h1>
-                <p className="text-muted-foreground max-w-prose">{group.description}</p>
-                <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                    <Icons.Users className="h-4 w-4 mr-2" />
-                    <span>{group.members.length} Members</span>
-                    <span className="mx-2">·</span>
-                    <div className="font-semibold text-foreground">
-                        Total Expenses: {CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}
-                    </div>
-                </div>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-                <AddMemberDialog group={group} />
-            </div>
-        </div>
-     </div>
+    <>
+      <div className="p-6 bg-card rounded-xl border border-border/50">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div>
+                  <h1 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-1">{group.name}</h1>
+                  <p className="text-muted-foreground max-w-prose">{group.description}</p>
+                  <div className="mt-4 flex items-center text-sm text-muted-foreground">
+                      <Icons.Users className="h-4 w-4 mr-2" />
+                      <span>{group.members.length} Members</span>
+                      <span className="mx-2">·</span>
+                      <div className="font-semibold text-foreground">
+                          Total Expenses: {CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}
+                      </div>
+                  </div>
+              </div>
+              <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-auto">
+                  <AddMemberDialog group={group} />
+                  {isCreator && deleteButton}
+              </div>
+          </div>
+      </div>
+
+       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Archive this group?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      Archiving this group will remove all members' access, including your own. The group and its history will be preserved for administrative review but will not be accessible to members. Are you sure?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleArchive} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                      {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+                      Yes, archive it
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

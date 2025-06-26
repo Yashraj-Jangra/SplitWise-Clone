@@ -94,7 +94,7 @@ export default function GroupDetailPage() {
 
   return (
     <div className="space-y-6">
-      <GroupDetailHeader group={group} />
+      <GroupDetailHeader group={group} user={userProfile} balances={balances} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-4">

@@ -1,54 +1,90 @@
 
 'use client'
 
-import type { Metadata } from 'next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { getAllGroups } from "@/lib/mock-data";
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { getFullName, getInitials } from '@/lib/utils';
+import { hardDeleteGroupAction } from "@/lib/actions/group";
 
-// export const metadata: Metadata = {
-//   title: 'Manage Groups - SettleEase Admin',
-//   description: 'View and manage all groups in the system.',
-// };
-
-function GroupActions({ group }: { group: Group }) {
+function GroupActions({ group, onGroupDeleted }: { group: Group, onGroupDeleted: (groupId: string) => void }) {
     const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    const handleDelete = () => {
-        toast({ title: "Delete Group", description: `Deleting group "${group.name}". (Not implemented)`, variant: "destructive"});
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        const result = await hardDeleteGroupAction(group.id);
+        if (result.success) {
+            toast({ title: "Group Deleted", description: `The group "${group.name}" and all its data have been permanently deleted.`});
+            onGroupDeleted(group.id);
+        } else {
+             toast({ title: "Error", description: result.error, variant: "destructive"});
+        }
+        setIsDeleting(false);
+        setIsDeleteDialogOpen(false);
     }
 
     return (
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Icons.MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Group Actions</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                    <Link href={`/groups/${group.id}`}>
-                        <Icons.Details className="mr-2 h-4 w-4" /> View Group
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                    <Icons.Delete className="mr-2 h-4 w-4" /> Delete Group
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Icons.MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Group Actions</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                        <Link href={`/groups/${group.id}`}>
+                            <Icons.Details className="mr-2 h-4 w-4" /> View Group
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                        <Icons.Delete className="mr-2 h-4 w-4" /> Delete Group
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action is irreversible. It will permanently delete the group "{group.name}" and all associated expenses, settlements, and history.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                            {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+                            Yes, delete permanently
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     )
 }
 
@@ -56,15 +92,20 @@ export default function ManageGroupsPage() {
     const [groups, setGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const fetchGroups = async () => {
+        setLoading(true);
+        const groupList = await getAllGroups();
+        setGroups(groupList);
+        setLoading(false);
+    }
+
     useEffect(() => {
-        const fetchGroups = async () => {
-            setLoading(true);
-            const groupList = await getAllGroups();
-            setGroups(groupList);
-            setLoading(false);
-        }
         fetchGroups();
     }, []);
+
+    const handleGroupDeleted = (groupId: string) => {
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+    };
 
     if (loading) {
         return (
@@ -119,11 +160,11 @@ export default function ManageGroupsPage() {
                                             <span>{getFullName(group.createdBy.firstName, group.createdBy.lastName)}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{group.members.length}</TableCell>
+                                    <TableCell>{group.members.length > 0 ? group.members.length : <span className="text-muted-foreground">Archived</span>}</TableCell>
                                     <TableCell>{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</TableCell>
                                     <TableCell>{format(new Date(group.createdAt), "PPP")}</TableCell>
                                     <TableCell className="text-right">
-                                        <GroupActions group={group} />
+                                        <GroupActions group={group} onGroupDeleted={handleGroupDeleted} />
                                     </TableCell>
                                 </TableRow>
                             ))}

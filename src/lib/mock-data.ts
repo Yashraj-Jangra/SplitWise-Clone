@@ -232,6 +232,33 @@ export async function addMembersToGroup(groupId: string, memberIds: string[]): P
     });
 }
 
+export async function archiveGroup(groupId: string): Promise<void> {
+    const groupDocRef = doc(db, 'groups', groupId);
+    await updateDoc(groupDocRef, {
+        memberIds: []
+    });
+}
+
+export async function hardDeleteGroup(groupId: string): Promise<void> {
+    const batch = writeBatch(db);
+
+    // Find and delete all related documents
+    const collectionsToDelete = ['expenses', 'settlements', 'history'];
+    for (const collectionName of collectionsToDelete) {
+        const q = query(collection(db, collectionName), where('groupId', '==', groupId));
+        const snapshot = await getDocs(q);
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+    }
+
+    // Delete the group itself
+    const groupDocRef = doc(db, 'groups', groupId);
+    batch.delete(groupDocRef);
+
+    await batch.commit();
+}
+
 
 // --- Expense Functions ---
 
@@ -317,7 +344,7 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
     const description = `${actorName} deleted expense "${deletedExpenseData.description}" (was ${CURRENCY_SYMBOL}${amount.toFixed(2)}).`;
-    await logHistoryEvent(groupId, 'expense_deleted', actorId, { ...deletedExpenseData, expenseId: expenseId });
+    await logHistoryEvent(groupId, 'expense_deleted', actorId, description, { ...deletedExpenseData, expenseId: expenseId });
 }
 
 
