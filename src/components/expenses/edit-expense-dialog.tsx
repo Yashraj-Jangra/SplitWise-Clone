@@ -2,27 +2,20 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useForm, FormProvider, useFieldArray } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, Expense, ExpensePayerDocument, ExpenseParticipantDocument, ExpenseDocument } from "@/types";
@@ -34,12 +27,17 @@ import { useAuth } from "@/contexts/auth-context";
 import { classifyExpense, categoryList } from "@/lib/expense-categories";
 import { Skeleton } from "../ui/skeleton";
 import { getFullName } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "../ui/scroll-area";
+import { Switch } from "../ui/switch";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
   amount: z.coerce.number().positive("Amount must be positive."),
   date: z.date({ required_error: "Date is required." }),
-  paymentType: z.enum(['single', 'multiple']).default('single'),
+  isMultiplePayers: z.boolean().default(false),
   singlePayerId: z.string().optional(),
   multiPayers: z.array(z.object({
     userId: z.string(),
@@ -58,7 +56,7 @@ const expenseSchema = z.object({
    .refine(arr => arr.some(p => p.selected), { message: "At least one participant must be selected." }),
   category: z.string({ required_error: "Category is required." }),
 }).superRefine((data, ctx) => {
-    if (data.paymentType === 'single') {
+    if (!data.isMultiplePayers) {
         if (!data.singlePayerId) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
@@ -95,6 +93,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   const { userProfile } = useAuth();
   const [group, setGroup] = useState<Group | null>(initialGroup || null);
   const [isGroupLoading, setIsGroupLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   const form = useForm<EditExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -102,7 +101,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         description: "",
         amount: 0,
         date: new Date(),
-        paymentType: 'single',
+        isMultiplePayers: false,
         splitType: "equally",
         participants: [],
         category: "Other",
@@ -113,7 +112,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   const watchSplitType = form.watch("splitType");
   const watchParticipants = form.watch("participants");
   const watchDescription = form.watch("description");
-  const watchPaymentType = form.watch("paymentType");
+  const watchIsMultiplePayers = form.watch("isMultiplePayers");
   const watchMultiPayers = form.watch("multiPayers");
 
   const participantDeps = JSON.stringify(
@@ -170,7 +169,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             description: expense.description,
             amount: expense.amount,
             date: new Date(expense.date),
-            paymentType: expense.payers.length > 1 ? 'multiple' : 'single',
+            isMultiplePayers: expense.payers.length > 1,
             singlePayerId: expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
             multiPayers: group.members.map(member => ({
                 userId: member.uid,
@@ -296,14 +295,14 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     if (!userProfile || !group) return;
 
     let payers: ExpensePayerDocument[] = [];
-    if (values.paymentType === 'single' && values.singlePayerId) {
+    if (!values.isMultiplePayers && values.singlePayerId) {
         payers = [{ userId: values.singlePayerId, amount: values.amount }];
     } else {
         payers = values.multiPayers?.filter(p => p.amount && p.amount > 0).map(p => ({ userId: p.userId, amount: p.amount! })) || [];
     }
 
     if (payers.length === 0) {
-        form.setError("paymentType", { type: "manual", message: "At least one payer must be specified."});
+        form.setError("isMultiplePayers", { type: "manual", message: "At least one payer must be specified."});
         return;
     }
 
@@ -368,294 +367,242 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     }
   }
   
-  const renderContent = () => {
-    if (isGroupLoading || !group) {
-        return (
-            <div className="space-y-4 pt-4">
-                <Skeleton className="h-8 w-1/2" />
-                <Skeleton className="h-10 w-full" />
-                <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-                 <Skeleton className="h-24 w-full" />
-                 <div className="flex justify-end gap-2">
-                    <Skeleton className="h-10 w-24" />
-                    <Skeleton className="h-10 w-24" />
-                 </div>
-            </div>
-        )
-    }
-
-    return (
-         <FormProvider {...form}>
-          <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto -mx-6 px-6">
-              <div className="space-y-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Amount ({CURRENCY_SYMBOL})</FormLabel>
-                        <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categoryList.map((cat) => (
-                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                </div>
-
-                 <FormField
-                    control={form.control}
-                    name="date"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                        <FormLabel>Date</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button
-                                variant={"outline"}
-                                className={cn("pl-3 text-left font-normal w-full", !field.value && "text-muted-foreground")}
-                                >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-
-                 <FormField
-                  control={form.control}
-                  name="paymentType"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Payment Method</FormLabel>
+  const FormContent = (
+    <FormProvider {...form}>
+      <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 text-sm">
+        <div className="space-y-2 rounded-lg border border-border/10 p-4">
+          <div className="flex items-center justify-between border-b border-border/10 pb-4">
+            <FormLabel>Description</FormLabel>
+            <FormField control={form.control} name="description" render={({ field }) => ( <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} className="w-1/2 text-right" /></FormControl>)} />
+          </div>
+          <div className="flex items-center justify-between border-b border-border/10 py-3">
+            <FormLabel>Amount</FormLabel>
+            <FormField control={form.control} name="amount" render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} className="w-1/2 text-right" /></FormControl> )} />
+          </div>
+          <div className="flex items-center justify-between border-b border-border/10 py-3">
+            <FormLabel>Category</FormLabel>
+            <FormField control={form.control} name="category" render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger className="w-1/2 justify-end" /></FormControl>
+                  <SelectContent>
+                    {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
+                  </SelectContent>
+                </Select>
+            )} />
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <FormLabel>Date</FormLabel>
+            <FormField control={form.control} name="date" render={({ field }) => (
+                <Popover>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          className="flex space-x-4"
-                        >
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl><RadioGroupItem value="single" /></FormControl>
-                            <FormLabel className="font-normal">Single Payer</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl><RadioGroupItem value="multiple" /></FormControl>
-                            <FormLabel className="font-normal">Multiple Payers</FormLabel>
-                          </FormItem>
-                        </RadioGroup>
+                          <Button variant={"ghost"} className={cn("w-1/2 justify-end text-right font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                              <Icons.Calendar className="ml-2 h-4 w-4" />
+                          </Button>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {watchPaymentType === 'single' && (
-                    <FormField
-                        control={form.control}
-                        name="singlePayerId"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Paid By</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                {group.members.map(member => (
-                                    <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                )}
-
-                 {watchPaymentType === 'multiple' && (
-                     <FormItem>
-                        <div className="flex justify-between items-center">
-                            <FormLabel>Payers</FormLabel>
-                            <p className={cn("text-sm font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-green-500')}>
-                                {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
-                                 amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} overpaid` :
-                                 'All assigned'}
-                            </p>
-                        </div>
-                        <div className="space-y-3 rounded-md border p-4 max-h-48 overflow-y-auto">
-                            {form.getValues('multiPayers')?.map((item, index) => (
-                                <div key={item.userId} className="flex items-center justify-between gap-4">
-                                     <FormLabel className="font-normal whitespace-nowrap truncate flex-1">
-                                        {item.name} {item.userId === userProfile?.uid ? "(You)" : ""}
-                                      </FormLabel>
-                                       <FormField
-                                            control={form.control}
-                                            name={`multiPayers.${index}.amount`}
-                                            render={({ field }) => (
-                                                <FormControl>
-                                                    <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-8 w-28 text-right"/>
-                                                </FormControl>
-                                            )}
-                                        />
-                                </div>
-                            ))}
-                        </div>
-                         <FormMessage>{form.formState.errors.multiPayers?.message}</FormMessage>
-                     </FormItem>
-                 )}
-
-                <FormField
-                  control={form.control}
-                  name="splitType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Split Method</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select split method" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="equally">Split Equally</SelectItem>
-                          <SelectItem value="unequally">Enter Amounts Manually</SelectItem>
-                          <SelectItem value="by_shares">Split by Shares</SelectItem>
-                          <SelectItem value="by_percentage">Split by Percentage</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormItem>
-                  <FormLabel>Participants</FormLabel>
-                  <FormDescription>Select who participated and how the expense is split.</FormDescription>
-                  <div className="space-y-3 rounded-md border p-4 max-h-48 overflow-y-auto">
-                     {form.getValues('participants').map((item, index) => (
-                      <div key={item.userId} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 rounded p-1 hover:bg-muted/50">
-                        <FormField
-                          control={form.control}
-                          name={`participants.${index}.selected`}
-                          render={({ field }) => (
-                            <FormItem className="flex items-center space-x-3 flex-grow min-w-[150px]">
-                              <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap truncate">
-                                {item.name} {item.userId === userProfile?.uid ? "(You)" : ""}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                        <div className="flex items-center gap-2 flex-shrink-0 ml-auto pl-7 sm:pl-0">
-                            {watchParticipants?.[index]?.selected && (
-                            <>
-                                {watchSplitType === "unequally" && (
-                                <FormField
-                                    control={form.control}
-                                    name={`participants.${index}.amountOwed`}
-                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amount" {...field} className="h-8 w-24"/></FormControl> )}
-                                />
-                                )}
-                                {watchSplitType === "by_shares" && (
-                                <FormField
-                                    control={form.control}
-                                    name={`participants.${index}.shares`}
-                                    render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8 w-24"/></FormControl> )}
-                                />
-                                )}
-                                {watchSplitType === "by_percentage" && (
-                                    <FormField
-                                    control={form.control}
-                                    name={`participants.${index}.percentage`}
-                                    render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8 w-24"/></FormControl> )}
-                                    />
-                                )}
-                            </>
-                            )}
-                             <div className="w-20 text-right text-sm font-medium text-muted-foreground">
-                              {(watchSplitType !== 'unequally') && watchParticipants?.[index]?.selected && watchAmount > 0 && (
-                                  <span>{CURRENCY_SYMBOL}{Number(form.getValues(`participants.${index}.amountOwed`) || 0).toFixed(2)}</span>
-                              )}
-                             </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                   <div className="text-right text-sm mt-2 pr-2">
-                        {runningTotal.type === 'amount' && (
-                            <p className={cn(Math.abs(runningTotal.sum - watchAmount) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
-                                Total Allocated: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)}
-                            </p>
-                        )}
-                        {runningTotal.type === 'percentage' && (
-                            <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
-                                Total Percentage: {runningTotal.sum.toFixed(2)}%
-                            </p>
-                        )}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                </Popover>
+            )} />
+          </div>
+        </div>
+        
+        <div className="space-y-4 rounded-lg border border-border/10 p-4">
+          <div className="flex items-center justify-between">
+            <FormLabel>{watchIsMultiplePayers ? "Multiple Payers" : "Single Payer"}</FormLabel>
+            <FormField control={form.control} name="isMultiplePayers" render={({ field }) => (
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            )} />
+          </div>
+          {!watchIsMultiplePayers ? (
+             <FormField control={form.control} name="singlePayerId" render={({ field }) => (
+              <FormItem>
+              <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                  {group?.members.map(member => (
+                      <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
+                  ))}
+                  </SelectContent>
+              </Select>
+              <FormMessage />
+              </FormItem>
+          )} />
+          ) : (
+            <>
+            <p className={cn("text-right text-xs font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
+                {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
+                  amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} over` :
+                  'All assigned'}
+            </p>
+            <ScrollArea className="h-32 pr-2">
+                <div className="space-y-3">
+                  {form.getValues('multiPayers')?.map((item, index) => (
+                    <div key={item.userId} className="flex items-center justify-between gap-4">
+                      <FormLabel className="font-normal truncate">{item.name}</FormLabel>
+                        <FormField control={form.control} name={`multiPayers.${index}.amount`} render={({ field }) => (
+                          <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} className="h-8 w-28 text-right"/></FormControl>
+                        )} />
                     </div>
-                   <FormMessage>{form.formState.errors.participants?.message}</FormMessage>
-                   {form.formState.errors.participants?.root?.message && <FormMessage>{form.formState.errors.participants.root.message}</FormMessage>}
-                </FormItem>
-              </div>
-          </form>
-        </FormProvider>
+                  ))}
+                </div>
+            </ScrollArea>
+            </>
+          )}
+        </div>
+
+        {isMobile ? (
+           <Accordion type="single" collapsible className="w-full rounded-lg border border-border/10 p-4" defaultValue="item-1">
+            <AccordionItem value="item-1">
+              <AccordionTrigger>
+                <FormLabel>Split Method: <span className="text-primary font-semibold">{watchSplitType}</span></FormLabel>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4">
+                <SplitContent form={form} group={group} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ) : (
+          <Tabs defaultValue="equally" className="w-full" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="equally">Equally</TabsTrigger>
+              <TabsTrigger value="unequally">Unequally</TabsTrigger>
+              <TabsTrigger value="by_shares">Shares</TabsTrigger>
+              <TabsTrigger value="by_percentage">Percent</TabsTrigger>
+            </TabsList>
+            <div className="rounded-lg border border-border/10 p-4 mt-2">
+              <SplitContent form={form} group={group} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
+            </div>
+          </Tabs>
+        )}
+      </form>
+    </FormProvider>
+  );
+
+  const renderSkeleton = () => (
+    <div className="space-y-4 pt-4">
+        <div className="space-y-4 rounded-lg border border-border/10 p-4">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+        <div className="space-y-4 rounded-lg border border-border/10 p-4">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-24 w-full" />
+        </div>
+    </div>
+  );
+
+  const MainContent = isGroupLoading || !group ? renderSkeleton() : FormContent;
+
+  const title = "Edit Expense";
+  const formId = "edit-expense-form";
+
+  if(isMobile) {
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent side="bottom" className="glass-pane h-[90vh] flex flex-col rounded-t-2xl border-border/20">
+                <SheetHeader className="p-4">
+                    <SheetTitle className="text-center text-lg font-semibold">{title}</SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="flex-1 px-4">
+                    {MainContent}
+                </ScrollArea>
+                <SheetFooter className="p-4 bg-background/50">
+                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full">
+                        {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                    </Button>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
     )
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
+      <DialogContent className="glass-pane sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-headline">Edit Expense</DialogTitle>
-          <DialogDescription>
-            Modify the details of the expense below.
-          </DialogDescription>
+          <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
         </DialogHeader>
-        {renderContent()}
-        <DialogFooter className="border-t pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" form="edit-expense-form" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
+        {MainContent}
+        <DialogFooter>
+          <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full">
+            {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function SplitContent({ form, group, userProfile, runningTotal, watchAmount, watchSplitType }: {form: any, group: Group | null, userProfile: any, runningTotal: any, watchAmount: number, watchSplitType: string}) {
+  if (!group) return null;
+  return (
+     <div className="space-y-4">
+        <ScrollArea className="h-40 pr-3">
+          <div className="space-y-3">
+              {form.getValues('participants').map((item: any, index: number) => (
+                <div key={item.userId} className="flex items-center justify-between gap-x-2 gap-y-2">
+                  <FormField
+                    control={form.control}
+                    name={`participants.${index}.selected`}
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-3 flex-grow min-w-[150px]">
+                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap truncate">
+                          {item.name} {item.userId === userProfile?.uid ? "(You)" : ""}
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                      {form.watch(`participants.${index}.selected`) && (
+                      <>
+                          {watchSplitType === "unequally" && (
+                          <FormField
+                              control={form.control}
+                              name={`participants.${index}.amountOwed`}
+                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amt" {...field} className="h-8 w-24 text-right"/></FormControl> )}
+                          />
+                          )}
+                          {watchSplitType === "by_shares" && (
+                          <FormField
+                              control={form.control}
+                              name={`participants.${index}.shares`}
+                              render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8 w-24 text-right"/></FormControl> )}
+                          />
+                          )}
+                          {watchSplitType === "by_percentage" && (
+                              <FormField
+                              control={form.control}
+                              name={`participants.${index}.percentage`}
+                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8 w-24 text-right"/></FormControl> )}
+                              />
+                          )}
+                      </>
+                      )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </ScrollArea>
+        <div className="text-right text-xs mt-2 pr-2">
+          {runningTotal.type === 'amount' && (
+              <p className={cn(Math.abs(runningTotal.sum - watchAmount) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                  Total Allocated: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)}
+              </p>
+          )}
+          {runningTotal.type === 'percentage' && (
+              <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                  Total Percentage: {runningTotal.sum.toFixed(2)}%
+              </p>
+          )}
+        </div>
+        <FormMessage>{form.formState.errors.participants?.message}</FormMessage>
+        {form.formState.errors.participants?.root?.message && <FormMessage>{form.formState.errors.participants.root.message}</FormMessage>}
+      </div>
+  )
 }
