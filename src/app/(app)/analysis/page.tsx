@@ -13,11 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { addDays, format, startOfMonth, endOfMonth } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import {
   Bar,
   BarChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   XAxis,
   YAxis,
@@ -27,6 +27,7 @@ import {
 } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { classifyExpense, categoryList } from '@/lib/expense-categories';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -41,11 +42,18 @@ export default function AnalysisPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   const [date, setDate] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  
+  const uniqueCategories = useMemo(() => {
+    const allCategories = new Set(expenses.map(e => e.category || 'Other'));
+    return ['all', ...Array.from(allCategories)];
+  }, [expenses]);
 
   useEffect(() => {
     async function loadExpenses() {
@@ -61,14 +69,16 @@ export default function AnalysisPage() {
   }, [userProfile]);
 
   const filteredExpenses = useMemo(() => {
-    if (!date?.from) return expenses;
+    if (!date?.from) return [];
     const fromDate = date.from;
     const toDate = date.to ? addDays(date.to, 1) : addDays(fromDate, 1);
+    
     return expenses.filter(expense => {
       const expenseDate = new Date(expense.date);
-      return expenseDate >= fromDate && expenseDate < toDate;
+      const isInCategory = selectedCategory === 'all' || (expense.category || 'Other') === selectedCategory;
+      return expenseDate >= fromDate && expenseDate < toDate && isInCategory;
     });
-  }, [expenses, date]);
+  }, [expenses, date, selectedCategory]);
 
   const expensesByMonth = useMemo(() => {
     const data = filteredExpenses.reduce((acc, expense) => {
@@ -83,36 +93,36 @@ export default function AnalysisPage() {
   }, [filteredExpenses]);
 
   const expensesByCategory = useMemo(() => {
-    const data = filteredExpenses.reduce((acc, expense) => {
+    // This chart should show all categories regardless of the filter, but for the selected date range.
+    const dateFilteredExpenses = expenses.filter(expense => {
+       const expenseDate = new Date(expense.date);
+       if (!date?.from) return false;
+       const fromDate = date.from;
+       const toDate = date.to ? addDays(date.to, 1) : addDays(fromDate, 1);
+       return expenseDate >= fromDate && expenseDate < toDate;
+    });
+
+    const data = dateFilteredExpenses.reduce((acc, expense) => {
       const category = expense.category || 'Other';
       acc[category] = (acc[category] || 0) + expense.amount;
       return acc;
     }, {} as Record<string, number>);
 
     return Object.entries(data)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [filteredExpenses]);
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [expenses, date]);
 
   const barChartConfig = {
     total: { label: 'Total Spent', color: 'hsl(var(--chart-1))' },
   } satisfies ChartConfig;
 
-  const pieChartConfig = useMemo(() => {
-    return expensesByCategory.reduce((acc, item, index) => {
-        acc[item.name] = {
-            label: item.name,
-            color: CHART_COLORS[index % CHART_COLORS.length]
-        };
-        return acc;
-    }, {} as ChartConfig);
-  }, [expensesByCategory]);
 
   if (authLoading || loading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-24 w-full" />
         <div className="grid gap-6 md:grid-cols-2">
           <Skeleton className="h-80 w-full" />
           <Skeleton className="h-80 w-full" />
@@ -127,40 +137,57 @@ export default function AnalysisPage() {
         <h1 className="text-3xl font-bold font-headline text-foreground">Expense Analysis</h1>
         <p className="text-muted-foreground">Visualize your spending patterns.</p>
       </div>
+      
+      <Card>
+          <CardHeader>
+              <CardTitle>Filters</CardTitle>
+              <CardDescription>Refine the data shown in the charts below.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row gap-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                    variant="outline"
+                    className="w-full sm:w-[300px] justify-start text-left font-normal"
+                    >
+                    <Icons.Calendar className="mr-2 h-4 w-4" />
+                    {date?.from ? (
+                        date.to ? (
+                        <>
+                            {format(date.from, 'LLL dd, y')} - {format(date.to, 'LLL dd, y')}
+                        </>
+                        ) : (
+                        format(date.from, 'LLL dd, y')
+                        )
+                    ) : (
+                        <span>Pick a date range</span>
+                    )}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                    />
+                </PopoverContent>
+              </Popover>
+               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full sm:w-[220px]">
+                    <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                    {uniqueCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </CardContent>
+      </Card>
 
-      <div className="flex items-center gap-4">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-[300px] justify-start text-left font-normal"
-            >
-              <Icons.Calendar className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
-                  <>
-                    {format(date.from, 'LLL dd, y')} - {format(date.to, 'LLL dd, y')}
-                  </>
-                ) : (
-                  format(date.from, 'LLL dd, y')
-                )
-              ) : (
-                <span>Pick a date range</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={date?.from}
-              selected={date}
-              onSelect={setDate}
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
 
       {filteredExpenses.length === 0 ? (
          <Card className="col-span-full py-12 text-center">
@@ -170,7 +197,7 @@ export default function AnalysisPage() {
                 </div>
                 <CardTitle className="text-2xl">No Data Available</CardTitle>
                 <CardDescription>
-                There are no expenses in the selected date range.
+                There are no expenses matching your filter criteria.
                 </CardDescription>
             </CardHeader>
         </Card>
@@ -180,7 +207,7 @@ export default function AnalysisPage() {
             <CardHeader>
                 <CardTitle>Spending Over Time</CardTitle>
                 <CardDescription>
-                Total expenses aggregated by month for the selected range.
+                Total expenses aggregated by month for the selected range and category.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -196,7 +223,7 @@ export default function AnalysisPage() {
                     cursor={false}
                     content={<ChartTooltipContent indicator="dot" />}
                     />
-                    <Bar dataKey="total" fill="var(--color-total)" radius={4} />
+                    <Bar dataKey="total" fill="var(--color-total)" radius={2} />
                 </BarChart>
                 </ChartContainer>
             </CardContent>
@@ -206,42 +233,21 @@ export default function AnalysisPage() {
             <CardHeader>
                 <CardTitle>Spending by Category</CardTitle>
                 <CardDescription>
-                Breakdown of your spending by category for the selected range.
+                Breakdown of total spending by category for the selected date range.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-center">
-                <ChartContainer config={pieChartConfig} className="h-[300px] w-full">
-                <PieChart>
-                    <Tooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-                    <Pie
-                    data={expensesByCategory}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    labelLine={false}
-                    label={({
-                        cx, cy, midAngle, innerRadius, outerRadius, percent, index
-                      }) => {
-                        const RADIAN = Math.PI / 180;
-                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                  
-                        return (percent * 100) > 5 ? (
-                          <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central">
-                            {`${(percent * 100).toFixed(0)}%`}
-                          </text>
-                        ) : null;
-                      }}
-                    >
-                    {expensesByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                    </Pie>
-                    <Legend/>
-                </PieChart>
+            <CardContent>
+                 <ChartContainer config={barChartConfig} className="h-[300px] w-full">
+                    <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={100} className="text-xs" stroke="hsl(var(--muted-foreground))"/>
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <Bar dataKey="total" radius={2}>
+                            {expensesByCategory.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                        </Bar>
+                    </BarChart>
                 </ChartContainer>
             </CardContent>
             </Card>
@@ -250,3 +256,4 @@ export default function AnalysisPage() {
     </div>
   );
 }
+

@@ -134,7 +134,10 @@ export default function SettingsPage() {
                   <AvatarFallback className="text-2xl">{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button type="button" variant="outline">Change Avatar</Button>
+                  <Button type="button" variant="outline">
+                    <Icons.UserPlus className="mr-2" />
+                    Change Avatar
+                  </Button>
                   <p className="text-xs text-muted-foreground mt-1">JPG, GIF or PNG. Max size of 800K.</p>
                 </div>
               </div>
@@ -160,9 +163,11 @@ export default function SettingsPage() {
                     </FormItem>)} 
                 />
               </div>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Profile"}
-              </Button>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? "Saving..." : "Save Profile"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </form>
@@ -191,7 +196,9 @@ export default function SettingsPage() {
             <Label htmlFor="confirmPassword">Confirm New Password</Label>
             <Input id="confirmPassword" type="password" />
           </div>
-          <Button>Change Password</Button>
+           <div className="flex justify-end">
+            <Button>Change Password</Button>
+          </div>
         </CardContent>
       </Card>
       
@@ -199,8 +206,8 @@ export default function SettingsPage() {
 
        <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Icons.Delete className="h-5 w-5 mr-2 text-destructive" />
+          <CardTitle className="flex items-center text-destructive">
+            <Icons.Delete className="h-5 w-5 mr-2" />
             Account Deletion
           </CardTitle>
           <CardDescription>Permanently delete your SettleEase account.</CardDescription>
@@ -209,7 +216,9 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground mb-4">
                 Once you delete your account, there is no going back. All your data, including groups, expenses, and settlements, will be permanently removed. Please be certain.
             </p>
-          <Button variant="destructive">Delete My Account</Button>
+           <div className="flex justify-end">
+             <Button variant="destructive">Delete My Account</Button>
+           </div>
         </CardContent>
       </Card>
     </div>
