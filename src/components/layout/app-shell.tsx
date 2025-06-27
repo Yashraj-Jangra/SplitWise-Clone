@@ -3,70 +3,122 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarTrigger,
-  SidebarInset,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { usePathname } from "next/navigation";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { NavLinks, mainNavItems, settingsNavItem } from "./nav-links";
 import { UserNav } from "./user-nav";
-import { DynamicYear } from "./dynamic-year";
+import type { NavItem } from "@/types";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "../ui/input";
 
-function AppHeader({ pageTitle }: { pageTitle?: string }) {
-  const { toggleSidebar, isMobile } = useSidebar();
+const mainNavItems: NavItem[] = [
+  { title: "Dashboard", href: "/dashboard", icon: "Dashboard" },
+  { title: "Groups", href: "/groups", icon: "Users" },
+  { title: "Expenses", href: "/expenses", icon: "Expense" },
+  { title: "Settlements", href: "/settlements", icon: "Settle" },
+  { title: "Analysis", href: "/analysis", icon: "Analysis" },
+];
+
+const settingsNavItem: NavItem = {
+    title: "Settings",
+    href: "/settings",
+    icon: "Settings",
+};
+
+function Sidebar() {
+  const { userProfile } = useAuth();
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-      {(isMobile) && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          className="md:hidden"
-          aria-label="Toggle sidebar"
-        >
-          <Icons.Dashboard className="h-5 w-5" />
-        </Button>
-      )}
-      {!isMobile && <div className="w-[52px]"> {/* Placeholder for trigger on desktop if trigger is inside sidebar */}</div>}
-      
-      {pageTitle && <h1 className="text-lg font-semibold md:text-xl font-headline">{pageTitle}</h1>}
-      <div className="ml-auto flex items-center gap-4">
-        <UserNav />
+    <div className="hidden border-r bg-background md:block">
+        <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
+          <div className="flex h-[60px] items-center border-b px-6">
+            <Link href="/" className="flex items-center gap-2 font-semibold">
+              <Icons.Logo className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold">SettleEase</span>
+            </Link>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <nav className="grid items-start px-4 text-sm font-medium">
+              <MainNav items={mainNavItems} />
+            </nav>
+          </div>
+          <div className="mt-auto p-4 border-t">
+             <nav className="grid items-start px-2 text-sm font-medium">
+                {userProfile?.role === 'admin' && (
+                  <Link href="/admin/dashboard" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 mb-2">
+                    <Icons.ShieldCheck className="h-5 w-5" />
+                    Admin Panel
+                  </Link>
+                )}
+                <MainNav items={[settingsNavItem]} />
+             </nav>
+          </div>
+        </div>
       </div>
-    </header>
-  );
+  )
 }
 
-function AppSidebar() {
-  const { open } = useSidebar(); 
-  const isCollapsed = !open; 
+function MainNav({ items }: { items: NavItem[] }) {
+    const pathname = usePathname();
+    return (
+        <nav className="flex flex-col gap-1">
+            {items.map((item) => {
+                 const Icon = Icons[item.icon || "Dashboard"];
+                 const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                 return (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
+                            isActive && "text-primary bg-primary/20 font-semibold"
+                        )}
+                        >
+                        <Icon className="h-5 w-5" />
+                        {item.title}
+                    </Link>
+                 )
+            })}
+        </nav>
+    );
+}
+
+function Header() {
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <Sidebar collapsible="icon" variant="inset" side="left" className="border-r">
-      <SidebarHeader className="p-4 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold" aria-label="SettleEase Home">
-          <Icons.AppLogo className="h-7 w-7 text-primary" />
-          {!isCollapsed && <span className="text-xl font-headline text-foreground">SettleEase</span>}
-        </Link>
-        <SidebarTrigger className="ml-auto data-[state=open]:bg-sidebar-accent data-[state=closed]:bg-transparent"/>
-      </SidebarHeader>
-      <SidebarContent className="p-2">
-        <NavLinks items={mainNavItems} isCollapsed={isCollapsed} />
-      </SidebarContent>
-      <SidebarFooter className="p-2 border-t">
-        <NavLinks items={[settingsNavItem]} isCollapsed={isCollapsed} />
-      </SidebarFooter>
-    </Sidebar>
-  );
+      <header className="flex h-[60px] items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6 sticky top-0 z-30">
+        <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="mr-2 md:hidden"
+                >
+                    <Icons.Menu className="h-6 w-6" />
+                    <span className="sr-only">Toggle Menu</span>
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="pr-0 w-[280px]">
+                <Link href="/" className="mr-6 flex items-center space-x-2 px-4" onClick={() => setOpen(false)}>
+                    <Icons.Logo className="h-8 w-8 text-primary" />
+                    <span className="font-bold text-xl">SettleEase</span>
+                </Link>
+                <div className="my-4 h-[calc(100vh-8rem)] pb-10 overflow-y-auto pl-4">
+                    <MainNav items={mainNavItems} />
+                </div>
+            </SheetContent>
+        </Sheet>
+        <div className="relative flex-1">
+            <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search..." className="w-full md:w-1/2 lg:w-1/3 pl-9 bg-muted/50 focus:bg-card" />
+        </div>
+        <UserNav />
+      </header>
+  )
 }
 
 function EmailVerificationBanner() {
@@ -98,7 +150,7 @@ function EmailVerificationBanner() {
   };
 
   return (
-    <div className="bg-yellow-900/50 border border-yellow-400/50 text-yellow-200 p-4 rounded-lg mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className="bg-yellow-900/50 border border-yellow-400/50 text-yellow-200 p-4 rounded-md flex flex-col sm:flex-row items-center justify-between gap-4 mx-4 my-6 lg:mx-6">
       <div className="flex items-start sm:items-center gap-3">
         <Icons.Mail className="h-6 w-6 flex-shrink-0 mt-1 sm:mt-0" />
         <div>
@@ -113,28 +165,21 @@ function EmailVerificationBanner() {
   );
 }
 
-
 interface AppShellProps {
   children: React.ReactNode;
-  pageTitle?: string;
 }
 
-export function AppShell({ children, pageTitle }: AppShellProps) {
+export function AppShell({ children }: AppShellProps) {
   return (
-    <SidebarProvider defaultOpen={true}>
-      <AppSidebar />
-      <SidebarInset>
-        <div className="flex flex-col min-h-screen">
-          <AppHeader pageTitle={pageTitle} />
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <EmailVerificationBanner />
+    <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
+      <Sidebar />
+       <div className="flex flex-col">
+          <Header />
+          <EmailVerificationBanner />
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pt-0">
             {children}
           </main>
-          <footer className="py-4 px-6 text-center text-xs text-muted-foreground border-t">
-            SettleEase &copy; <DynamicYear />
-          </footer>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
 }

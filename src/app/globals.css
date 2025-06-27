@@ -13,77 +13,48 @@
   }
 
   :root {
-    --background: 0 0% 0%; /* True Black for AMOLED */
-    --foreground: 0 0% 98%; /* Off-white for better readability */
-    --card: 240 5% 5%; /* Slightly off-black for cards */
+    --background: 0 0% 10%; /* #1A1A1A */
+    --foreground: 0 0% 98%;
+    --card: 0 0% 13%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 5% 5%;
+    --popover: 0 0% 13%;
     --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%; /* Vibrant Blue */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4% 15%;
+    --primary: 180 100% 40%; /* #00C4CC */
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 15%;
-    --muted-foreground: 0 0% 63%; /* Lighter gray for muted text */
-    --accent: 217 91% 60%; /* Using primary for accent */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 15%; /* Darker, subtle border */
-    --input: 240 4% 15%;
-    --ring: 217 91% 60%;
-    --chart-1: 217 91% 60%;
-    --chart-2: 190 95% 55%;
-    --chart-3: 290 86% 65%;
-    --chart-4: 350 91% 65%;
-    --chart-5: 45 93% 55%;
-    --radius: 0.75rem;
-
-    --sidebar-background: 240 5% 5%; /* App 'chrome' color for inset variant */
-    --sidebar-foreground: 0 0% 80%; /* Slightly dimmer foreground for less emphasis */
-    --sidebar-primary: 217 91% 60%; /* Active item bg - vibrant blue */
-    --sidebar-primary-foreground: 0 0% 98%; /* Active item text */
-    --sidebar-accent: 240 4% 15%; /* Hover item bg */
-    --sidebar-accent-foreground: 0 0% 98%; /* Hover item text */
-    --sidebar-border: 240 4% 10%; /* Subtle border */
-    --sidebar-ring: 217 91% 60%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 0 100% 71%; /* #FF6B6B */
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 100% 71%;
+    --destructive-foreground: 0 0% 10%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 180 100% 40%;
+    --radius: 0.3rem; /* Edgy corners */
   }
 
   .dark {
-    --background: 0 0% 0%;
+    --background: 0 0% 10%;
     --foreground: 0 0% 98%;
-    --card: 240 5% 5%;
+    --card: 0 0% 13%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 5% 5%;
+    --popover: 0 0% 13%;
     --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4% 15%;
+    --primary: 180 100% 40%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 15%;
+    --muted: 0 0% 18%;
     --muted-foreground: 0 0% 63%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 15%;
-    --input: 240 4% 15%;
-    --ring: 217 91% 60%;
-    --chart-1: 217 91% 60%;
-    --chart-2: 190 95% 55%;
-    --chart-3: 290 86% 65%;
-    --chart-4: 350 91% 65%;
-    --chart-5: 45 93% 55%;
-
-    /* Dark Sidebar specific colors */
-    --sidebar-background: 240 5% 5%; /* App 'chrome' color for inset variant */
-    --sidebar-foreground: 0 0% 80%; /* Slightly dimmer foreground for less emphasis */
-    --sidebar-primary: 217 91% 60%; /* Active item bg - vibrant blue */
-    --sidebar-primary-foreground: 0 0% 98%; /* Active item text */
-    --sidebar-accent: 240 4% 15%; /* Hover item bg */
-    --sidebar-accent-foreground: 0 0% 98%; /* Hover item text */
-    --sidebar-border: 240 4% 10%; /* Subtle border */
-    --sidebar-ring: 217 91% 60%;
+    --accent: 0 100% 71%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 100% 71%;
+    --destructive-foreground: 0 0% 10%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 180 100% 40%;
   }
 }
 
@@ -91,10 +62,10 @@
   .animated-gradient-bg {
     background: linear-gradient(
       -45deg,
-      hsl(var(--primary) / 0.1),
+      hsl(var(--primary) / 0.15),
       hsl(var(--background)),
       hsl(var(--background)),
-      hsl(var(--accent) / 0.1)
+      hsl(var(--accent) / 0.15)
     );
     background-size: 400% 400%;
     animation: gradient 20s ease infinite;
@@ -110,5 +81,9 @@
     100% {
       background-position: 0% 50%;
     }
+  }
+  
+  .glass-pane {
+    @apply bg-card/50 backdrop-blur-sm border-border/50;
   }
 }
