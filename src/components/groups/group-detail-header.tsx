@@ -5,7 +5,7 @@ import { Icons } from "@/components/icons";
 import Image from "next/image";
 import { AddMemberDialog } from "@/components/groups/add-member-dialog";
 import { CURRENCY_SYMBOL, GROUP_COVER_IMAGES, DEFAULT_GROUP_COVER_IMAGE } from "@/lib/constants";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import {
@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { archiveGroupAction } from "@/lib/actions/group";
 import { updateGroup } from "@/lib/mock-data";
+import { uploadFile } from "@/lib/storage";
 
 
 interface GroupDetailHeaderProps {
@@ -42,6 +43,8 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isCreator = user.uid === group.createdById;
   const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
@@ -69,6 +72,31 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
         toast({ title: "Error", description: "Failed to update cover image", variant: "destructive"});
     }
   }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+        return;
+    }
+    const file = e.target.files[0];
+    
+    if (file.size > 1024 * 1024 * 5) { // 5MB limit
+        toast({ variant: "destructive", title: "File too large", description: "Please select an image smaller than 5MB." });
+        return;
+    }
+
+    setIsUploading(true);
+    try {
+        const downloadURL = await uploadFile(file, `group-covers/${group.id}`);
+        await updateGroup(group.id, { coverImageUrl: downloadURL });
+        toast({ title: "Cover Image Updated", description: "Your new cover image has been saved." });
+        onActionComplete(); 
+    } catch (error) {
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload your image. Please try again." });
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
 
   const deleteButton = (
     <TooltipProvider>
@@ -134,6 +162,16 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
                            </button>
                         ))}
                       </div>
+                       <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/png, image/jpeg, image/gif" />
+                        <Button 
+                            variant="ghost" 
+                            className="w-full mt-2" 
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                        >
+                            {isUploading ? <Icons.AppLogo className="mr-2 animate-spin" /> : <Icons.Upload className="mr-2" />}
+                            {isUploading ? 'Uploading...' : 'Upload Custom'}
+                        </Button>
                     </PopoverContent>
                   </Popover>
 
