@@ -62,7 +62,7 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
     defaultValues: {
       paidById: "",
       paidToId: "",
-      amount: 0,
+      amount: undefined,
       date: new Date(),
       notes: "",
     },
@@ -73,7 +73,7 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
         form.reset({
             paidById: userProfile.uid,
             paidToId: "",
-            amount: 0,
+            amount: undefined,
             date: new Date(),
             notes: "",
         });

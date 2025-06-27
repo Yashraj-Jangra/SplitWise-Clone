@@ -96,7 +96,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       description: "",
-      amount: 0,
+      amount: undefined,
       date: new Date(),
       paymentType: 'single',
       singlePayerId: userProfile?.uid || "",
@@ -128,14 +128,14 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     if (userProfile && open) {
       form.reset({
         description: "",
-        amount: 0,
+        amount: undefined,
         date: new Date(),
         paymentType: 'single',
         singlePayerId: userProfile.uid,
         multiPayers: group.members.map(member => ({
             userId: member.uid,
             name: getFullName(member.firstName, member.lastName),
-            amount: 0,
+            amount: undefined,
         })),
         splitType: "equally",
         participants: group.members.map(member => ({

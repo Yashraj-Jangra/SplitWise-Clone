@@ -175,7 +175,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             multiPayers: group.members.map(member => ({
                 userId: member.uid,
                 name: getFullName(member.firstName, member.lastName),
-                amount: expense.payers.find(p => p.user.uid === member.uid)?.amount || 0,
+                amount: expense.payers.find(p => p.user.uid === member.uid)?.amount || undefined,
             })),
             splitType: expense.splitType,
             participants: participantData,
