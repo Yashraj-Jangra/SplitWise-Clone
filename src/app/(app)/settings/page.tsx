@@ -1,12 +1,13 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -24,6 +25,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
 import { updateUser, isUsernameTaken } from "@/lib/mock-data";
 import { getFullName, getInitials } from "@/lib/utils";
+import { uploadFile } from "@/lib/storage";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -42,6 +44,9 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function SettingsPage() {
   const { userProfile, loading } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -91,6 +96,7 @@ export default function SettingsPage() {
             title: "Profile Updated",
             description: "Your settings have been saved successfully.",
         });
+        router.refresh();
     } catch (error) {
         toast({
             variant: "destructive",
@@ -99,6 +105,30 @@ export default function SettingsPage() {
         });
     }
   }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !userProfile) {
+        return;
+    }
+    const file = e.target.files[0];
+    
+    if (file.size > 1024 * 1024 * 2) { // 2MB limit
+        toast({ variant: "destructive", title: "File too large", description: "Please select an image smaller than 2MB." });
+        return;
+    }
+
+    setIsUploading(true);
+    try {
+        const downloadURL = await uploadFile(file, `avatars/${userProfile.uid}`);
+        await updateUser(userProfile.uid, { avatarUrl: downloadURL });
+        toast({ title: "Avatar Updated", description: "Your new avatar has been saved." });
+        router.refresh(); 
+    } catch (error) {
+        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload your avatar. Please try again." });
+    } finally {
+        setIsUploading(false);
+    }
+  };
 
   if (loading || !userProfile) {
     return (
@@ -134,11 +164,12 @@ export default function SettingsPage() {
                   <AvatarFallback className="text-2xl">{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button type="button" variant="outline">
-                    <Icons.UserPlus className="mr-2" />
-                    Change Avatar
+                  <input type="file" ref={fileInputRef} onChange={handleAvatarChange} className="hidden" accept="image/png, image/jpeg, image/gif" />
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                    {isUploading ? <Icons.AppLogo className="mr-2 animate-spin" /> : <Icons.UserPlus className="mr-2" />}
+                    {isUploading ? "Uploading..." : "Change Avatar"}
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-1">JPG, GIF or PNG. Max size of 800K.</p>
+                  <p className="text-xs text-muted-foreground mt-1">JPG, GIF or PNG. Max size of 2MB.</p>
                 </div>
               </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
