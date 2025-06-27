@@ -32,7 +32,7 @@ import type {
   HistoryEventDocument,
 } from '@/types';
 import { getFullName } from './utils';
-import { CURRENCY_SYMBOL } from './constants';
+import { CURRENCY_SYMBOL, DEFAULT_GROUP_COVER_IMAGE } from './constants';
 
 // --- User Functions ---
 
@@ -193,7 +193,7 @@ export async function getGroupsByUserId(userId: string): Promise<Group[]> {
             }
         })
     );
-    return groups.filter((g): g is Group => g !== null);
+    return groups.filter((g): g is Group => g !== null).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export async function getAllGroups(): Promise<Group[]> {
@@ -225,11 +225,20 @@ export async function getAllGroups(): Promise<Group[]> {
     return groups.filter((g): g is Group => g !== null);
 }
 
-export async function addMembersToGroup(groupId: string, memberIds: string[]): Promise<void> {
+export async function addMembersToGroup(groupId: string, memberIds: string[], actorId: string): Promise<void> {
     const groupDocRef = doc(db, 'groups', groupId);
     await updateDoc(groupDocRef, {
         memberIds: arrayUnion(...memberIds)
     });
+    
+    const [actor, newMembers] = await Promise.all([
+        getUserProfile(actorId),
+        hydrateUsers(memberIds)
+    ]);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const newMemberNames = newMembers.map(m => getFullName(m.firstName, m.lastName)).join(', ');
+    const description = `${actorName} added ${newMemberNames} to the group.`;
+    await logHistoryEvent(groupId, 'member_added', actorId, description, { memberIds });
 }
 
 export async function archiveGroup(groupId: string): Promise<void> {
@@ -237,6 +246,12 @@ export async function archiveGroup(groupId: string): Promise<void> {
     await updateDoc(groupDocRef, {
         memberIds: []
     });
+}
+
+export async function updateGroup(groupId: string, data: Partial<GroupDocument>): Promise<void> {
+    const groupDocRef = doc(db, 'groups', groupId);
+    const cleanData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
+    await updateDoc(groupDocRef, cleanData);
 }
 
 
@@ -460,7 +475,7 @@ export async function getAllExpenses(): Promise<Expense[]> {
 
 // --- Settlement Functions ---
 
-export async function addSettlement(settlementData: Omit<SettlementDocument, 'date' | 'groupMemberIds'> & { date: Date }): Promise<string> {
+export async function addSettlement(settlementData: Omit<SettlementDocument, 'date' | 'groupMemberIds'> & { date: Date }, actorId: string): Promise<string> {
     const groupDocRef = doc(db, 'groups', settlementData.groupId);
     const groupSnap = await getDoc(groupDocRef);
     if (!groupSnap.exists()) {
@@ -473,6 +488,19 @@ export async function addSettlement(settlementData: Omit<SettlementDocument, 'da
         groupMemberIds: groupData.memberIds,
         date: Timestamp.fromDate(settlementData.date),
     });
+    
+    const [actor, paidBy, paidTo] = await Promise.all([
+        getUserProfile(actorId),
+        getUserProfile(settlementData.paidById),
+        getUserProfile(settlementData.paidToId),
+    ]);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const paidByName = getFullName(paidBy?.firstName, paidBy?.lastName);
+    const paidToName = getFullName(paidTo?.firstName, paidTo?.lastName);
+
+    const description = `${actorName} recorded a settlement: ${paidByName} paid ${paidToName} ${CURRENCY_SYMBOL}${settlementData.amount.toFixed(2)}.`;
+    await logHistoryEvent(settlementData.groupId, 'settlement_created', actorId, description, { settlementId: docRef.id });
+
     return docRef.id;
 }
 
