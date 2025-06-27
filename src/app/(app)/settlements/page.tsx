@@ -50,10 +50,10 @@ export default function AllSettlementsPage() {
         </Button>
       </div>
 
-      <Card>
+      <div className="rounded-md border border-border/50 bg-card/50">
         <CardHeader>
           <CardTitle>Settlement History</CardTitle>
-          <CardDescription>Showing {userSettlements.length} settlements you are involved in.</CardDescription>
+          {!loading && <CardDescription>Showing {userSettlements.length} settlements you are involved in.</CardDescription>}
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -61,8 +61,8 @@ export default function AllSettlementsPage() {
                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
           ) : userSettlements.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height as needed */}
-              <div className="divide-y">
+            <ScrollArea className="h-[calc(100vh-22rem)]">
+              <div className="divide-y divide-border/50">
                 {userSettlements.map((settlement) => (
                   <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={userProfile!.uid} />
                 ))}
@@ -76,7 +76,7 @@ export default function AllSettlementsPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

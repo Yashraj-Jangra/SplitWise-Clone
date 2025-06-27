@@ -69,45 +69,34 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
 
 
   if (balanceLoading) {
-    return (
-        <Card className="col-span-1">
-            <CardHeader>
-                <Skeleton className="h-6 w-1/2" />
-                <Skeleton className="h-4 w-3/4 mt-2" />
-            </CardHeader>
-            <CardContent>
-                <Skeleton className="h-20 w-full" />
-            </CardContent>
-        </Card>
-    )
+    return <Skeleton className="h-36 w-full rounded-md" />
   }
 
   const isOwed = netBalance >= 0;
 
   return (
-    <Card className="col-span-1 flex flex-col">
-      <CardHeader>
-        <CardTitle>Net Balance</CardTitle>
-        <CardDescription>Your overall financial position across all groups.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center justify-center text-center flex-grow">
-        <div className={`text-5xl font-bold ${isOwed ? 'text-green-400' : 'text-red-400'}`}>
-            {CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
+    <div className="p-6 rounded-md border border-border/50 bg-card/50 glass-pane">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+            <div className="flex-1">
+                <p className="text-muted-foreground mb-2">Your Net Balance</p>
+                <p className={`text-4xl lg:text-5xl font-bold tracking-tighter ${isOwed ? 'text-primary' : 'text-accent'}`}>
+                    {isOwed ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
+                </p>
+                <p className="text-muted-foreground mt-1">
+                    {isOwed ? "You are owed overall." : "You owe overall."}
+                </p>
+            </div>
+            <div className="flex gap-4 w-full md:w-auto">
+                 <div className="flex-1 text-center p-3 rounded-md bg-muted/30">
+                    <p className="text-xs text-green-400 uppercase tracking-wider">Owed to you</p>
+                    <p className="text-xl font-bold text-green-400">{CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}</p>
+                </div>
+                <div className="flex-1 text-center p-3 rounded-md bg-muted/30">
+                    <p className="text-xs text-red-400 uppercase tracking-wider">You owe</p>
+                    <p className="text-xl font-bold text-red-400">{CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}</p>
+                </div>
+            </div>
         </div>
-        <p className="text-muted-foreground mt-2">
-            {isOwed ? "You are owed" : "You owe"}
-        </p>
-      </CardContent>
-      <CardContent className="flex justify-around text-center text-sm">
-        <div>
-            <p className="text-muted-foreground">Total Owed to You</p>
-            <p className="font-semibold text-green-400">{CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}</p>
-        </div>
-        <div>
-            <p className="text-muted-foreground">Total You Owe</p>
-            <p className="font-semibold text-red-400">{CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}</p>
-        </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import type { Group, UserProfile, Balance } from "@/types";
 import { Icons } from "@/components/icons";
 import Image from "next/image";
 import { AddMemberDialog } from "@/components/groups/add-member-dialog";
-import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { CURRENCY_SYMBOL, GROUP_COVER_IMAGES, DEFAULT_GROUP_COVER_IMAGE } from "@/lib/constants";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
@@ -18,17 +18,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { archiveGroupAction } from "@/lib/actions/group";
+import { updateGroup } from "@/lib/mock-data";
+
 
 interface GroupDetailHeaderProps {
   group: Group;
   user: UserProfile;
   balances: Balance[];
+  onActionComplete: () => void;
 }
 
-export function GroupDetailHeader({ group, user, balances }: GroupDetailHeaderProps) {
+export function GroupDetailHeader({ group, user, balances, onActionComplete }: GroupDetailHeaderProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -49,6 +58,16 @@ export function GroupDetailHeader({ group, user, balances }: GroupDetailHeaderPr
     }
     setIsDeleting(false);
     setIsDeleteDialogOpen(false);
+  }
+
+  const handleCoverChange = async (imageUrl: string) => {
+    try {
+        await updateGroup(group.id, { coverImageUrl: imageUrl });
+        toast({ title: "Cover Image Updated" });
+        onActionComplete();
+    } catch(e) {
+        toast({ title: "Error", description: "Failed to update cover image", variant: "destructive"});
+    }
   }
 
   const deleteButton = (
@@ -78,8 +97,16 @@ export function GroupDetailHeader({ group, user, balances }: GroupDetailHeaderPr
 
   return (
     <>
-      <div className="p-6 bg-card rounded-xl border border-border/50">
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+      <div className="relative p-6 bg-card rounded-md border border-border/50 overflow-hidden">
+          <Image
+            src={group.coverImageUrl || DEFAULT_GROUP_COVER_IMAGE}
+            alt={`${group.name} cover image`}
+            fill
+            className="object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+          
+          <div className="relative flex flex-col sm:flex-row justify-between items-start gap-4">
               <div>
                   <h1 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-1">{group.name}</h1>
                   <p className="text-muted-foreground max-w-prose">{group.description}</p>
@@ -93,7 +120,23 @@ export function GroupDetailHeader({ group, user, balances }: GroupDetailHeaderPr
                   </div>
               </div>
               <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-auto">
-                  <AddMemberDialog group={group} />
+                 <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline"><Icons.Edit className="mr-2"/>Change Cover</Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {GROUP_COVER_IMAGES.map((url, i) => (
+                           <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
+                             <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
+                             {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
+                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
+                           </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
                   {isCreator && deleteButton}
               </div>
           </div>

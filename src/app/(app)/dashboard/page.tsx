@@ -24,81 +24,24 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function DashboardSkeleton() {
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div className="flex justify-between items-center">
                 <div>
                     <Skeleton className="h-8 w-48 mb-2" />
                     <Skeleton className="h-4 w-64" />
                 </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Skeleton className="h-96 rounded-xl lg:col-span-2" />
-                <Skeleton className="h-96 rounded-xl" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                    <Skeleton className="h-36 rounded-xl" />
+                    <Skeleton className="h-96 rounded-xl" />
+                </div>
+                <div className="space-y-6">
+                    <Skeleton className="h-64 rounded-xl" />
+                </div>
             </div>
         </div>
     );
-}
-
-function QuickActionsWidget() {
-    const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-
-    return (
-        <Card className="col-span-1 md:col-span-2 lg:col-span-1 flex flex-col justify-center items-center p-6 bg-card hover:bg-muted/50 transition-colors">
-            <CardTitle className="text-lg font-semibold mb-4">Quick Actions</CardTitle>
-            <div className="flex flex-wrap justify-center gap-4">
-                <CreateGroupDialog buttonVariant="outline" />
-                {/* The AddExpenseDialog needs a group to function, so it can't be a direct quick action without a selection mechanism */}
-                <Button variant="outline" disabled>
-                    <Icons.Expense className="mr-2 h-4 w-4" /> Add Expense
-                </Button>
-            </div>
-        </Card>
-    )
-}
-
-function RecentGroupsWidget({ groups }: { groups: Group[] }) {
-    if (groups.length === 0) {
-        return (
-            <Card className="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>Recent Groups</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground">You haven't joined any groups yet.</p>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    return (
-        <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle>Recent Groups</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {groups.slice(0, 2).map(group => (
-                    <Link href={`/groups/${group.id}`} key={group.id}>
-                        <div className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer space-y-3">
-                            <h3 className="font-semibold truncate">{group.name}</h3>
-                            <div className="flex -space-x-2 overflow-hidden">
-                                {group.members.slice(0, 5).map(member => (
-                                    <Avatar key={member.uid} className="inline-block h-8 w-8 rounded-full border-2 border-background">
-                                        <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
-                                        <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
-                                    </Avatar>
-                                ))}
-                                {group.members.length > 5 && <Avatar className="h-8 w-8 rounded-full border-2 border-background bg-muted"><AvatarFallback>+{group.members.length - 5}</AvatarFallback></Avatar>}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)} total expenses</p>
-                        </div>
-                    </Link>
-                ))}
-            </CardContent>
-        </Card>
-    )
 }
 
 export default function DashboardPage() {
@@ -137,20 +80,56 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold font-headline text-foreground">Dashboard</h1>
+        <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground tracking-tighter">Dashboard</h1>
         <p className="text-lg text-muted-foreground">Welcome back, {userProfile.firstName}!</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <BalanceOverviewSummary currentUserId={userProfile.uid} />
-        <RecentGroupsWidget groups={groups} />
-        <QuickActionsWidget />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+            <BalanceOverviewSummary currentUserId={userProfile.uid} />
+            <RecentActivityList />
+        </div>
 
-      <div className="grid gap-6">
-        <RecentActivityList />
+        <div className="space-y-6">
+            <Card className="glass-pane">
+                <CardHeader>
+                    <CardTitle className="text-lg">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                    <CreateGroupDialog buttonVariant="secondary" />
+                    {/* The AddExpenseDialog needs a group to function, so it can't be a direct quick action without a selection mechanism */}
+                    <Button variant="secondary" disabled>
+                        <Icons.Expense className="mr-2 h-4 w-4" /> Add Expense
+                    </Button>
+                </CardContent>
+            </Card>
+            
+            <Card className="glass-pane">
+                <CardHeader>
+                    <CardTitle className="text-lg">Recent Groups</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {groups.length > 0 ? (
+                        <div className="space-y-3">
+                            {groups.slice(0, 3).map(group => (
+                                <Link href={`/groups/${group.id}`} key={group.id} className="block p-3 rounded-md bg-muted/30 hover:bg-muted/60 transition-colors">
+                                    <h3 className="font-semibold truncate">{group.name}</h3>
+                                    <p className="text-sm text-muted-foreground">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)} total expenses</p>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">You haven't joined any groups yet.</p>
+                    )}
+                </CardContent>
+                 <CardFooter>
+                    <Button variant="outline" size="sm" asChild className="w-full">
+                        <Link href="/groups">View All Groups</Link>
+                    </Button>
+                 </CardFooter>
+            </Card>
+        </div>
       </div>
-      
     </div>
   );
 }

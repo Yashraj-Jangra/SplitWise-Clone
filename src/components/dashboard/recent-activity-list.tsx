@@ -97,7 +97,7 @@ export function RecentActivityList() {
 
   if (loading) {
     return (
-        <Card className="lg:col-span-3">
+        <Card className="glass-pane">
             <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
@@ -120,7 +120,7 @@ export function RecentActivityList() {
 
   if (!activities.length) {
     return (
-      <Card className="lg:col-span-3">
+      <Card className="glass-pane">
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
@@ -134,14 +134,14 @@ export function RecentActivityList() {
   }
 
   return (
-    <Card className="lg:col-span-3">
+    <Card className="glass-pane">
       <CardHeader>
         <CardTitle>Recent Activity</CardTitle>
         <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[400px]">
-          <div className="divide-y divide-border">
+        <ScrollArea className="h-[450px]">
+          <div className="divide-y divide-border/50">
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
                  <Avatar className="h-10 w-10">
@@ -153,7 +153,7 @@ export function RecentActivityList() {
                     {activity.description}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    <span className="font-semibold">{getActorText(activity.actors, activity.type)}</span> in <Link href={`/groups/${activity.groupId}`} className="hover:underline">{activity.groupName}</Link>
+                    <span className="font-semibold">{getActorText(activity.actors, activity.type)}</span> in <Link href={`/groups/${activity.groupId}`} className="hover:underline text-primary/80 hover:text-primary">{activity.groupName}</Link>
                   </p>
                 </div>
                 <div className="flex flex-col items-end">

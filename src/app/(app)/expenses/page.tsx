@@ -43,39 +43,39 @@ export default function AllExpensesPage() {
           <p className="text-muted-foreground">A consolidated view of all your expenses.</p>
         </div>
         <Button asChild>
-            <Link href="/expenses/new"> {/* This would likely open a dialog to select group first */}
+            <Link href="/groups">
              <Icons.Expense className="mr-2 h-4 w-4" /> Add New Expense
             </Link>
           </Button>
       </div>
-
-      <Card>
+      
+      <div className="rounded-md border border-border/50 bg-card/50">
         <CardHeader>
-          <CardTitle>Expense History</CardTitle>
-          <CardDescription>Showing {userExpenses.length} expenses you are involved in.</CardDescription>
+            <CardTitle>Expense History</CardTitle>
+            {!loading && <CardDescription>Showing {userExpenses.length} expenses you are involved in.</CardDescription>}
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? (
-            <div className="p-4 space-y-4">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-            </div>
-          ) : userExpenses.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-20rem)]"> {/* Adjust height */}
-              <div className="divide-y">
-                {userExpenses.map((expense) => (
-                  <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} onActionComplete={loadExpenses} />
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <div className="text-center p-12 text-muted-foreground">
-              <Icons.Expense className="h-16 w-16 mx-auto mb-4" />
-              <p className="text-lg">No expenses found.</p>
-              <p>Get started by adding an expense in one of your groups.</p>
-            </div>
-          )}
+            {loading ? (
+                <div className="p-4 space-y-4">
+                    {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+                </div>
+            ) : userExpenses.length > 0 ? (
+                <ScrollArea className="h-[calc(100vh-22rem)]">
+                <div className="divide-y divide-border/50">
+                    {userExpenses.map((expense) => (
+                    <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} onActionComplete={loadExpenses} />
+                    ))}
+                </div>
+                </ScrollArea>
+            ) : (
+                <div className="text-center p-12 text-muted-foreground">
+                <Icons.Expense className="h-16 w-16 mx-auto mb-4" />
+                <p className="text-lg">No expenses found.</p>
+                <p>Get started by adding an expense in one of your groups.</p>
+                </div>
+            )}
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

@@ -15,11 +15,12 @@ import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName, getInitials } from '@/lib/utils';
+import { DEFAULT_GROUP_COVER_IMAGE, GROUP_COVER_IMAGES } from '@/lib/constants';
 
 function GroupSkeleton() {
     return (
         <div className="aspect-[4/3] w-full">
-            <Skeleton className="h-full w-full rounded-xl" />
+            <Skeleton className="h-full w-full rounded-md" />
         </div>
     )
 }
@@ -57,9 +58,9 @@ export default function GroupsPage() {
       ) : groups.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {groups.map((group) => (
-             <Link href={`/groups/${group.id}`} key={group.id} className="group block aspect-[4/3] w-full relative rounded-xl overflow-hidden shadow-lg hover:shadow-primary/20 transition-all duration-300">
+             <Link href={`/groups/${group.id}`} key={group.id} className="group block aspect-[4/3] w-full relative rounded-md overflow-hidden shadow-lg hover:shadow-primary/20 transition-all duration-300">
                 <Image
-                    src={group.coverImageUrl || 'https://placehold.co/600x400.png'}
+                    src={group.coverImageUrl || DEFAULT_GROUP_COVER_IMAGE}
                     alt={group.name}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -87,7 +88,7 @@ export default function GroupsPage() {
           ))}
         </div>
       ) : (
-        <Card className="col-span-full py-12 text-center border-dashed">
+        <Card className="col-span-full py-12 text-center border-dashed border-border/50 glass-pane">
           <CardHeader>
             <div className="flex justify-center mb-4">
               <Icons.Users className="h-16 w-16 text-muted-foreground" />
