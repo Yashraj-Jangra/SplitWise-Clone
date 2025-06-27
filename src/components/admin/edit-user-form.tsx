@@ -94,24 +94,20 @@ export function EditUserForm({ user }: EditUserFormProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Edit User Details</CardTitle>
-        <CardDescription>Update the user's information and role.</CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
                  <FormField control={form.control} name="firstName" render={({ field }) => ( <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="lastName" render={({ field }) => ( <FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
             </div>
              <FormField control={form.control} name="username" render={({ field }) => ( <FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
                 <FormField control={form.control} name="mobileNumber" render={({ field }) => ( <FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="dob" render={({ field }) => (
-                    <FormItem className="flex flex-col pt-2"><FormLabel className="mb-1">Date of Birth</FormLabel>
+                    <FormItem className="flex flex-col"><FormLabel className="mb-2">Date of Birth</FormLabel>
                         <Popover><PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
                                 {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
@@ -147,7 +143,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                 </FormItem>
               )}
             />
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting ? (

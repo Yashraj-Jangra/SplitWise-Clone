@@ -58,7 +58,7 @@ function UserActions({ user }: { user: UserProfile }) {
                 <DropdownMenuItem 
                     onClick={handleDelete} 
                     disabled={isMainAdmin}
-                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                    className="text-red-600 focus:text-red-600 focus:bg-destructive/10"
                 >
                     <Icons.Delete className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>

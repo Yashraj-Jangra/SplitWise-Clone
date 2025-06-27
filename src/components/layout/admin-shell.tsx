@@ -41,7 +41,7 @@ const adminNavItems: NavItem[] = [
 function AdminHeader() {
   const isMobile = useIsMobile();
   return (
-    <header className="sticky top-0 z-40 flex h-[60px] items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-4 md:px-8">
+    <header className="sticky top-0 z-40 flex h-[60px] items-center gap-4 border-b border-border/50 bg-background/50 px-4 md:px-8 backdrop-blur-sm">
       <div className="flex-1 md:hidden">
         <MobileNav items={adminNavItems} />
       </div>
@@ -55,17 +55,18 @@ function AdminHeader() {
   );
 }
 
-function MainNav({ items }: { items: NavItem[] }) {
+function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () => void }) {
     const pathname = usePathname();
     return (
         <nav className="flex flex-col gap-1">
             {items.map((item) => {
                  const Icon = Icons[item.icon || "Dashboard"];
-                 const isActive = pathname === item.href || (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));
+                 const isActive = pathname === item.href || (item.href !== "/admin/dashboard" && item.href !== "/dashboard" && pathname.startsWith(item.href));
                  return (
                     <Link
                         key={item.href}
                         href={item.href}
+                        onClick={onLinkClick}
                         className={cn(
                             "flex items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
                             isActive && "text-primary bg-primary/20 font-semibold"
@@ -100,7 +101,7 @@ function MobileNav({ items }: {items: NavItem[]}) {
                     <span className="font-bold text-xl">SettleEase</span>
                 </Link>
                 <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-4 overflow-y-auto">
-                    <MainNav items={items} />
+                    <MainNav items={items} onLinkClick={() => setOpen(false)} />
                 </div>
             </SheetContent>
         </Sheet>
@@ -114,9 +115,9 @@ interface AdminShellProps {
 export function AdminShell({ children }: AdminShellProps) {
   return (
      <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-background md:block">
+      <div className="hidden border-r border-border/50 bg-background/50 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
-          <div className="flex h-[60px] items-center border-b px-6">
+          <div className="flex h-[60px] items-center border-b border-border/50 px-6">
             <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold">
               <Icons.Logo className="h-8 w-8 text-primary" />
               <span className="text-xl font-bold">SettleEase</span>
@@ -127,7 +128,7 @@ export function AdminShell({ children }: AdminShellProps) {
               <MainNav items={adminNavItems} />
             </nav>
           </div>
-           <div className="mt-auto p-4 border-t">
+           <div className="mt-auto p-4 border-t border-border/50">
               <p className="text-xs text-muted-foreground text-center">
                  Admin Panel &copy; <DynamicYear/>
               </p>

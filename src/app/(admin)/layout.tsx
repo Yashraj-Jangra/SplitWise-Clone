@@ -46,7 +46,7 @@ export default function AdminLayout({
     // to have a fallback UI instead of rendering children that might flash.
     return (
       <div className="flex items-center justify-center min-h-screen bg-background p-6">
-        <Card className="w-full max-w-md text-center shadow-xl">
+        <Card className="w-full max-w-md text-center shadow-xl glass-pane">
           <CardHeader>
              <div className="flex justify-center mb-4">
                 <Icons.ShieldCheck className="h-16 w-16 text-destructive" />
