@@ -1,74 +1,84 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // HELPER FUNCTIONS to make rules clearer and reusable.
+    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwnRecord(userId) {
+    function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
-    function isAdmin() {
-      // Securely checks if the currently signed-in user has the 'admin' role in their user document.
+    
+    function hasAdminRole() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // SETTINGS COLLECTION
+    // --- Rules ---
+    
     match /settings/general {
-      // ANYONE can read the general site settings. This is required for public pages and server-side rendering.
+      // Allow public read for site settings (e.g., app name for SSR).
+      // Writes are restricted to admins.
       allow get: if true;
-      // ONLY an admin can change the site settings.
-      allow write: if isAdmin();
+      allow write: if hasAdminRole();
     }
 
-    // USERS COLLECTION
     match /users/{userId} {
-      // Any signed-in user can view other user profiles (needed for names/avatars in groups) and list users (for member search).
-      allow get, list: if isSignedIn();
-      
-      // A user can only create their OWN profile document.
-      allow create: if isOwnRecord(userId);
-      
-      // A user can update their OWN profile. An admin can update ANY profile.
-      allow update: if isOwnRecord(userId) || isAdmin();
+      // Any authenticated user can read a user profile (for adding to groups).
+      // Only the owner or an admin can update a profile.
+      allow get: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || hasAdminRole();
     }
 
-    // GROUPS COLLECTION
     match /groups/{groupId} {
-      // A user can get or update a group's details if their UID is in the group's `memberIds` array.
-      allow get, update: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      // You can read/list a group if you are in its memberIds list.
+      // The `read` permission covers both `get` and `list` operations.
+      // The client query for listing groups is constrained by `where('memberIds', 'array-contains', uid)`.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberIds;
       
-      // Any signed-in user can query for groups. The client-side code MUST be trusted to filter these
-      // correctly (e.g., using `where('memberIds', 'array-contains', auth.uid)`), which it does.
-      allow list: if isSignedIn();
-      
-      // Any signed-in user can create a new group.
-      allow create: if isSignedIn();
+      // You can create a group if you are the creator and are included in the member list.
+      allow create: if isSignedIn() && 
+                     request.auth.uid == request.resource.data.createdById &&
+                     request.auth.uid in request.resource.data.memberIds;
+                     
+      // You can update a group if you are a member.
+      allow update: if isSignedIn() && request.auth.uid in resource.data.memberIds;
     }
-    
-    // EXPENSES COLLECTION
+
     match /expenses/{expenseId} {
-      // A user can perform any action on an expense if their UID is in the expense's `groupMemberIds` array.
-      // This array is added to every expense by the application logic to ensure this security rule works efficiently.
-      allow read, write, delete: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+      // You can read/list expenses if you are in the expense's denormalized groupMemberIds list.
+      // This supports the client's secure query: where('groupMemberIds', 'array-contains', uid).
+      allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+
+      // You can create an expense if you are a member of the target group.
+      // This uses a `get` to check the group document.
+      allow create: if isSignedIn() && 
+                     request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds;
+
+      // You can modify an expense if you are a member of its group.
+      allow update, delete: if isSignedIn() && 
+                             request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds;
     }
     
-    // SETTLEMENTS COLLECTION
     match /settlements/{settlementId} {
-      // Similar to expenses, access is granted if the user is part of the group associated with the settlement.
-      allow read, write, delete: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+      // Rules mirror the expenses collection for consistency.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+
+      allow create: if isSignedIn() && 
+                     request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds;
+                     
+      allow update, delete: if isSignedIn() && 
+                             request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds;
     }
     
-    // HISTORY COLLECTION
     match /history/{historyId} {
-      // Group members can read and create history events for their groups.
-      allow read, create: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
-      // Only admins are allowed to delete history events.
-      allow delete: if isAdmin();
+      // History is readable by group members.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+
+      // Only admins can write to the history log to maintain audit integrity.
+      allow write: if hasAdminRole();
     }
   }
 }
