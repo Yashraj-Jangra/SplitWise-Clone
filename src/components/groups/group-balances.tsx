@@ -84,10 +84,10 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
 
     // Default detailed view
     return (
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <h4 className="font-semibold mb-2 text-red-600">Members Who Owe</h4>
-          <ScrollArea className="h-[180px] pr-2">
+          <div className="space-y-2">
             {membersWhoOwe.map(balance => (
               <div key={balance.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                 <div className="flex items-center gap-2">
@@ -102,11 +102,11 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                 </span>
               </div>
             ))}
-          </ScrollArea>
+          </div>
         </div>
         <div>
           <h4 className="font-semibold mb-2 text-green-600">Members Who Are Owed</h4>
-            <ScrollArea className="h-[180px] pr-2">
+          <div className="space-y-2">
             {membersOwed.map(balance => (
               <div key={balance.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
                 <div className="flex items-center gap-2">
@@ -121,7 +121,7 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                 </span>
               </div>
             ))}
-          </ScrollArea>
+          </div>
         </div>
       </div>
     );

@@ -213,13 +213,11 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
       </CardHeader>
       <CardContent className="p-0">
         {history.length > 0 ? (
-          <ScrollArea className="h-[400px]">
-            <div className="divide-y divide-border">
-                {history.map(event => (
-                    <HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} />
-                ))}
-            </div>
-          </ScrollArea>
+          <div className="divide-y divide-border">
+              {history.map(event => (
+                  <HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} />
+              ))}
+          </div>
         ) : (
           <div className="text-center p-8 text-muted-foreground">
             <Icons.History className="h-12 w-12 mx-auto mb-2" />

@@ -9,7 +9,6 @@ import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
 import { GroupMembers } from '@/components/groups/group-members';
 import { GroupBalances } from '@/components/groups/group-balances';
-import { AddExpenseDialog } from '@/components/expenses/add-expense-dialog';
 import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
@@ -132,39 +131,7 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-         <div className="relative">
-          <ScrollArea className="w-full whitespace-nowrap">
-            <TabsList className="inline-flex w-max sm:w-auto">
-              <TabsTrigger value="expenses">
-                <Icons.Expense className="mr-2 h-4 w-4" />
-                Expenses ({expenses.length})
-              </TabsTrigger>
-              <TabsTrigger value="settlements">
-                <Icons.Settle className="mr-2 h-4 w-4" />
-                Settlements ({settlements.length})
-              </TabsTrigger>
-              <TabsTrigger value="balances">
-                <Icons.Wallet className="mr-2 h-4 w-4" />
-                Balances
-              </TabsTrigger>
-              <TabsTrigger value="members">
-                <Icons.Users className="mr-2 h-4 w-4" />
-                Members ({group.members.length})
-              </TabsTrigger>
-              <TabsTrigger value="analysis">
-                <Icons.Analysis className="mr-2 h-4 w-4" />
-                Analysis
-              </TabsTrigger>
-              <TabsTrigger value="history">
-                <Icons.History className="mr-2 h-4 w-4" />
-                History
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" className="h-2 sm:hidden" />
-          </ScrollArea>
-        </div>
-
-        <TabsContent value="expenses" className="mt-6">
+        <TabsContent value="expenses" className="mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Expense Log</CardTitle>
@@ -174,19 +141,17 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="p-0">
               {expenses.length > 0 ? (
-                <ScrollArea className="h-[400px]">
-                  <div className="divide-y divide-border/50">
-                    {expenses.map((expense) => (
-                      <ExpenseListItem
-                        key={expense.id}
-                        expense={expense}
-                        currentUserId={userProfile.uid}
-                        group={group}
-                        onActionComplete={loadGroupData}
-                      />
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="divide-y divide-border/50">
+                  {expenses.map((expense) => (
+                    <ExpenseListItem
+                      key={expense.id}
+                      expense={expense}
+                      currentUserId={userProfile.uid}
+                      group={group}
+                      onActionComplete={loadGroupData}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.Details className="h-12 w-12 mx-auto mb-2" />
@@ -197,7 +162,7 @@ export default function GroupDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="settlements" className="mt-6">
+        <TabsContent value="settlements" className="mt-0">
           <Card>
             <CardHeader className="flex flex-row justify-between items-center">
               <div>
@@ -213,17 +178,15 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="p-0">
               {settlements.length > 0 ? (
-                <ScrollArea className="h-[400px]">
-                  <div className="divide-y divide-border/50">
-                    {settlements.map((settlement) => (
-                      <SettlementListItem
-                        key={settlement.id}
-                        settlement={settlement}
-                        currentUserId={userProfile.uid}
-                      />
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="divide-y divide-border/50">
+                  {settlements.map((settlement) => (
+                    <SettlementListItem
+                      key={settlement.id}
+                      settlement={settlement}
+                      currentUserId={userProfile.uid}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.Details className="h-12 w-12 mx-auto mb-2" />
@@ -234,7 +197,7 @@ export default function GroupDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="balances" className="mt-6">
+        <TabsContent value="balances" className="mt-0">
           <GroupBalances
             balances={balances}
             group={group}
@@ -242,7 +205,7 @@ export default function GroupDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="members" className="mt-6">
+        <TabsContent value="members" className="mt-0">
           <GroupMembers
             members={group.members}
             group={group}
@@ -250,11 +213,11 @@ export default function GroupDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="analysis" className="mt-6">
+        <TabsContent value="analysis" className="mt-0">
           <GroupAnalysisCharts expenses={expenses} members={group.members} />
         </TabsContent>
 
-        <TabsContent value="history" className="mt-6">
+        <TabsContent value="history" className="mt-0">
           <GroupHistoryTab
             groupId={group.id}
             onActionComplete={loadGroupData}
