@@ -28,6 +28,7 @@ import { getFullName, getInitials } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 const addMembersSchema = z.object({
   memberIds: z.array(z.string()).min(1, { message: "Select at least one member to add." }),
@@ -37,12 +38,14 @@ type AddMembersFormValues = z.infer<typeof addMembersSchema>;
 
 interface AddMemberDialogProps {
   group: Group;
+  onActionComplete: () => void;
 }
 
-export function AddMemberDialog({ group }: AddMemberDialogProps) {
+export function AddMemberDialog({ group, onActionComplete }: AddMemberDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,13 +106,19 @@ export function AddMemberDialog({ group }: AddMemberDialogProps) {
   };
   
   async function onSubmit(values: AddMembersFormValues) {
-    await addMembersToGroup(group.id, values.memberIds);
+    if (!userProfile) {
+        toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
+        return;
+    }
+
+    await addMembersToGroup(group.id, values.memberIds, userProfile.uid);
 
     toast({
       title: "Members Added!",
       description: `${values.memberIds.length} new member(s) added to "${group.name}".`,
     });
     setOpen(false);
+    onActionComplete();
     router.refresh();
   }
 
