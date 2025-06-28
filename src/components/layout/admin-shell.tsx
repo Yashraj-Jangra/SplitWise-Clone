@@ -10,7 +10,7 @@ import { UserNav } from "./user-nav";
 import { DynamicYear } from "./dynamic-year";
 import type { NavItem } from "@/types";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { Skeleton } from "../ui/skeleton";
@@ -103,13 +103,19 @@ function MobileNav({ items }: {items: NavItem[]}) {
                     <span className="sr-only">Toggle Menu</span>
                 </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="pr-0 w-[280px]">
-                <Link href="/admin/dashboard" className="mr-6 flex items-center space-x-2 px-4" onClick={() => setOpen(false)}>
-                    <Icons.Logo className="h-8 w-8 text-primary" />
-                    {loading ? <Skeleton className="h-6 w-32" /> : <span className="font-bold text-xl">{settings.appName}</span>}
-                </Link>
-                <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-4 overflow-y-auto">
-                    <MainNav items={items} onLinkClick={() => setOpen(false)} />
+            <SheetContent side="left" className="w-[280px] flex flex-col p-0">
+                 <SheetHeader className="p-4 border-b">
+                    <SheetTitle>
+                        <Link href="/admin/dashboard" className="flex items-center space-x-2" onClick={() => setOpen(false)}>
+                            <Icons.Logo className="h-8 w-8 text-primary" />
+                            {loading ? <Skeleton className="h-6 w-32" /> : <span className="font-bold text-xl">{settings.appName}</span>}
+                        </Link>
+                    </SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto">
+                  <div className="my-4 pb-10 px-4">
+                      <MainNav items={items} onLinkClick={() => setOpen(false)} />
+                  </div>
                 </div>
             </SheetContent>
         </Sheet>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { UserNav } from "./user-nav";
 import type { NavItem } from "@/types";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "../ui/input";
@@ -107,13 +107,19 @@ function Header() {
                     <span className="sr-only">Toggle Menu</span>
                 </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="pr-0 w-[280px]">
-                <Link href="/" className="mr-6 flex items-center space-x-2 px-4" onClick={() => setOpen(false)}>
-                    <Icons.Logo className="h-8 w-8 text-primary" />
-                    {loading ? <Skeleton className="h-6 w-32" /> : <span className="font-bold text-xl">{settings.appName}</span>}
-                </Link>
-                <div className="my-4 h-[calc(100vh-8rem)] pb-10 overflow-y-auto pl-4">
-                    <MainNav items={mainNavItems} />
+            <SheetContent side="left" className="w-[280px] flex flex-col p-0">
+                <SheetHeader className="p-4 border-b">
+                    <SheetTitle>
+                        <Link href="/" className="flex items-center space-x-2" onClick={() => setOpen(false)}>
+                            <Icons.Logo className="h-8 w-8 text-primary" />
+                            {loading ? <Skeleton className="h-6 w-32" /> : <span className="font-bold text-xl">{settings.appName}</span>}
+                        </Link>
+                    </SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto">
+                    <div className="my-4 pb-10 px-4">
+                        <MainNav items={mainNavItems} />
+                    </div>
                 </div>
             </SheetContent>
         </Sheet>
