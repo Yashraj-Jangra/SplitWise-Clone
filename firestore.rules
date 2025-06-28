@@ -2,8 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Helper Functions ---
+
+    // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -11,88 +11,44 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
+
     function isAdmin() {
-      // For production, prefer custom claims over hardcoding emails.
-      // https://firebase.google.com/docs/auth/admin/custom-claims
-      return request.auth.token.email == 'jangrayash1505@gmail.com';
+      return isSignedIn() && request.auth.token.email == 'jangrayash1505@gmail.com';
     }
 
-    // Checks if the requesting user is a member of the specified group.
     function isMemberOfGroup(groupId) {
-      return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
     }
-    
-    // --- Rules ---
 
+    // --- Rules ---
+    
     match /settings/general {
       allow get: if true;
       allow write: if isAdmin();
     }
-    
+
     match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create, update: if isOwner(userId);
-      allow delete: if false;
+      allow read: if isSignedIn() || isAdmin();
+      allow create: if isSignedIn() || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
     }
     
     match /groups/{groupId} {
-      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0].fieldPath == 'memberIds' && request.query.where[0].op == 'array-contains' && request.query.where[0].value == request.auth.uid;
-      
-      allow create: if isSignedIn() && request.resource.data.createdById == request.auth.uid && request.auth.uid in request.resource.data.memberIds;
-      allow get: if isMemberOfGroup(groupId);
-      allow update: if isMemberOfGroup(groupId) && !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdById', 'totalExpenses']));
-      allow delete: if false; // Deletion is handled by secure server action
+      allow read: if isMemberOfGroup(groupId) || isAdmin();
+      allow create: if isSignedIn() || isAdmin();
+      allow update, delete: if (isMemberOfGroup(groupId) && resource.data.createdById == request.auth.uid) || isAdmin();
     }
 
-    match /expenses/{expenseId} {
-      // Individual document access
-      allow get: if isMemberOfGroup(resource.data.groupId);
-      allow create: if isMemberOfGroup(request.resource.data.groupId);
-      allow update: if isMemberOfGroup(request.resource.data.groupId);
-      allow delete: if isMemberOfGroup(resource.data.groupId);
-
-      // Rules for listing/querying documents
-      allow list: if isSignedIn() && (
-        // Allow querying by group ID if the user is a member of that group
-        (request.query.where.size() > 0 && request.query.where[0].fieldPath == 'groupId' && isMemberOfGroup(request.query.where[0].value))
-        ||
-        // Allow querying for expenses where the user is a participant
-        (request.query.where.size() == 1 && request.query.where[0].fieldPath == 'participantIds' && request.query.where[0].op == 'array-contains' && request.query.where[0].value == request.auth.uid)
-      );
+    match /expenses/{docId} {
+       allow list, read, write, delete: if isMemberOfGroup(request.resource.data.groupId) || isAdmin();
     }
     
-    match /settlements/{settlementId} {
-      // Individual document access
-      allow get: if isMemberOfGroup(resource.data.groupId);
-      allow create: if isMemberOfGroup(request.resource.data.groupId);
-      allow update: if isMemberOfGroup(request.resource.data.groupId);
-      allow delete: if isMemberOfGroup(resource.data.groupId);
-
-      // Rules for listing/querying documents
-      allow list: if isSignedIn() && (
-        // Allow querying by group ID if the user is a member of that group
-        (request.query.where.size() > 0 && request.query.where[0].fieldPath == 'groupId' && isMemberOfGroup(request.query.where[0].value))
-        ||
-        // Allow querying by who paid
-        (request.query.where.size() == 1 && request.query.where[0].fieldPath == 'paidById' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid)
-        ||
-        // Allow querying by who was paid
-        (request.query.where.size() == 1 && request.query.where[0].fieldPath == 'paidToId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid)
-      );
+    match /settlements/{docId} {
+       allow list, read, write, delete: if isMemberOfGroup(request.resource.data.groupId) || isAdmin();
     }
     
-    match /history/{historyId} {
-      // Individual document access
-      allow get: if isMemberOfGroup(resource.data.groupId);
-      allow create: if isMemberOfGroup(request.resource.data.groupId);
-      
-      // Only admins should be able to modify history for audit integrity
-      allow update, delete: if isAdmin();
-      
-      // Allow listing history for a group if user is a member
-      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0].fieldPath == 'groupId' && isMemberOfGroup(request.query.where[0].value);
+    match /history/{docId} {
+       allow list, read, write, delete: if isMemberOfGroup(request.resource.data.groupId) || isAdmin();
     }
   }
 }
