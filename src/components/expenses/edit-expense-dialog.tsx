@@ -561,7 +561,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-pane sm:max-w-md">
+      <DialogContent className="glass-pane sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
         </DialogHeader>
@@ -579,7 +579,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplitType }: {form: any, userProfile: any, runningTotal: any, watchAmount: number, watchSplitType: string}) {
     return (
      <div className="space-y-4 pt-2">
-        <ScrollArea className="h-48 pr-3">
+        <ScrollArea className="h-36 pr-3">
           <div className="space-y-3">
               {form.getValues('participants').map((item: any, index: number) => (
                 <div key={item.userId} className="flex items-center justify-between gap-x-2 gap-y-2">
