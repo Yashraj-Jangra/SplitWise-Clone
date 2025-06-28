@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GroupDetailHeader } from '@/components/groups/group-detail-header';
@@ -112,6 +112,11 @@ export default function GroupDetailPage() {
     setTargetExpenseId(expenseId);
     setActiveTab('expenses');
   };
+  
+  const currentUserBalance = useMemo(() => {
+    return balances.find(b => b.user.uid === userProfile?.uid)?.netBalance ?? 0;
+  }, [balances, userProfile]);
+
 
   if (loading || !group || !userProfile) {
     return <GroupDetailLoading />;
@@ -122,13 +127,12 @@ export default function GroupDetailPage() {
       <GroupDetailHeader
         group={group}
         user={userProfile}
-        balances={balances}
+        currentUserBalance={currentUserBalance}
         onActionComplete={loadGroupData}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <ScrollArea className="w-full sm:w-auto whitespace-nowrap">
+        <ScrollArea className="w-full whitespace-nowrap">
             <TabsList className="inline-flex w-max sm:w-auto">
               <TabsTrigger value="expenses">
                 <Icons.Expense className="mr-2 h-4 w-4" />
@@ -157,14 +161,10 @@ export default function GroupDetailPage() {
             </TabsList>
             <ScrollBar orientation="horizontal" className="h-2 sm:hidden" />
           </ScrollArea>
-          <div className="w-full sm:w-auto">
-            <AddExpenseDialog group={group} onExpenseAdded={loadGroupData} />
-          </div>
-        </div>
 
         <TabsContent
           value="expenses"
-          className="rounded-md border border-border/50 bg-card/50 p-0"
+          className="mt-6 rounded-md border border-border/50 bg-card/50 p-0"
         >
           <CardHeader>
             <CardTitle>Expense Log</CardTitle>
@@ -198,7 +198,7 @@ export default function GroupDetailPage() {
 
         <TabsContent
           value="settlements"
-          className="rounded-md border border-border/50 bg-card/50 p-0"
+          className="mt-6 rounded-md border border-border/50 bg-card/50 p-0"
         >
           <CardHeader className="flex flex-row justify-between items-center">
             <div>
@@ -234,7 +234,7 @@ export default function GroupDetailPage() {
           </CardContent>
         </TabsContent>
 
-        <TabsContent value="balances">
+        <TabsContent value="balances" className="mt-6">
           <GroupBalances
             balances={balances}
             group={group}
@@ -242,7 +242,7 @@ export default function GroupDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="members">
+        <TabsContent value="members" className="mt-6">
           <GroupMembers
             members={group.members}
             group={group}
@@ -250,11 +250,11 @@ export default function GroupDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="analysis">
+        <TabsContent value="analysis" className="mt-6">
           <GroupAnalysisCharts expenses={expenses} members={group.members} />
         </TabsContent>
 
-        <TabsContent value="history">
+        <TabsContent value="history" className="mt-6">
           <GroupHistoryTab
             groupId={group.id}
             onActionComplete={loadGroupData}
