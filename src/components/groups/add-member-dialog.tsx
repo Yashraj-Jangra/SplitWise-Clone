@@ -187,7 +187,7 @@ export function AddMemberDialog({ group, onActionComplete }: AddMemberDialogProp
                             <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
                             <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium">{getFullName(member.firstName, user.lastName)}</span>
+                        <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</span>
                       </div>
                       <Button
                         type="button"
