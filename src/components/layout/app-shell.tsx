@@ -14,6 +14,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "../ui/input";
+import { useSiteSettings } from "@/contexts/site-settings-context";
+import { Skeleton } from "../ui/skeleton";
 
 const mainNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: "Dashboard" },
@@ -31,13 +33,15 @@ const settingsNavItem: NavItem = {
 
 function Sidebar() {
   const { userProfile } = useAuth();
+  const { settings, loading } = useSiteSettings();
+
   return (
     <div className="hidden border-r bg-background md:block">
         <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
           <div className="flex h-[60px] items-center border-b px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold">
               <Icons.Logo className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">SettleEase</span>
+              {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
             </Link>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -88,6 +92,7 @@ function MainNav({ items }: { items: NavItem[] }) {
 
 function Header() {
   const [open, setOpen] = React.useState(false);
+  const { settings, loading } = useSiteSettings();
 
   return (
       <header className="flex h-[60px] items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6 sticky top-0 z-30">
@@ -105,7 +110,7 @@ function Header() {
             <SheetContent side="left" className="pr-0 w-[280px]">
                 <Link href="/" className="mr-6 flex items-center space-x-2 px-4" onClick={() => setOpen(false)}>
                     <Icons.Logo className="h-8 w-8 text-primary" />
-                    <span className="font-bold text-xl">SettleEase</span>
+                    {loading ? <Skeleton className="h-6 w-32" /> : <span className="font-bold text-xl">{settings.appName}</span>}
                 </Link>
                 <div className="my-4 h-[calc(100vh-8rem)] pb-10 overflow-y-auto pl-4">
                     <MainNav items={mainNavItems} />

@@ -1,11 +1,16 @@
 
 import { AppShell } from "@/components/layout/app-shell";
 import type { Metadata } from 'next';
+import { getSiteSettings } from "@/lib/mock-data";
 
-export const metadata: Metadata = {
-  title: 'SettleEase App', // Will be overridden by specific pages
-  description: 'Manage your group expenses.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  return {
+    title: `${settings.appName} App`,
+    description: `Manage your group expenses on ${settings.appName}.`,
+  };
+}
+
 
 // This layout will apply to all routes within the (app) group
 export default function AuthenticatedAppLayout({

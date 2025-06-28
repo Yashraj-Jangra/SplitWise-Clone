@@ -12,6 +12,8 @@ import type { NavItem } from "@/types";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useSiteSettings } from "@/contexts/site-settings-context";
+import { Skeleton } from "../ui/skeleton";
 
 
 const adminNavItems: NavItem[] = [
@@ -88,6 +90,7 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
 
 function MobileNav({ items }: {items: NavItem[]}) {
     const [open, setOpen] = React.useState(false);
+    const { settings, loading } = useSiteSettings();
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -103,7 +106,7 @@ function MobileNav({ items }: {items: NavItem[]}) {
             <SheetContent side="left" className="pr-0 w-[280px]">
                 <Link href="/admin/dashboard" className="mr-6 flex items-center space-x-2 px-4" onClick={() => setOpen(false)}>
                     <Icons.Logo className="h-8 w-8 text-primary" />
-                    <span className="font-bold text-xl">SettleEase</span>
+                    {loading ? <Skeleton className="h-6 w-32" /> : <span className="font-bold text-xl">{settings.appName}</span>}
                 </Link>
                 <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-4 overflow-y-auto">
                     <MainNav items={items} onLinkClick={() => setOpen(false)} />
@@ -118,6 +121,8 @@ interface AdminShellProps {
 }
 
 export function AdminShell({ children }: AdminShellProps) {
+  const { settings, loading } = useSiteSettings();
+  
   return (
      <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
       <div className="hidden border-r border-border/50 bg-background/50 md:block">
@@ -125,7 +130,7 @@ export function AdminShell({ children }: AdminShellProps) {
           <div className="flex h-[60px] items-center border-b border-border/50 px-6">
             <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold">
               <Icons.Logo className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">SettleEase</span>
+              {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
             </Link>
           </div>
           <div className="flex-1">

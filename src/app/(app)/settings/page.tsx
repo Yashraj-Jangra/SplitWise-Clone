@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { updateUser, isUsernameTaken } from "@/lib/mock-data";
 import { getFullName, getInitials } from "@/lib/utils";
 import { uploadFile } from "@/lib/storage";
+import { useSiteSettings } from "@/contexts/site-settings-context";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -43,6 +44,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function SettingsPage() {
   const { userProfile, loading } = useAuth();
+  const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const { toast } = useToast();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,7 +132,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading || !userProfile) {
+  if (loading || !userProfile || siteSettingsLoading) {
     return (
         <div className="space-y-8 max-w-3xl mx-auto">
             <Skeleton className="h-12 w-1/3" />
@@ -241,7 +243,7 @@ export default function SettingsPage() {
             <Icons.Delete className="h-5 w-5 mr-2" />
             Account Deletion
           </CardTitle>
-          <CardDescription>Permanently delete your SettleEase account.</CardDescription>
+          <CardDescription>Permanently delete your {siteSettings.appName} account.</CardDescription>
         </CardHeader>
         <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
