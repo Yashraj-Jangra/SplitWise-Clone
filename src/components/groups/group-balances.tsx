@@ -151,7 +151,11 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {renderContent()}
+        <ScrollArea className="h-[45vh]">
+          <div className="p-1">
+            {renderContent()}
+          </div>
+        </ScrollArea>
         <div className="pt-4 border-t flex justify-end">
             <AddSettlementDialog group={group} onSettlementAdded={onSettlementAdded} />
         </div>

@@ -25,25 +25,27 @@ export function GroupMembers({ members, group, onActionComplete }: GroupMembersP
         </div>
         <AddMemberDialog group={group} onActionComplete={onActionComplete}/>
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="divide-y divide-border/50">
-          {members.map((member) => (
-            <div key={member.uid} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
-                <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm font-medium leading-none">{getFullName(member.firstName, member.lastName)}</p>
+      <CardContent className="p-6 pt-0">
+        <ScrollArea className="h-[45vh] -mx-6 pr-6">
+            <div className="divide-y divide-border/50">
+            {members.map((member) => (
+                <div key={member.uid} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
+                    <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                    <p className="text-sm font-medium leading-none">{getFullName(member.firstName, member.lastName)}</p>
 
-                <p className="text-xs text-muted-foreground">{member.email}</p>
-              </div>
-                {member.uid === group.createdById && (
-                  <span className="text-xs font-semibold uppercase text-primary/80 tracking-wider">Creator</span>
-              )}
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                </div>
+                    {member.uid === group.createdById && (
+                    <span className="text-xs font-semibold uppercase text-primary/80 tracking-wider">Creator</span>
+                )}
+                </div>
+            ))}
             </div>
-          ))}
-        </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

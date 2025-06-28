@@ -211,13 +211,15 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
         </CardTitle>
         <CardDescription>An audit log of all activities within this group.</CardDescription>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-6 pt-0">
         {history.length > 0 ? (
-          <div className="divide-y divide-border">
-              {history.map(event => (
-                  <HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} />
-              ))}
-          </div>
+          <ScrollArea className="h-[45vh] -mx-6 pr-6">
+            <div className="divide-y divide-border">
+                {history.map(event => (
+                    <HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} />
+                ))}
+            </div>
+          </ScrollArea>
         ) : (
           <div className="text-center p-8 text-muted-foreground">
             <Icons.History className="h-12 w-12 mx-auto mb-2" />

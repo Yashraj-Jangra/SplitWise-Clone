@@ -130,15 +130,15 @@ export default function GroupDetailPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <ScrollArea className="w-full whitespace-nowrap">
-            <TabsList className="inline-flex h-auto">
-                <TabsTrigger value="expenses">Expenses</TabsTrigger>
-                <TabsTrigger value="settlements">Settlements</TabsTrigger>
-                <TabsTrigger value="balances">Balances</TabsTrigger>
-                <TabsTrigger value="members">Members</TabsTrigger>
-                <TabsTrigger value="analysis">Analysis</TabsTrigger>
-                <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
+          <TabsList className="inline-flex h-auto">
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="settlements">Settlements</TabsTrigger>
+            <TabsTrigger value="balances">Balances</TabsTrigger>
+            <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="analysis">Analysis</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
 
         <TabsContent value="expenses" className="mt-4">
@@ -149,19 +149,21 @@ export default function GroupDetailPage() {
                 All expenses recorded in this group.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-6 pt-0">
               {expenses.length > 0 ? (
-                <div className="divide-y divide-border/50">
-                  {expenses.map((expense) => (
-                    <ExpenseListItem
-                      key={expense.id}
-                      expense={expense}
-                      currentUserId={userProfile.uid}
-                      group={group}
-                      onActionComplete={loadGroupData}
-                    />
-                  ))}
-                </div>
+                <ScrollArea className="h-[45vh] -mx-6 pr-6">
+                  <div className="divide-y divide-border/50">
+                    {expenses.map((expense) => (
+                      <ExpenseListItem
+                        key={expense.id}
+                        expense={expense}
+                        currentUserId={userProfile.uid}
+                        group={group}
+                        onActionComplete={loadGroupData}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.Details className="h-12 w-12 mx-auto mb-2" />
@@ -186,17 +188,19 @@ export default function GroupDetailPage() {
                 onSettlementAdded={loadGroupData}
               />
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-6 pt-0">
               {settlements.length > 0 ? (
-                <div className="divide-y divide-border/50">
-                  {settlements.map((settlement) => (
-                    <SettlementListItem
-                      key={settlement.id}
-                      settlement={settlement}
-                      currentUserId={userProfile.uid}
-                    />
-                  ))}
-                </div>
+                <ScrollArea className="h-[45vh] -mx-6 pr-6">
+                  <div className="divide-y divide-border/50">
+                    {settlements.map((settlement) => (
+                      <SettlementListItem
+                        key={settlement.id}
+                        settlement={settlement}
+                        currentUserId={userProfile.uid}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.Settle className="h-12 w-12 mx-auto mb-2" />
