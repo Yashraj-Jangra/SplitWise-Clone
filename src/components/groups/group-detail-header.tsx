@@ -3,11 +3,17 @@
 import type { Group, UserProfile, Balance } from "@/types";
 import { Icons } from "@/components/icons";
 import Image from "next/image";
-import { AddMemberDialog } from "@/components/groups/add-member-dialog";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,20 +120,19 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
   };
 
 
-  const deleteButton = (
+  const archiveButtonMenuItem = (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div tabIndex={0}> 
-            <Button 
-              variant="destructive" 
-              onClick={() => setIsDeleteDialogOpen(true)} 
+          <div className="w-full">
+            <DropdownMenuItem
+              onClick={() => setIsDeleteDialogOpen(true)}
               disabled={!isSettled || isDeleting}
-              className="w-full"
+              className="text-red-600 focus:text-red-600"
             >
               <Icons.Delete className="mr-2 h-4 w-4" />
               Archive Group
-            </Button>
+            </DropdownMenuItem>
           </div>
         </TooltipTrigger>
         {!isSettled && (
@@ -165,42 +170,59 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
                         </div>
                     </div>
               </div>
-              <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-auto">
-                 <Popover onOpenChange={setIsPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline"><Icons.Edit className="mr-2"/>Change Cover</Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2">
-                      {coversLoading ? (
-                        <div className="grid grid-cols-3 gap-2">
-                          {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {coverImages.map((url, i) => (
-                             <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
-                               <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
-                               {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
-                               <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
-                             </button>
-                          ))}
-                        </div>
-                      )}
-                       <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/png, image/jpeg, image/gif" />
-                        <Button 
-                            variant="ghost" 
-                            className="w-full mt-2" 
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
-                        >
-                            {isUploading ? <Icons.AppLogo className="mr-2 animate-spin" /> : <Icons.Upload className="mr-2" />}
-                            {isUploading ? 'Uploading...' : 'Upload Custom'}
-                        </Button>
-                    </PopoverContent>
-                  </Popover>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0">
+                      <Icons.MoreHorizontal />
+                      <span className="sr-only">More Actions</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <Popover onOpenChange={setIsPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Icons.Edit className="mr-2"/>Change Cover
+                            </DropdownMenuItem>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-2">
+                          {coversLoading ? (
+                            <div className="grid grid-cols-3 gap-2">
+                              {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-2">
+                              {coverImages.map((url, i) => (
+                                 <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
+                                   <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
+                                   {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
+                                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
+                                 </button>
+                              ))}
+                            </div>
+                          )}
+                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/png, image/jpeg, image/gif" />
+                            <Button 
+                                variant="ghost" 
+                                className="w-full mt-2" 
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                            >
+                                {isUploading ? <Icons.AppLogo className="mr-2 animate-spin" /> : <Icons.Upload className="mr-2" />}
+                                {isUploading ? 'Uploading...' : 'Upload Custom'}
+                            </Button>
+                        </PopoverContent>
+                      </Popover>
 
-                  {isCreator && deleteButton}
-              </div>
+                  {isCreator && (
+                    <>
+                    <DropdownMenuSeparator />
+                    {archiveButtonMenuItem}
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
           </div>
       </div>
 
