@@ -4,8 +4,8 @@ import type { Group, UserProfile, Balance } from "@/types";
 import { Icons } from "@/components/icons";
 import Image from "next/image";
 import { AddMemberDialog } from "@/components/groups/add-member-dialog";
-import { CURRENCY_SYMBOL, GROUP_COVER_IMAGES, DEFAULT_GROUP_COVER_IMAGE } from "@/lib/constants";
-import { useState, useRef } from "react";
+import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import {
@@ -27,8 +27,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { archiveGroupAction } from "@/lib/actions/group";
-import { updateGroup } from "@/lib/mock-data";
+import { updateGroup, getGroupCoverImages } from "@/lib/mock-data";
 import { uploadFile } from "@/lib/storage";
+import { Skeleton } from "../ui/skeleton";
 
 
 interface GroupDetailHeaderProps {
@@ -45,6 +46,21 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [coverImages, setCoverImages] = useState<string[]>([]);
+  const [coversLoading, setCoversLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadCovers() {
+        if (isPopoverOpen) {
+            setCoversLoading(true);
+            const images = await getGroupCoverImages();
+            setCoverImages(images);
+            setCoversLoading(false);
+        }
+    }
+    loadCovers();
+  }, [isPopoverOpen]);
 
   const isCreator = user.uid === group.createdById;
   const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
@@ -127,7 +143,7 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
     <>
       <div className="relative p-6 bg-card rounded-md border border-border/50 overflow-hidden">
           <Image
-            src={group.coverImageUrl || DEFAULT_GROUP_COVER_IMAGE}
+            src={group.coverImageUrl || 'https://placehold.co/1200x300.png'}
             alt={`${group.name} cover image`}
             fill
             className="object-cover opacity-20"
@@ -148,20 +164,26 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
                   </div>
               </div>
               <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-auto">
-                 <Popover>
+                 <Popover onOpenChange={setIsPopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline"><Icons.Edit className="mr-2"/>Change Cover</Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-64 p-2">
-                      <div className="grid grid-cols-3 gap-2">
-                        {GROUP_COVER_IMAGES.map((url, i) => (
-                           <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
-                             <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
-                             {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
-                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
-                           </button>
-                        ))}
-                      </div>
+                      {coversLoading ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {coverImages.map((url, i) => (
+                             <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
+                               <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
+                               {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
+                               <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
+                             </button>
+                          ))}
+                        </div>
+                      )}
                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/png, image/jpeg, image/gif" />
                         <Button 
                             variant="ghost" 

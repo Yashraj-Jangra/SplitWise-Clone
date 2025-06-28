@@ -30,6 +30,11 @@ const adminNavItems: NavItem[] = [
     href: "/admin/groups",
     icon: "Details",
   },
+  {
+    title: "Site Settings",
+    href: "/admin/settings",
+    icon: "Settings",
+  },
    {
     title: "Back to App",
     href: "/dashboard",

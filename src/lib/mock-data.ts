@@ -15,6 +15,7 @@ import {
   arrayRemove,
   documentId,
   orderBy,
+  setDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
@@ -32,7 +33,7 @@ import type {
   HistoryEventDocument,
 } from '@/types';
 import { getFullName } from './utils';
-import { CURRENCY_SYMBOL, DEFAULT_GROUP_COVER_IMAGE } from './constants';
+import { CURRENCY_SYMBOL, FALLBACK_GROUP_COVER_IMAGES } from './constants';
 
 // --- User Functions ---
 
@@ -775,4 +776,27 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
 export async function deleteHistoryEvent(historyEventId: string): Promise<void> {
     const historyDocRef = doc(db, 'history', historyEventId);
     await deleteDoc(historyDocRef);
+}
+
+
+// --- Site Settings ---
+const SETTINGS_COLLECTION = 'settings';
+const GROUP_COVERS_DOC = 'groupCoverImages';
+
+export async function getGroupCoverImages(): Promise<string[]> {
+    const docRef = doc(db, SETTINGS_COLLECTION, GROUP_COVERS_DOC);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists() && docSnap.data()?.urls?.length > 0) {
+        return docSnap.data().urls;
+    } else {
+        // If the document doesn't exist, create it with fallback images
+        await setDoc(docRef, { urls: FALLBACK_GROUP_COVER_IMAGES });
+        return FALLBACK_GROUP_COVER_IMAGES;
+    }
+}
+
+export async function updateGroupCoverImages(urls: string[]): Promise<void> {
+    const docRef = doc(db, SETTINGS_COLLECTION, GROUP_COVERS_DOC);
+    await setDoc(docRef, { urls });
 }

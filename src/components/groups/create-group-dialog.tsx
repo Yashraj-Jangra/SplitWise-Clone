@@ -23,14 +23,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { createGroup, getAllUsers } from "@/lib/mock-data";
+import { createGroup, getAllUsers, getGroupCoverImages } from "@/lib/mock-data";
 import type { UserProfile, GroupDocument } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/auth-context";
 import { getFullName, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "../ui/skeleton";
-import { GROUP_COVER_IMAGES } from "@/lib/constants";
 
 const createGroupSchema = z.object({
   name: z.string().min(3, { message: "Group name must be at least 3 characters." }).max(50, { message: "Group name must be less than 50 characters."}),
@@ -56,15 +55,8 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   // New state for search functionality
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<UserProfile[]>([]);
-
-  const form = useForm<CreateGroupFormValues>({
-    resolver: zodResolver(createGroupSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      memberIds: userProfile ? [userProfile.uid] : [],
-    },
-  });
+  const [coverImages, setCoverImages] = useState<string[]>([]);
+  const [coversLoading, setCoversLoading] = useState(true);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -79,17 +71,23 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     }
   }, [userProfile, form, open]);
 
-  // Load users when dialog opens
+  // Load users and covers when dialog opens
   useEffect(() => {
-    async function loadUsers() {
+    async function loadInitialData() {
         if (open) {
             setLoading(true);
-            const users = await getAllUsers();
+            setCoversLoading(true);
+            const [users, images] = await Promise.all([
+                getAllUsers(),
+                getGroupCoverImages()
+            ]);
             setAllUsers(users);
+            setCoverImages(images);
             setLoading(false);
+            setCoversLoading(false);
         }
     }
-    loadUsers();
+    loadInitialData();
   }, [open]);
 
   const searchResults = useMemo(() => {
@@ -104,6 +102,15 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
        user.email.toLowerCase().includes(lowerCaseSearchTerm))
     ).slice(0, 5); // Limit results
   }, [searchTerm, allUsers, userProfile, selectedMembers]);
+
+  const form = useForm<CreateGroupFormValues>({
+    resolver: zodResolver(createGroupSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      memberIds: userProfile ? [userProfile.uid] : [],
+    },
+  });
 
   if (!userProfile) {
     return (
@@ -133,12 +140,16 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
         return;
     }
 
+    const randomCoverImage = coverImages.length > 0
+        ? coverImages[Math.floor(Math.random() * coverImages.length)]
+        : 'https://placehold.co/600x400.png';
+
     const groupData: Omit<GroupDocument, 'createdAt' | 'totalExpenses'> = {
         name: values.name,
         description: values.description,
         memberIds: values.memberIds,
         createdById: userProfile.uid,
-        coverImageUrl: GROUP_COVER_IMAGES[Math.floor(Math.random() * GROUP_COVER_IMAGES.length)],
+        coverImageUrl: randomCoverImage,
     };
 
     try {

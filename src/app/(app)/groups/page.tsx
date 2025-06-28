@@ -8,14 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Icons } from '@/components/icons';
-import { getGroupsByUserId } from '@/lib/mock-data';
+import { getGroupsByUserId, getGroupCoverImages } from '@/lib/mock-data';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName, getInitials } from '@/lib/utils';
-import { DEFAULT_GROUP_COVER_IMAGE, GROUP_COVER_IMAGES } from '@/lib/constants';
 
 function GroupSkeleton() {
     return (
@@ -29,16 +28,21 @@ export default function GroupsPage() {
   const { userProfile } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [coverImages, setCoverImages] = useState<string[]>([]);
 
   useEffect(() => {
-    async function loadGroups() {
+    async function loadInitialData() {
         if (!userProfile?.uid) return;
         setLoading(true);
-        const userGroups = await getGroupsByUserId(userProfile.uid);
+        const [userGroups, fetchedCovers] = await Promise.all([
+          getGroupsByUserId(userProfile.uid),
+          getGroupCoverImages()
+        ]);
         setGroups(userGroups);
+        setCoverImages(fetchedCovers);
         setLoading(false);
     }
-    loadGroups();
+    loadInitialData();
   }, [userProfile]);
 
   return (
@@ -60,7 +64,7 @@ export default function GroupsPage() {
           {groups.map((group) => (
              <Link href={`/groups/${group.id}`} key={group.id} className="group block aspect-[4/3] w-full relative rounded-md overflow-hidden shadow-lg hover:shadow-primary/20 transition-all duration-300">
                 <Image
-                    src={group.coverImageUrl || DEFAULT_GROUP_COVER_IMAGE}
+                    src={group.coverImageUrl || coverImages[0] || 'https://placehold.co/600x400.png'}
                     alt={group.name}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
