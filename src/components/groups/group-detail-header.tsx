@@ -152,16 +152,18 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
           
           <div className="relative flex flex-col sm:flex-row justify-between items-start gap-4">
               <div>
-                  <h1 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-1">{group.name}</h1>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold font-headline text-foreground mb-1">{group.name}</h1>
                   <p className="text-muted-foreground max-w-prose">{group.description}</p>
-                  <div className="mt-4 flex items-center text-sm text-muted-foreground">
-                      <Icons.Users className="h-4 w-4 mr-2" />
-                      <span>{group.members.length} Members</span>
-                      <span className="mx-2">·</span>
-                      <div className="font-semibold text-foreground">
-                          Total Expenses: {CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}
-                      </div>
-                  </div>
+                   <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        <div className="flex items-center">
+                            <Icons.Users className="h-4 w-4 mr-2" />
+                            <span>{group.members.length} Members</span>
+                        </div>
+                        <div className="font-semibold text-foreground flex items-center">
+                            <Icons.Currency className="h-4 w-4 mr-2" />
+                            <span>Total Expenses: {CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</span>
+                        </div>
+                    </div>
               </div>
               <div className="flex flex-col gap-2 flex-shrink-0 w-full sm:w-auto">
                  <Popover onOpenChange={setIsPopoverOpen}>
