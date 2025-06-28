@@ -17,7 +17,7 @@ interface GroupMembersProps {
 
 export function GroupMembers({ members, group, onActionComplete }: GroupMembersProps) {
   return (
-    <div className="rounded-md border border-border/50 bg-card/50 p-0">
+    <Card>
       <CardHeader className="flex flex-row justify-between items-start">
         <div>
             <CardTitle>Group Members ({members.length})</CardTitle>
@@ -26,7 +26,7 @@ export function GroupMembers({ members, group, onActionComplete }: GroupMembersP
         <AddMemberDialog group={group} onActionComplete={onActionComplete}/>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[200px]">
+        <ScrollArea className="h-[400px]">
           <div className="divide-y divide-border/50">
             {members.map((member) => (
               <div key={member.uid} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
@@ -47,6 +47,6 @@ export function GroupMembers({ members, group, onActionComplete }: GroupMembersP
           </div>
         </ScrollArea>
       </CardContent>
-    </div>
+    </Card>
   );
 }

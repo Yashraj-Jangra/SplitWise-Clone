@@ -132,7 +132,8 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <ScrollArea className="w-full whitespace-nowrap">
+         <div className="relative">
+          <ScrollArea className="w-full whitespace-nowrap">
             <TabsList className="inline-flex w-max sm:w-auto">
               <TabsTrigger value="expenses">
                 <Icons.Expense className="mr-2 h-4 w-4" />
@@ -161,77 +162,76 @@ export default function GroupDetailPage() {
             </TabsList>
             <ScrollBar orientation="horizontal" className="h-2 sm:hidden" />
           </ScrollArea>
+        </div>
 
-        <TabsContent
-          value="expenses"
-          className="mt-6 rounded-md border border-border/50 bg-card/50 p-0"
-        >
-          <CardHeader>
-            <CardTitle>Expense Log</CardTitle>
-            <CardDescription>
-              All expenses recorded in this group.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {expenses.length > 0 ? (
-              <ScrollArea className="h-[400px]">
-                <div className="divide-y divide-border/50">
-                  {expenses.map((expense) => (
-                    <ExpenseListItem
-                      key={expense.id}
-                      expense={expense}
-                      currentUserId={userProfile.uid}
-                      group={group}
-                      onActionComplete={loadGroupData}
-                    />
-                  ))}
+        <TabsContent value="expenses" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Expense Log</CardTitle>
+              <CardDescription>
+                All expenses recorded in this group.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {expenses.length > 0 ? (
+                <ScrollArea className="h-[400px]">
+                  <div className="divide-y divide-border/50">
+                    {expenses.map((expense) => (
+                      <ExpenseListItem
+                        key={expense.id}
+                        expense={expense}
+                        currentUserId={userProfile.uid}
+                        group={group}
+                        onActionComplete={loadGroupData}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  <Icons.Details className="h-12 w-12 mx-auto mb-2" />
+                  No expenses recorded yet.
                 </div>
-              </ScrollArea>
-            ) : (
-              <div className="text-center p-8 text-muted-foreground">
-                <Icons.Details className="h-12 w-12 mx-auto mb-2" />
-                No expenses recorded yet.
-              </div>
-            )}
-          </CardContent>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent
-          value="settlements"
-          className="mt-6 rounded-md border border-border/50 bg-card/50 p-0"
-        >
-          <CardHeader className="flex flex-row justify-between items-center">
-            <div>
-              <CardTitle>Settlements Log</CardTitle>
-              <CardDescription>
-                All settlements made in this group.
-              </CardDescription>
-            </div>
-            <AddSettlementDialog
-              group={group}
-              onSettlementAdded={loadGroupData}
-            />
-          </CardHeader>
-          <CardContent className="p-0">
-            {settlements.length > 0 ? (
-              <ScrollArea className="h-[400px]">
-                <div className="divide-y divide-border/50">
-                  {settlements.map((settlement) => (
-                    <SettlementListItem
-                      key={settlement.id}
-                      settlement={settlement}
-                      currentUserId={userProfile.uid}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="text-center p-8 text-muted-foreground">
-                <Icons.Details className="h-12 w-12 mx-auto mb-2" />
-                No settlements recorded yet.
+        <TabsContent value="settlements" className="mt-6">
+          <Card>
+            <CardHeader className="flex flex-row justify-between items-center">
+              <div>
+                <CardTitle>Settlements Log</CardTitle>
+                <CardDescription>
+                  All settlements made in this group.
+                </CardDescription>
               </div>
-            )}
-          </CardContent>
+              <AddSettlementDialog
+                group={group}
+                onSettlementAdded={loadGroupData}
+              />
+            </CardHeader>
+            <CardContent className="p-0">
+              {settlements.length > 0 ? (
+                <ScrollArea className="h-[400px]">
+                  <div className="divide-y divide-border/50">
+                    {settlements.map((settlement) => (
+                      <SettlementListItem
+                        key={settlement.id}
+                        settlement={settlement}
+                        currentUserId={userProfile.uid}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center p-8 text-muted-foreground">
+                  <Icons.Details className="h-12 w-12 mx-auto mb-2" />
+                  No settlements recorded yet.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="balances" className="mt-6">
