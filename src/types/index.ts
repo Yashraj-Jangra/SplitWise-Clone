@@ -134,3 +134,5 @@ export interface SiteSettings {
   logoUrl?: string;
   coverImages: string[];
 }
+
+    
