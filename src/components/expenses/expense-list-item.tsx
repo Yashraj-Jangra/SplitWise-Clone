@@ -4,26 +4,16 @@
 import { useState } from 'react';
 import type { Expense, Group } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-import { Icons } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { formatDistanceToNow } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 import { getFullName, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ExpenseDetailDialog } from './expense-detail-dialog';
 
 interface ExpenseListItemProps {
   expense: Expense;
-  currentUserId: string; // To determine user's involvement
-  group?: Group; // Optional: Pass group data to avoid re-fetching in dialog
+  currentUserId: string;
+  group?: Group;
   onActionComplete?: () => void;
 }
 
@@ -31,7 +21,6 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
-  const amountUserOwes = currentUserParticipation ? currentUserParticipation.amountOwed : 0;
   const isPayer = expense.payers.some(p => p.user.uid === currentUserId);
   
   const getPayerText = () => {
@@ -53,7 +42,7 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
 
     return (
         <TooltipProvider>
-            <div className="flex -space-x-2">
+            <div className="flex -space-x-3">
                 {visiblePayers.map(payer => (
                     <Tooltip key={payer.user.uid}>
                         <TooltipTrigger asChild>
@@ -83,31 +72,45 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
         </TooltipProvider>
     )
   }
+  
+  const userShare = {
+    amount: 0,
+    text: "",
+    className: ""
+  };
+
+  if (currentUserParticipation) {
+    const userPaidAmount = expense.payers.find(p => p.user.uid === currentUserId)?.amount || 0;
+    const netAmount = userPaidAmount - currentUserParticipation.amountOwed;
+    userShare.amount = netAmount;
+
+    if (netAmount > 0.01) {
+        userShare.text = `You get back ${CURRENCY_SYMBOL}${netAmount.toFixed(2)}`;
+        userShare.className = "text-green-500";
+    } else if (netAmount < -0.01) {
+        userShare.text = `You owe ${CURRENCY_SYMBOL}${Math.abs(netAmount).toFixed(2)}`;
+        userShare.className = "text-red-500";
+    }
+  }
 
   return (
     <>
-      <div id={`expense-${expense.id}`} onClick={() => setIsDetailOpen(true)} className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer">
-        <div className="flex items-center gap-4">
-          {renderAvatars()}
+      <div id={`expense-${expense.id}`} onClick={() => setIsDetailOpen(true)} className="flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="text-center w-12 text-xs text-muted-foreground">
+             <div className="font-bold text-lg text-foreground">{format(new Date(expense.date), 'dd')}</div>
+             <div>{format(new Date(expense.date), 'MMM')}</div>
+          </div>
           <div className="grid gap-0.5">
-            <p className="text-sm font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
+            <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
             <p className="text-xs text-muted-foreground">
-              {getPayerText()} • {formatDistanceToNow(new Date(expense.date), { addSuffix: true })}
+              {getPayerText()}
             </p>
-            {expense.category && <Badge variant="outline" className="w-fit text-xs">{expense.category}</Badge>}
           </div>
         </div>
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <div className="text-right">
-            <p className="text-sm font-semibold text-foreground">{CURRENCY_SYMBOL}{expense.amount.toFixed(2)}</p>
-            {currentUserParticipation && !isPayer && (
-              <p className="text-xs text-red-600">You owe: {CURRENCY_SYMBOL}{amountUserOwes.toFixed(2)}</p>
-            )}
-            {isPayer && currentUserParticipation && currentUserParticipation.amountOwed < expense.payers.find(p => p.user.uid === currentUserId)!.amount && (
-              <p className="text-xs text-green-600">You get back: {CURRENCY_SYMBOL}{(expense.payers.find(p => p.user.uid === currentUserId)!.amount - amountUserOwes).toFixed(2)}</p>
-            )}
-          </div>
-           {/* Dropdown menu is now a secondary action, details are primary */}
+        <div className="text-right">
+            <p className="text-base font-bold text-foreground">{CURRENCY_SYMBOL}{expense.amount.toFixed(2)}</p>
+            {userShare.text && <p className={`text-xs font-medium ${userShare.className}`}>{userShare.text}</p>}
         </div>
       </div>
       

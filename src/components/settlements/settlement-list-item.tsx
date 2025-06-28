@@ -3,17 +3,9 @@
 
 import type { Settlement } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Icons } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { formatDistanceToNow } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import { getFullName, getInitials } from "@/lib/utils";
 
 interface SettlementListItemProps {
@@ -22,59 +14,37 @@ interface SettlementListItemProps {
 }
 
 export function SettlementListItem({ settlement, currentUserId }: SettlementListItemProps) {
-  const { toast } = useToast();
   const isPayer = settlement.paidBy.uid === currentUserId;
   const isPayee = settlement.paidTo.uid === currentUserId;
 
-  const handleDelete = () => {
-    // Simulate delete
-    toast({ title: "Settlement Deleted", description: `Settlement of ${CURRENCY_SYMBOL}${settlement.amount} has been removed.` });
-    // Here you would call an API and update state/refresh
-  };
-
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-            <Avatar className="h-10 w-10 border-2 border-background rounded-full">
-            <AvatarImage src={settlement.paidBy.avatarUrl} alt={getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} />
-            <AvatarFallback>{getInitials(settlement.paidBy.firstName, settlement.paidBy.lastName)}</AvatarFallback>
-            </Avatar>
-
-            <div className="flex flex-col items-center">
-                 <p className="text-xs text-muted-foreground">{CURRENCY_SYMBOL}{settlement.amount.toFixed(2)}</p>
-                 <Icons.ArrowRight className="h-5 w-5 text-green-400" />
-            </div>
-
-            <Avatar className="h-10 w-10 border-2 border-background rounded-full">
-            <AvatarImage src={settlement.paidTo.avatarUrl} alt={getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)} />
-            <AvatarFallback>{getInitials(settlement.paidTo.firstName, settlement.paidTo.lastName)}</AvatarFallback>
-            </Avatar>
+    <div className="flex items-center p-3 hover:bg-muted/50 rounded-lg transition-colors">
+      <div className="flex items-center gap-4 flex-1">
+        <div className="text-center w-12 flex-shrink-0">
+          <Icons.Settle className="h-7 w-7 text-green-500 mx-auto"/>
         </div>
-        <div className="grid gap-0.5">
-          <p className="text-sm font-medium leading-none truncate max-w-[150px] sm:max-w-xs">
-            {isPayer ? `You paid ${getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}` : `${getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} paid ${isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}`}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(settlement.date), { addSuffix: true })}
-          </p>
-          {settlement.notes && <p className="text-xs text-muted-foreground italic truncate max-w-[150px] sm:max-w-xs">Note: {settlement.notes}</p>}
+        <div className="flex-1 grid gap-1">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Avatar className="h-6 w-6">
+                <AvatarImage src={settlement.paidBy.avatarUrl} alt={getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} />
+                <AvatarFallback>{getInitials(settlement.paidBy.firstName, settlement.paidBy.lastName)}</AvatarFallback>
+            </Avatar>
+            <span>{isPayer ? 'You' : getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)}</span>
+            <Icons.ArrowRight className="h-4 w-4 text-muted-foreground"/>
+            <Avatar className="h-6 w-6">
+                <AvatarImage src={settlement.paidTo.avatarUrl} alt={getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)} />
+                <AvatarFallback>{getInitials(settlement.paidTo.firstName, settlement.paidTo.lastName)}</AvatarFallback>
+            </Avatar>
+            <span>{isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+             <span>{format(new Date(settlement.date), "PPP")}</span>
+             {settlement.notes && <p className="italic truncate max-w-[150px] sm:max-w-xs">• "{settlement.notes}"</p>}
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Icons.MoreHorizontal className="h-4 w-4" />
-               <span className="sr-only">Settlement options</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-              <Icons.Delete className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="text-right">
+            <p className="text-base font-bold text-green-500">{CURRENCY_SYMBOL}{settlement.amount.toFixed(2)}</p>
+        </div>
       </div>
     </div>
   );
