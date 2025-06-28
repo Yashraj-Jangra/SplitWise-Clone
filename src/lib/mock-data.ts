@@ -31,9 +31,10 @@ import type {
   ExpensePayer,
   HistoryEvent,
   HistoryEventDocument,
+  SiteSettings,
 } from '@/types';
 import { getFullName } from './utils';
-import { CURRENCY_SYMBOL, FALLBACK_GROUP_COVER_IMAGES } from './constants';
+import { CURRENCY_SYMBOL } from './constants';
 
 // --- User Functions ---
 
@@ -781,22 +782,42 @@ export async function deleteHistoryEvent(historyEventId: string): Promise<void> 
 
 // --- Site Settings ---
 const SETTINGS_COLLECTION = 'settings';
-const GROUP_COVERS_DOC = 'groupCoverImages';
+const GENERAL_SETTINGS_DOC = 'general';
 
-export async function getGroupCoverImages(): Promise<string[]> {
-    const docRef = doc(db, SETTINGS_COLLECTION, GROUP_COVERS_DOC);
+const DEFAULT_APP_NAME = 'SettleEase';
+const FALLBACK_GROUP_COVER_IMAGES = [
+    'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=2029&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1604079628040-94301bb21b91?q=80&w=1974&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1579546929662-7112e7508432?q=80&w=2070&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1511207538754-e8555f2bc187?q=80&w=1974&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?q=80&w=1974&auto=format&fit=crop',
+];
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+    const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
     const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists() && docSnap.data()?.urls?.length > 0) {
-        return docSnap.data().urls;
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+            appName: data.appName || DEFAULT_APP_NAME,
+            logoUrl: data.logoUrl || '',
+            coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
+        };
     } else {
-        // If the document doesn't exist, create it with fallback images
-        await setDoc(docRef, { urls: FALLBACK_GROUP_COVER_IMAGES });
-        return FALLBACK_GROUP_COVER_IMAGES;
+        const defaultSettings = {
+            appName: DEFAULT_APP_NAME,
+            logoUrl: '',
+            coverImages: FALLBACK_GROUP_COVER_IMAGES,
+        };
+        await setDoc(docRef, defaultSettings);
+        return defaultSettings;
     }
 }
 
-export async function updateGroupCoverImages(urls: string[]): Promise<void> {
-    const docRef = doc(db, SETTINGS_COLLECTION, GROUP_COVERS_DOC);
-    await setDoc(docRef, { urls });
+export async function updateSiteSettings(settings: Partial<SiteSettings>): Promise<void> {
+    const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
+    const cleanSettings = Object.fromEntries(Object.entries(settings).filter(([_, v]) => v !== undefined));
+    await setDoc(docRef, cleanSettings, { merge: true });
 }

@@ -128,3 +128,9 @@ export interface HistoryEvent extends Omit<HistoryEventDocument, 'timestamp' | '
     timestamp: string; // ISO string
     actor: UserProfile;
 }
+
+export interface SiteSettings {
+  appName: string;
+  logoUrl?: string;
+  coverImages: string[];
+}
