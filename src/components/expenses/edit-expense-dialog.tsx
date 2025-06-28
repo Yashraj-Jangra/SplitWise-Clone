@@ -311,7 +311,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       .map(p => ({
         userId: p.userId,
         amountOwed: Number(p.amountOwed) || 0,
-        share: Number(p.shares),
+        share: Number(p.shares) || 1,
       }));
 
     if (finalParticipants.length === 0) {
@@ -323,7 +323,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     if(values.splitType === "unequally") {
         const sumOfOwedAmounts = finalParticipants.reduce((sum, p) => sum + (p.amountOwed || 0), 0);
-        if (Math.abs(sumOfOwedAmounts - totalAmount) > 0.01 * finalParticipants.length ) {
+        if (Math.abs(sumOfOwedAmounts - totalAmount) > 0.01) {
              form.setError("participants", { type: "manual", message: `Sum of amounts (${CURRENCY_SYMBOL}${sumOfOwedAmounts.toFixed(2)}) must equal total expense (${CURRENCY_SYMBOL}${totalAmount.toFixed(2)}).` });
             return;
         }
@@ -377,7 +377,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
           </div>
           <div className="flex items-center justify-between border-b border-border/10 py-3">
             <FormLabel>Amount</FormLabel>
-            <FormField control={form.control} name="amount" render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} className="w-1/2 text-right" /></FormControl> )} />
+            <FormField control={form.control} name="amount" render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} value={field.value ?? ''} className="w-1/2 text-right" /></FormControl> )} />
           </div>
           <div className="flex items-center justify-between border-b border-border/10 py-3">
             <FormLabel>Category</FormLabel>
@@ -444,7 +444,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                     <div key={item.userId} className="flex items-center justify-between gap-4">
                       <FormLabel className="font-normal truncate">{item.name}</FormLabel>
                         <FormField control={form.control} name={`multiPayers.${index}.amount`} render={({ field }) => (
-                          <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} className="h-8 w-28 text-right"/></FormControl>
+                          <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} value={field.value ?? ''} className="h-8 w-28 text-right"/></FormControl>
                         )} />
                     </div>
                   ))}
@@ -565,21 +565,21 @@ function SplitContent({ form, group, userProfile, runningTotal, watchAmount, wat
                           <FormField
                               control={form.control}
                               name={`participants.${index}.amountOwed`}
-                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amt" {...field} className="h-8 w-24 text-right"/></FormControl> )}
+                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amt" {...field} value={field.value ?? ''} className="h-8 w-24 text-right"/></FormControl> )}
                           />
                           )}
                           {watchSplitType === "by_shares" && (
                           <FormField
                               control={form.control}
                               name={`participants.${index}.shares`}
-                              render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} className="h-8 w-24 text-right"/></FormControl> )}
+                              render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} value={field.value ?? ''} className="h-8 w-24 text-right"/></FormControl> )}
                           />
                           )}
                           {watchSplitType === "by_percentage" && (
                               <FormField
                               control={form.control}
                               name={`participants.${index}.percentage`}
-                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} className="h-8 w-24 text-right"/></FormControl> )}
+                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} value={field.value ?? ''} className="h-8 w-24 text-right"/></FormControl> )}
                               />
                           )}
                       </>
