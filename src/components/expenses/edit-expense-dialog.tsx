@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,12 +26,13 @@ import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { classifyExpense, categoryList } from "@/lib/expense-categories";
 import { Skeleton } from "../ui/skeleton";
-import { getFullName } from "@/lib/utils";
+import { getFullName, getInitials } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "../ui/scroll-area";
 import { Switch } from "../ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
@@ -48,6 +49,7 @@ const expenseSchema = z.object({
   participants: z.array(z.object({
     userId: z.string(),
     name: z.string(),
+    avatarUrl: z.string().optional(),
     selected: z.boolean(),
     amountOwed: z.coerce.number().optional(),
     shares: z.coerce.number().min(0, "Shares cannot be negative").optional(),
@@ -147,6 +149,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             return {
                 userId: member.uid,
                 name: getFullName(member.firstName, member.lastName),
+                avatarUrl: member.avatarUrl,
                 selected: !!existingParticipant,
                 amountOwed: existingParticipant?.amountOwed || 0,
                 shares: existingParticipant?.share || 1,
@@ -369,53 +372,74 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   
   const FormContent = (
     <FormProvider {...form}>
-      <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 text-sm">
-        <div className="space-y-2 rounded-lg border border-border/10 p-4">
-          <div className="flex items-center justify-between border-b border-border/10 pb-4">
-            <FormLabel>Description</FormLabel>
-            <FormField control={form.control} name="description" render={({ field }) => ( <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} className="w-1/2 text-right" /></FormControl>)} />
-          </div>
-          <div className="flex items-center justify-between border-b border-border/10 py-3">
-            <FormLabel>Amount</FormLabel>
-            <FormField control={form.control} name="amount" render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} value={field.value ?? ''} className="w-1/2 text-right" /></FormControl> )} />
-          </div>
-          <div className="flex items-center justify-between border-b border-border/10 py-3">
-            <FormLabel>Category</FormLabel>
-            <FormField control={form.control} name="category" render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger className="w-1/2 justify-end" /></FormControl>
-                  <SelectContent>
-                    {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
-                  </SelectContent>
-                </Select>
-            )} />
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <FormLabel>Date</FormLabel>
-            <FormField control={form.control} name="date" render={({ field }) => (
-                <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                          <Button variant={"ghost"} className={cn("w-1/2 justify-end text-right font-normal", !field.value && "text-muted-foreground")}>
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <Icons.Calendar className="ml-2 h-4 w-4" />
-                          </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                </Popover>
-            )} />
-          </div>
+      <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-4">
+            {/* Main Inputs */}
+            <div className="p-4 border rounded-lg bg-background/30">
+                <FormField control={form.control} name="description" render={({ field }) => ( 
+                    <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} className="text-base" /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                 <FormField control={form.control} name="amount" render={({ field }) => ( 
+                    <FormItem className="mt-4">
+                        <FormLabel>Amount</FormLabel>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                            <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 text-2xl font-bold h-12" /></FormControl>
+                        </div>
+                        <FormMessage />
+                    </FormItem>
+                 )} />
+            </div>
+            {/* Secondary Details */}
+             <div className="grid grid-cols-2 gap-4">
+                 <FormField control={form.control} name="date" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    <Icons.Calendar className="mr-2 h-4 w-4" />
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        </Popover>
+                         <FormMessage />
+                    </FormItem>
+                )} />
+                 <FormField control={form.control} name="category" render={({ field }) => (
+                    <FormItem>
+                         <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
+                        </SelectContent>
+                        </Select>
+                         <FormMessage />
+                    </FormItem>
+                )} />
+             </div>
         </div>
         
-        <div className="space-y-4 rounded-lg border border-border/10 p-4">
+        {/* Payer Section */}
+        <div className="space-y-4 rounded-lg border p-4 bg-background/30">
           <div className="flex items-center justify-between">
-            <FormLabel>{watchIsMultiplePayers ? "Multiple Payers" : "Single Payer"}</FormLabel>
-            <FormField control={form.control} name="isMultiplePayers" render={({ field }) => (
-              <FormControl>
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-            )} />
+            <FormLabel className="text-base">Paid By</FormLabel>
+            <div className="flex items-center gap-2 text-sm">
+                <FormLabel htmlFor="isMultiplePayers" className="text-muted-foreground">Multiple</FormLabel>
+                <FormField control={form.control} name="isMultiplePayers" render={({ field }) => (
+                <FormControl>
+                    <Switch id="isMultiplePayers" checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                )} />
+            </div>
           </div>
           {!watchIsMultiplePayers ? (
              <FormField control={form.control} name="singlePayerId" render={({ field }) => (
@@ -433,7 +457,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
           )} />
           ) : (
             <>
-            <p className={cn("text-right text-xs font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
+            <p className={cn("text-right text-sm font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
                 {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
                   amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} over` :
                   'All assigned'}
@@ -454,29 +478,43 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
           )}
         </div>
 
+        {/* Split Section */}
         {isMobile ? (
-           <Accordion type="single" collapsible className="w-full rounded-lg border border-border/10 p-4" defaultValue="item-1">
-            <AccordionItem value="item-1">
-              <AccordionTrigger>
-                <FormLabel>Split Method: <span className="text-primary font-semibold">{watchSplitType}</span></FormLabel>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4">
-                <SplitContent form={form} group={group} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType} />
-              </AccordionContent>
+           <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
+            <AccordionItem value="item-1" className="border-b-0">
+                <div className="rounded-lg border p-4 bg-background/30">
+                    <AccordionTrigger>
+                        <FormLabel className="text-base">Split Details</FormLabel>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                        <Tabs defaultValue="equally" className="w-full" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
+                            <TabsList className="grid w-full grid-cols-4 h-auto flex-wrap">
+                                <TabsTrigger value="equally">Equally</TabsTrigger>
+                                <TabsTrigger value="unequally">Unequally</TabsTrigger>
+                                <TabsTrigger value="by_shares">Shares</TabsTrigger>
+                                <TabsTrigger value="by_percentage">%</TabsTrigger>
+                            </TabsList>
+                            <SplitContent form={form} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
+                        </Tabs>
+                    </AccordionContent>
+                </div>
             </AccordionItem>
           </Accordion>
         ) : (
-          <Tabs defaultValue="equally" className="w-full" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="equally">Equally</TabsTrigger>
-              <TabsTrigger value="unequally">Unequally</TabsTrigger>
-              <TabsTrigger value="by_shares">Shares</TabsTrigger>
-              <TabsTrigger value="by_percentage">Percent</TabsTrigger>
-            </TabsList>
-            <div className="rounded-lg border border-border/10 p-4 mt-2">
-              <SplitContent form={form} group={group} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
-            </div>
-          </Tabs>
+          <div className="rounded-lg border p-4 bg-background/30">
+             <FormLabel className="text-base mb-4 block">Split Details</FormLabel>
+             <Tabs defaultValue="equally" className="w-full" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
+                <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="equally">Equally</TabsTrigger>
+                <TabsTrigger value="unequally">Unequally</TabsTrigger>
+                <TabsTrigger value="by_shares">Shares</TabsTrigger>
+                <TabsTrigger value="by_percentage">Percentage</TabsTrigger>
+                </TabsList>
+                <div className="mt-4">
+                    <SplitContent form={form} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
+                </div>
+            </Tabs>
+          </div>
         )}
       </form>
     </FormProvider>
@@ -504,15 +542,15 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   if(isMobile) {
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="bottom" className="glass-pane h-[90vh] flex flex-col rounded-t-2xl border-border/20">
-                <SheetHeader className="p-4">
+            <SheetContent side="bottom" className="glass-pane h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0">
+                <SheetHeader className="p-4 border-b">
                     <SheetTitle className="text-center text-lg font-semibold">{title}</SheetTitle>
                 </SheetHeader>
-                <ScrollArea className="flex-1 px-4">
-                    {MainContent}
+                <ScrollArea className="flex-1">
+                    <div className="p-4">{MainContent}</div>
                 </ScrollArea>
-                <SheetFooter className="p-4 bg-background/50">
-                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full">
+                <SheetFooter className="p-4 bg-background/50 border-t">
+                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full" size="lg">
                         {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
                     </Button>
                 </SheetFooter>
@@ -528,7 +566,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
           <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
         </DialogHeader>
         {MainContent}
-        <DialogFooter>
+        <DialogFooter className="border-t pt-4">
           <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full">
             {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
@@ -538,11 +576,10 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   );
 }
 
-function SplitContent({ form, group, userProfile, runningTotal, watchAmount, watchSplitType }: {form: any, group: Group | null, userProfile: any, runningTotal: any, watchAmount: number, watchSplitType: string}) {
-  if (!group) return null;
-  return (
-     <div className="space-y-4">
-        <ScrollArea className="h-40 pr-3">
+function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplitType }: {form: any, userProfile: any, runningTotal: any, watchAmount: number, watchSplitType: string}) {
+    return (
+     <div className="space-y-4 pt-2">
+        <ScrollArea className="h-48 pr-3">
           <div className="space-y-3">
               {form.getValues('participants').map((item: any, index: number) => (
                 <div key={item.userId} className="flex items-center justify-between gap-x-2 gap-y-2">
@@ -552,9 +589,15 @@ function SplitContent({ form, group, userProfile, runningTotal, watchAmount, wat
                     render={({ field }) => (
                       <FormItem className="flex items-center space-x-3 flex-grow min-w-[150px]">
                         <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap truncate">
-                          {item.name} {item.userId === userProfile?.uid ? "(You)" : ""}
-                        </FormLabel>
+                        <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={item.avatarUrl} alt={item.name} />
+                                <AvatarFallback>{getInitials(item.name)}</AvatarFallback>
+                            </Avatar>
+                            <FormLabel className="font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 whitespace-nowrap truncate">
+                                {item.name}
+                            </FormLabel>
+                        </div>
                       </FormItem>
                     )}
                   />
@@ -589,15 +632,15 @@ function SplitContent({ form, group, userProfile, runningTotal, watchAmount, wat
               ))}
           </div>
         </ScrollArea>
-        <div className="text-right text-xs mt-2 pr-2">
+        <div className="text-right text-xs mt-2 pr-2 font-medium">
           {runningTotal.type === 'amount' && (
-              <p className={cn(Math.abs(runningTotal.sum - watchAmount) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
-                  Total Allocated: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)}
+              <p className={cn(Math.abs(runningTotal.sum - watchAmount) > 0.01 ? 'text-destructive' : 'text-primary')}>
+                  Total: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)} / {CURRENCY_SYMBOL}{(watchAmount || 0).toFixed(2)}
               </p>
           )}
           {runningTotal.type === 'percentage' && (
-              <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
-                  Total Percentage: {runningTotal.sum.toFixed(2)}%
+              <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive' : 'text-primary')}>
+                  Total: {runningTotal.sum.toFixed(2)}% / 100%
               </p>
           )}
         </div>
