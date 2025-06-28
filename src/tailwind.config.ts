@@ -88,11 +88,6 @@ export default {
             height: '0',
           },
         },
-        'neon-pulse': {
-          '50%': {
-            boxShadow: '0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--primary))',
-          },
-        },
         orbit: {
           '0%': { transform: 'rotate(0deg) translateX(5px) rotate(0deg)' },
           '100%': { transform: 'rotate(360deg) translateX(5px) rotate(-360deg)' },
@@ -101,7 +96,6 @@ export default {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'neon-pulse': 'neon-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         orbit: 'orbit 4s linear infinite',
       },
     },
