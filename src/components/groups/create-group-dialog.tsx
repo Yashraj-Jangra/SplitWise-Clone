@@ -58,6 +58,15 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [coversLoading, setCoversLoading] = useState(true);
 
+  const form = useForm<CreateGroupFormValues>({
+    resolver: zodResolver(createGroupSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      memberIds: userProfile ? [userProfile.uid] : [],
+    },
+  });
+
   // Reset state when dialog opens
   useEffect(() => {
     if (userProfile && open) {
@@ -102,15 +111,6 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
        user.email.toLowerCase().includes(lowerCaseSearchTerm))
     ).slice(0, 5); // Limit results
   }, [searchTerm, allUsers, userProfile, selectedMembers]);
-
-  const form = useForm<CreateGroupFormValues>({
-    resolver: zodResolver(createGroupSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      memberIds: userProfile ? [userProfile.uid] : [],
-    },
-  });
 
   if (!userProfile) {
     return (
