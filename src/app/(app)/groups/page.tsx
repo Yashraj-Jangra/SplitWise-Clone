@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Icons } from '@/components/icons';
-import { getGroupsByUserId, getGroupCoverImages } from '@/lib/mock-data';
+import { getGroupsByUserId, getSiteSettings } from '@/lib/mock-data';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
@@ -34,12 +34,12 @@ export default function GroupsPage() {
     async function loadInitialData() {
         if (!userProfile?.uid) return;
         setLoading(true);
-        const [userGroups, fetchedCovers] = await Promise.all([
+        const [userGroups, siteSettings] = await Promise.all([
           getGroupsByUserId(userProfile.uid),
-          getGroupCoverImages()
+          getSiteSettings()
         ]);
         setGroups(userGroups);
-        setCoverImages(fetchedCovers);
+        setCoverImages(siteSettings.coverImages);
         setLoading(false);
     }
     loadInitialData();

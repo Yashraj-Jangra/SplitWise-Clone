@@ -27,7 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { archiveGroupAction } from "@/lib/actions/group";
-import { updateGroup, getGroupCoverImages } from "@/lib/mock-data";
+import { updateGroup, getSiteSettings } from "@/lib/mock-data";
 import { uploadFile } from "@/lib/storage";
 import { Skeleton } from "../ui/skeleton";
 
@@ -54,8 +54,8 @@ export function GroupDetailHeader({ group, user, balances, onActionComplete }: G
     async function loadCovers() {
         if (isPopoverOpen) {
             setCoversLoading(true);
-            const images = await getGroupCoverImages();
-            setCoverImages(images);
+            const settings = await getSiteSettings();
+            setCoverImages(settings.coverImages);
             setCoversLoading(false);
         }
     }

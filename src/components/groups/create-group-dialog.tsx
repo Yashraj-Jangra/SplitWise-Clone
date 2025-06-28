@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { createGroup, getAllUsers, getGroupCoverImages } from "@/lib/mock-data";
+import { createGroup, getAllUsers, getSiteSettings } from "@/lib/mock-data";
 import type { UserProfile, GroupDocument } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/auth-context";
@@ -86,12 +86,12 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
         if (open) {
             setLoading(true);
             setCoversLoading(true);
-            const [users, images] = await Promise.all([
+            const [users, siteSettings] = await Promise.all([
                 getAllUsers(),
-                getGroupCoverImages()
+                getSiteSettings()
             ]);
             setAllUsers(users);
-            setCoverImages(images);
+            setCoverImages(siteSettings.coverImages);
             setLoading(false);
             setCoversLoading(false);
         }
