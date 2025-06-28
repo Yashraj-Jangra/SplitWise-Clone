@@ -3,15 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- DEBUGGING HELPER ---
-    // This function gives the specified email god-mode access to help identify
-    // which rule is failing for normal users.
-    function isAdmin() {
-      // The user's primary admin email address.
-      return request.auth.token.email == 'jangrayash1505@gmail.com';
-    }
-    
-    // --- Standard Helpers ---
+    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
@@ -19,81 +11,88 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
+    
+    function isAdmin() {
+      // For production, prefer custom claims over hardcoding emails.
+      // https://firebase.google.com/docs/auth/admin/custom-claims
+      return request.auth.token.email == 'jangrayash1505@gmail.com';
+    }
 
-    // Function to check if a user is a member of a group by reading the group document.
-    // Use this for single document reads/writes where you have the groupId.
+    // Checks if the requesting user is a member of the specified group.
     function isMemberOfGroup(groupId) {
-        return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
-    }
-
-    // Function to check if a user is a member of a group by checking a field on the resource being accessed.
-    // Use this for list queries on collections like expenses, settlements, history.
-    function isMemberViaResource(resource) {
-        return isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid]);
-    }
-
-    // --- Collection Rules ---
-
-    // USERS
-    match /users/{userId} {
-      // Allow reading user profiles if signed in. This is needed to populate user info across the app.
-      allow get, list: if isAdmin() || isSignedIn();
-      // Allow creating a user document during signup.
-      allow create: if isAdmin() || isSignedIn();
-      // Allow updating your own user profile, but not changing your role.
-      allow update: if isAdmin() || (isOwner(userId) && !('role' in request.resource.data));
-      // Only admins can delete users.
-      allow delete: if isAdmin();
+      return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
     }
     
-    // SETTINGS
+    // --- Rules ---
+
     match /settings/general {
-      // This MUST be public for the app layout to read the app name on the server.
       allow get: if true;
-      // Only admins can change site settings.
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
-
-    // GROUPS
+    
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+    
     match /groups/{groupId} {
-      // Allow reading a group if you are a member.
-      allow get: if isAdmin() || isMemberOfGroup(groupId);
-      // Allow listing groups if you are signed in (the query itself is filtered by user ID).
-      allow list: if isAdmin() || isSignedIn();
-      // Allow creating groups if you are signed in.
-      allow create: if isAdmin() || isSignedIn();
-      // Allow members to update a group (e.g., adding members).
-      allow update: if isAdmin() || isMemberOfGroup(groupId);
-      allow delete: if isAdmin();
-    }
-    
-    // EXPENSES
-    match /expenses/{expenseId} {
-      // Allow reads if you are a member of the group this expense belongs to.
-      allow get: if isAdmin() || isMemberViaResource(resource);
-      // Allow listing expenses if signed in (the query is filtered).
-      allow list: if isAdmin() || isSignedIn();
-      // Allow writes if you are a member of the group.
-      allow create, update, delete: if isAdmin() || isMemberOfGroup(request.resource.data.groupId);
-    }
-    
-    // SETTLEMENTS
-    match /settlements/{settlementId} {
-      allow get: if isAdmin() || isMemberViaResource(resource);
-      allow list: if isAdmin() || isSignedIn();
-      allow create: if isAdmin() || isMemberOfGroup(request.resource.data.groupId);
-      // Only admins can modify settlements for audit integrity.
-      allow update, delete: if isAdmin();
+      allow list: if isSignedIn() && request.query.where.size() == 1 && request.query.where[0].fieldPath == 'memberIds' && request.query.where[0].op == 'array-contains' && request.query.where[0].value == request.auth.uid;
+      
+      allow create: if isSignedIn() && request.resource.data.createdById == request.auth.uid && request.auth.uid in request.resource.data.memberIds;
+      allow get: if isMemberOfGroup(groupId);
+      allow update: if isMemberOfGroup(groupId) && !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdById', 'totalExpenses']));
+      allow delete: if false; // Deletion is handled by secure server action
     }
 
-    // HISTORY
+    match /expenses/{expenseId} {
+      // Individual document access
+      allow get: if isMemberOfGroup(resource.data.groupId);
+      allow create: if isMemberOfGroup(request.resource.data.groupId);
+      allow update: if isMemberOfGroup(request.resource.data.groupId);
+      allow delete: if isMemberOfGroup(resource.data.groupId);
+
+      // Rules for listing/querying documents
+      allow list: if isSignedIn() && (
+        // Allow querying by group ID if the user is a member of that group
+        (request.query.where.size() > 0 && request.query.where[0].fieldPath == 'groupId' && isMemberOfGroup(request.query.where[0].value))
+        ||
+        // Allow querying for expenses where the user is a participant
+        (request.query.where.size() == 1 && request.query.where[0].fieldPath == 'participantIds' && request.query.where[0].op == 'array-contains' && request.query.where[0].value == request.auth.uid)
+      );
+    }
+    
+    match /settlements/{settlementId} {
+      // Individual document access
+      allow get: if isMemberOfGroup(resource.data.groupId);
+      allow create: if isMemberOfGroup(request.resource.data.groupId);
+      allow update: if isMemberOfGroup(request.resource.data.groupId);
+      allow delete: if isMemberOfGroup(resource.data.groupId);
+
+      // Rules for listing/querying documents
+      allow list: if isSignedIn() && (
+        // Allow querying by group ID if the user is a member of that group
+        (request.query.where.size() > 0 && request.query.where[0].fieldPath == 'groupId' && isMemberOfGroup(request.query.where[0].value))
+        ||
+        // Allow querying by who paid
+        (request.query.where.size() == 1 && request.query.where[0].fieldPath == 'paidById' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid)
+        ||
+        // Allow querying by who was paid
+        (request.query.where.size() == 1 && request.query.where[0].fieldPath == 'paidToId' && request.query.where[0].op == '==' && request.query.where[0].value == request.auth.uid)
+      );
+    }
+    
     match /history/{historyId} {
-      allow get: if isAdmin() || isMemberViaResource(resource);
-      allow list: if isAdmin() || isSignedIn();
-      // History is created by server logic when actions occur.
-      allow create, update: if isAdmin() || isMemberOfGroup(request.resource.data.groupId);
-      // Only admins can delete history.
-      allow delete: if isAdmin();
+      // Individual document access
+      allow get: if isMemberOfGroup(resource.data.groupId);
+      allow create: if isMemberOfGroup(request.resource.data.groupId);
+      
+      // Only admins should be able to modify history for audit integrity
+      allow update, delete: if isAdmin();
+      
+      // Allow listing history for a group if user is a member
+      allow list: if isSignedIn() && request.query.where.size() > 0 && request.query.where[0].fieldPath == 'groupId' && isMemberOfGroup(request.query.where[0].value);
     }
   }
 }
