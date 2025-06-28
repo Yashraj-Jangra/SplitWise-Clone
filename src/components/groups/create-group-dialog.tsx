@@ -30,6 +30,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { getFullName, getInitials } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "../ui/skeleton";
+import { GROUP_COVER_IMAGES } from "@/lib/constants";
 
 const createGroupSchema = z.object({
   name: z.string().min(3, { message: "Group name must be at least 3 characters." }).max(50, { message: "Group name must be less than 50 characters."}),
@@ -137,7 +138,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
         description: values.description,
         memberIds: values.memberIds,
         createdById: userProfile.uid,
-        coverImageUrl: 'https://placehold.co/600x400.png',
+        coverImageUrl: GROUP_COVER_IMAGES[Math.floor(Math.random() * GROUP_COVER_IMAGES.length)],
     };
 
     try {
