@@ -17,7 +17,7 @@ import {
   orderBy,
   setDoc,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import type {
   UserProfile,
   Group,
@@ -353,7 +353,14 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
 
 
 export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
-    const q = query(collection(db, 'expenses'), where('groupId', '==', groupId));
+    const user = auth.currentUser;
+    if (!user) return []; // Cannot fetch without a logged-in user for security rule compliance.
+
+    const q = query(
+        collection(db, 'expenses'), 
+        where('groupId', '==', groupId), 
+        where('groupMemberIds', 'array-contains', user.uid)
+    );
     const querySnapshot = await getDocs(q);
 
     const expenses: Expense[] = await Promise.all(
@@ -508,7 +515,14 @@ export async function addSettlement(settlementData: Omit<SettlementDocument, 'da
 
 
 export async function getSettlementsByGroupId(groupId: string): Promise<Settlement[]> {
-    const q = query(collection(db, 'settlements'), where('groupId', '==', groupId));
+    const user = auth.currentUser;
+    if (!user) return [];
+
+    const q = query(
+        collection(db, 'settlements'), 
+        where('groupId', '==', groupId), 
+        where('groupMemberIds', 'array-contains', user.uid)
+    );
     const querySnapshot = await getDocs(q);
     
     const userIds = new Set<string>();
@@ -717,7 +731,15 @@ async function logHistoryEvent(groupId: string, eventType: string, actorId: stri
 }
 
 export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent[]> {
-  const q = query(collection(db, 'history'), where('groupId', '==', groupId), orderBy('timestamp', 'desc'));
+  const user = auth.currentUser;
+  if (!user) return [];
+  
+  const q = query(
+    collection(db, 'history'), 
+    where('groupId', '==', groupId), 
+    where('groupMemberIds', 'array-contains', user.uid),
+    orderBy('timestamp', 'desc')
+  );
   const querySnapshot = await getDocs(q);
 
   const historyDocs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HistoryEventDocument & { id: string }));

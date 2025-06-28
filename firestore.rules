@@ -4,78 +4,91 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Helper Functions ---
-    function isAuthenticated() {
+    // Helper functions to make rules more readable.
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
     
     function isAdmin() {
-      // Check if the user's document in the 'users' collection has role 'admin'.
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    function isGroupMember(groupId) {
-      // Check if the user's UID is in the group's memberIds array.
-      let groupData = get(/databases/$(database)/documents/groups/$(groupId)).data;
-      return isAuthenticated() && request.auth.uid in groupData.memberIds;
+      // Check for a custom 'role' field on the user's document in Firestore.
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // --- User Rules ---
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      // Only the user themselves can create their own document on signup.
-      allow create: if isUser(userId);
-      // The user can update their own profile, or an admin can.
-      allow update: if isUser(userId) || isAdmin();
-      // Deletion is disallowed for safety.
-      allow delete: if false; 
+    // This function checks if the user making the request is a member of the group
+    // specified in the document being accessed.
+    function isGroupMember(docData) {
+      return isSignedIn() && request.auth.uid in docData.groupMemberIds;
     }
     
-    // --- Group Rules ---
-    match /groups/{groupId} {
-      allow read: if isGroupMember(groupId) || isAdmin();
-      
-      // Anyone authenticated can create a group, but they MUST include themselves as a member.
-      allow create: if isAuthenticated()
-                    && request.resource.data.createdById == request.auth.uid
-                    && request.auth.uid in request.resource.data.memberIds;
-                    
-      // Only members can update the group (e.g. for adding members). Admins can also update.
-      allow update: if isGroupMember(groupId) || isAdmin();
-      
-      // Deletion is disallowed. Archiving is handled via an update.
-      allow delete: if false;
-    }
-    
-    // --- Expense Rules ---
-    match /expenses/{expenseId} {
-        allow read, update, delete: if isGroupMember(resource.data.groupId) || isAdmin();
-        allow create: if isGroupMember(request.resource.data.groupId) || isAdmin();
-    }
-    
-    // --- Settlement Rules ---
-    match /settlements/{settlementId} {
-        allow read, update, delete: if isGroupMember(resource.data.groupId) || isAdmin();
-        allow create: if isGroupMember(request.resource.data.groupId) || isAdmin();
-    }
+    // --- Collection Rules ---
 
-    // --- History Rules ---
-    match /history/{historyId} {
-        allow read, delete: if isGroupMember(resource.data.groupId) || isAdmin();
-        allow create: if isGroupMember(request.resource.data.groupId) || isAdmin();
-        allow update: if isAdmin(); // only admins should modify history, e.g. marking as restored
-    }
-    
-    // --- Settings Rules ---
-    match /settings/{settingId} {
-      // Anyone can read the settings (e.g. to get cover images)
-      allow read: if true;
-      // Only admins can change settings
+    // Site settings: everyone can read, only admins can write.
+    match /settings/general {
+      allow get: if true;
       allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      // Any signed-in user can view any user's profile (needed for member lists, search, etc.)
+      allow get: if isSignedIn();
+      // Allow signed-in users to list/query the users collection (for searching members).
+      allow list: if isSignedIn();
+      // A user can only create their own document.
+      allow create: if isOwner(userId);
+      // A user can update their own document, or an admin can update any.
+      allow update: if isOwner(userId) || isAdmin();
+      // Only admins can delete users.
+      allow delete: if isAdmin();
+    }
+
+    match /groups/{groupId} {
+      // Allow reading (get/list) a group document if the user's ID is in the memberIds list.
+      // This rule works for both single document fetches and queries.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      
+      // To create a group, the user must be signed in, be the creator, and be in the initial members list.
+      allow create: if isSignedIn() 
+                    && request.auth.uid == request.resource.data.createdById
+                    && request.auth.uid in request.resource.data.memberIds;
+      
+      // Only members of a group can update it.
+      allow update: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      
+      // Only admins can delete groups directly. Archiving is handled by a server action.
+      allow delete: if isAdmin();
+    }
+
+    match /expenses/{expenseId} {
+      // Allow reading (get/list) expenses if the user's ID is in the document's `groupMemberIds` field.
+      // This requires the client query to include `where('groupMemberIds', 'array-contains', request.auth.uid)`.
+      allow read: if isGroupMember(resource.data);
+
+      // Allow creating an expense if the user is part of the target group.
+      allow create: if isGroupMember(request.resource.data);
+
+      // Allow updating/deleting an expense if the user was a member of the group.
+      allow update, delete: if isGroupMember(resource.data);
+    }
+
+    match /settlements/{settlementId} {
+      allow read: if isGroupMember(resource.data);
+      allow create: if isGroupMember(request.resource.data);
+      allow update, delete: if isGroupMember(resource.data);
+    }
+
+    match /history/{historyId} {
+      allow read: if isGroupMember(resource.data);
+      
+      // Creating history events should ideally be a trusted server-side action.
+      // This rule allows a client to create one if they are a member.
+      allow create: if isGroupMember(request.resource.data);
+      
+      // Only admins can modify/delete history entries.
+      allow update, delete: if isAdmin();
     }
   }
 }
