@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { format } from "date-fns";
-import { getFullName, getInitials } from "@/lib/utils";
+import { getFullName, getInitials } from '@/lib/utils';
 
 interface SettlementListItemProps {
   settlement: Settlement;
@@ -29,13 +29,13 @@ export function SettlementListItem({ settlement, currentUserId }: SettlementList
                 <AvatarImage src={settlement.paidBy.avatarUrl} alt={getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} />
                 <AvatarFallback>{getInitials(settlement.paidBy.firstName, settlement.paidBy.lastName)}</AvatarFallback>
             </Avatar>
-            <span>{isPayer ? 'You' : getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)}</span>
-            <Icons.ArrowRight className="h-4 w-4 text-muted-foreground"/>
+            <span className="truncate max-w-[80px]">{isPayer ? 'You' : getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)}</span>
+            <Icons.ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
             <Avatar className="h-6 w-6">
                 <AvatarImage src={settlement.paidTo.avatarUrl} alt={getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)} />
                 <AvatarFallback>{getInitials(settlement.paidTo.firstName, settlement.paidTo.lastName)}</AvatarFallback>
             </Avatar>
-            <span>{isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}</span>
+            <span className="truncate max-w-[80px]">{isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
              <span>{format(new Date(settlement.date), "PPP")}</span>

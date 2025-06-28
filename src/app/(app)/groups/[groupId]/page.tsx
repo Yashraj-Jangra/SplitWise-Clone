@@ -24,8 +24,6 @@ import {
   getExpensesByGroupId,
   getSettlementsByGroupId,
   getGroupBalances,
-  SimplifiedSettlement,
-  simplifyDebts,
 } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, Settlement, Balance } from '@/types';
@@ -131,7 +129,19 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsContent value="expenses" className="mt-0">
+        <ScrollArea className="w-full whitespace-nowrap">
+            <TabsList className="inline-flex h-auto">
+                <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                <TabsTrigger value="settlements">Settlements</TabsTrigger>
+                <TabsTrigger value="balances">Balances</TabsTrigger>
+                <TabsTrigger value="members">Members</TabsTrigger>
+                <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+
+        <TabsContent value="expenses" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle>Expense Log</CardTitle>
@@ -162,7 +172,7 @@ export default function GroupDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="settlements" className="mt-0">
+        <TabsContent value="settlements" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row justify-between items-center">
               <div>
@@ -189,7 +199,7 @@ export default function GroupDetailPage() {
                 </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
-                  <Icons.Details className="h-12 w-12 mx-auto mb-2" />
+                  <Icons.Settle className="h-12 w-12 mx-auto mb-2" />
                   No settlements recorded yet.
                 </div>
               )}
@@ -197,7 +207,7 @@ export default function GroupDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="balances" className="mt-0">
+        <TabsContent value="balances" className="mt-4">
           <GroupBalances
             balances={balances}
             group={group}
@@ -205,7 +215,7 @@ export default function GroupDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="members" className="mt-0">
+        <TabsContent value="members" className="mt-4">
           <GroupMembers
             members={group.members}
             group={group}
@@ -213,11 +223,11 @@ export default function GroupDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="analysis" className="mt-0">
+        <TabsContent value="analysis" className="mt-4">
           <GroupAnalysisCharts expenses={expenses} members={group.members} />
         </TabsContent>
 
-        <TabsContent value="history" className="mt-0">
+        <TabsContent value="history" className="mt-4">
           <GroupHistoryTab
             groupId={group.id}
             onActionComplete={loadGroupData}
