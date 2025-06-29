@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import type { HistoryEvent } from '@/types';
 import { getHistoryByGroupId, restoreExpense, deleteHistoryEvent } from '@/lib/mock-data';
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getFullName } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface GroupHistoryTabProps {
   groupId: string;
@@ -39,7 +40,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   default: <Icons.History className="h-4 w-4 text-muted-foreground" />,
 };
 
-function HistoryEventItem({ event, onActionComplete, onViewExpense }: { event: HistoryEvent; onActionComplete: () => void; onViewExpense: (expenseId: string) => void; }) {
+function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }: { event: HistoryEvent; onActionComplete: () => void; onViewExpense: (expenseId: string) => void; isDeleted?: boolean; }) {
     const { userProfile } = useAuth();
     const { toast } = useToast();
     const [isRestoring, setIsRestoring] = useState(false);
@@ -83,6 +84,11 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense }: { event: H
     } else if (event.eventType === 'expense_restored' && event.data?.newExpenseId) {
         viewableExpenseId = event.data.newExpenseId;
     }
+    
+    // If the creation/update event is for a deleted expense, don't allow viewing it.
+    if (isDeleted) {
+        viewableExpenseId = null;
+    }
 
     return (
         <TooltipProvider>
@@ -91,7 +97,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense }: { event: H
                     {eventIcons[event.eventType] || eventIcons.default}
                 </div>
                 <div className="flex-1 grid gap-1">
-                    <p className="text-sm">{event.description}</p>
+                    <p className={cn("text-sm", isDeleted && "line-through text-muted-foreground/80")}>{event.description}</p>
                     <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
                     </p>
@@ -188,6 +194,17 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
     onActionComplete();
   }
 
+  const deletedExpenseIds = useMemo(() => {
+    const deletedIds = new Set<string>();
+    // Collect all deleted expense IDs from 'expense_deleted' events that have NOT been restored.
+    history.forEach(event => {
+      if (event.eventType === 'expense_deleted' && event.data?.expenseId && !event.restored) {
+        deletedIds.add(event.data.expenseId);
+      }
+    });
+    return deletedIds;
+  }, [history]);
+
   if (loading) {
     return (
       <Card>
@@ -215,9 +232,10 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
         {history.length > 0 ? (
           <ScrollArea className="h-[45vh] -mx-6 pr-6">
             <div className="divide-y divide-border">
-                {history.map(event => (
-                    <HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} />
-                ))}
+                {history.map(event => {
+                    const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
+                    return (<HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
+                })}
             </div>
           </ScrollArea>
         ) : (
