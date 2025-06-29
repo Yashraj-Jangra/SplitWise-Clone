@@ -239,7 +239,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
     return watchMultiPayers?.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) || 0;
   }, [multiPayersDep]);
 
-  const amountRemainingToPay = watchAmount - totalPaid;
+  const amountRemainingToPay = (Number(watchAmount) || 0) - totalPaid;
 
   const runningTotal = useMemo(() => {
     const participants = watchParticipants || [];
@@ -443,7 +443,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
           </div>
           {/* RIGHT COLUMN */}
           <div className="space-y-6">
-             <div className="rounded-lg border p-4 h-full flex flex-col">
+             <div className="rounded-lg border p-4 flex flex-col">
                 <FormLabel className="text-base mb-4 block">Split Details</FormLabel>
                 <Tabs defaultValue="equally" className="w-full flex-1 flex flex-col" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
                     <TabsList className="grid w-full grid-cols-4">
@@ -471,7 +471,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
             <SheetTrigger asChild>
                 <Button className="w-full"><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="glass-pane h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0">
+            <SheetContent side="bottom" className="glass-pane h-[95vh] flex flex-col rounded-t-2xl border-border/20 p-0">
                 <SheetHeader className="p-4 border-b">
                     <SheetTitle className="text-center text-lg font-semibold">New Expense</SheetTitle>
                 </SheetHeader>
@@ -493,7 +493,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
       <DialogTrigger asChild>
         <Button><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>
       </DialogTrigger>
-      <DialogContent className="glass-pane sm:max-w-2xl flex flex-col max-h-[90vh]">
+      <DialogContent className="glass-pane sm:max-w-4xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">New Expense in "{group.name}"</DialogTitle>
         </DialogHeader>
@@ -584,5 +584,7 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
       </div>
   )
 }
+
+    
 
     
