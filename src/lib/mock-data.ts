@@ -453,8 +453,6 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
                 return user ? { ...p, user } : null;
             }).filter((p): p is ExpensePayer => p !== null);
             
-            if (payers.length === 0) return null;
-
             const participants = (expenseData.participants || []).map(p => {
                 const user = userMap.get(p.userId);
                 return user ? { ...p, user } : null;
@@ -502,8 +500,6 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
                 return user ? { ...p, user } : null;
             }).filter((p): p is ExpensePayer => p !== null);
         
-        if (payers.length === 0) return null;
-        
         const participants = (expenseData.participants || []).map((p) => {
             const user = userMap.get(p.userId);
             return user ? { ...p, user } : null;
@@ -541,8 +537,6 @@ export async function getAllExpenses(): Promise<Expense[]> {
           const user = userMap.get(p.userId);
           return user ? { ...p, user } : null;
       }).filter((p): p is ExpensePayer => p !== null);
-
-      if (payers.length === 0) return null;
 
       const participants = (expenseData.participants || []).map(p => {
           const user = userMap.get(p.userId);
