@@ -29,6 +29,7 @@ import type { Group, Expense, Settlement, Balance } from '@/types';
 import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
+import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
 import {
   Tooltip,
   TooltipContent,
