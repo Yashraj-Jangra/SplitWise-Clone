@@ -32,6 +32,7 @@ import type {
   HistoryEvent,
   HistoryEventDocument,
   SiteSettings,
+  SimplifiedSettlement,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -670,11 +671,6 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
   });
 }
 
-export interface SimplifiedSettlement {
-  from: UserProfile;
-  to: UserProfile;
-  amount: number;
-}
 
 export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
     const debtors = balances
@@ -775,6 +771,7 @@ export async function getHistoryForExpense(expenseId: string, groupId: string): 
         collection(db, 'history'), 
         where('groupId', '==', groupId),
         where('data.expenseId', '==', expenseId),
+        where('groupMemberIds', 'array-contains', user.uid),
         orderBy('timestamp', 'desc')
     );
     const querySnapshot = await getDocs(q);

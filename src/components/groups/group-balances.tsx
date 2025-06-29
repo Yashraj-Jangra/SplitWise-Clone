@@ -82,25 +82,39 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
         <div className="space-y-3">
           <h4 className="font-semibold text-center text-muted-foreground">Simplified Settlement Plan</h4>
           {simplifiedSettlements.map((s, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                      <AvatarImage src={s.from.avatarUrl} alt={getFullName(s.from.firstName, s.from.lastName)} />
-                      <AvatarFallback>{getInitials(s.from.firstName, s.from.lastName)}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{getFullName(s.from.firstName, s.from.lastName)}</span>
-              </div>
-              <div className="flex flex-col items-center text-sm text-muted-foreground">
-                  <span className="font-bold text-foreground">{CURRENCY_SYMBOL}{s.amount.toFixed(2)}</span>
-                  <Icons.ArrowRight className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex items-center gap-3 justify-end">
-                  <span className="font-medium text-right">{getFullName(s.to.firstName, s.to.lastName)}</span>
-                  <Avatar className="h-9 w-9">
-                      <AvatarImage src={s.to.avatarUrl} alt={getFullName(s.to.firstName, s.to.lastName)} />
-                      <AvatarFallback>{getInitials(s.to.firstName, s.to.lastName)}</AvatarFallback>
-                  </Avatar>
-              </div>
+            <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors gap-2">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Avatar className="h-9 w-9">
+                        <AvatarImage src={s.from.avatarUrl} alt={getFullName(s.from.firstName, s.from.lastName)} />
+                        <AvatarFallback>{getInitials(s.from.firstName, s.from.lastName)}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium truncate">{getFullName(s.from.firstName, s.from.lastName)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground flex-shrink-0">
+                    <span className="font-bold text-foreground">{CURRENCY_SYMBOL}{s.amount.toFixed(2)}</span>
+                    <Icons.ArrowRight className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
+                    <span className="font-medium text-right truncate">{getFullName(s.to.firstName, s.to.lastName)}</span>
+                    <Avatar className="h-9 w-9">
+                        <AvatarImage src={s.to.avatarUrl} alt={getFullName(s.to.firstName, s.to.lastName)} />
+                        <AvatarFallback>{getInitials(s.to.firstName, s.to.lastName)}</AvatarFallback>
+                    </Avatar>
+                </div>
+                 <div className="flex-shrink-0">
+                    <AddSettlementDialog
+                        group={group}
+                        onSettlementAdded={onSettlementAdded}
+                        initialSettlement={{
+                            paidById: s.from.uid,
+                            paidToId: s.to.uid,
+                            amount: s.amount,
+                        }}
+                        trigger={
+                            <Button size="sm">Settle</Button>
+                        }
+                    />
+                </div>
             </div>
           ))}
         </div>

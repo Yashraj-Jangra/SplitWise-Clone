@@ -51,6 +51,8 @@ export interface ExpenseDocument {
   groupMemberIds: string[]; // For security rules
   category?: string;
   receiptImageUrl?: string;
+  expenseCreatorId: string;
+  groupCreatorId: string;
 }
 
 export interface SettlementDocument {
@@ -63,7 +65,7 @@ export interface SettlementDocument {
   groupMemberIds: string[]; // For security rules
 }
 
-export type HistoryEventType = 'expense_created' | 'expense_updated' | 'expense_deleted' | 'settlement_created' | 'settlement_deleted' | 'group_created' | 'member_added' | 'expense_restored';
+export type HistoryEventType = 'expense_created' | 'expense_updated' | 'expense_deleted' | 'settlement_created' | 'settlement_deleted' | 'group_created' | 'member_added' | 'expense_restored' | 'member_removed';
 
 export interface HistoryEventDocument {
   groupId: string;
@@ -114,6 +116,13 @@ export interface Balance {
   netBalance: number;
 }
 
+export interface SimplifiedSettlement {
+  from: UserProfile;
+  to: UserProfile;
+  amount: number;
+}
+
+
 export interface NavItem {
   title: string;
   href: string;
@@ -135,5 +144,3 @@ export interface SiteSettings {
   coverImages: string[];
   landingImages: string[];
 }
-
-    

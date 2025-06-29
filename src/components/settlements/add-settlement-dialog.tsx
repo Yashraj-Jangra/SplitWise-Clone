@@ -49,9 +49,11 @@ type AddSettlementFormValues = z.infer<typeof settlementSchema>;
 interface AddSettlementDialogProps {
   group: Group;
   onSettlementAdded: () => void;
+  initialSettlement?: Partial<AddSettlementFormValues>;
+  trigger?: React.ReactNode;
 }
 
-export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementDialogProps) {
+export function AddSettlementDialog({ group, onSettlementAdded, initialSettlement, trigger }: AddSettlementDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -71,14 +73,14 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
   useEffect(() => {
     if (userProfile && open) {
         form.reset({
-            paidById: userProfile.uid,
-            paidToId: "",
-            amount: undefined,
+            paidById: initialSettlement?.paidById || userProfile.uid,
+            paidToId: initialSettlement?.paidToId || "",
+            amount: initialSettlement?.amount || undefined,
             date: new Date(),
-            notes: "",
+            notes: initialSettlement?.notes || "",
         });
     }
-  }, [userProfile, open, form]);
+  }, [userProfile, open, form, initialSettlement]);
 
 
   async function onSubmit(values: AddSettlementFormValues) {
@@ -94,7 +96,7 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
     };
 
     try {
-        await addSettlement(newSettlement);
+        await addSettlement(newSettlement, userProfile.uid);
         const paidByName = getFullName(group.members.find(m => m.uid === values.paidById)?.firstName, group.members.find(m => m.uid === values.paidById)?.lastName);
         const paidToName = getFullName(group.members.find(m => m.uid === values.paidToId)?.firstName, group.members.find(m => m.uid === values.paidToId)?.lastName);
 
@@ -110,12 +112,16 @@ export function AddSettlementDialog({ group, onSettlementAdded }: AddSettlementD
     }
   }
 
+  const dialogTrigger = trigger ? trigger : (
+    <Button variant="outline" disabled={!userProfile}>
+        <Icons.Settle className="mr-2 h-4 w-4" /> Record Settlement
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" disabled={!userProfile}>
-          <Icons.Settle className="mr-2 h-4 w-4" /> Record Settlement
-        </Button>
+        {dialogTrigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
