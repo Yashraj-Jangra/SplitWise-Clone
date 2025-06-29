@@ -32,18 +32,6 @@ interface GroupDetailHeaderProps {
   onActionComplete: () => void;
 }
 
-function StatCard({ icon, label, value, valueClassName }: { icon: React.ReactNode, label: string, value: string, valueClassName?: string }) {
-    return (
-        <div className="flex items-center gap-3 rounded-lg bg-background/50 p-3">
-            <div className="text-primary">{icon}</div>
-            <div>
-                <div className="text-xs text-muted-foreground">{label}</div>
-                <div className={cn("text-base font-bold text-foreground", valueClassName)}>{value}</div>
-            </div>
-        </div>
-    )
-}
-
 export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete }: GroupDetailHeaderProps) {
   const { toast } = useToast();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -73,88 +61,85 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
   }
 
   return (
-    <>
-      <div className="relative w-full rounded-lg overflow-hidden border border-border/50">
-        {/* Cover Image */}
-        <div className="relative h-32 md:h-48 w-full">
-            <Image
-                src={group.coverImageUrl || 'https://placehold.co/1200x300.png'}
-                alt={`${group.name} cover image`}
-                fill
-                className="object-cover"
-                priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
-        </div>
+    <div className="rounded-lg border border-border/50 overflow-hidden">
+      {/* Cover Image and Overlay Content */}
+      <div className="relative h-32 md:h-40 w-full">
+        <Image
+          src={group.coverImageUrl || 'https://placehold.co/1200x300.png'}
+          alt={`${group.name} cover image`}
+          fill
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
         
-        {/* Content */}
-        <div className="p-4 bg-background">
-            {/* Title, Actions, and Description */}
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="flex-1">
-                    <h1 className="text-2xl md:text-3xl font-bold font-headline text-foreground">{group.name}</h1>
-                    <p className="text-muted-foreground text-sm mt-1">{group.description}</p>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <AddExpenseDialog group={group} onExpenseAdded={onActionComplete} />
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <Icons.MoreHorizontal />
-                                <span className="sr-only">More Actions</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <Popover onOpenChange={setIsPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <Icons.Edit className="mr-2"/>Change Cover
-                                    </DropdownMenuItem>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64 p-2">
-                                {coversLoading ? (
-                                    <div className="grid grid-cols-3 gap-2">
-                                    {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-3 gap-2">
-                                    {coverImages.map((url, i) => (
-                                        <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
-                                        <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
-                                        {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
-                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
-                                        </button>
-                                    ))}
-                                    </div>
-                                )}
-                                </PopoverContent>
-                            </Popover>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </div>
-
-            {/* Stats Bar */}
-             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard 
-                    icon={<Icons.Currency />} 
-                    label="Total Spent" 
-                    value={`${CURRENCY_SYMBOL}${group.totalExpenses.toFixed(2)}`}
-                />
-                 <StatCard 
-                    icon={<Icons.Users />} 
-                    label="Members" 
-                    value={`${group.members.length}`}
-                />
-                 <StatCard 
-                    icon={<Icons.Wallet />} 
-                    label="Your Balance" 
-                    value={`${currentUserBalance >= 0 ? '' : '-'}${CURRENCY_SYMBOL}${Math.abs(currentUserBalance).toFixed(2)}`}
-                    valueClassName={currentUserBalance > 0.01 ? 'text-green-500' : currentUserBalance < -0.01 ? 'text-red-500' : 'text-foreground'}
-                />
-            </div>
+        <div className="absolute inset-0 flex flex-col sm:flex-row justify-between items-end p-4 text-white">
+          {/* Title and Description */}
+          <div className="flex-1 mb-2 sm:mb-0">
+            <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg">{group.name}</h1>
+            <p className="text-sm text-slate-200 drop-shadow-md truncate">{group.description}</p>
+          </div>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <AddExpenseDialog group={group} onExpenseAdded={onActionComplete} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                  <Icons.MoreHorizontal />
+                  <span className="sr-only">More Actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <Popover onOpenChange={setIsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Icons.Edit className="mr-2"/>Change Cover
+                    </DropdownMenuItem>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2">
+                    {coversLoading ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {coverImages.map((url, i) => (
+                          <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
+                            <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
+                            {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
-    </>
+      
+      {/* Compact Stats Bar */}
+      <div className="grid grid-cols-3 divide-x divide-border/50 bg-background/50">
+        <div className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Total Spent</p>
+            <p className="font-bold text-lg">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</p>
+        </div>
+        <div className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Members</p>
+            <p className="font-bold text-lg">{group.members.length}</p>
+        </div>
+        <div className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Your Balance</p>
+            <p className={cn(
+                "font-bold text-lg",
+                currentUserBalance > 0.01 ? 'text-green-500' : currentUserBalance < -0.01 ? 'text-red-500' : 'text-foreground'
+            )}>
+                {currentUserBalance >= 0 ? '' : '-'}{CURRENCY_SYMBOL}{Math.abs(currentUserBalance).toFixed(2)}
+            </p>
+        </div>
+      </div>
+    </div>
   );
 }
