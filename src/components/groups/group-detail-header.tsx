@@ -127,7 +127,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
           </div>
 
           {/* Bottom Content */}
-          <div className="flex flex-col sm:flex-row justify-between items-end text-white gap-2">
+          <div className="flex flex-row justify-between items-end text-white gap-2">
             {/* Title and Description */}
             <div className="flex-1">
               <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg">{group.name}</h1>
