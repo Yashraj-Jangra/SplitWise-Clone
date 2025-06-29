@@ -15,6 +15,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, isValid } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 interface GroupAnalysisChartsProps {
@@ -31,6 +32,7 @@ const CHART_COLORS = [
 ];
 
 export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsProps) {
+  const isMobile = useIsMobile();
   const validExpenses = useMemo(() => expenses.filter(e => e.date && isValid(new Date(e.date))), [expenses]);
 
   const { minDate, maxDate } = useMemo(() => {
@@ -223,7 +225,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
         </CardHeader>
         <CardContent>
           <ChartContainer config={userChartConfig} className="h-[400px] w-full">
-            <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: 20, right: 12 }}>
+            <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: isMobile ? -10 : 20, right: 12 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`} />
@@ -277,9 +279,10 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                   tickLine={false}
                   axisLine={false}
                   tickMargin={5}
-                  width={80}
+                  width={isMobile ? 60 : 80}
                   className="text-xs"
                   stroke="hsl(var(--muted-foreground))"
+                  tickFormatter={(value) => isMobile && value.length > 7 ? `${value.substring(0, 7)}...` : value}
                 />
                 <Tooltip
                   cursor={false}
@@ -304,7 +307,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 <ChartContainer config={barChartConfig} className="h-[300px] w-full">
                 <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={100} className="text-xs" stroke="hsl(var(--muted-foreground))"/>
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 9 ? `${value.substring(0, 9)}...` : value} />
                     <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                     <Bar dataKey="total" radius={4}>
                         {expensesByCategory.map((entry, index) => (
