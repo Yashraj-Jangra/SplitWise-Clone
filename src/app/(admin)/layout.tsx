@@ -29,15 +29,25 @@ export default function AdminLayout({
   if (loading) {
     // Show a loading state while checking auth
     return (
-       <div className="flex flex-col items-center justify-center min-h-screen p-6">
-        <Icons.AppLogo className="h-20 w-20 text-primary animate-pulse mb-8" />
-        <h2 className="text-2xl font-semibold text-foreground mb-4">Loading Admin Area...</h2>
-        <div className="w-full max-w-md space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-20 w-full" />
+        <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-6">
+            <div className="relative flex flex-col items-center justify-center space-y-6">
+                <div className="absolute h-48 w-48 rounded-full border-2 border-destructive/20 animate-spin" style={{ animationDuration: '3s' }} />
+                <div className="absolute h-64 w-64 rounded-full border-t-2 border-b-2 border-destructive/50 animate-spin" style={{ animationDuration: '5s', animationDirection: 'reverse' }} />
+                
+                <div className="relative z-10 animate-pulse" style={{ animationDuration: '2s' }}>
+                  <Icons.ShieldCheck className="h-24 w-24 text-destructive" />
+                </div>
+                
+                <div className="z-10 text-center">
+                    <h2 className="text-2xl font-bold tracking-wider text-destructive/90">
+                      Loading Admin Area...
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                      Verifying credentials. Please wait.
+                    </p>
+                </div>
+            </div>
         </div>
-       </div>
     );
   }
 
