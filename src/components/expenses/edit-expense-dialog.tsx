@@ -636,8 +636,8 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
         </ScrollArea>
         <div className="text-right text-xs mt-2 pr-2 font-medium">
           {runningTotal.type === 'amount' && (
-              <p className={cn(Math.abs(runningTotal.sum - watchAmount) > 0.01 ? 'text-destructive' : 'text-primary')}>
-                  Total: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)} / {CURRENCY_SYMBOL}{(watchAmount || 0).toFixed(2)}
+              <p className={cn(Math.abs(runningTotal.sum - (Number(watchAmount) || 0)) > 0.01 ? 'text-destructive' : 'text-primary')}>
+                  Total: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)} / {CURRENCY_SYMBOL}{(Number(watchAmount) || 0).toFixed(2)}
               </p>
           )}
           {runningTotal.type === 'percentage' && (
