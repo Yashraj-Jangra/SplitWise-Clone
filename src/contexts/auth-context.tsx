@@ -9,7 +9,7 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
 import { app, db, auth, firebaseError } from '@/lib/firebase';
-import { isUsernameTaken } from '@/lib/mock-data';
+import { isUsernameTaken, updateUser } from '@/lib/mock-data';
 
 const ADMIN_EMAIL = 'jangrayash1505@gmail.com';
 
@@ -68,7 +68,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setFirebaseUser(user);
         let profile = await fetchUserProfile(user.uid);
         
-        if (!profile) {
+        if (profile) {
+            // Profile exists. Check if we should update the avatar from Google.
+            const isPlaceholderAvatar = profile.avatarUrl?.includes('placehold.co');
+            const hasGoogleAvatar = !!user.photoURL;
+
+            // If the current avatar is not set or is a placeholder, and there's a Google avatar available that is different
+            if ((!profile.avatarUrl || isPlaceholderAvatar) && hasGoogleAvatar && profile.avatarUrl !== user.photoURL) {
+                await updateUser(user.uid, { avatarUrl: user.photoURL });
+                // Re-fetch profile to get the latest data
+                profile = await fetchUserProfile(user.uid);
+            }
+        } else {
             console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
             let username = user.email?.split('@')[0] || `user${Date.now()}`;
             let usernameIsTaken = await isUsernameTaken(username);
