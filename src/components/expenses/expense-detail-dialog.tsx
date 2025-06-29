@@ -97,30 +97,30 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
                         </DialogDescription>
                     </DialogHeader>
                     
-                    <div className="flex-1 overflow-y-auto -mx-6 px-6 py-4 space-y-4">
-                        <div>
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-2">Paid By</h3>
-                            <div className="space-y-3">
-                                {expense.payers.map(payer => (
-                                    <div key={payer.user.uid} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage src={payer.user.avatarUrl} alt={getFullName(payer.user.firstName, payer.user.lastName)} />
-                                                <AvatarFallback>{getInitials(payer.user.firstName, payer.user.lastName)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">{getFullName(payer.user.firstName, payer.user.lastName)}</span>
+                    <ScrollArea className="flex-1 -mx-6">
+                        <div className="px-6 py-4 space-y-4">
+                            <div>
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Paid By</h3>
+                                <div className="space-y-3">
+                                    {expense.payers.map(payer => (
+                                        <div key={payer.user.uid} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-9 w-9">
+                                                    <AvatarImage src={payer.user.avatarUrl} alt={getFullName(payer.user.firstName, payer.user.lastName)} />
+                                                    <AvatarFallback>{getInitials(payer.user.firstName, payer.user.lastName)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{getFullName(payer.user.firstName, payer.user.lastName)}</span>
+                                            </div>
+                                            <span className="font-semibold">{CURRENCY_SYMBOL}{payer.amount.toFixed(2)}</span>
                                         </div>
-                                        <span className="font-semibold">{CURRENCY_SYMBOL}{payer.amount.toFixed(2)}</span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        <Separator />
+                            <Separator />
 
-                        <div>
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-2">Split For</h3>
-                            <ScrollArea className="h-[200px] pr-3">
+                            <div>
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Split For</h3>
                                 <div className="space-y-3">
                                     {expense.participants.map(p => (
                                         <div key={p.user.uid} className="flex items-center justify-between">
@@ -135,9 +135,9 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
                                         </div>
                                     ))}
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </div>
-                    </div>
+                    </ScrollArea>
 
                     <DialogFooter className="border-t pt-4">
                         <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>

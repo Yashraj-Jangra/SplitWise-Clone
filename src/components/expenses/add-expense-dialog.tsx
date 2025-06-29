@@ -510,11 +510,13 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
       <DialogTrigger asChild>
         <Button><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>
       </DialogTrigger>
-      <DialogContent className="glass-pane sm:max-w-xl">
+      <DialogContent className="glass-pane sm:max-w-xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">New Expense</DialogTitle>
         </DialogHeader>
-        {FormContent}
+        <ScrollArea className="flex-1 -mx-6">
+            <div className="px-6 py-4">{FormContent}</div>
+        </ScrollArea>
         <DialogFooter className="border-t pt-4">
           <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting} className="w-full">
             {form.formState.isSubmitting ? "Adding..." : "Add Expense"}

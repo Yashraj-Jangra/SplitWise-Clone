@@ -561,11 +561,13 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-pane sm:max-w-xl">
+      <DialogContent className="glass-pane sm:max-w-xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
         </DialogHeader>
-        {MainContent}
+        <ScrollArea className="flex-1 -mx-6">
+            <div className="px-6 py-4">{MainContent}</div>
+        </ScrollArea>
         <DialogFooter className="border-t pt-4">
           <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full">
             {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
