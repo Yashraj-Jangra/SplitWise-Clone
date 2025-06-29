@@ -767,12 +767,13 @@ export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent
   return historyEvents;
 }
 
-export async function getHistoryForExpense(expenseId: string): Promise<HistoryEvent[]> {
+export async function getHistoryForExpense(expenseId: string, groupId: string): Promise<HistoryEvent[]> {
     const user = auth.currentUser;
     if (!user) return [];
 
     const q = query(
         collection(db, 'history'), 
+        where('groupId', '==', groupId),
         where('data.expenseId', '==', expenseId),
         orderBy('timestamp', 'desc')
     );
@@ -785,10 +786,6 @@ export async function getHistoryForExpense(expenseId: string): Promise<HistoryEv
     const actorMap = new Map(actors.map(u => [u.uid, u]));
 
     const historyEvents: HistoryEvent[] = historyDocs.map(doc => {
-        // Security check: ensure the current user is part of the group associated with this history event
-        if (!doc.groupMemberIds.includes(user.uid)) {
-            return null;
-        }
         const actor = actorMap.get(doc.actorId);
         if (!actor) return null;
         return {

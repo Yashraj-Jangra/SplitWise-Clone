@@ -76,7 +76,7 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
         async function fetchHistory() {
             setHistoryLoading(true);
             try {
-            const history = await getHistoryForExpense(expense.id);
+            const history = await getHistoryForExpense(expense.id, expense.groupId);
             setExpenseHistory(history);
             } catch (error) {
             console.error("Failed to fetch expense history:", error);
@@ -87,7 +87,7 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
         }
         fetchHistory();
         }
-    }, [open, expense.id, toast]);
+    }, [open, expense.id, expense.groupId, toast]);
 
 
     const handleDelete = async () => {
