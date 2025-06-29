@@ -126,17 +126,18 @@ export default function GroupDetailPage() {
         user={userProfile}
         currentUserBalance={currentUserBalance}
         onActionComplete={loadGroupData}
+        onSettingsClick={() => setActiveTab('settings')}
+        activeTab={activeTab}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <ScrollArea className="w-full whitespace-nowrap">
+        <ScrollArea className="w-full whitespace-nowrap rounded-md">
           <TabsList className="inline-flex h-auto">
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
             <TabsTrigger value="settlements">Settlements</TabsTrigger>
             <TabsTrigger value="balances">Balances</TabsTrigger>
             <TabsTrigger value="analysis">Analysis</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>

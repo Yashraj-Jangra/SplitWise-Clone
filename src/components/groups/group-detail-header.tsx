@@ -30,9 +30,11 @@ interface GroupDetailHeaderProps {
   user: UserProfile;
   currentUserBalance: number;
   onActionComplete: () => void;
+  onSettingsClick: () => void;
+  activeTab: string;
 }
 
-export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete }: GroupDetailHeaderProps) {
+export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete, onSettingsClick, activeTab }: GroupDetailHeaderProps) {
   const { toast } = useToast();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [coverImages, setCoverImages] = useState<string[]>([]);
@@ -82,6 +84,18 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <AddExpenseDialog group={group} onExpenseAdded={onActionComplete} />
+            <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                    "text-white hover:bg-white/20 hover:text-white",
+                    activeTab === 'settings' && 'bg-white/25'
+                )}
+                onClick={onSettingsClick}
+            >
+                <Icons.Settings />
+                <span className="sr-only">Settings</span>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
