@@ -82,9 +82,10 @@ type AddExpenseFormValues = z.infer<typeof expenseSchema>;
 interface AddExpenseDialogProps {
   group: Group;
   onExpenseAdded?: () => void;
+  trigger?: React.ReactNode;
 }
 
-export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -465,11 +466,14 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
   
   if (!userProfile) return null;
 
+  const dialogTrigger = trigger || <Button><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>;
+  const mobileTrigger = trigger || <Button className="w-full"><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>;
+
   if(isMobile) {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button className="w-full"><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>
+                {mobileTrigger}
             </SheetTrigger>
             <SheetContent side="bottom" className="glass-pane h-[95vh] flex flex-col rounded-t-2xl border-border/20 p-0">
                 <SheetHeader className="p-4 border-b">
@@ -491,7 +495,7 @@ export function AddExpenseDialog({ group, onExpenseAdded }: AddExpenseDialogProp
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>
+        {dialogTrigger}
       </DialogTrigger>
       <DialogContent className="glass-pane sm:max-w-4xl flex flex-col max-h-[90vh]">
         <DialogHeader>

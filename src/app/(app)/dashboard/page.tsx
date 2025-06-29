@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getFullName, getInitials } from '@/lib/utils';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
-import { AddExpenseDialog } from '@/components/expenses/add-expense-dialog';
+import { DashboardAddExpenseButton } from '@/components/expenses/dashboard-add-expense-button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -97,10 +97,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
                     <CreateGroupDialog buttonVariant="secondary" />
-                    {/* The AddExpenseDialog needs a group to function, so it can't be a direct quick action without a selection mechanism */}
-                    <Button variant="secondary" disabled>
-                        <Icons.Expense className="mr-2 h-4 w-4" /> Add Expense
-                    </Button>
+                    <DashboardAddExpenseButton groups={groups} />
                 </CardContent>
             </Card>
             
