@@ -30,6 +30,12 @@ import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -133,11 +139,58 @@ export default function GroupDetailPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <ScrollArea className="w-full whitespace-nowrap rounded-md">
           <TabsList className="inline-flex h-auto">
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="settlements">Settlements</TabsTrigger>
-            <TabsTrigger value="balances">Balances</TabsTrigger>
-            <TabsTrigger value="analysis">Analysis</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="expenses" className="h-9 w-9">
+                    <Icons.Expense className="h-5 w-5" />
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Expenses</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="settlements" className="h-9 w-9">
+                    <Icons.Settle className="h-5 w-5" />
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Settlements</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="balances" className="h-9 w-9">
+                    <Icons.Wallet className="h-5 w-5" />
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Balances</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="analysis" className="h-9 w-9">
+                    <Icons.Analysis className="h-5 w-5" />
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Analysis</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="history" className="h-9 w-9">
+                    <Icons.History className="h-5 w-5" />
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>History</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </TabsList>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
