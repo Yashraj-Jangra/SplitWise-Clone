@@ -36,6 +36,7 @@ import type {
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
+import { format } from 'date-fns';
 
 // --- User Functions ---
 
@@ -298,7 +299,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
 export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & { date: Date }, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
     const expenseSnap = await getDoc(expenseDocRef);
-    const oldData = expenseSnap.exists() ? expenseSnap.data() : null;
+    const oldData = expenseSnap.exists() ? expenseSnap.data() as ExpenseDocument : null;
 
     const groupDocRef = doc(db, 'groups', expenseData.groupId);
     const groupSnap = await getDoc(groupDocRef);
@@ -325,9 +326,51 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
 
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
-    const description = `${actorName} updated expense "${expenseData.description}" (amount from ${CURRENCY_SYMBOL}${oldAmount.toFixed(2)} to ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}).`;
-    await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, { expenseId, before: oldData, after: expenseData });
+    
+    let description = `${actorName} updated expense "${expenseData.description}".`;
 
+    if (oldData) {
+        const changes = [];
+        const oldDate = (oldData.date as Timestamp).toDate();
+
+        if (oldData.description !== expenseData.description) {
+            changes.push(`description from "${oldData.description}" to "${expenseData.description}"`);
+        }
+        if (oldData.amount !== expenseData.amount) {
+            changes.push(`amount from ${CURRENCY_SYMBOL}${oldData.amount.toFixed(2)} to ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}`);
+        }
+        if (oldDate.toISOString().split('T')[0] !== expenseData.date.toISOString().split('T')[0]) {
+            changes.push(`date to ${format(expenseData.date, 'PPP')}`);
+        }
+        if ((oldData.category || 'Other') !== (expenseData.category || 'Other')) {
+            changes.push(`category from "${oldData.category || 'Other'}" to "${expenseData.category || 'Other'}"`);
+        }
+        if (oldData.splitType !== expenseData.splitType) {
+             changes.push(`split method to "${expenseData.splitType}"`);
+        }
+
+        // More detailed check for payers and participants using stringify
+        const oldPayersStr = JSON.stringify(oldData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
+        const newPayersStr = JSON.stringify(expenseData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
+        if (oldPayersStr !== newPayersStr) {
+            changes.push('the payers');
+        }
+
+        const oldParticipantsStr = JSON.stringify(oldData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
+        const newParticipantsStr = JSON.stringify(expenseData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
+        if (oldParticipantsStr !== newParticipantsStr) {
+            changes.push('the participant split');
+        }
+
+        if (changes.length > 0) {
+            const uniqueChanges = [...new Set(changes)];
+            description = `${actorName} updated ${uniqueChanges.join(', ')} for expense "${oldData.description}".`;
+        } else {
+            description = `${actorName} re-saved expense "${oldData.description}" with no changes.`;
+        }
+    }
+    
+    await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, { expenseId, before: oldData, after: { ...expenseData, date: Timestamp.fromDate(expenseData.date) } });
 }
 
 export async function deleteExpense(expenseId: string, groupId: string, amount: number, actorId: string): Promise<void> {
