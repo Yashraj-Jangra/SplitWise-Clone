@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Expense, Group } from "@/types";
+import type { Expense, Group, HistoryEvent } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -22,18 +22,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { getFullName, getInitials } from '@/lib/utils';
-import { deleteExpense } from '@/lib/mock-data';
+import { deleteExpense, getHistoryForExpense } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { EditExpenseDialog } from './edit-expense-dialog';
+import { Skeleton } from '../ui/skeleton';
 
 
 interface ExpenseDetailDialogProps {
@@ -45,12 +52,43 @@ interface ExpenseDetailDialogProps {
   onActionComplete?: () => void;
 }
 
+const eventIcons: { [key: string]: React.ReactNode } = {
+  expense_created: <Icons.Add className="h-4 w-4 text-green-500" />,
+  expense_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
+  expense_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
+  expense_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
+  default: <Icons.History className="h-4 w-4 text-muted-foreground" />,
+};
+
+
 export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId, group, onActionComplete }: ExpenseDetailDialogProps) {
     const { toast } = useToast();
     const router = useRouter();
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    
+    const [expenseHistory, setExpenseHistory] = useState<HistoryEvent[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(true);
+
+    useEffect(() => {
+        if (open) {
+        async function fetchHistory() {
+            setHistoryLoading(true);
+            try {
+            const history = await getHistoryForExpense(expense.id);
+            setExpenseHistory(history);
+            } catch (error) {
+            console.error("Failed to fetch expense history:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not load expense history.' });
+            } finally {
+            setHistoryLoading(false);
+            }
+        }
+        fetchHistory();
+        }
+    }, [open, expense.id, toast]);
+
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -136,6 +174,41 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
                                     ))}
                                 </div>
                             </div>
+
+                             <Separator />
+
+                            <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="history" className="border-b-0">
+                                <AccordionTrigger>
+                                    <h3 className="text-sm font-semibold text-muted-foreground flex items-center">
+                                    <Icons.History className="mr-2 h-4 w-4" /> Expense History
+                                    </h3>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    {historyLoading ? (
+                                        <div className="space-y-3 pt-2">
+                                            {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                                        </div>
+                                    ) : expenseHistory.length > 0 ? (
+                                        <div className="space-y-3 pt-2">
+                                            {expenseHistory.map(event => (
+                                                <div key={event.id} className="flex items-center gap-3 text-xs">
+                                                     <div className="flex-shrink-0">
+                                                        {eventIcons[event.eventType] || eventIcons.default}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-muted-foreground">{event.description}</p>
+                                                        <p className="text-muted-foreground/80">{formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground text-center pt-4">No history found for this expense.</p>
+                                    )}
+                                </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                         </div>
                     </ScrollArea>
 

@@ -141,9 +141,10 @@ async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
 
 // --- Group Functions ---
 
-export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | 'totalExpenses'>): Promise<string> {
+export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | 'totalExpenses' | 'groupCreatorId'>): Promise<string> {
     const docRef = await addDoc(collection(db, 'groups'), {
         ...groupData,
+        groupCreatorId: groupData.createdById,
         totalExpenses: 0,
         createdAt: Timestamp.now(),
     });
@@ -259,7 +260,7 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>)
 
 // --- Expense Functions ---
 
-export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds'> & { date: Date }, actorId: string): Promise<string> {
+export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & { date: Date }, actorId: string): Promise<string> {
     const groupDocRef = doc(db, 'groups', expenseData.groupId);
     const groupSnap = await getDoc(groupDocRef);
 
@@ -273,6 +274,8 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
         ...expenseData,
         participantIds,
         groupMemberIds: groupData.memberIds,
+        groupCreatorId: groupData.createdById,
+        expenseCreatorId: actorId,
         date: Timestamp.fromDate(expenseData.date),
     });
 
@@ -291,7 +294,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
 }
 
 
-export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds'> & { date: Date }, actorId: string): Promise<void> {
+export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & { date: Date }, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
     const expenseSnap = await getDoc(expenseDocRef);
     const oldData = expenseSnap.exists() ? expenseSnap.data() : null;
@@ -308,6 +311,8 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
         ...expenseData,
         participantIds,
         groupMemberIds: groupData.memberIds,
+        groupCreatorId: groupData.createdById, // ensure this is present
+        expenseCreatorId: oldData?.expenseCreatorId || actorId, // preserve original creator
         date: Timestamp.fromDate(expenseData.date)
     });
 
@@ -553,17 +558,13 @@ export async function getSettlementsByGroupId(groupId: string): Promise<Settleme
 }
 
 export async function getSettlementsByUserId(userId: string): Promise<Settlement[]> {
-    const paidByQuery = query(collection(db, 'settlements'), where('paidById', '==', userId));
-    const paidToQuery = query(collection(db, 'settlements'), where('paidToId', '==', userId));
+    const settlementsRef = collection(db, 'settlements');
+    const memberQuery = query(settlementsRef, where('groupMemberIds', 'array-contains', userId)); 
 
-    const [paidBySnapshot, paidToSnapshot] = await Promise.all([
-        getDocs(paidByQuery),
-        getDocs(paidToQuery)
-    ]);
-
+    const memberSnapshot = await getDocs(memberQuery);
+    
     const settlementMap = new Map<string, SettlementDocument>();
-    paidBySnapshot.docs.forEach(doc => settlementMap.set(doc.id, doc.data() as SettlementDocument));
-    paidToSnapshot.docs.forEach(doc => settlementMap.set(doc.id, doc.data() as SettlementDocument));
+    memberSnapshot.docs.forEach(doc => settlementMap.set(doc.id, doc.data() as SettlementDocument));
 
     const allUserIds = new Set<string>();
     settlementMap.forEach(s => {
@@ -575,6 +576,11 @@ export async function getSettlementsByUserId(userId: string): Promise<Settlement
     const userMap = new Map(allUsers.map(u => [u.uid, u]));
 
     const settlements: Settlement[] = Array.from(settlementMap.entries()).map(([id, settlementData]) => {
+        // Filter out settlements not directly involving the user
+        if (settlementData.paidById !== userId && settlementData.paidToId !== userId) {
+            return null;
+        }
+        
         const paidBy = userMap.get(settlementData.paidById);
         const paidTo = userMap.get(settlementData.paidToId);
         if (!paidBy || !paidTo) return null;
@@ -760,6 +766,41 @@ export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent
 
   return historyEvents;
 }
+
+export async function getHistoryForExpense(expenseId: string): Promise<HistoryEvent[]> {
+    const user = auth.currentUser;
+    if (!user) return [];
+
+    const q = query(
+        collection(db, 'history'), 
+        where('data.expenseId', '==', expenseId),
+        orderBy('timestamp', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+
+    const historyDocs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HistoryEventDocument & { id: string }));
+    
+    const actorIds = [...new Set(historyDocs.map(h => h.actorId))];
+    const actors = await hydrateUsers(actorIds);
+    const actorMap = new Map(actors.map(u => [u.uid, u]));
+
+    const historyEvents: HistoryEvent[] = historyDocs.map(doc => {
+        // Security check: ensure the current user is part of the group associated with this history event
+        if (!doc.groupMemberIds.includes(user.uid)) {
+            return null;
+        }
+        const actor = actorMap.get(doc.actorId);
+        if (!actor) return null;
+        return {
+        ...doc,
+        timestamp: (doc.timestamp as Timestamp).toDate().toISOString(),
+        actor,
+        };
+    }).filter((h): h is HistoryEvent => h !== null);
+
+    return historyEvents;
+}
+
 
 export async function restoreExpense(historyEventId: string, actorId: string): Promise<string | null> {
     const historyDocRef = doc(db, 'history', historyEventId);
