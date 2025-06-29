@@ -826,12 +826,14 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
+            landingImageUrl: data.landingImageUrl || 'https://images.unsplash.com/photo-1518655048521-f130df041f66?q=80&w=2070&auto=format&fit=crop',
         };
     } else {
         const defaultSettings = {
             appName: DEFAULT_APP_NAME,
             logoUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
+            landingImageUrl: 'https://images.unsplash.com/photo-1518655048521-f130df041f66?q=80&w=2070&auto=format&fit=crop',
         };
         await setDoc(docRef, defaultSettings);
         return defaultSettings;

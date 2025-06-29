@@ -136,7 +136,7 @@ export default function AdminSettingsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Branding</CardTitle>
-                <CardDescription>Customize the application's name and logo.</CardDescription>
+                <CardDescription>Customize the application's name, logo, and landing page.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                  <div className="space-y-2">
@@ -155,6 +155,16 @@ export default function AdminSettingsPage() {
                             <Input id="logoUrl" value={settings.logoUrl || ''} onChange={handleLogoUrlChange} placeholder="https://example.com/logo.png" />
                          </div>
                     </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="landingImageUrl">Landing Page Background URL</Label>
+                    <Input
+                        id="landingImageUrl"
+                        value={settings.landingImageUrl || ''}
+                        onChange={(e) => { if (!settings) return; setSettings({ ...settings, landingImageUrl: e.target.value }); }}
+                        placeholder="https://example.com/background.png"
+                    />
+                    <p className="text-xs text-muted-foreground">Full-screen background image for the public home page.</p>
                 </div>
             </CardContent>
         </Card>
