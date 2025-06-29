@@ -84,7 +84,7 @@ export default function AdminSettingsPage() {
       return;
     }
     const isLogo = type === 'logo';
-    if(isLogo) setIsLogoUploading(true); else setIsCoverUploading(true);
+    if (isLogo) setIsLogoUploading(true); else setIsCoverUploading(true);
 
     try {
       const uploadPath = isLogo ? 'site' : 'default-covers';
@@ -98,9 +98,11 @@ export default function AdminSettingsPage() {
         toast({ title: 'Upload Successful', description: 'Image added to the list. Remember to save changes.' });
       }
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the image.' });
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      console.error("Upload failed:", error);
+      toast({ variant: 'destructive', title: 'Upload Failed', description: `Could not upload the image. Error: ${errorMessage}` });
     } finally {
-      if(isLogo) setIsLogoUploading(false); else setIsCoverUploading(false);
+      if (isLogo) setIsLogoUploading(false); else setIsCoverUploading(false);
     }
   };
 
@@ -117,7 +119,9 @@ export default function AdminSettingsPage() {
       setCustomUploads(prev => [{ name: file.name, url: downloadURL }, ...prev]);
       toast({ title: 'Upload Successful', description: 'Custom image uploaded to the CDN.' });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the image.' });
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      console.error("Upload failed:", error);
+      toast({ variant: 'destructive', title: 'Upload Failed', description: `Could not upload the image. Error: ${errorMessage}` });
     } finally {
       setIsCustomUploading(false);
     }

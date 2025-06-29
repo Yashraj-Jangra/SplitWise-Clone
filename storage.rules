@@ -1,0 +1,21 @@
+
+rules_version = '2';
+
+// Set the service to cloud.storage
+service firebase.storage {
+  // Allow files to be served from any path in the bucket
+  match /b/{bucket}/o {
+    // Allow public read access to all files.
+    // This allows images to be displayed in the app without authentication.
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Allow write access (uploads, updates, deletes) only to authenticated users.
+    // For more security, you could restrict this further, for example:
+    // allow write: if request.auth != null && request.resource.size < 5 * 1024 * 1024;
+    match /{allPaths=**} {
+      allow write: if request.auth != null;
+    }
+  }
+}
