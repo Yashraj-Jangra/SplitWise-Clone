@@ -23,12 +23,20 @@ interface GroupAnalysisChartsProps {
   members: UserProfile[];
 }
 
-const CHART_COLORS = [
+const MEMBER_CHART_COLORS = [
   'hsl(var(--chart-1))',
   'hsl(var(--chart-2))',
   'hsl(var(--chart-3))',
   'hsl(var(--chart-4))',
   'hsl(var(--chart-5))',
+];
+
+const CATEGORY_CHART_COLORS = [
+  'hsl(var(--chart-6))',
+  'hsl(var(--chart-7))',
+  'hsl(var(--chart-8))',
+  'hsl(var(--chart-9))',
+  'hsl(var(--chart-10))',
 ];
 
 export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsProps) {
@@ -143,7 +151,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     return members.reduce((acc, member, index) => {
         acc[member.uid] = {
             label: getFullName(member.firstName, member.lastName),
-            color: CHART_COLORS[index % CHART_COLORS.length]
+            color: MEMBER_CHART_COLORS[index % MEMBER_CHART_COLORS.length]
         };
         return acc;
     }, {} as ChartConfig);
@@ -290,7 +298,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 />
                  <Bar dataKey="total" radius={4}>
                     {totalShareByMember.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={MEMBER_CHART_COLORS[index % MEMBER_CHART_COLORS.length]} />
                     ))}
                 </Bar>
               </BarChart>
@@ -311,7 +319,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                     <Bar dataKey="total" radius={4}>
                         {expensesByCategory.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
                         ))}
                     </Bar>
                 </BarChart>
