@@ -102,20 +102,32 @@ export default function GroupDetailPage() {
   useEffect(() => {
     // Handles scrolling to and highlighting an expense when navigated from history
     if (activeTab === 'expenses' && targetExpenseId) {
-      const element = document.getElementById(`expense-${targetExpenseId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add(
-          'bg-primary/20',
-          'transition-all',
-          'duration-1000',
-          'rounded-lg'
-        );
-        setTimeout(() => {
-          element.classList.remove('bg-primary/20', 'rounded-lg');
-        }, 2000);
-      }
-      setTargetExpenseId(null);
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`expense-${targetExpenseId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+          const highlightClass = 'bg-primary/20';
+          
+          // Blink effect
+          const blink = (count: number) => {
+            if (count === 0) return;
+            
+            element.classList.add(highlightClass);
+            setTimeout(() => {
+              element.classList.remove(highlightClass);
+              if(count > 1) {
+                setTimeout(() => blink(count - 1), 300); // Wait before next blink
+              }
+            }, 300); // Duration of blink
+          };
+          
+          blink(2); // Blink twice
+        }
+        setTargetExpenseId(null);
+      }, 100); // Delay to ensure element is in DOM
+
+      return () => clearTimeout(timer);
     }
   }, [activeTab, targetExpenseId]);
 
