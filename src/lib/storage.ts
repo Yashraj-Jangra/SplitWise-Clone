@@ -4,7 +4,7 @@ import { storage } from "./firebase";
 import { v4 as uuidv4 } from "uuid";
 
 /**
- * Uploads a file to a specified path in Firebase Storage.
+ * Uploads a file to a specified path in the image CDN (Firebase Storage).
  * @param file The file to upload.
  * @param path The path in storage to upload the file to (e.g., 'avatars/userId').
  * @returns The public download URL of the uploaded file.

@@ -21,10 +21,17 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isLogoUploading, setIsLogoUploading] = useState(false);
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
+  const [isCustomUploading, setIsCustomUploading] = useState(false);
+
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [customUploads, setCustomUploads] = useState<{name: string, url: string}[]>([]);
+  
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const customFileInputRef = useRef<HTMLInputElement>(null);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,12 +83,14 @@ export default function AdminSettingsPage() {
       toast({ variant: 'destructive', title: 'File too large', description: 'Please select an image smaller than 5MB.' });
       return;
     }
-    setIsUploading(true);
+    const isLogo = type === 'logo';
+    if(isLogo) setIsLogoUploading(true); else setIsCoverUploading(true);
+
     try {
-      const uploadPath = type === 'logo' ? 'site' : 'default-covers';
+      const uploadPath = isLogo ? 'site' : 'default-covers';
       const downloadURL = await uploadFile(file, uploadPath);
       
-      if (type === 'logo') {
+      if (isLogo) {
         setSettings({ ...settings, logoUrl: downloadURL });
         toast({ title: 'Upload Successful', description: 'Logo updated. Remember to save changes.' });
       } else {
@@ -91,8 +100,32 @@ export default function AdminSettingsPage() {
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the image.' });
     } finally {
-      setIsUploading(false);
+      if(isLogo) setIsLogoUploading(false); else setIsCoverUploading(false);
     }
+  };
+
+  const handleCustomUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    if (file.size > 1024 * 1024 * 5) { // 5MB limit
+      toast({ variant: 'destructive', title: 'File too large', description: 'Please select an image smaller than 5MB.' });
+      return;
+    }
+    setIsCustomUploading(true);
+    try {
+      const downloadURL = await uploadFile(file, 'custom-uploads');
+      setCustomUploads(prev => [{ name: file.name, url: downloadURL }, ...prev]);
+      toast({ title: 'Upload Successful', description: 'Custom image uploaded to the CDN.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the image.' });
+    } finally {
+      setIsCustomUploading(false);
+    }
+  };
+  
+  const handleCopyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({ title: 'URL Copied', description: 'Image URL has been copied to your clipboard.' });
   };
 
   const handleAppNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,9 +208,9 @@ export default function AdminSettingsPage() {
                             <AvatarFallback>{getInitials(settings.appName)}</AvatarFallback>
                         </Avatar>
                          <input type="file" ref={logoFileInputRef} onChange={(e) => handleFileUpload(e, 'logo')} className="hidden" accept="image/*" />
-                        <Button variant="outline" onClick={() => logoFileInputRef.current?.click()} disabled={isUploading}>
-                            {isUploading ? <Icons.AppLogo className="animate-spin mr-2" /> : <Icons.Upload className="mr-2" />}
-                            {isUploading ? 'Uploading...' : 'Upload Logo'}
+                        <Button variant="outline" onClick={() => logoFileInputRef.current?.click()} disabled={isLogoUploading}>
+                            {isLogoUploading ? <Icons.AppLogo className="animate-spin mr-2" /> : <Icons.Upload className="mr-2" />}
+                            {isLogoUploading ? 'Uploading...' : 'Upload Logo'}
                         </Button>
                     </div>
                 </div>
@@ -187,7 +220,7 @@ export default function AdminSettingsPage() {
         <Card>
             <CardHeader>
             <CardTitle>Default Group Cover Images</CardTitle>
-            <CardDescription>These images are used as default covers when creating new groups.</CardDescription>
+            <CardDescription>These images are used as default covers when creating new groups. You can paste URLs from the Image CDN management section below.</CardDescription>
             </CardHeader>
             <CardContent>
                  <div className="space-y-6">
@@ -229,14 +262,47 @@ export default function AdminSettingsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                         <input type="file" ref={coverFileInputRef} onChange={(e) => handleFileUpload(e, 'cover')} className="hidden" accept="image/*" />
-                        <Button variant="outline" className="w-full" onClick={() => coverFileInputRef.current?.click()} disabled={isUploading}>
-                            {isUploading ? <Icons.AppLogo className="animate-spin mr-2" /> : <Icons.Upload className="mr-2" />}
-                            {isUploading ? 'Uploading...' : 'Upload Image'}
+                        <Button variant="outline" className="w-full" onClick={() => coverFileInputRef.current?.click()} disabled={isCoverUploading}>
+                            {isCoverUploading ? <Icons.AppLogo className="animate-spin mr-2" /> : <Icons.Upload className="mr-2" />}
+                            {isCoverUploading ? 'Uploading...' : 'Upload Image'}
                         </Button>
                         </div>
                     </CardContent>
                     </Card>
                 </div>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Image CDN Management</CardTitle>
+                <CardDescription>Upload custom images to the CDN and get a shareable URL.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <input type="file" ref={customFileInputRef} onChange={handleCustomUpload} className="hidden" accept="image/*" />
+                <Button variant="outline" className="w-full" onClick={() => customFileInputRef.current?.click()} disabled={isCustomUploading}>
+                    {isCustomUploading ? <Icons.AppLogo className="animate-spin mr-2" /> : <Icons.Upload className="mr-2" />}
+                    {isCustomUploading ? 'Uploading...' : 'Upload Custom Image'}
+                </Button>
+
+                {customUploads.length > 0 && (
+                    <div className="space-y-3 pt-4">
+                        <h4 className="font-medium">Uploaded Images (this session)</h4>
+                        <div className="space-y-2 rounded-md border p-3 bg-muted/30 max-h-64 overflow-y-auto">
+                            {customUploads.map((upload, index) => (
+                                <div key={index} className="flex items-center gap-3">
+                                    <Image src={upload.url} alt={upload.name} width={48} height={48} className="rounded aspect-square object-cover border" />
+                                    <div className="relative flex-1">
+                                        <Input readOnly value={upload.url} className="pr-10 bg-background" />
+                                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => handleCopyUrl(upload.url)}>
+                                            <Icons.Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
       </>
@@ -261,4 +327,3 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
-
