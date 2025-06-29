@@ -139,7 +139,7 @@ export function GroupSettingsTab({ group, onActionComplete }: GroupSettingsTabPr
         </Form>
       </Card>
       
-      <GroupMembers group={group} onActionComplete={onActionComplete} />
+      <GroupMembers members={group.members} group={group} onActionComplete={onActionComplete} />
       
       {isCreator && (
         <Card className="border-destructive">
