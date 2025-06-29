@@ -340,7 +340,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
     }
 
-    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds'> & { date: Date } = {
+    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds'> & { date: Date } = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
@@ -640,7 +640,3 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
       </div>
   )
 }
-
-    
-
-    

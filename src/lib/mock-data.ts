@@ -262,7 +262,7 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>)
 
 // --- Expense Functions ---
 
-export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & { date: Date }, actorId: string): Promise<string> {
+export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & { date: Date }, actorId: string): Promise<string> {
     const groupDocRef = doc(db, 'groups', expenseData.groupId);
     const groupSnap = await getDoc(groupDocRef);
 
@@ -272,9 +272,11 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
     const groupData = groupSnap.data() as GroupDocument;
     
     const participantIds = expenseData.participants.map(p => p.userId);
+    const payerIds = expenseData.payers.map(p => p.userId);
     const docRef = await addDoc(collection(db, 'expenses'), {
         ...expenseData,
         participantIds,
+        payerIds,
         groupMemberIds: groupData.memberIds,
         groupCreatorId: groupData.createdById,
         expenseCreatorId: actorId,
@@ -296,7 +298,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
 }
 
 
-export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & { date: Date }, actorId: string): Promise<void> {
+export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds'> & { date: Date }, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
     const expenseSnap = await getDoc(expenseDocRef);
     const oldData = expenseSnap.exists() ? expenseSnap.data() as ExpenseDocument : null;
@@ -309,9 +311,11 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
     const groupData = groupSnap.data() as GroupDocument;
 
     const participantIds = expenseData.participants.map(p => p.userId);
+    const payerIds = expenseData.payers.map(p => p.userId);
     await updateDoc(expenseDocRef, {
         ...expenseData,
         participantIds,
+        payerIds,
         groupMemberIds: groupData.memberIds,
         groupCreatorId: groupData.createdById, 
         expenseCreatorId: oldData?.expenseCreatorId || actorId, 
@@ -390,7 +394,6 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
 
 export async function deleteExpense(expenseId: string, groupId: string, amount: number, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
-    const groupDocRef = doc(db, 'groups', groupId);
     const expenseSnap = await getDoc(expenseDocRef);
 
     if (!expenseSnap.exists()) return;
@@ -398,6 +401,7 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
 
     const batch = writeBatch(db);
 
+    const groupDocRef = doc(db, 'groups', groupId);
     const groupSnap = await getDoc(groupDocRef);
     if (groupSnap.exists()) {
         const currentTotal = groupSnap.data().totalExpenses || 0;
@@ -412,6 +416,12 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
     const description = `${actorName} deleted expense "${deletedExpenseData.description}" (was ${CURRENCY_SYMBOL}${amount.toFixed(2)}).`;
+
+    // Ensure payerIds exists for restoration
+    if (!deletedExpenseData.payerIds && deletedExpenseData.payers) {
+        deletedExpenseData.payerIds = deletedExpenseData.payers.map((p: ExpensePayer) => p.user.uid);
+    }
+    
     await logHistoryEvent(groupId, 'expense_deleted', actorId, description, { ...deletedExpenseData, expenseId: expenseId });
 }
 
@@ -464,12 +474,18 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
 
 export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
   const expensesRef = collection(db, 'expenses');
-  const memberQuery = query(expensesRef, where('participantIds', 'array-contains', userId)); 
   
-  const memberSnapshot = await getDocs(memberQuery);
+  const participantQuery = query(expensesRef, where('participantIds', 'array-contains', userId)); 
+  const payerQuery = query(expensesRef, where('payerIds', 'array-contains', userId)); 
+  
+  const [participantSnapshot, payerSnapshot] = await Promise.all([
+    getDocs(participantQuery),
+    getDocs(payerQuery),
+  ]);
   
   const expenseMap = new Map<string, ExpenseDocument>();
-  memberSnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
+  participantSnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
+  payerSnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
 
   const expenses: Expense[] = await Promise.all(
     Array.from(expenseMap.entries()).map(async ([id, expenseData]) => {

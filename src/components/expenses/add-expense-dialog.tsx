@@ -305,7 +305,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         }
     }
 
-    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & {date: Date} = {
+    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & {date: Date} = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
@@ -314,8 +314,6 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       splitType: values.splitType,
       participants: finalParticipants,
       category: values.category,
-      expenseCreatorId: userProfile.uid,
-      groupCreatorId: group.createdById,
     };
     
     try {
@@ -588,7 +586,3 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
       </div>
   )
 }
-
-    
-
-    

@@ -44,6 +44,7 @@ export interface ExpenseDocument {
   description: string;
   amount: number;
   payers: ExpensePayerDocument[];
+  payerIds: string[]; // For querying
   date: Timestamp;
   splitType: "equally" | "unequally" | "by_shares" | "by_percentage";
   participants: ExpenseParticipantDocument[];
