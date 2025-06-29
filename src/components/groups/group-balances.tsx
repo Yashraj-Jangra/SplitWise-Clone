@@ -14,7 +14,7 @@ import { AddSettlementDialog } from "@/components/settlements/add-settlement-dia
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getFullName, getInitials } from "@/lib/utils";
-
+import { cn } from "@/lib/utils";
 
 interface GroupBalancesProps {
   balances: Balance[];
@@ -25,9 +25,35 @@ interface GroupBalancesProps {
 export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalancesProps) {
   const [isSimplified, setIsSimplified] = useState(false);
 
-  const membersWhoOwe = balances.filter(b => b.netBalance < 0);
-  const membersOwed = balances.filter(b => b.netBalance > 0);
-  const everythingIsSettled = membersWhoOwe.length === 0 && membersOwed.length === 0;
+  const everythingIsSettled = useMemo(() => balances.every(b => Math.abs(b.netBalance) < 0.01), [balances]);
+
+  const sortedBalances = useMemo(() => {
+    return [...balances].sort((a, b) => {
+        const getStatus = (balance: number) => {
+            if (balance > 0.01) return 0; // Owed
+            if (balance < -0.01) return 2; // Owes
+            return 1; // Settled
+        };
+
+        const statusA = getStatus(a.netBalance);
+        const statusB = getStatus(b.netBalance);
+        
+        if (statusA !== statusB) {
+            return statusA - statusB;
+        }
+
+        // Within the same status, sort by amount
+        if (statusA === 0) { // Owed
+            return b.netBalance - a.netBalance; // largest owed first
+        }
+        if (statusA === 2) { // Owes
+            return a.netBalance - b.netBalance; // largest debt first
+        }
+
+        return getFullName(a.user.firstName, a.user.lastName).localeCompare(getFullName(b.user.firstName, b.user.lastName));
+    });
+  }, [balances]);
+
 
   const simplifiedSettlements = useMemo(() => {
     if (isSimplified && !everythingIsSettled) {
@@ -47,7 +73,6 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
           <Icons.ShieldCheck className="h-12 w-12 mx-auto mb-2 text-green-500" />
           <p className="text-lg font-semibold">All debts are settled!</p>
           <p>Everyone is balanced in this group.</p>
-          <p className="text-xs mt-4">Visit the 'Analysis' tab to see spending charts.</p>
         </div>
       );
     }
@@ -84,45 +109,34 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
 
     // Default detailed view
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h4 className="font-semibold mb-2 text-red-600">Members Who Owe</h4>
-          <div className="space-y-2">
-            {membersWhoOwe.map(balance => (
-              <div key={balance.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={balance.user.avatarUrl} />
-                    <AvatarFallback>{getInitials(balance.user.firstName, balance.user.lastName)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{getFullName(balance.user.firstName, balance.user.lastName)}</span>
-                </div>
-                <span className="text-sm font-semibold text-red-600">
-                  Owes {CURRENCY_SYMBOL}{Math.abs(balance.netBalance).toFixed(2)}
-                </span>
+      <div className="space-y-2">
+        {sortedBalances.map(balance => {
+          const isOwed = balance.netBalance > 0.01;
+          const isDebtor = balance.netBalance < -0.01;
+          const isSettled = !isOwed && !isDebtor;
+
+          return (
+            <div key={balance.user.uid} className="flex items-center justify-between p-3 border-b border-border/50 last:border-b-0">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={balance.user.avatarUrl} alt={getFullName(balance.user.firstName, balance.user.lastName)} />
+                  <AvatarFallback>{getInitials(balance.user.firstName, balance.user.lastName)}</AvatarFallback>
+                </Avatar>
+                <span className="font-medium">{getFullName(balance.user.firstName, balance.user.lastName)}</span>
               </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <h4 className="font-semibold mb-2 text-green-600">Members Who Are Owed</h4>
-          <div className="space-y-2">
-            {membersOwed.map(balance => (
-              <div key={balance.user.uid} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={balance.user.avatarUrl} />
-                    <AvatarFallback>{getInitials(balance.user.firstName, balance.user.lastName)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm">{getFullName(balance.user.firstName, balance.user.lastName)}</span>
-                </div>
-                <span className="text-sm font-semibold text-green-600">
-                  Is Owed {CURRENCY_SYMBOL}{balance.netBalance.toFixed(2)}
-                </span>
+              <div className={cn(
+                  "text-right font-semibold",
+                  isOwed && "text-green-500",
+                  isDebtor && "text-red-500",
+                  isSettled && "text-muted-foreground"
+              )}>
+                {isOwed && `Is Owed ${CURRENCY_SYMBOL}${balance.netBalance.toFixed(2)}`}
+                {isDebtor && `Owes ${CURRENCY_SYMBOL}${Math.abs(balance.netBalance).toFixed(2)}`}
+                {isSettled && "Settled Up"}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          );
+        })}
       </div>
     );
   };
