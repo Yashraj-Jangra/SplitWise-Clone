@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 <CardHeader>
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-3">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <CreateGroupDialog buttonVariant="secondary" />
                     <DashboardAddExpenseButton groups={groups} />
                 </CardContent>
@@ -109,9 +109,24 @@ export default function DashboardPage() {
                     {groups.length > 0 ? (
                         <div className="space-y-3">
                             {groups.slice(0, 3).map(group => (
-                                <Link href={`/groups/${group.id}`} key={group.id} className="block p-3 rounded-md bg-muted/30 hover:bg-muted/60 transition-colors">
-                                    <h3 className="font-semibold truncate">{group.name}</h3>
-                                    <p className="text-sm text-muted-foreground">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)} total expenses</p>
+                                <Link href={`/groups/${group.id}`} key={group.id} className="block p-4 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors">
+                                    <div className="flex justify-between items-start">
+                                        <h3 className="font-semibold truncate pr-4">{group.name}</h3>
+                                        <p className="font-bold text-sm shrink-0">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</p>
+                                    </div>
+                                    <div className="flex -space-x-2 overflow-hidden mt-3">
+                                        {group.members.slice(0, 5).map(member => (
+                                            <Avatar key={member.uid} className="inline-block h-6 w-6 rounded-full border border-background">
+                                                <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
+                                                <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                                            </Avatar>
+                                        ))}
+                                        {group.members.length > 5 && (
+                                            <Avatar className="h-6 w-6 rounded-full border border-background bg-secondary text-secondary-foreground">
+                                                <AvatarFallback className="text-xs">+{group.members.length - 5}</AvatarFallback>
+                                            </Avatar>
+                                        )}
+                                    </div>
                                 </Link>
                             ))}
                         </div>
