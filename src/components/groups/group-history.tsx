@@ -25,6 +25,12 @@ import {
 import { getFullName } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface GroupHistoryTabProps {
   groupId: string;
@@ -77,6 +83,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
     
     const canRestore = event.eventType === 'expense_deleted' && !event.restored;
     const canDelete = userProfile?.role === 'admin';
+    const isUpdateWithDetails = event.eventType === 'expense_updated' && event.data?.changes && event.data.changes.length > 0;
 
     let viewableExpenseId: string | null = null;
     if ((event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId) {
@@ -85,61 +92,90 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
         viewableExpenseId = event.data.newExpenseId;
     }
     
-    // If the creation/update event is for a deleted expense, don't allow viewing it.
     if (isDeleted) {
         viewableExpenseId = null;
     }
 
     return (
         <TooltipProvider>
-            <div className="flex items-center gap-4 p-3 hover:bg-muted/50 transition-colors">
-                <div className="flex-shrink-0">
-                    {eventIcons[event.eventType] || eventIcons.default}
-                </div>
-                <div className="flex-1 grid gap-1">
-                    <p className={cn("text-sm", isDeleted && "line-through text-muted-foreground/80")}>{event.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                     {viewableExpenseId && (
-                         <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onViewExpense(viewableExpenseId!)}>
-                                    <Icons.ArrowRight className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>View Expense</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
-                    {canRestore && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleRestore} disabled={isRestoring}>
-                                    {isRestoring ? <Icons.AppLogo className="h-4 w-4 animate-spin"/> : <Icons.Restore className="h-4 w-4" />}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Restore Expense</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
-                    {canDelete && (
-                         <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setShowDeleteConfirm(true)} disabled={isDeleting}>
-                                    <Icons.Delete className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Delete History Event</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
-                </div>
+            <div className="p-3 hover:bg-muted/50 transition-colors">
+                 <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0">
+                        {eventIcons[event.eventType] || eventIcons.default}
+                    </div>
+                    <div className="flex-1 grid gap-1">
+                        <p className={cn("text-sm", isDeleted && "line-through text-muted-foreground/80")}>{event.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {viewableExpenseId && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onViewExpense(viewableExpenseId!)}>
+                                        <Icons.ArrowRight className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>View Expense</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                        {canRestore && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleRestore} disabled={isRestoring}>
+                                        {isRestoring ? <Icons.AppLogo className="h-4 w-4 animate-spin"/> : <Icons.Restore className="h-4 w-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Restore Expense</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                        {canDelete && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setShowDeleteConfirm(true)} disabled={isDeleting}>
+                                        <Icons.Delete className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Delete History Event</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                    </div>
+                 </div>
+
+                {isUpdateWithDetails && (
+                    <Accordion type="single" collapsible className="w-full mt-1">
+                        <AccordionItem value="item-1" className="border-b-0">
+                            <AccordionTrigger className="text-xs text-muted-foreground hover:no-underline justify-start gap-1 p-0 h-auto font-normal [&[data-state=open]>svg]:rotate-180">
+                                <span>Show details</span>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-2 pl-6 text-xs">
+                                <div className="space-y-2">
+                                    {event.data.changes.map((change: any, index: number) => (
+                                        <div key={index}>
+                                            <span className="font-semibold text-foreground">{change.field}</span>
+                                            {change.to ? (
+                                                <div className="text-muted-foreground flex items-center gap-2">
+                                                    <span className="text-red-500 line-through">{change.from}</span>
+                                                    <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
+                                                    <span className="text-green-500">{change.to}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="text-muted-foreground">{change.from}</div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                )}
             </div>
             
             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
@@ -196,7 +232,6 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
 
   const deletedExpenseIds = useMemo(() => {
     const deletedIds = new Set<string>();
-    // Collect all deleted expense IDs from 'expense_deleted' events that have NOT been restored.
     history.forEach(event => {
       if (event.eventType === 'expense_deleted' && event.data?.expenseId && !event.restored) {
         deletedIds.add(event.data.expenseId);
@@ -230,7 +265,7 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
       </CardHeader>
       <CardContent className="p-6 pt-0">
         {history.length > 0 ? (
-          <ScrollArea className="h-[45vh] -mx-6 pr-6">
+          <ScrollArea className="h-[45vh] -mx-6">
             <div className="divide-y divide-border">
                 {history.map(event => {
                     const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);

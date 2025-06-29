@@ -313,8 +313,8 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
         ...expenseData,
         participantIds,
         groupMemberIds: groupData.memberIds,
-        groupCreatorId: groupData.createdById, // ensure this is present
-        expenseCreatorId: oldData?.expenseCreatorId || actorId, // preserve original creator
+        groupCreatorId: groupData.createdById, 
+        expenseCreatorId: oldData?.expenseCreatorId || actorId, 
         date: Timestamp.fromDate(expenseData.date)
     });
 
@@ -327,50 +327,65 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
     
-    let description = `${actorName} updated expense "${expenseData.description}".`;
+    const changes: { field: string; from: any; to: any }[] = [];
+    const changeSummaries: string[] = [];
 
     if (oldData) {
-        const changes = [];
         const oldDate = (oldData.date as Timestamp).toDate();
 
         if (oldData.description !== expenseData.description) {
-            changes.push(`description from "${oldData.description}" to "${expenseData.description}"`);
+            changes.push({ field: 'Description', from: `"${oldData.description}"`, to: `"${expenseData.description}"` });
+            changeSummaries.push('description');
         }
         if (oldData.amount !== expenseData.amount) {
-            changes.push(`amount from ${CURRENCY_SYMBOL}${oldData.amount.toFixed(2)} to ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}`);
+            changes.push({ field: 'Amount', from: `${CURRENCY_SYMBOL}${oldData.amount.toFixed(2)}`, to: `${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}` });
+            changeSummaries.push('amount');
         }
         if (oldDate.toISOString().split('T')[0] !== expenseData.date.toISOString().split('T')[0]) {
-            changes.push(`date to ${format(expenseData.date, 'PPP')}`);
+            changes.push({ field: 'Date', from: format(oldDate, 'PPP'), to: format(expenseData.date, 'PPP') });
+            changeSummaries.push('date');
         }
         if ((oldData.category || 'Other') !== (expenseData.category || 'Other')) {
-            changes.push(`category from "${oldData.category || 'Other'}" to "${expenseData.category || 'Other'}"`);
+            changes.push({ field: 'Category', from: `"${oldData.category || 'Other'}"`, to: `"${expenseData.category || 'Other'}"` });
+            changeSummaries.push('category');
         }
         if (oldData.splitType !== expenseData.splitType) {
-             changes.push(`split method to "${expenseData.splitType}"`);
+             changes.push({ field: 'Split Method', from: `"${oldData.splitType}"`, to: `"${expenseData.splitType}"` });
+             changeSummaries.push('split method');
         }
 
-        // More detailed check for payers and participants using stringify
         const oldPayersStr = JSON.stringify(oldData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
         const newPayersStr = JSON.stringify(expenseData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
         if (oldPayersStr !== newPayersStr) {
-            changes.push('the payers');
+            changes.push({ field: 'Payers', from: 'List of payers was updated.', to: '' });
+            changeSummaries.push('payers');
         }
-
+        
         const oldParticipantsStr = JSON.stringify(oldData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
         const newParticipantsStr = JSON.stringify(expenseData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
         if (oldParticipantsStr !== newParticipantsStr) {
-            changes.push('the participant split');
-        }
-
-        if (changes.length > 0) {
-            const uniqueChanges = [...new Set(changes)];
-            description = `${actorName} updated ${uniqueChanges.join(', ')} for expense "${oldData.description}".`;
-        } else {
-            description = `${actorName} re-saved expense "${oldData.description}" with no changes.`;
+            changes.push({ field: 'Split', from: 'Participant split was updated.', to: '' });
+            changeSummaries.push('participant split');
         }
     }
+
+    let description: string;
+    if (changeSummaries.length > 0) {
+        const uniqueSummaries = [...new Set(changeSummaries)];
+        const summaryText = uniqueSummaries.length > 2
+            ? `${uniqueSummaries.slice(0, 2).join(', ')} and other details`
+            : uniqueSummaries.join(' and ');
+        description = `${actorName} updated the ${summaryText} for expense "${oldData?.description}".`;
+    } else {
+        description = `${actorName} re-saved expense "${oldData?.description}" with no changes.`;
+    }
     
-    await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, { expenseId, before: oldData, after: { ...expenseData, date: Timestamp.fromDate(expenseData.date) } });
+    await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
+        expenseId,
+        changes,
+        before: oldData,
+        after: { ...expenseData, date: Timestamp.fromDate(expenseData.date) }
+    });
 }
 
 export async function deleteExpense(expenseId: string, groupId: string, amount: number, actorId: string): Promise<void> {
@@ -813,8 +828,8 @@ export async function getHistoryForExpense(expenseId: string, groupId: string): 
     const q = query(
         collection(db, 'history'), 
         where('groupId', '==', groupId),
-        where('data.expenseId', '==', expenseId),
         where('groupMemberIds', 'array-contains', user.uid),
+        where('data.expenseId', '==', expenseId),
         orderBy('timestamp', 'desc')
     );
     const querySnapshot = await getDocs(q);
