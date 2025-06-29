@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GroupDetailHeader } from '@/components/groups/group-detail-header';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
-import { GroupMembers } from '@/components/groups/group-members';
 import { GroupBalances } from '@/components/groups/group-balances';
 import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -30,6 +29,7 @@ import type { Group, Expense, Settlement, Balance } from '@/types';
 import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
+import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -134,9 +134,9 @@ export default function GroupDetailPage() {
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
             <TabsTrigger value="settlements">Settlements</TabsTrigger>
             <TabsTrigger value="balances">Balances</TabsTrigger>
-            <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="analysis">Analysis</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
@@ -149,9 +149,9 @@ export default function GroupDetailPage() {
                 All expenses recorded in this group.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent className="p-0">
               {expenses.length > 0 ? (
-                <ScrollArea className="h-[45vh] -mx-6 pr-6">
+                <ScrollArea className="h-[45vh]">
                   <div className="divide-y divide-border/50">
                     {expenses.map((expense) => (
                       <ExpenseListItem
@@ -188,9 +188,9 @@ export default function GroupDetailPage() {
                 onSettlementAdded={loadGroupData}
               />
             </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <CardContent className="p-0">
               {settlements.length > 0 ? (
-                <ScrollArea className="h-[45vh] -mx-6 pr-6">
+                <ScrollArea className="h-[45vh]">
                   <div className="divide-y divide-border/50">
                     {settlements.map((settlement) => (
                       <SettlementListItem
@@ -219,14 +219,6 @@ export default function GroupDetailPage() {
           />
         </TabsContent>
 
-        <TabsContent value="members" className="mt-4">
-          <GroupMembers
-            members={group.members}
-            group={group}
-            onActionComplete={loadGroupData}
-          />
-        </TabsContent>
-
         <TabsContent value="analysis" className="mt-4">
           <GroupAnalysisCharts expenses={expenses} members={group.members} />
         </TabsContent>
@@ -237,6 +229,10 @@ export default function GroupDetailPage() {
             onActionComplete={loadGroupData}
             onViewExpense={handleViewExpense}
           />
+        </TabsContent>
+
+         <TabsContent value="settings" className="mt-4">
+            <GroupSettingsTab group={group} onActionComplete={loadGroupData} />
         </TabsContent>
       </Tabs>
     </div>

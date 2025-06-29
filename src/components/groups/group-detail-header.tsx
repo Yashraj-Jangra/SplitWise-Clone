@@ -6,24 +6,12 @@ import Image from "next/image";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Popover,
   PopoverContent,
@@ -31,9 +19,7 @@ import {
 } from "@/components/ui/popover";
 
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { archiveGroupAction } from "@/lib/actions/group";
-import { updateGroup, getSiteSettings, getGroupBalances } from "@/lib/mock-data";
+import { updateGroup, getSiteSettings } from "@/lib/mock-data";
 import { uploadFile } from "@/lib/storage";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -60,24 +46,12 @@ function StatCard({ icon, label, value, valueClassName }: { icon: React.ReactNod
 }
 
 export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete }: GroupDetailHeaderProps) {
-  const router = useRouter();
   const { toast } = useToast();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [coversLoading, setCoversLoading] = useState(true);
-  
-  const [balances, setBalances] = useState<any[]>([]);
-  useEffect(() => {
-    async function fetchBalances() {
-      const b = await getGroupBalances(group.id);
-      setBalances(b);
-    }
-    fetchBalances();
-  }, [group.id]);
 
   useEffect(() => {
     async function loadCovers() {
@@ -90,23 +64,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
     }
     loadCovers();
   }, [isPopoverOpen]);
-
-  const isCreator = user.uid === group.createdById;
-  const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
-
-  const handleArchive = async () => {
-    setIsDeleting(true);
-    const result = await archiveGroupAction(group.id, user.uid);
-    if (result.success) {
-      toast({ title: "Group Archived", description: `The group "${group.name}" has been archived and is now read-only.`});
-      router.push('/groups');
-      router.refresh();
-    } else {
-      toast({ title: "Error", description: result.error, variant: "destructive"});
-    }
-    setIsDeleting(false);
-    setIsDeleteDialogOpen(false);
-  }
 
   const handleCoverChange = async (imageUrl: string) => {
     try {
@@ -141,31 +98,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
         setIsUploading(false);
     }
   };
-
-
-  const archiveButtonMenuItem = (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="w-full">
-            <DropdownMenuItem
-              onClick={() => setIsDeleteDialogOpen(true)}
-              disabled={!isSettled || isDeleting}
-              className="text-red-600 focus:text-red-600"
-            >
-              <Icons.Delete className="mr-2 h-4 w-4" />
-              Archive Group
-            </DropdownMenuItem>
-          </div>
-        </TooltipTrigger>
-        {!isSettled && (
-          <TooltipContent>
-            <p>You can only archive a group once all debts are settled.</p>
-          </TooltipContent>
-        )}
-      </Tooltip>
-    </TooltipProvider>
-  );
 
   return (
     <>
@@ -234,12 +166,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
                                     </Button>
                                 </PopoverContent>
                             </Popover>
-                            {isCreator && (
-                                <>
-                                <DropdownMenuSeparator />
-                                {archiveButtonMenuItem}
-                                </>
-                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -266,24 +192,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
             </div>
         </div>
       </div>
-
-       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-              <AlertDialogHeader>
-                  <AlertDialogTitle>Archive this group?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                      Archiving this group will remove all members' access, including your own. The group and its history will be preserved for administrative review but will not be accessible to members. Are you sure?
-                  </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleArchive} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                      {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
-                      Yes, archive it
-                  </AlertDialogAction>
-              </AlertDialogFooter>
-          </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
