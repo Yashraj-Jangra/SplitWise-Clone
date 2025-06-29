@@ -20,7 +20,8 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newCoverImageUrl, setNewCoverImageUrl] = useState('');
+  const [newLandingImageUrl, setNewLandingImageUrl] = useState('');
 
   const { toast } = useToast();
 
@@ -59,9 +60,36 @@ export default function AdminSettingsPage() {
 
   const handleAddCoverImage = () => {
     if (!settings) return;
-    if (newImageUrl && !settings.coverImages.includes(newImageUrl)) {
-      setSettings({ ...settings, coverImages: [...settings.coverImages, newImageUrl] });
-      setNewImageUrl('');
+    if (newCoverImageUrl && !settings.coverImages.includes(newCoverImageUrl)) {
+      setSettings({ ...settings, coverImages: [...settings.coverImages, newCoverImageUrl] });
+      setNewCoverImageUrl('');
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid URL',
+        description: 'Please enter a valid and unique image URL.',
+      });
+    }
+  };
+  
+  const handleLandingImageChange = (index: number, value: string) => {
+    if (!settings) return;
+    const newImages = [...settings.landingImages];
+    newImages[index] = value;
+    setSettings({ ...settings, landingImages: newImages });
+  };
+  
+  const handleRemoveLandingImage = (index: number) => {
+    if (!settings) return;
+    const newImages = settings.landingImages.filter((_, i) => i !== index);
+    setSettings({ ...settings, landingImages: newImages });
+  };
+
+  const handleAddLandingImage = () => {
+    if (!settings) return;
+    if (newLandingImageUrl && !settings.landingImages.includes(newLandingImageUrl)) {
+      setSettings({ ...settings, landingImages: [...settings.landingImages, newLandingImageUrl] });
+      setNewLandingImageUrl('');
     } else {
       toast({
         variant: 'destructive',
@@ -136,7 +164,7 @@ export default function AdminSettingsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Branding</CardTitle>
-                <CardDescription>Customize the application's name, logo, and landing page.</CardDescription>
+                <CardDescription>Customize the application's name and logo.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                  <div className="space-y-2">
@@ -156,15 +184,54 @@ export default function AdminSettingsPage() {
                          </div>
                     </div>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="landingImageUrl">Landing Page Background URL</Label>
-                    <Input
-                        id="landingImageUrl"
-                        value={settings.landingImageUrl || ''}
-                        onChange={(e) => { if (!settings) return; setSettings({ ...settings, landingImageUrl: e.target.value }); }}
-                        placeholder="https://example.com/background.png"
-                    />
-                    <p className="text-xs text-muted-foreground">Full-screen background image for the public home page.</p>
+            </CardContent>
+        </Card>
+        
+        <Card>
+            <CardHeader>
+            <CardTitle>Landing Page Backgrounds</CardTitle>
+            <CardDescription>Manage the background images for the public home page. One will be chosen randomly on each visit.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {settings.landingImages.map((url, index) => (
+                        <div key={index} className="relative group space-y-2">
+                        <div className="relative aspect-video w-full overflow-hidden rounded-md">
+                            <Image src={url} alt={`Landing Image ${index + 1}`} fill className="object-cover" />
+                            <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemoveLandingImage(index)}
+                            >
+                            <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <Input
+                            value={url}
+                            onChange={(e) => handleLandingImageChange(index, e.target.value)}
+                            placeholder="Image URL"
+                        />
+                        </div>
+                    ))}
+                    </div>
+                    <Card>
+                    <CardHeader>
+                        <CardTitle>Add New Landing Image</CardTitle>
+                        <CardDescription>Add a new image by pasting a URL.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex gap-2">
+                        <Input
+                            placeholder="https://example.com/image.png"
+                            value={newLandingImageUrl}
+                            onChange={(e) => setNewLandingImageUrl(e.target.value)}
+                        />
+                        <Button onClick={handleAddLandingImage}>Add by URL</Button>
+                        </div>
+                    </CardContent>
+                    </Card>
                 </div>
             </CardContent>
         </Card>
@@ -207,8 +274,8 @@ export default function AdminSettingsPage() {
                         <div className="flex gap-2">
                         <Input
                             placeholder="https://example.com/image.png"
-                            value={newImageUrl}
-                            onChange={(e) => setNewImageUrl(e.target.value)}
+                            value={newCoverImageUrl}
+                            onChange={(e) => setNewCoverImageUrl(e.target.value)}
                         />
                         <Button onClick={handleAddCoverImage}>Add by URL</Button>
                         </div>

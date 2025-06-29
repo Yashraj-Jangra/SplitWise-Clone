@@ -7,20 +7,22 @@ import { getSiteSettings } from '@/lib/mock-data';
 
 export default async function HomePage() {
   const settings = await getSiteSettings();
+  
+  const randomImage = settings.landingImages?.length > 0
+    ? settings.landingImages[Math.floor(Math.random() * settings.landingImages.length)]
+    : 'https://placehold.co/1920x1080.png';
 
   return (
     <main className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden">
-      {settings.landingImageUrl && (
-        <Image
-          src={settings.landingImageUrl}
-          alt="Office background"
-          fill
-          className="object-cover -z-10"
-          quality={100}
-          priority
-          data-ai-hint="office workspace"
-        />
-      )}
+      <Image
+        src={randomImage}
+        alt="Office background"
+        fill
+        className="object-cover -z-10"
+        quality={100}
+        priority
+        data-ai-hint="office workspace"
+      />
       <div className="absolute inset-0 bg-black/60 -z-10" />
 
       <div className="text-center max-w-4xl mx-auto z-10">

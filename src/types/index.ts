@@ -133,7 +133,7 @@ export interface SiteSettings {
   appName: string;
   logoUrl?: string;
   coverImages: string[];
-  landingImageUrl?: string;
+  landingImages: string[];
 }
 
     

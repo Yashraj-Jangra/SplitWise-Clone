@@ -815,6 +815,11 @@ const FALLBACK_GROUP_COVER_IMAGES = [
     'https://images.unsplash.com/photo-1511207538754-e8555f2bc187?q=80&w=1974&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?q=80&w=1974&auto=format&fit=crop',
 ];
+const FALLBACK_LANDING_IMAGES = [
+    'https://images.unsplash.com/photo-1518655048521-f130df041f66?q=80&w=2070&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2070&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop',
+];
 
 export async function getSiteSettings(): Promise<SiteSettings> {
     const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
@@ -826,14 +831,14 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
-            landingImageUrl: data.landingImageUrl || 'https://images.unsplash.com/photo-1518655048521-f130df041f66?q=80&w=2070&auto=format&fit=crop',
+            landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
         };
     } else {
         const defaultSettings = {
             appName: DEFAULT_APP_NAME,
             logoUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
-            landingImageUrl: 'https://images.unsplash.com/photo-1518655048521-f130df041f66?q=80&w=2070&auto=format&fit=crop',
+            landingImages: FALLBACK_LANDING_IMAGES,
         };
         await setDoc(docRef, defaultSettings);
         return defaultSettings;
