@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,7 +25,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
 import { updateUser, isUsernameTaken } from "@/lib/mock-data";
 import { getFullName, getInitials } from "@/lib/utils";
-import { uploadFile } from "@/lib/storage";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 
 const profileSchema = z.object({
@@ -38,6 +37,7 @@ const profileSchema = z.object({
   email: z.string().email(),
   mobileNumber: z.string().optional(),
   dob: z.string().optional(),
+  avatarUrl: z.string().url("Please enter a valid URL.").or(z.literal('')).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -47,8 +47,6 @@ export default function SettingsPage() {
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const { toast } = useToast();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -59,6 +57,7 @@ export default function SettingsPage() {
       email: '',
       mobileNumber: '',
       dob: '',
+      avatarUrl: '',
     },
   });
 
@@ -71,6 +70,7 @@ export default function SettingsPage() {
         email: userProfile.email,
         mobileNumber: userProfile.mobileNumber || '',
         dob: userProfile.dob ? new Date(userProfile.dob).toISOString() : '',
+        avatarUrl: userProfile.avatarUrl || '',
       });
     }
   }, [userProfile, form]);
@@ -92,6 +92,7 @@ export default function SettingsPage() {
             lastName: values.lastName || undefined,
             mobileNumber: values.mobileNumber || undefined,
             dob: values.dob || undefined,
+            avatarUrl: values.avatarUrl || undefined,
         });
 
         toast({
@@ -107,30 +108,6 @@ export default function SettingsPage() {
         });
     }
   }
-
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !userProfile) {
-        return;
-    }
-    const file = e.target.files[0];
-    
-    if (file.size > 1024 * 1024 * 2) { // 2MB limit
-        toast({ variant: "destructive", title: "File too large", description: "Please select an image smaller than 2MB." });
-        return;
-    }
-
-    setIsUploading(true);
-    try {
-        const downloadURL = await uploadFile(file, `avatars/${userProfile.uid}`);
-        await updateUser(userProfile.uid, { avatarUrl: downloadURL });
-        toast({ title: "Avatar Updated", description: "Your new avatar has been saved." });
-        router.refresh(); 
-    } catch (error) {
-        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload your avatar. Please try again." });
-    } finally {
-        setIsUploading(false);
-    }
-  };
 
   if (loading || !userProfile || siteSettingsLoading) {
     return (
@@ -162,16 +139,23 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4 mb-6">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
+                  <AvatarImage src={form.watch('avatarUrl') || userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
                   <AvatarFallback className="text-2xl">{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <input type="file" ref={fileInputRef} onChange={handleAvatarChange} className="hidden" accept="image/png, image/jpeg, image/gif" />
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-                    {isUploading ? <Icons.AppLogo className="mr-2 animate-spin" /> : <Icons.UserPlus className="mr-2" />}
-                    {isUploading ? "Uploading..." : "Change Avatar"}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-1">JPG, GIF or PNG. Max size of 2MB.</p>
+                <div className="w-full">
+                    <FormField
+                      control={form.control}
+                      name="avatarUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Avatar URL</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://example.com/avatar.png" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                 </div>
               </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

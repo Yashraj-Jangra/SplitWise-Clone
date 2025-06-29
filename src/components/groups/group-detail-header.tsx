@@ -20,7 +20,6 @@ import {
 
 import { useToast } from "@/hooks/use-toast";
 import { updateGroup, getSiteSettings } from "@/lib/mock-data";
-import { uploadFile } from "@/lib/storage";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddExpenseDialog } from "../expenses/add-expense-dialog";
@@ -47,8 +46,6 @@ function StatCard({ icon, label, value, valueClassName }: { icon: React.ReactNod
 
 export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete }: GroupDetailHeaderProps) {
   const { toast } = useToast();
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [coversLoading, setCoversLoading] = useState(true);
@@ -74,30 +71,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
         toast({ title: "Error", description: "Failed to update cover image", variant: "destructive"});
     }
   }
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) {
-        return;
-    }
-    const file = e.target.files[0];
-    
-    if (file.size > 1024 * 1024 * 5) { // 5MB limit
-        toast({ variant: "destructive", title: "File too large", description: "Please select an image smaller than 5MB." });
-        return;
-    }
-
-    setIsUploading(true);
-    try {
-        const downloadURL = await uploadFile(file, `group-covers/${group.id}`);
-        await updateGroup(group.id, { coverImageUrl: downloadURL });
-        toast({ title: "Cover Image Updated", description: "Your new cover image has been saved." });
-        onActionComplete(); 
-    } catch (error) {
-        toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload your image. Please try again." });
-    } finally {
-        setIsUploading(false);
-    }
-  };
 
   return (
     <>
@@ -154,16 +127,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
                                     ))}
                                     </div>
                                 )}
-                                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/png, image/jpeg, image/gif" />
-                                    <Button 
-                                        variant="ghost" 
-                                        className="w-full mt-2" 
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={isUploading}
-                                    >
-                                        {isUploading ? <Icons.AppLogo className="mr-2 animate-spin" /> : <Icons.Upload className="mr-2" />}
-                                        {isUploading ? 'Uploading...' : 'Upload Custom'}
-                                    </Button>
                                 </PopoverContent>
                             </Popover>
                         </DropdownMenuContent>
