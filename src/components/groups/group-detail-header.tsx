@@ -75,15 +75,9 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
         
-        <div className="absolute inset-0 flex flex-col sm:flex-row justify-between items-end p-4 text-white">
-          {/* Title and Description */}
-          <div className="flex-1 mb-2 sm:mb-0">
-            <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg">{group.name}</h1>
-            <p className="text-sm text-slate-200 drop-shadow-md truncate">{group.description}</p>
-          </div>
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            <AddExpenseDialog group={group} onExpenseAdded={onActionComplete} />
+        <div className="absolute inset-0 flex flex-col justify-between p-4">
+          {/* Top Right Actions */}
+          <div className="flex self-end items-center gap-2">
             <Button
                 variant="ghost"
                 size="icon"
@@ -130,6 +124,19 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
                 </Popover>
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+
+          {/* Bottom Content */}
+          <div className="flex flex-col sm:flex-row justify-between items-end text-white gap-2">
+            {/* Title and Description */}
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg">{group.name}</h1>
+              <p className="text-sm text-slate-200 drop-shadow-md truncate">{group.description}</p>
+            </div>
+            {/* Add Expense Button */}
+            <div className="flex-shrink-0">
+                <AddExpenseDialog group={group} onExpenseAdded={onActionComplete} />
+            </div>
           </div>
         </div>
       </div>
