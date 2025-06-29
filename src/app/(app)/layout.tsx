@@ -1,16 +1,10 @@
+"use client";
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 import { AppShell } from "@/components/layout/app-shell";
-import type { Metadata } from 'next';
-import { getSiteSettings } from "@/lib/mock-data";
-
-export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
-  return {
-    title: `${settings.appName} App`,
-    description: `Manage your group expenses on ${settings.appName}.`,
-  };
-}
-
+import AppLoading from './loading';
 
 // This layout will apply to all routes within the (app) group
 export default function AuthenticatedAppLayout({
@@ -18,8 +12,23 @@ export default function AuthenticatedAppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // The pageTitle prop for AppShell can be set dynamically by child pages
-  // or a default can be provided here. For now, child pages will handle it.
+  const { userProfile, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If auth state is resolved and there's no user, redirect to login
+    if (!loading && !userProfile) {
+      router.replace('/auth/login');
+    }
+  }, [userProfile, loading, router]);
+
+  // While checking auth state or if user is not yet available, show a loading screen.
+  // This prevents a flash of content before the redirect can happen.
+  if (loading || !userProfile) {
+    return <AppLoading />;
+  }
+  
+  // If user is authenticated, render the app shell and its children
   return (
     <AppShell>{children}</AppShell>
   );
