@@ -31,7 +31,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "../ui/scroll-area";
 import { Switch } from "../ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 
 const expenseSchema = z.object({
@@ -350,6 +349,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       splitType: values.splitType,
       participants: finalParticipants,
       category: values.category,
+      expenseCreatorId: expense.expenseCreatorId,
+      groupCreatorId: expense.groupCreatorId,
     };
 
     try {
@@ -373,10 +374,12 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   const FormContent = (
     <FormProvider {...form}>
       <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-6">
+          {/* LEFT COLUMN */}
+          <div className="space-y-6">
             {/* Main Inputs */}
-            <div className="p-4 border rounded-lg bg-background/30">
-                <FormField control={form.control} name="description" render={({ field }) => ( 
+            <div className="space-y-4">
+               <FormField control={form.control} name="description" render={({ field }) => ( 
                     <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} className="text-base" /></FormControl>
@@ -384,7 +387,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                     </FormItem>
                 )} />
                  <FormField control={form.control} name="amount" render={({ field }) => ( 
-                    <FormItem className="mt-4">
+                    <FormItem>
                         <FormLabel>Amount</FormLabel>
                         <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">{CURRENCY_SYMBOL}</span>
@@ -394,6 +397,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                     </FormItem>
                  )} />
             </div>
+            
             {/* Secondary Details */}
              <div className="grid grid-cols-2 gap-4">
                  <FormField control={form.control} name="date" render={({ field }) => (
@@ -426,116 +430,101 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                     </FormItem>
                 )} />
              </div>
-        </div>
         
-        {/* Payer Section */}
-        <div className="space-y-4 rounded-lg border p-4 bg-background/30">
-          <div className="flex items-center justify-between">
-            <FormLabel className="text-base">Paid By</FormLabel>
-            <div className="flex items-center gap-2 text-sm">
-                <FormLabel htmlFor="isMultiplePayers" className="text-muted-foreground">Multiple</FormLabel>
-                <FormField control={form.control} name="isMultiplePayers" render={({ field }) => (
-                <FormControl>
-                    <Switch id="isMultiplePayers" checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                )} />
+            {/* Payer Section */}
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-base">Paid By</FormLabel>
+                <div className="flex items-center gap-2 text-sm">
+                    <FormLabel htmlFor="isMultiplePayers" className="text-muted-foreground">Multiple</FormLabel>
+                    <FormField control={form.control} name="isMultiplePayers" render={({ field }) => (
+                    <FormControl>
+                        <Switch id="isMultiplePayers" checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    )} />
+                </div>
+              </div>
+              {!watchIsMultiplePayers ? (
+                 <FormField control={form.control} name="singlePayerId" render={({ field }) => (
+                  <FormItem>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                      {group?.members.map(member => (
+                          <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
+                      ))}
+                      </SelectContent>
+                  </Select>
+                  <FormMessage />
+                  </FormItem>
+              )} />
+              ) : (
+                <>
+                <p className={cn("text-right text-sm font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
+                    {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
+                    amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} over` :
+                    'All assigned'}
+                </p>
+                <ScrollArea className="h-32 pr-2">
+                    <div className="space-y-3">
+                    {form.getValues('multiPayers')?.map((item, index) => (
+                        <div key={item.userId} className="flex items-center justify-between gap-4">
+                        <FormLabel className="font-normal truncate">{item.name}</FormLabel>
+                            <FormField control={form.control} name={`multiPayers.${index}.amount`} render={({ field }) => (
+                            <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} value={field.value ?? ''} className="h-8 w-28 text-right"/></FormControl>
+                            )} />
+                        </div>
+                    ))}
+                    </div>
+                </ScrollArea>
+                </>
+              )}
             </div>
           </div>
-          {!watchIsMultiplePayers ? (
-             <FormField control={form.control} name="singlePayerId" render={({ field }) => (
-              <FormItem>
-              <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                  {group?.members.map(member => (
-                      <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
-                  ))}
-                  </SelectContent>
-              </Select>
-              <FormMessage />
-              </FormItem>
-          )} />
-          ) : (
-            <>
-            <p className={cn("text-right text-sm font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
-                {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
-                  amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} over` :
-                  'All assigned'}
-            </p>
-            <ScrollArea className="h-32 pr-2">
-                <div className="space-y-3">
-                  {form.getValues('multiPayers')?.map((item, index) => (
-                    <div key={item.userId} className="flex items-center justify-between gap-4">
-                      <FormLabel className="font-normal truncate">{item.name}</FormLabel>
-                        <FormField control={form.control} name={`multiPayers.${index}.amount`} render={({ field }) => (
-                          <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} value={field.value ?? ''} className="h-8 w-28 text-right"/></FormControl>
-                        )} />
+          {/* RIGHT COLUMN */}
+          <div className="space-y-6">
+             <div className="rounded-lg border p-4 h-full flex flex-col">
+                <FormLabel className="text-base mb-4 block">Split Details</FormLabel>
+                <Tabs defaultValue="equally" className="w-full flex-1 flex flex-col" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
+                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="equally">Equally</TabsTrigger>
+                    <TabsTrigger value="unequally">Unequally</TabsTrigger>
+                    <TabsTrigger value="by_shares">Shares</TabsTrigger>
+                    <TabsTrigger value="by_percentage">%</TabsTrigger>
+                    </TabsList>
+                    <div className="mt-4 flex-1">
+                        <SplitContent form={form} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
                     </div>
-                  ))}
-                </div>
-            </ScrollArea>
-            </>
-          )}
-        </div>
-
-        {/* Split Section */}
-        {isMobile ? (
-           <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
-            <AccordionItem value="item-1" className="border-b-0">
-                <div className="rounded-lg border p-4 bg-background/30">
-                    <AccordionTrigger>
-                        <FormLabel className="text-base">Split Details</FormLabel>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-4">
-                        <Tabs defaultValue="equally" className="w-full" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
-                            <TabsList className="grid w-full grid-cols-4 h-auto flex-wrap">
-                                <TabsTrigger value="equally">Equally</TabsTrigger>
-                                <TabsTrigger value="unequally">Unequally</TabsTrigger>
-                                <TabsTrigger value="by_shares">Shares</TabsTrigger>
-                                <TabsTrigger value="by_percentage">%</TabsTrigger>
-                            </TabsList>
-                            <SplitContent form={form} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
-                        </Tabs>
-                    </AccordionContent>
-                </div>
-            </AccordionItem>
-          </Accordion>
-        ) : (
-          <div className="rounded-lg border p-4 bg-background/30">
-             <FormLabel className="text-base mb-4 block">Split Details</FormLabel>
-             <Tabs defaultValue="equally" className="w-full" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
-                <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="equally">Equally</TabsTrigger>
-                <TabsTrigger value="unequally">Unequally</TabsTrigger>
-                <TabsTrigger value="by_shares">Shares</TabsTrigger>
-                <TabsTrigger value="by_percentage">Percentage</TabsTrigger>
-                </TabsList>
-                <div className="mt-4">
-                    <SplitContent form={form} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
-                </div>
-            </Tabs>
+                </Tabs>
+            </div>
           </div>
-        )}
+        </div>
       </form>
     </FormProvider>
   );
 
   const renderSkeleton = () => (
-    <div className="space-y-4 pt-4">
-        <div className="space-y-4 rounded-lg border border-border/10 p-4">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
+    <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-6 p-1">
+        {/* Left Column Skeleton */}
+        <div className="space-y-6">
+            <div className="space-y-4">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-40 w-full" />
         </div>
-        <div className="space-y-4 rounded-lg border border-border/10 p-4">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-24 w-full" />
-        </div>
+        {/* Right Column Skeleton */}
+        <Skeleton className="h-full w-full min-h-[300px]" />
     </div>
   );
 
   const MainContent = isGroupLoading || !group ? renderSkeleton() : FormContent;
-
   const title = "Edit Expense";
   const formId = "edit-expense-form";
 
@@ -561,7 +550,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-pane sm:max-w-xl flex flex-col max-h-[90vh]">
+      <DialogContent className="glass-pane sm:max-w-2xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
         </DialogHeader>
@@ -569,7 +558,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             <div className="px-6 py-4">{MainContent}</div>
         </ScrollArea>
         <DialogFooter className="border-t pt-4">
-          <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full">
+          <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
             {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
@@ -580,8 +569,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
 function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplitType }: {form: any, userProfile: any, runningTotal: any, watchAmount: number, watchSplitType: string}) {
     return (
-     <div className="space-y-4 pt-2">
-        <ScrollArea className="h-36 pr-3">
+     <div className="space-y-4 pt-2 flex flex-col h-full">
+        <ScrollArea className="flex-1 pr-3 h-[240px]">
           <div className="space-y-3">
               {form.getValues('participants').map((item: any, index: number) => (
                 <div key={item.userId} className="flex items-center justify-between gap-x-2 gap-y-2">
@@ -637,12 +626,12 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
         <div className="text-right text-xs mt-2 pr-2 font-medium">
           {runningTotal.type === 'amount' && (
               <p className={cn(Math.abs(runningTotal.sum - (Number(watchAmount) || 0)) > 0.01 ? 'text-destructive' : 'text-primary')}>
-                  Total: {CURRENCY_SYMBOL}{runningTotal.sum.toFixed(2)} / {CURRENCY_SYMBOL}{(Number(watchAmount) || 0).toFixed(2)}
+                  Total: {CURRENCY_SYMBOL}{(Number(runningTotal.sum) || 0).toFixed(2)} / {CURRENCY_SYMBOL}{(Number(watchAmount) || 0).toFixed(2)}
               </p>
           )}
           {runningTotal.type === 'percentage' && (
               <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive' : 'text-primary')}>
-                  Total: {runningTotal.sum.toFixed(2)}% / 100%
+                  Total: {(Number(runningTotal.sum) || 0).toFixed(2)}% / 100%
               </p>
           )}
         </div>
@@ -651,3 +640,5 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
       </div>
   )
 }
+
+    
