@@ -9,7 +9,7 @@ import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
 import { GroupBalances } from '@/components/groups/group-balances';
 import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { Icons } from '@/components/icons';
+import { Icons, type IconName } from '@/components/icons';
 import {
   getGroupById,
   getExpensesByGroupId,
@@ -36,6 +36,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+
+const TABS: { value: string; label: string; icon: IconName }[] = [
+    { value: 'expenses', label: 'Expenses', icon: 'Expense' },
+    { value: 'settlements', label: 'Settlements', icon: 'Settle' },
+    { value: 'balances', label: 'Balances', icon: 'Wallet' },
+    { value: 'analysis', label: 'Analysis', icon: 'Analysis' },
+    { value: 'history', label: 'History', icon: 'History' },
+];
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -137,63 +145,30 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <ScrollArea className="w-full whitespace-nowrap rounded-md">
-          <TabsList className="inline-flex h-auto">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="expenses" className="h-9 w-9">
-                    <Icons.Expense className="h-5 w-5" />
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Expenses</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="settlements" className="h-9 w-9">
-                    <Icons.Settle className="h-5 w-5" />
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Settlements</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="balances" className="h-9 w-9">
-                    <Icons.Wallet className="h-5 w-5" />
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Balances</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="analysis" className="h-9 w-9">
-                    <Icons.Analysis className="h-5 w-5" />
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Analysis</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="history" className="h-9 w-9">
-                    <Icons.History className="h-5 w-5" />
-                  </TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>History</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </TabsList>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        <TabsList className="grid w-full grid-cols-5 md:inline-flex md:w-auto">
+          {TABS.map((tab) => {
+            const Icon = Icons[tab.icon];
+            return (
+              <TooltipProvider key={tab.value} delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger
+                      value={tab.value}
+                      className="w-full gap-2 md:w-auto md:px-4"
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="hidden md:inline">{tab.label}</span>
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent className="md:hidden">
+                    <p>{tab.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
+        </TabsList>
+        
 
         <TabsContent value="expenses" className="mt-4">
           <Card>
