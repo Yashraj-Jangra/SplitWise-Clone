@@ -1,17 +1,15 @@
 
 "use client";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
 import { getGroupBalances, getGroupsByUserId } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { Icons } from "@/components/icons";
-import type { Balance, Group, UserProfile } from "@/types";
+import type { Balance, UserProfile } from "@/types";
 import { Skeleton } from "../ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState, useMemo } from "react";
-import { getFullName, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface OverallBalance {
     user: UserProfile;
@@ -75,28 +73,46 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
   const isOwed = netBalance >= 0;
 
   return (
-    <div className="p-6 rounded-md border border-border/50 bg-card/50 glass-pane">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-            <div className="flex-1">
-                <p className="text-muted-foreground mb-2">Your Net Balance</p>
-                <p className={`text-4xl lg:text-5xl font-bold tracking-tighter ${isOwed ? 'text-primary' : 'text-accent'}`}>
-                    {isOwed ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
-                </p>
-                <p className="text-muted-foreground mt-1">
-                    {isOwed ? "You are owed overall." : "You owe overall."}
-                </p>
-            </div>
-            <div className="flex gap-4 w-full md:w-auto">
-                 <div className="flex-1 text-center p-3 rounded-md bg-muted/30">
-                    <p className="text-xs text-green-400 uppercase tracking-wider">Owed to you</p>
-                    <p className="text-xl font-bold text-green-400">{CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}</p>
+    <Card className="glass-pane overflow-hidden">
+        <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-6 md:gap-4">
+                {/* You are Owed */}
+                <div className="flex flex-row md:flex-col items-center gap-2 md:gap-1 text-center justify-between md:justify-center">
+                    <div className="flex items-center text-sm text-green-400">
+                        <Icons.TrendingUp className="h-5 w-5 mr-2" />
+                        <span className="font-semibold">You get back</span>
+                    </div>
+                    <span className="text-2xl font-bold text-green-400">
+                        {CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}
+                    </span>
                 </div>
-                <div className="flex-1 text-center p-3 rounded-md bg-muted/30">
-                    <p className="text-xs text-red-400 uppercase tracking-wider">You owe</p>
-                    <p className="text-xl font-bold text-red-400">{CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}</p>
+
+                {/* Net Balance */}
+                <div className="flex flex-col items-center gap-2 text-center md:border-x md:border-border/50 md:px-4 py-4 md:py-0 order-first md:order-none">
+                    <p className="text-sm text-muted-foreground">Your Net Balance</p>
+                    <p className={cn(
+                        "text-4xl lg:text-5xl font-bold tracking-tighter",
+                        isOwed ? 'text-primary' : 'text-accent'
+                    )}>
+                        {isOwed ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        {isOwed ? "You are owed overall" : "You owe overall"}
+                    </p>
+                </div>
+
+                {/* You Owe */}
+                <div className="flex flex-row md:flex-col items-center gap-2 md:gap-1 text-center justify-between md:justify-center">
+                     <div className="flex items-center text-sm text-red-400">
+                        <Icons.TrendingDown className="h-5 w-5 mr-2" />
+                        <span className="font-semibold">You owe</span>
+                    </div>
+                    <span className="text-2xl font-bold text-red-400">
+                        {CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}
+                    </span>
                 </div>
             </div>
-        </div>
-    </div>
+        </CardContent>
+    </Card>
   );
 }
