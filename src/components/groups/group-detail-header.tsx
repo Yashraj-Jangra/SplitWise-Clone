@@ -34,17 +34,23 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [coversLoading, setCoversLoading] = useState(true);
 
+  // Fetch cover images only when the popover is about to open
   useEffect(() => {
     async function loadCovers() {
         if (isPopoverOpen) {
             setCoversLoading(true);
-            const settings = await getSiteSettings();
-            setCoverImages(settings.coverImages);
-            setCoversLoading(false);
+            try {
+                const settings = await getSiteSettings();
+                setCoverImages(settings.coverImages);
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not load cover images.' });
+            } finally {
+                setCoversLoading(false);
+            }
         }
     }
     loadCovers();
-  }, [isPopoverOpen]);
+  }, [isPopoverOpen, toast]);
 
   const handleCoverChange = async (imageUrl: string) => {
     try {
@@ -60,7 +66,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
   return (
     <div className="rounded-lg border border-border/50 overflow-hidden">
       {/* Cover Image and Overlay Content */}
-      <div className="relative h-32 md:h-40 w-full group">
+      <div className="relative h-32 md:h-40 w-full">
         <Image
           src={group.coverImageUrl || 'https://placehold.co/1200x300.png'}
           alt={`${group.name} cover image`}
@@ -70,8 +76,8 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
         
-        {/* Actions visible on hover */}
-        <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Actions - Always visible for mobile-friendliness */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="text-white bg-black/30 hover:bg-black/50 hover:text-white">
@@ -82,17 +88,17 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
                 <PopoverContent className="w-64 p-2">
                     {coversLoading ? (
                         <div className="grid grid-cols-3 gap-2">
-                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
+                            {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
                         </div>
                     ) : (
                         <div className="grid grid-cols-3 gap-2">
-                        {coverImages.map((url, i) => (
-                            <button key={i} className="aspect-video relative rounded-sm overflow-hidden group/image focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
-                            <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
-                            {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
-                            <div className="absolute inset-0 bg-black/20 group-hover/image:bg-black/40 transition-colors"/>
-                            </button>
-                        ))}
+                            {coverImages.map((url, i) => (
+                                <button key={i} className="aspect-video relative rounded-sm overflow-hidden group/image focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
+                                    <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
+                                    {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
+                                    <div className="absolute inset-0 bg-black/20 group-hover/image:bg-black/40 transition-colors"/>
+                                </button>
+                            ))}
                         </div>
                     )}
                 </PopoverContent>
@@ -102,7 +108,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
                 size="icon"
                 className={cn(
                     "text-white bg-black/30 hover:bg-black/50 hover:text-white",
-                    activeTab === 'settings' && 'bg-white/25'
+                    activeTab === 'settings' && 'bg-white/25' // Highlight if settings tab is active
                 )}
                 onClick={onSettingsClick}
             >
