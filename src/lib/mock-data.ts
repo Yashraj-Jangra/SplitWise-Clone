@@ -473,17 +473,24 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
 export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
   const expensesRef = collection(db, 'expenses');
   
-  const participantQuery = query(expensesRef, where('participantIds', 'array-contains', userId)); 
-  const payerQuery = query(expensesRef, where('payerIds', 'array-contains', userId)); 
+  // This is a secure query, as security rules can check if `userId` is in `groupMemberIds`.
+  const memberQuery = query(expensesRef, where('groupMemberIds', 'array-contains', userId));
   
-  const [participantSnapshot, payerSnapshot] = await Promise.all([
-    getDocs(participantQuery),
-    getDocs(payerQuery),
-  ]);
+  const memberSnapshot = await getDocs(memberQuery);
   
   const expenseMap = new Map<string, ExpenseDocument>();
-  participantSnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
-  payerSnapshot.docs.forEach(doc => expenseMap.set(doc.id, doc.data() as ExpenseDocument));
+
+  // Now, we filter client-side. The permission error happens during the `getDocs` call,
+  // so by the time we get here, we have a set of documents we are allowed to read.
+  memberSnapshot.docs.forEach(doc => {
+      const expenseData = doc.data() as ExpenseDocument;
+      // We only want expenses where the user was actually a payer or participant.
+      const isParticipant = expenseData.participantIds?.includes(userId);
+      const isPayer = expenseData.payerIds?.includes(userId);
+      if (isParticipant || isPayer) {
+          expenseMap.set(doc.id, expenseData);
+      }
+  });
 
   const expenses: Expense[] = await Promise.all(
     Array.from(expenseMap.entries()).map(async ([id, expenseData]) => {
