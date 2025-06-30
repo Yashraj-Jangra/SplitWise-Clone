@@ -7,12 +7,6 @@ import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -57,6 +51,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
         await updateGroup(group.id, { coverImageUrl: imageUrl }, user.uid);
         toast({ title: "Cover Image Updated" });
         onActionComplete();
+        setIsPopoverOpen(false); // Close popover on selection
     } catch(e) {
         toast({ title: "Error", description: "Failed to update cover image", variant: "destructive"});
     }
@@ -65,7 +60,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
   return (
     <div className="rounded-lg border border-border/50 overflow-hidden">
       {/* Cover Image and Overlay Content */}
-      <div className="relative h-32 md:h-40 w-full">
+      <div className="relative h-32 md:h-40 w-full group">
         <Image
           src={group.coverImageUrl || 'https://placehold.co/1200x300.png'}
           alt={`${group.name} cover image`}
@@ -75,62 +70,54 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
         
-        <div className="absolute inset-0 flex flex-col justify-between p-4">
-          {/* Top Right Actions */}
-          <div className="flex self-end items-center gap-2">
+        {/* Actions visible on hover */}
+        <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-white bg-black/30 hover:bg-black/50 hover:text-white">
+                        <Icons.Edit className="h-4 w-4" />
+                        <span className="sr-only">Change Cover</span>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2">
+                    {coversLoading ? (
+                        <div className="grid grid-cols-3 gap-2">
+                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                        {coverImages.map((url, i) => (
+                            <button key={i} className="aspect-video relative rounded-sm overflow-hidden group/image focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
+                            <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
+                            {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
+                            <div className="absolute inset-0 bg-black/20 group-hover/image:bg-black/40 transition-colors"/>
+                            </button>
+                        ))}
+                        </div>
+                    )}
+                </PopoverContent>
+            </Popover>
             <Button
                 variant="ghost"
                 size="icon"
                 className={cn(
-                    "text-white hover:bg-white/20 hover:text-white",
+                    "text-white bg-black/30 hover:bg-black/50 hover:text-white",
                     activeTab === 'settings' && 'bg-white/25'
                 )}
                 onClick={onSettingsClick}
             >
-                <Icons.Settings />
+                <Icons.Settings className="h-4 w-4"/>
                 <span className="sr-only">Settings</span>
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-                  <Icons.MoreHorizontal />
-                  <span className="sr-only">More Actions</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <Popover onOpenChange={setIsPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      <Icons.Edit className="mr-2"/>Change Cover
-                    </DropdownMenuItem>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-2">
-                    {coversLoading ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2">
-                        {coverImages.map((url, i) => (
-                          <button key={i} className="aspect-video relative rounded-sm overflow-hidden group focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
-                            <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
-                            {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"/>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        </div>
 
+
+        <div className="absolute inset-0 flex flex-col justify-end p-4">
           {/* Bottom Content */}
           <div className="flex flex-row justify-between items-end text-white gap-2">
             {/* Title and Description */}
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg">{group.name}</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg truncate">{group.name}</h1>
               <p className="text-sm text-slate-200 drop-shadow-md truncate">{group.description}</p>
             </div>
             {/* Add Expense Button */}
