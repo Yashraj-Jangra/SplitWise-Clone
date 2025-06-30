@@ -75,20 +75,10 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
   return (
     <Card className="glass-pane overflow-hidden">
         <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-6 md:gap-4">
-                {/* You are Owed */}
-                <div className="flex flex-col items-center gap-1 text-center">
-                    <div className="flex items-center text-sm text-green-400">
-                        <Icons.TrendingUp className="h-5 w-5 mr-2" />
-                        <span className="font-semibold">You get back</span>
-                    </div>
-                    <span className="text-2xl font-bold text-green-400">
-                        {CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}
-                    </span>
-                </div>
-
-                {/* Net Balance */}
-                <div className="flex flex-col items-center gap-2 text-center md:border-x md:border-border/50 md:px-4 py-4 md:py-0 order-first md:order-none">
+            <div className="flex flex-col gap-4 md:grid md:grid-cols-3 md:items-center md:gap-4">
+                
+                {/* Net Balance - Center on desktop, top on mobile */}
+                <div className="flex flex-col items-center gap-2 text-center md:border-x md:border-border/50 md:px-4 py-4 md:py-0 md:order-2">
                     <p className="text-sm text-muted-foreground">Your Net Balance</p>
                     <p className={cn(
                         "text-4xl lg:text-5xl font-bold tracking-tighter",
@@ -100,17 +90,32 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                         {isOwed ? "You are owed overall" : "You owe overall"}
                     </p>
                 </div>
-
-                {/* You Owe */}
-                <div className="flex flex-col items-center gap-1 text-center">
-                     <div className="flex items-center text-sm text-red-400">
-                        <Icons.TrendingDown className="h-5 w-5 mr-2" />
-                        <span className="font-semibold">You owe</span>
+                
+                {/* Wrapper for side elements on mobile. 'md:contents' makes this div disappear on desktop, and its children become direct children of the parent grid. */}
+                <div className="grid grid-cols-2 gap-4 md:contents">
+                    {/* You are Owed - Left on desktop, part of a grid on mobile */}
+                    <div className="flex flex-col items-center gap-1 text-center md:order-1">
+                        <div className="flex items-center text-sm text-green-400">
+                            <Icons.TrendingUp className="h-5 w-5 mr-2" />
+                            <span className="font-semibold">You get back</span>
+                        </div>
+                        <span className="text-xl md:text-2xl font-bold text-green-400">
+                            {CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}
+                        </span>
                     </div>
-                    <span className="text-2xl font-bold text-red-400">
-                        {CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}
-                    </span>
+
+                    {/* You Owe - Right on desktop, part of a grid on mobile */}
+                    <div className="flex flex-col items-center gap-1 text-center md:order-3">
+                        <div className="flex items-center text-sm text-red-400">
+                            <Icons.TrendingDown className="h-5 w-5 mr-2" />
+                            <span className="font-semibold">You owe</span>
+                        </div>
+                        <span className="text-xl md:text-2xl font-bold text-red-400">
+                            {CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}
+                        </span>
+                    </div>
                 </div>
+
             </div>
         </CardContent>
     </Card>
