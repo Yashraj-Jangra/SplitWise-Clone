@@ -81,7 +81,7 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                 <div className="flex flex-col items-center gap-2 text-center p-4 border-b border-border/50 md:order-2 md:border-x md:border-b-0 md:px-4 md:py-6">
                     <p className="text-sm text-muted-foreground">Your Net Balance</p>
                     <p className={cn(
-                        "text-5xl lg:text-6xl font-bold tracking-tighter",
+                        "text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter",
                         isOwed ? 'text-primary' : 'text-accent'
                     )}>
                         {isOwed ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
