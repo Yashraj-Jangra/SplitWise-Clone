@@ -81,7 +81,7 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                 <div className="flex flex-col items-center gap-2 text-center p-4 border-b border-border/50 md:order-2 md:border-x md:border-b-0 md:px-4 md:py-6">
                     <p className="text-sm text-muted-foreground">Your Net Balance</p>
                     <p className={cn(
-                        "text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tighter",
+                        "text-3xl sm:text-4xl md:text-5xl font-bold tracking-tighter",
                         isOwed ? 'text-primary' : 'text-accent'
                     )}>
                         {isOwed ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
@@ -99,7 +99,7 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                             <Icons.TrendingUp className="h-5 w-5 mr-2" />
                             <span className="font-semibold">You get back</span>
                         </div>
-                        <span className="text-2xl md:text-3xl font-bold text-green-500">
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-green-500">
                             {CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}
                         </span>
                     </div>
@@ -110,7 +110,7 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                             <Icons.TrendingDown className="h-5 w-5 mr-2" />
                             <span className="font-semibold">You owe</span>
                         </div>
-                        <span className="text-2xl md:text-3xl font-bold text-red-500">
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-red-500">
                             {CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}
                         </span>
                     </div>
