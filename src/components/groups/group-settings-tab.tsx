@@ -72,8 +72,9 @@ export function GroupSettingsTab({ group, onActionComplete }: GroupSettingsTabPr
   const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
 
   async function onSubmit(values: SettingsFormValues) {
+    if (!userProfile) return;
     try {
-      await updateGroup(group.id, values);
+      await updateGroup(group.id, values, userProfile.uid);
       toast({ title: "Group Updated", description: "The group details have been saved." });
       onActionComplete();
     } catch (error) {

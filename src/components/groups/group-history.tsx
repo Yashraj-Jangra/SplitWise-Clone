@@ -38,12 +38,22 @@ interface GroupHistoryTabProps {
 }
 
 const eventIcons: { [key: string]: React.ReactNode } = {
+  // Creations
   expense_created: <Icons.Add className="h-4 w-4 text-green-500" />,
+  settlement_created: <Icons.Settle className="h-4 w-4 text-green-500" />,
+  group_created: <Icons.Add className="h-4 w-4 text-green-500" />,
+  member_added: <Icons.UserPlus className="h-4 w-4 text-green-500" />,
+  // Updates
   expense_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
+  group_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
+  // Deletions
   expense_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
+  // Restorations
   expense_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
+  // Default
   default: <Icons.History className="h-4 w-4 text-muted-foreground" />,
 };
+
 
 function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }: { event: HistoryEvent; onActionComplete: () => void; onViewExpense: (expenseId: string) => void; isDeleted?: boolean; }) {
     const { userProfile } = useAuth();
@@ -82,7 +92,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
     
     const canRestore = event.eventType === 'expense_deleted' && !event.restored;
     const canDelete = userProfile?.role === 'admin';
-    const isUpdateWithDetails = event.eventType === 'expense_updated' && event.data?.changes && event.data.changes.length > 0;
+    const isUpdateWithDetails = (event.eventType === 'expense_updated' || event.eventType === 'group_updated') && event.data?.changes && event.data.changes.length > 0;
 
     let viewableExpenseId: string | null = null;
     if ((event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId) {

@@ -253,10 +253,40 @@ export async function archiveGroup(groupId: string): Promise<void> {
     });
 }
 
-export async function updateGroup(groupId: string, data: Partial<GroupDocument>): Promise<void> {
+export async function updateGroup(groupId: string, data: Partial<GroupDocument>, actorId: string): Promise<void> {
     const groupDocRef = doc(db, 'groups', groupId);
+    
+    const groupSnap = await getDoc(groupDocRef);
+    if (!groupSnap.exists()) {
+        throw new Error("Group not found.");
+    }
+    const oldData = groupSnap.data() as GroupDocument;
+
     const cleanData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
     await updateDoc(groupDocRef, cleanData);
+
+    // Now, check for changes and log history
+    const actor = await getUserProfile(actorId);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+
+    const changes: { field: string; from: any; to: any }[] = [];
+    
+    if (data.name && data.name !== oldData.name) {
+        changes.push({ field: 'Name', from: `"${oldData.name}"`, to: `"${data.name}"` });
+    }
+    if (data.description !== undefined && data.description !== (oldData.description || '')) {
+         changes.push({ field: 'Description', from: `"${oldData.description || ''}"`, to: `"${data.description || ''}"` });
+    }
+    if (data.coverImageUrl && data.coverImageUrl !== oldData.coverImageUrl) {
+        // Just log that it changed, not the URLs, to keep the log clean.
+        changes.push({ field: 'Cover Image', from: 'updated', to: '' });
+    }
+
+    if (changes.length > 0) {
+        const changeSummary = changes.map(c => c.field.toLowerCase()).join(', ');
+        const description = `${actorName} updated the group ${changeSummary}.`;
+        await logHistoryEvent(groupId, 'group_updated', actorId, description, { changes });
+    }
 }
 
 

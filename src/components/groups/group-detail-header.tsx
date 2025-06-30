@@ -54,7 +54,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
 
   const handleCoverChange = async (imageUrl: string) => {
     try {
-        await updateGroup(group.id, { coverImageUrl: imageUrl });
+        await updateGroup(group.id, { coverImageUrl: imageUrl }, user.uid);
         toast({ title: "Cover Image Updated" });
         onActionComplete();
     } catch(e) {
