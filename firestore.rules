@@ -1,48 +1,66 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is an admin
-    function isAdmin(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Site settings can be read by anyone
-    match /settings/general {
-      allow read: if true;
-      allow write: if request.auth != null && isAdmin(request.auth.uid);
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
     
-    // Users can be read by any authenticated user
-    // Users can only be created by anyone, but can only be updated by the user themselves or an admin.
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if true;
-      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin(request.auth.uid));
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // A user can read/write to a group/expense/settlement/history only if they are a member of that group.
-    // Admins have full read/write access to all of these collections.
+    // --- Collections ---
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isUser(userId);
+      allow update: if isUser(userId);
+      allow delete: if false; // Users cannot delete their own accounts
+    }
     
     match /groups/{groupId} {
-      allow read, write: if request.auth != null && resource.data.memberIds.hasAny([request.auth.uid]);
-      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
-    }
-    
-    match /expenses/{expenseId} {
-      allow read, write: if request.auth != null && resource.data.groupMemberIds.hasAny([request.auth.uid]);
-      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
+        // Admins can read any group, members can read their own.
+        allow read: if (isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid])) || isAdmin();
+        // Only members can update, create.
+        allow update: if isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid]);
+        allow create: if isSignedIn(); // Checked in app logic
+        allow delete: if false; // Groups are archived, not deleted
     }
 
+    match /expenses/{expenseId} {
+        // Admins can read any expense, members can read their own.
+        allow read: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        // Only members can create, update, delete.
+        allow create, update, delete: if isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid]);
+    }
+    
     match /settlements/{settlementId} {
-      allow read, write: if request.auth != null && resource.data.groupMemberIds.hasAny([request.auth.uid]);
-      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
+        // Admins can read any settlement, members can read their own.
+        allow read: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        // Only members can create, update, delete.
+        allow create, update, delete: if isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid]);
     }
 
     match /history/{historyId} {
-      allow read, write: if request.auth != null && resource.data.groupMemberIds.hasAny([request.auth.uid]);
-      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
+        // Admins can read any history, members can read their own.
+        allow read: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow create: if isSignedIn();
+        // Allow update only if the user is a member and is only changing the 'restored' field.
+        allow update: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
+        // Only admins can delete history events.
+        allow delete: if isAdmin();
+    }
+    
+    match /settings/{docId} {
+        allow read: if true; // Public settings
+        allow write: if isAdmin(); // Only admins can change site settings
     }
   }
 }
