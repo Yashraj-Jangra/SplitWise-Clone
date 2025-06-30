@@ -12,7 +12,7 @@ import type { Expense, Settlement, Group, UserProfile } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getFullName } from '@/lib/utils';
+import { getFullName, getInitials } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,6 @@ interface ActivityItem {
   groupName: string;
   groupId: string;
   date: string;
-  icon: React.ReactNode;
 }
 
 export function RecentActivityList() {
@@ -49,7 +48,7 @@ export function RecentActivityList() {
         
         const groupMap = new Map(groups.map(g => [g.id, g.name]));
 
-        const expenseActivities = expenses.map((e: Expense) => {
+        const expenseActivities: ActivityItem[] = expenses.map((e: Expense) => {
           const userPaid = e.payers.find(p => p.user.uid === userProfile.uid)?.amount || 0;
           const userOwed = e.participants.find(p => p.user.uid === userProfile.uid)?.amountOwed || 0;
           const netAmount = userPaid - userOwed;
@@ -63,11 +62,10 @@ export function RecentActivityList() {
             groupName: groupMap.get(e.groupId) || "a group",
             groupId: e.groupId,
             date: e.date,
-            icon: <Icons.Expense className="h-5 w-5 text-primary" />,
           };
         });
 
-        const settlementActivities = settlements.map((s: Settlement) => {
+        const settlementActivities: ActivityItem[] = settlements.map((s: Settlement) => {
           const isPayer = s.paidBy.uid === userProfile.uid;
           const description = isPayer 
             ? `You paid ${getFullName(s.paidTo.firstName, s.paidTo.lastName)}`
@@ -82,7 +80,6 @@ export function RecentActivityList() {
             groupName: groupMap.get(s.groupId) || "a group",
             groupId: s.groupId,
             date: s.date,
-            icon: <Icons.Settle className="h-5 w-5 text-green-400" />,
           };
         });
 
@@ -159,8 +156,8 @@ export function RecentActivityList() {
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={activity.actors[0].avatarUrl} />
-                    <AvatarFallback>{activity.actors[0].firstName[0]}</AvatarFallback>
+                    <AvatarImage src={activity.actors[0].avatarUrl} alt={getFullName(activity.actors[0].firstName, activity.actors[0].lastName)} />
+                    <AvatarFallback>{getInitials(activity.actors[0].firstName, activity.actors[0].lastName)}</AvatarFallback>
                  </Avatar>
                 <div className="grid gap-1 flex-1">
                   <p className="text-sm font-medium leading-none truncate">
@@ -184,8 +181,8 @@ export function RecentActivityList() {
                 <div className="flex flex-col items-end">
                     <div className={cn(
                         'text-sm font-semibold',
-                        activity.amount > 0.01 ? 'text-green-400' :
-                        activity.amount < -0.01 ? 'text-red-400' :
+                        activity.amount > 0.01 ? 'text-green-500' :
+                        activity.amount < -0.01 ? 'text-red-500' :
                         'text-muted-foreground'
                       )}>
                         {activity.amount > 0.01 ? '+' : ''}
