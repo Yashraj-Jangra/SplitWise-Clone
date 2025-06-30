@@ -77,7 +77,7 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
         <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-6 md:gap-4">
                 {/* You are Owed */}
-                <div className="flex flex-row md:flex-col items-center gap-2 md:gap-1 text-center justify-between md:justify-center">
+                <div className="flex flex-col items-center gap-1 text-center">
                     <div className="flex items-center text-sm text-green-400">
                         <Icons.TrendingUp className="h-5 w-5 mr-2" />
                         <span className="font-semibold">You get back</span>
@@ -102,7 +102,7 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                 </div>
 
                 {/* You Owe */}
-                <div className="flex flex-row md:flex-col items-center gap-2 md:gap-1 text-center justify-between md:justify-center">
+                <div className="flex flex-col items-center gap-1 text-center">
                      <div className="flex items-center text-sm text-red-400">
                         <Icons.TrendingDown className="h-5 w-5 mr-2" />
                         <span className="font-semibold">You owe</span>
