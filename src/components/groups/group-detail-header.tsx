@@ -77,7 +77,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
         
         {/* Actions - Always visible for mobile-friendliness */}
-        <div className="absolute top-2 right-2 flex items-center gap-2">
+        <div className="absolute top-2 right-2 flex items-center gap-2 z-10">
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="text-white bg-black/30 hover:bg-black/50 hover:text-white">
