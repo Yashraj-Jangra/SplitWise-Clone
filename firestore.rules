@@ -1,54 +1,48 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
+    // Helper function to check if a user is an admin
+    function isAdmin(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    // Site settings can be read by anyone
+    match /settings/general {
+      allow read: if true;
+      allow write: if request.auth != null && isAdmin(request.auth.uid);
     }
-
-    // --- Collections ---
+    
+    // Users can be read by any authenticated user
+    // Users can only be created by anyone, but can only be updated by the user themselves or an admin.
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isUser(userId);
-      allow update: if isUser(userId);
-      allow delete: if false; // Users cannot delete their own accounts
+      allow read: if request.auth != null;
+      allow create: if true;
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin(request.auth.uid));
     }
+
+    // A user can read/write to a group/expense/settlement/history only if they are a member of that group.
+    // Admins have full read/write access to all of these collections.
     
     match /groups/{groupId} {
-        allow read, update: if isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid]);
-        allow create: if isSignedIn(); // Checked in app logic
-        allow delete: if false; // Groups are archived, not deleted
-    }
-
-    match /expenses/{expenseId} {
-        // Any group member can read, create, update, or delete expenses.
-        // This relies on the `groupMemberIds` array being correctly stored on each expense document.
-        allow read, delete: if isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid]);
-        allow create, update: if isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid]);
+      allow read, write: if request.auth != null && resource.data.memberIds.hasAny([request.auth.uid]);
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
     
+    match /expenses/{expenseId} {
+      allow read, write: if request.auth != null && resource.data.groupMemberIds.hasAny([request.auth.uid]);
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
+    }
+
     match /settlements/{settlementId} {
-        // Any group member can manage settlements.
-        allow read, delete: if isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid]);
-        allow create, update: if isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid]);
+      allow read, write: if request.auth != null && resource.data.groupMemberIds.hasAny([request.auth.uid]);
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
 
     match /history/{historyId} {
-        allow read: if isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid]);
-        allow create: if isSignedIn();
-        allow update, delete: if false; // History is immutable for users
-    }
-    
-    match /settings/{docId} {
-        allow read: if true; // Public settings
-        allow write: if false; // Only modifiable via admin panel/backend logic
+      allow read, write: if request.auth != null && resource.data.groupMemberIds.hasAny([request.auth.uid]);
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
   }
 }
