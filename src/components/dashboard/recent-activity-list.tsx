@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
+import { cn } from '@/lib/utils';
 
 
 interface ActivityItem {
@@ -48,29 +49,42 @@ export function RecentActivityList() {
         
         const groupMap = new Map(groups.map(g => [g.id, g.name]));
 
-        const expenseActivities = expenses.map((e: Expense) => ({
-          id: e.id,
-          type: 'expense' as const,
-          description: e.description,
-          amount: e.amount,
-          actors: e.payers.map(p => p.user),
-          groupName: groupMap.get(e.groupId) || "a group",
-          groupId: e.groupId,
-          date: e.date,
-          icon: <Icons.Expense className="h-5 w-5 text-primary" />,
-        }));
+        const expenseActivities = expenses.map((e: Expense) => {
+          const userPaid = e.payers.find(p => p.user.uid === userProfile.uid)?.amount || 0;
+          const userOwed = e.participants.find(p => p.user.uid === userProfile.uid)?.amountOwed || 0;
+          const netAmount = userPaid - userOwed;
 
-        const settlementActivities = settlements.map((s: Settlement) => ({
-          id: s.id,
-          type: 'settlement' as const,
-          description: `Settled with ${getFullName(s.paidTo.firstName, s.paidTo.lastName)}`,
-          amount: s.amount,
-          actors: [s.paidBy],
-          groupName: groupMap.get(s.groupId) || "a group",
-          groupId: s.groupId,
-          date: s.date,
-          icon: <Icons.Settle className="h-5 w-5 text-green-400" />,
-        }));
+          return {
+            id: e.id,
+            type: 'expense' as const,
+            description: e.description,
+            amount: netAmount,
+            actors: e.payers.map(p => p.user),
+            groupName: groupMap.get(e.groupId) || "a group",
+            groupId: e.groupId,
+            date: e.date,
+            icon: <Icons.Expense className="h-5 w-5 text-primary" />,
+          };
+        });
+
+        const settlementActivities = settlements.map((s: Settlement) => {
+          const isPayer = s.paidBy.uid === userProfile.uid;
+          const description = isPayer 
+            ? `You paid ${getFullName(s.paidTo.firstName, s.paidTo.lastName)}`
+            : `${getFullName(s.paidBy.firstName, s.paidBy.lastName)} paid you`;
+          
+          return {
+            id: s.id,
+            type: 'settlement' as const,
+            description,
+            amount: isPayer ? -s.amount : s.amount,
+            actors: [s.paidBy],
+            groupName: groupMap.get(s.groupId) || "a group",
+            groupId: s.groupId,
+            date: s.date,
+            icon: <Icons.Settle className="h-5 w-5 text-green-400" />,
+          };
+        });
 
         const combined = [...expenseActivities, ...settlementActivities]
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -153,12 +167,30 @@ export function RecentActivityList() {
                     {activity.description}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    <span className="font-semibold">{getActorText(activity.actors, activity.type)}</span> in <Link href={`/groups/${activity.groupId}`} className="hover:underline text-primary/80 hover:text-primary">{activity.groupName}</Link>
+                    {activity.type === 'expense' ? (
+                      <>
+                        <span className="font-semibold">{getActorText(activity.actors, activity.type)}</span>
+                        {' in '}
+                        <Link href={`/groups/${activity.groupId}`} className="hover:underline text-primary/80 hover:text-primary">{activity.groupName}</Link>
+                      </>
+                    ) : (
+                      <>
+                        {'in '}
+                        <Link href={`/groups/${activity.groupId}`} className="hover:underline text-primary/80 hover:text-primary">{activity.groupName}</Link>
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="flex flex-col items-end">
-                    <div className={`text-sm font-semibold ${activity.type === 'expense' ? 'text-foreground' : 'text-green-400'}`}>
-                    {activity.type === 'expense' ? '-' : '+'}{CURRENCY_SYMBOL}{activity.amount.toFixed(2)}
+                    <div className={cn(
+                        'text-sm font-semibold',
+                        activity.amount > 0.01 ? 'text-green-400' :
+                        activity.amount < -0.01 ? 'text-red-400' :
+                        'text-muted-foreground'
+                      )}>
+                        {activity.amount > 0.01 ? '+' : ''}
+                        {activity.amount < -0.01 ? '−' : ''}
+                        {CURRENCY_SYMBOL}{Math.abs(activity.amount).toFixed(2)}
                     </div>
                     <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(activity.date), { addSuffix: true })}
