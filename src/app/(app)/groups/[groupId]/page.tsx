@@ -9,7 +9,6 @@ import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
 import { GroupBalances } from '@/components/groups/group-balances';
 import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Card,
   CardContent,
@@ -30,12 +29,6 @@ import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 const TABS: { value: string; label: string; icon: IconName }[] = [
     { value: 'expenses', label: 'Expenses', icon: 'Expense' },
@@ -161,22 +154,15 @@ export default function GroupDetailPage() {
           {TABS.map((tab) => {
             const Icon = Icons[tab.icon];
             return (
-              <TooltipProvider key={tab.value} delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <TabsTrigger
-                      value={tab.value}
-                      className="w-full gap-2 md:w-auto md:px-4"
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="hidden md:inline">{tab.label}</span>
-                    </TabsTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent className="md:hidden">
-                    <p>{tab.label}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="w-full gap-2 md:w-auto md:px-4"
+                title={tab.label}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="hidden md:inline">{tab.label}</span>
+              </TabsTrigger>
             );
           })}
         </TabsList>
@@ -192,19 +178,17 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="p-0">
               {expenses.length > 0 ? (
-                <ScrollArea className="h-[45vh]">
-                  <div className="divide-y divide-border/50">
-                    {expenses.map((expense) => (
-                      <ExpenseListItem
-                        key={expense.id}
-                        expense={expense}
-                        currentUserId={userProfile.uid}
-                        group={group}
-                        onActionComplete={loadGroupData}
-                      />
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="divide-y divide-border/50">
+                  {expenses.map((expense) => (
+                    <ExpenseListItem
+                      key={expense.id}
+                      expense={expense}
+                      currentUserId={userProfile.uid}
+                      group={group}
+                      onActionComplete={loadGroupData}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.Details className="h-12 w-12 mx-auto mb-2" />
@@ -231,17 +215,15 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="p-0">
               {settlements.length > 0 ? (
-                <ScrollArea className="h-[45vh]">
-                  <div className="divide-y divide-border/50">
-                    {settlements.map((settlement) => (
-                      <SettlementListItem
-                        key={settlement.id}
-                        settlement={settlement}
-                        currentUserId={userProfile.uid}
-                      />
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="divide-y divide-border/50">
+                  {settlements.map((settlement) => (
+                    <SettlementListItem
+                      key={settlement.id}
+                      settlement={settlement}
+                      currentUserId={userProfile.uid}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.Settle className="h-12 w-12 mx-auto mb-2" />

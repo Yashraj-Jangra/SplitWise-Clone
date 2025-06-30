@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/auth-context';
 import type { HistoryEvent } from '@/types';
 import { getHistoryByGroupId, restoreExpense, deleteHistoryEvent } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/components/icons';
 import { formatDistanceToNow } from 'date-fns';
@@ -263,16 +262,14 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
         </CardTitle>
         <CardDescription>An audit log of all activities within this group.</CardDescription>
       </CardHeader>
-      <CardContent className="p-6 pt-0">
+      <CardContent className="p-0">
         {history.length > 0 ? (
-          <ScrollArea className="h-[45vh] -mx-6">
-            <div className="divide-y divide-border">
-                {history.map(event => {
-                    const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
-                    return (<HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
-                })}
-            </div>
-          </ScrollArea>
+          <div className="divide-y divide-border">
+              {history.map(event => {
+                  const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
+                  return (<HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
+              })}
+          </div>
         ) : (
           <div className="text-center p-8 text-muted-foreground">
             <Icons.History className="h-12 w-12 mx-auto mb-2" />

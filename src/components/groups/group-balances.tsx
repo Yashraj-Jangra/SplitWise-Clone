@@ -6,7 +6,6 @@ import type { Balance, UserProfile, Group, SimplifiedSettlement } from "@/types"
 import { simplifyDebts } from "@/lib/mock-data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -179,11 +178,9 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ScrollArea className="h-[45vh]">
-          <div className="p-1">
-            {renderContent()}
-          </div>
-        </ScrollArea>
+        <div className="p-1">
+          {renderContent()}
+        </div>
         <div className="pt-4 border-t flex justify-end">
             <AddSettlementDialog group={group} onSettlementAdded={onSettlementAdded} />
         </div>
