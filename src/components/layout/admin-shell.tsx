@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -41,6 +42,8 @@ const adminNavItems: NavItem[] = [
         { title: "Landing Images", href: "/admin/settings#landing-images", icon: "Wallet" },
         { title: "Cover Images", href: "/admin/settings#cover-images", icon: "Wallet" },
         { title: "About Page", href: "/admin/settings#about-settings", icon: "Wallet" },
+        { title: "Privacy Policy", href: "/admin/settings#privacy-settings", icon: "Wallet" },
+        { title: "Terms & Conditions", href: "/admin/settings#terms-settings", icon: "Wallet" },
     ],
   },
    {

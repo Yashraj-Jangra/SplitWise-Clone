@@ -106,14 +106,21 @@ export default function AdminSettingsPage() {
     setSettings({ ...settings, appName: e.target.value });
   };
   
-  const handleAboutChange = (field: keyof NonNullable<SiteSettings['about']>, value: string) => {
+  const handleNestedSettingsChange = (
+    key: 'about' | 'privacyPolicy' | 'termsAndConditions',
+    field: string,
+    value: string
+  ) => {
     if (!settings) return;
-    setSettings({
-        ...settings,
-        about: {
-            ...settings.about!,
-            [field]: value,
-        },
+    setSettings(prevSettings => {
+        if (!prevSettings) return null;
+        return {
+            ...prevSettings,
+            [key]: {
+                ...prevSettings[key],
+                [field]: value,
+            },
+        };
     });
   };
 
@@ -306,15 +313,15 @@ export default function AdminSettingsPage() {
             <CardContent className="space-y-6">
                 <div className="space-y-2">
                     <Label htmlFor="aboutTitle">Page Title</Label>
-                    <Input id="aboutTitle" value={settings.about?.title || ''} onChange={(e) => handleAboutChange('title', e.target.value)} />
+                    <Input id="aboutTitle" value={settings.about?.title || ''} onChange={(e) => handleNestedSettingsChange('about', 'title', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="aboutSubtitle">Page Subtitle</Label>
-                    <Input id="aboutSubtitle" value={settings.about?.subtitle || ''} onChange={(e) => handleAboutChange('subtitle', e.target.value)} />
+                    <Input id="aboutSubtitle" value={settings.about?.subtitle || ''} onChange={(e) => handleNestedSettingsChange('about', 'subtitle', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="aboutContent">Main Content</Label>
-                    <Textarea id="aboutContent" value={settings.about?.mainContent || ''} onChange={(e) => handleAboutChange('mainContent', e.target.value)} rows={5} />
+                    <Textarea id="aboutContent" value={settings.about?.mainContent || ''} onChange={(e) => handleNestedSettingsChange('about', 'mainContent', e.target.value)} rows={5} />
                 </div>
                 
                 <Separator />
@@ -323,29 +330,95 @@ export default function AdminSettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div className="space-y-2">
                         <Label htmlFor="ownerName">Owner Name</Label>
-                        <Input id="ownerName" value={settings.about?.ownerName || ''} onChange={(e) => handleAboutChange('ownerName', e.target.value)} />
+                        <Input id="ownerName" value={settings.about?.ownerName || ''} onChange={(e) => handleNestedSettingsChange('about', 'ownerName', e.target.value)} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="ownerTitle">Owner Title</Label>
-                        <Input id="ownerTitle" value={settings.about?.ownerTitle || ''} onChange={(e) => handleAboutChange('ownerTitle', e.target.value)} />
+                        <Input id="ownerTitle" value={settings.about?.ownerTitle || ''} onChange={(e) => handleNestedSettingsChange('about', 'ownerTitle', e.target.value)} />
                     </div>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="ownerBio">Owner Bio</Label>
-                    <Textarea id="ownerBio" value={settings.about?.ownerBio || ''} onChange={(e) => handleAboutChange('ownerBio', e.target.value)} rows={3} />
+                    <Textarea id="ownerBio" value={settings.about?.ownerBio || ''} onChange={(e) => handleNestedSettingsChange('about', 'ownerBio', e.target.value)} rows={3} />
                 </div>
                 
                 <div className="space-y-2">
                     <Label htmlFor="githubUrl">GitHub URL</Label>
-                    <Input id="githubUrl" value={settings.about?.githubUrl || ''} onChange={(e) => handleAboutChange('githubUrl', e.target.value)} />
+                    <Input id="githubUrl" value={settings.about?.githubUrl || ''} onChange={(e) => handleNestedSettingsChange('about', 'githubUrl', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-                    <Input id="linkedinUrl" value={settings.about?.linkedinUrl || ''} onChange={(e) => handleAboutChange('linkedinUrl', e.target.value)} />
+                    <Input id="linkedinUrl" value={settings.about?.linkedinUrl || ''} onChange={(e) => handleNestedSettingsChange('about', 'linkedinUrl', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="portfolioUrl">Portfolio URL</Label>
-                    <Input id="portfolioUrl" value={settings.about?.portfolioUrl || ''} onChange={(e) => handleAboutChange('portfolioUrl', e.target.value)} />
+                    <Input id="portfolioUrl" value={settings.about?.portfolioUrl || ''} onChange={(e) => handleNestedSettingsChange('about', 'portfolioUrl', e.target.value)} />
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card id="privacy-settings" className="scroll-mt-24">
+            <CardHeader>
+                <CardTitle>Privacy Policy Settings</CardTitle>
+                <CardDescription>Customize the content of the "Privacy Policy" page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Label>Page Title</Label>
+                    <Input value={settings.privacyPolicy?.title || ''} onChange={(e) => handleNestedSettingsChange('privacyPolicy', 'title', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>1. Introduction</Label>
+                    <Textarea value={settings.privacyPolicy?.introduction || ''} onChange={(e) => handleNestedSettingsChange('privacyPolicy', 'introduction', e.target.value)} rows={5} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>2. Information We Collect</Label>
+                    <Textarea value={settings.privacyPolicy?.informationWeCollect || ''} onChange={(e) => handleNestedSettingsChange('privacyPolicy', 'informationWeCollect', e.target.value)} rows={5} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>3. Use of Your Information</Label>
+                    <Textarea value={settings.privacyPolicy?.howWeUseYourInformation || ''} onChange={(e) => handleNestedSettingsChange('privacyPolicy', 'howWeUseYourInformation', e.target.value)} rows={5} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>4. Security of Your Information</Label>
+                    <Textarea value={settings.privacyPolicy?.securityOfYourInformation || ''} onChange={(e) => handleNestedSettingsChange('privacyPolicy', 'securityOfYourInformation', e.target.value)} rows={5} />
+                </div>
+                <div className="space-y-2">
+                    <Label>5. Contact Us</Label>
+                    <Textarea value={settings.privacyPolicy?.contactUs || ''} onChange={(e) => handleNestedSettingsChange('privacyPolicy', 'contactUs', e.target.value)} rows={3} />
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card id="terms-settings" className="scroll-mt-24">
+            <CardHeader>
+                <CardTitle>Terms & Conditions Settings</CardTitle>
+                <CardDescription>Customize the content of the "Terms & Conditions" page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                 <div className="space-y-2">
+                    <Label>Page Title</Label>
+                    <Input value={settings.termsAndConditions?.title || ''} onChange={(e) => handleNestedSettingsChange('termsAndConditions', 'title', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>1. Acceptance of Terms</Label>
+                    <Textarea value={settings.termsAndConditions?.acceptanceOfTerms || ''} onChange={(e) => handleNestedSettingsChange('termsAndConditions', 'acceptanceOfTerms', e.target.value)} rows={3} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>2. User Accounts</Label>
+                    <Textarea value={settings.termsAndConditions?.userAccounts || ''} onChange={(e) => handleNestedSettingsChange('termsAndConditions', 'userAccounts', e.target.value)} rows={4} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>3. User Conduct</Label>
+                    <Textarea value={settings.termsAndConditions?.userConduct || ''} onChange={(e) => handleNestedSettingsChange('termsAndConditions', 'userConduct', e.target.value)} rows={5} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>4. Limitation of Liability</Label>
+                    <Textarea value={settings.termsAndConditions?.limitationOfLiability || ''} onChange={(e) => handleNestedSettingsChange('termsAndConditions', 'limitationOfLiability', e.target.value)} rows={4} />
+                </div>
+                <div className="space-y-2">
+                    <Label>5. Governing Law</Label>
+                    <Textarea value={settings.termsAndConditions?.governingLaw || ''} onChange={(e) => handleNestedSettingsChange('termsAndConditions', 'governingLaw', e.target.value)} rows={3} />
                 </div>
             </CardContent>
         </Card>

@@ -1,4 +1,5 @@
 
+
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -155,5 +156,21 @@ export interface SiteSettings {
     githubUrl?: string;
     linkedinUrl?: string;
     portfolioUrl?: string;
-  }
+  };
+  privacyPolicy?: {
+    title: string;
+    introduction: string;
+    informationWeCollect: string;
+    howWeUseYourInformation: string;
+    securityOfYourInformation: string;
+    contactUs: string;
+  };
+  termsAndConditions?: {
+    title: string;
+    acceptanceOfTerms: string;
+    userAccounts: string;
+    userConduct: string;
+    limitationOfLiability: string;
+    governingLaw: string;
+  };
 }
