@@ -963,6 +963,16 @@ const FALLBACK_LANDING_IMAGES = [
     'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop',
 ];
 
+const DEFAULT_AUTH_PAGE_SETTINGS = {
+    imageUrl: 'https://images.unsplash.com/photo-1549880338-65ddcdfd017b?q=80&w=2070&auto=format&fit=crop',
+    loginTitle: 'Welcome Back',
+    loginSubtitle: 'Enter your credentials to access your account.',
+    signupTitle: 'Create an Account',
+    signupSubtitle: 'Join {appName} to simplify your group expenses.',
+    forgotPasswordTitle: 'Forgot Password',
+    forgotPasswordSubtitle: 'Enter your email to receive a reset link.',
+}
+
 const DEFAULT_ABOUT_SETTINGS = {
     title: 'About SettleEase',
     subtitle: 'Simplifying shared expenses for everyone, everywhere.',
@@ -1018,6 +1028,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             logoUrl: data.logoUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
+            authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
             about: { ...DEFAULT_ABOUT_SETTINGS, ...(data.about || {}) },
             privacyPolicy,
             termsAndConditions,
@@ -1028,6 +1039,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             logoUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
+            authPage: DEFAULT_AUTH_PAGE_SETTINGS,
             about: DEFAULT_ABOUT_SETTINGS,
             privacyPolicy: DEFAULT_PRIVACY_POLICY,
             termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS,

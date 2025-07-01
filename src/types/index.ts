@@ -157,6 +157,15 @@ export interface SiteSettings {
   logoUrl?: string;
   coverImages: string[];
   landingImages: string[];
+  authPage?: {
+    imageUrl: string;
+    loginTitle: string;
+    loginSubtitle: string;
+    signupTitle: string;
+    signupSubtitle: string;
+    forgotPasswordTitle: string;
+    forgotPasswordSubtitle: string;
+  };
   about?: {
     title: string;
     subtitle: string;

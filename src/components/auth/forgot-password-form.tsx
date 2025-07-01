@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -7,12 +8,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { AuthCard } from "./auth-card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { FirebaseError } from "firebase/app";
+import type { SiteSettings } from "@/types";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -20,7 +21,12 @@ const forgotPasswordSchema = z.object({
 
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
-export function ForgotPasswordForm() {
+interface ForgotPasswordFormProps {
+    authPageSettings?: SiteSettings['authPage'];
+    appName: string;
+}
+
+export function ForgotPasswordForm({ authPageSettings, appName }: ForgotPasswordFormProps) {
     const { sendPasswordResetEmail } = useAuth();
     const { toast } = useToast();
     const [submitted, setSubmitted] = useState(false);
@@ -51,24 +57,27 @@ export function ForgotPasswordForm() {
 
     if (submitted) {
         return (
-             <AuthCard
-                title="Check Your Email"
-                description={`A password reset link has been sent to ${form.getValues("email")}. Please check your inbox and spam folder.`}
-                icon={<Icons.Mail className="h-12 w-12 text-primary" />}
-            >
-                <Button asChild className="w-full">
+             <div className="text-center">
+                <Icons.Mail className="h-12 w-12 text-primary mx-auto mb-4" />
+                <h1 className="text-3xl font-bold font-headline">Check Your Email</h1>
+                <p className="text-muted-foreground mt-2">{`A password reset link has been sent to ${form.getValues("email")}. Please check your inbox and spam folder.`}</p>
+                <Button asChild className="w-full mt-6 bg-secondary-foreground text-secondary hover:bg-secondary-foreground/90">
                     <Link href="/auth/login">Back to Login</Link>
                 </Button>
-            </AuthCard>
+            </div>
         )
     }
 
     return (
-        <AuthCard
-            title="Forgot Password"
-            description="Enter your email address and we'll send you a link to reset your password."
-            icon={<Icons.Mail className="h-12 w-12 text-primary" />}
-        >
+        <div className="w-full">
+            <div className="text-center md:text-left mb-8">
+                <Link href="/" className="inline-block mb-4">
+                    <Icons.Logo className="h-10 w-10 text-primary" />
+                </Link>
+                <h1 className="text-3xl font-bold font-headline">{authPageSettings?.forgotPasswordTitle || "Forgot Password"}</h1>
+                <p className="text-muted-foreground">{authPageSettings?.forgotPasswordSubtitle || "Enter your email to receive a reset link."}</p>
+            </div>
+
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <FormField
@@ -78,13 +87,13 @@ export function ForgotPasswordForm() {
                             <FormItem>
                                 <FormLabel>Email</FormLabel>
                                 <FormControl>
-                                    <Input type="email" placeholder="you@example.com" {...field} />
+                                    <Input type="email" placeholder="you@example.com" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-                    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                    <Button type="submit" className="w-full bg-secondary-foreground text-secondary hover:bg-secondary-foreground/90" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting ? "Sending..." : "Send Reset Link"}
                     </Button>
                 </form>
@@ -95,6 +104,6 @@ export function ForgotPasswordForm() {
                     Log in
                 </Link>
             </div>
-        </AuthCard>
+        </div>
     );
 }

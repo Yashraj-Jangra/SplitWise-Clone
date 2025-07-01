@@ -7,19 +7,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FirebaseError } from 'firebase/app';
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { AuthCard } from "./auth-card";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import type { SiteSettings } from "@/types";
 
 const signupSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
@@ -30,13 +26,16 @@ const signupSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/, { message: "Username can only contain letters, numbers, and underscores."}),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters long." }),
-  mobileNumber: z.string().optional(),
-  dob: z.string().optional(),
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
-export function SignupForm() {
+interface SignupFormProps {
+    authPageSettings?: SiteSettings['authPage'];
+    appName: string;
+}
+
+export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { signup, loginWithGoogle } = useAuth();
@@ -50,8 +49,6 @@ export function SignupForm() {
       username: "",
       email: "",
       password: "",
-      mobileNumber: "",
-      dob: "",
     },
   });
 
@@ -74,7 +71,6 @@ export function SignupForm() {
           description = `Signup failed: ${error.message}`;
         }
       } else if (error instanceof Error) {
-        // This will now catch the username error from the context
         if (error.message.toLowerCase().includes("username")) {
             description = error.message;
             form.setError("username", { type: "manual", message: description });
@@ -115,11 +111,15 @@ export function SignupForm() {
   }
 
   return (
-    <AuthCard
-      title="Create an Account"
-      description="Join SettleEase to simplify your group expenses."
-      icon={<Icons.Signup className="h-12 w-12 text-primary" />}
-    >
+    <div className="w-full">
+      <div className="text-center md:text-left mb-8">
+        <Link href="/" className="inline-block mb-4">
+          <Icons.Logo className="h-10 w-10 text-primary" />
+        </Link>
+        <h1 className="text-3xl font-bold font-headline">{authPageSettings?.signupTitle || "Create an Account"}</h1>
+        <p className="text-muted-foreground mt-1">{authPageSettings?.signupSubtitle?.replace('{appName}', appName) || `Join ${appName} to simplify your group expenses.`}</p>
+      </div>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -130,7 +130,7 @@ export function SignupForm() {
                     <FormItem>
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
-                        <Input placeholder="John" {...field} />
+                            <Input placeholder="John" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -143,7 +143,7 @@ export function SignupForm() {
                     <FormItem>
                         <FormLabel>Last Name (Optional)</FormLabel>
                         <FormControl>
-                        <Input placeholder="Doe" {...field} />
+                            <Input placeholder="Doe" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -157,7 +157,7 @@ export function SignupForm() {
                 <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                    <Input placeholder="johndoe99" {...field} />
+                    <Input placeholder="johndoe99" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -170,7 +170,7 @@ export function SignupForm() {
                 <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                    <Input type="email" placeholder="you@example.com" {...field} />
+                    <Input type="email" placeholder="you@example.com" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -183,61 +183,15 @@ export function SignupForm() {
                 <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input type="password" placeholder="••••••••" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="mobileNumber"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Mobile (Optional)</FormLabel>
-                        <FormControl>
-                        <Input placeholder="9876543210" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="dob"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-col pt-2">
-                        <FormLabel className="mb-[0.6rem]">Date of Birth (Optional)</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <FormControl>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                                >
-                                    {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-                                    <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                mode="single"
-                                selected={field.value ? new Date(field.value) : undefined}
-                                onSelect={(date) => field.onChange(date?.toISOString())}
-                                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={form.formState.isSubmitting || isGoogleLoading}>
-                {form.formState.isSubmitting ? "Signing up..." : "Sign Up"}
+            
+            <Button type="submit" className="w-full bg-secondary-foreground text-secondary hover:bg-secondary-foreground/90 mt-6" disabled={form.formState.isSubmitting || isGoogleLoading}>
+                {form.formState.isSubmitting ? "Creating Account..." : "Create Account"}
             </Button>
         </form>
       </Form>
@@ -247,8 +201,8 @@ export function SignupForm() {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or sign up with
+          <span className="bg-card px-2 text-muted-foreground">
+            Or
           </span>
         </div>
       </div>
@@ -267,6 +221,6 @@ export function SignupForm() {
           Log in
         </Link>
       </div>
-    </AuthCard>
+    </div>
   );
 }

@@ -6,10 +6,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   return {
     title: `Forgot Password - ${settings.appName}`,
-    description: `Reset your ${settings.appName} password.`,
+    description: settings.authPage?.forgotPasswordSubtitle,
   };
 }
 
-export default function ForgotPasswordPage() {
-  return <ForgotPasswordForm />;
+export default async function ForgotPasswordPage() {
+  const settings = await getSiteSettings();
+  return <ForgotPasswordForm authPageSettings={settings.authPage} appName={settings.appName} />;
 }

@@ -6,10 +6,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   return {
     title: `Login - ${settings.appName}`,
-    description: `Log in to your ${settings.appName} account to manage group expenses.`,
+    description: settings.authPage?.loginSubtitle,
   };
 }
 
-export default function LoginPage() {
-  return <LoginForm />;
+export default async function LoginPage() {
+  const settings = await getSiteSettings();
+  return <LoginForm authPageSettings={settings.authPage} appName={settings.appName} />;
 }

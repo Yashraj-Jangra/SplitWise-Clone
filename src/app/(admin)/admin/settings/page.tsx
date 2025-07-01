@@ -47,6 +47,11 @@ export default function AdminSettingsPage() {
       setSettings({ ...settings, [key]: value });
   };
   
+   const handleAuthPageChange = (field: string, value: string) => {
+      if (!settings) return;
+      setSettings(prev => prev ? ({ ...prev, authPage: { ...prev.authPage!, [field]: value }}) : null);
+  }
+
   const handleCoverImageChange = (index: number, value: string) => {
     if (!settings) return;
     const newImages = [...settings.coverImages];
@@ -117,8 +122,12 @@ export default function AdminSettingsPage() {
         if (!prev) return null;
         const newPolicyData = { ...prev[policy]! };
         const newSections = [...newPolicyData.sections];
-        newSections[index] = { ...newSections[index], [field]: value };
-        newPolicyData.sections = newSections;
+        if (index === -1) { // -1 is a sentinel for the main title
+            newPolicyData.title = value;
+        } else {
+            newSections[index] = { ...newSections[index], [field]: value };
+            newPolicyData.sections = newSections;
+        }
         return { ...prev, [policy]: newPolicyData };
     });
   };
@@ -228,6 +237,46 @@ export default function AdminSettingsPage() {
                             <Input id="logoUrl" value={settings.logoUrl || ''} onChange={(e) => handleValueChange('logoUrl', e.target.value)} placeholder="https://example.com/logo.png" />
                          </div>
                     </div>
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card id="auth-page" className="scroll-mt-24">
+            <CardHeader>
+                <CardTitle>Authentication Page</CardTitle>
+                <CardDescription>Customize the content on the Login, Signup, and Forgot Password pages.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                 <div className="space-y-2">
+                    <Label htmlFor="authImageUrl">Side Image URL</Label>
+                    <Input id="authImageUrl" value={settings.authPage?.imageUrl || ''} onChange={(e) => handleAuthPageChange('imageUrl', e.target.value)} placeholder="https://images.unsplash.com/..."/>
+                    <p className="text-xs text-muted-foreground">Recommended aspect ratio: 2:3 (e.g., 800x1200px).</p>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="authLoginTitle">Login Title</Label>
+                    <Input id="authLoginTitle" value={settings.authPage?.loginTitle || ''} onChange={(e) => handleAuthPageChange('loginTitle', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="authLoginSubtitle">Login Subtitle</Label>
+                    <Input id="authLoginSubtitle" value={settings.authPage?.loginSubtitle || ''} onChange={(e) => handleAuthPageChange('loginSubtitle', e.target.value)} />
+                </div>
+                 <Separator />
+                <div className="space-y-2">
+                    <Label htmlFor="authSignupTitle">Signup Title</Label>
+                    <Input id="authSignupTitle" value={settings.authPage?.signupTitle || ''} onChange={(e) => handleAuthPageChange('signupTitle', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="authSignupSubtitle">Signup Subtitle</Label>
+                    <Input id="authSignupSubtitle" value={settings.authPage?.signupSubtitle || ''} onChange={(e) => handleAuthPageChange('signupSubtitle', e.target.value)} />
+                </div>
+                 <Separator />
+                <div className="space-y-2">
+                    <Label htmlFor="authForgotTitle">Forgot Password Title</Label>
+                    <Input id="authForgotTitle" value={settings.authPage?.forgotPasswordTitle || ''} onChange={(e) => handleAuthPageChange('forgotPasswordTitle', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="authForgotSubtitle">Forgot Password Subtitle</Label>
+                    <Input id="authForgotSubtitle" value={settings.authPage?.forgotPasswordSubtitle || ''} onChange={(e) => handleAuthPageChange('forgotPasswordSubtitle', e.target.value)} />
                 </div>
             </CardContent>
         </Card>

@@ -11,11 +11,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { AuthCard } from "./auth-card";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { FirebaseError } from "firebase/app";
+import type { SiteSettings } from "@/types";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -24,7 +24,12 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export function LoginForm() {
+interface LoginFormProps {
+    authPageSettings?: SiteSettings['authPage'];
+    appName: string;
+}
+
+export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { login, loginWithGoogle } = useAuth();
@@ -45,7 +50,6 @@ export function LoginForm() {
         title: "Login Successful",
         description: "Welcome back!",
       });
-      // The auth context will redirect via the layout components
       router.push("/dashboard");
     } catch (error) {
       let description = "An unknown error occurred. Please try again.";
@@ -95,11 +99,15 @@ export function LoginForm() {
   }
 
   return (
-    <AuthCard
-      title="Welcome Back!"
-      description="Log in to manage your shared expenses."
-      icon={<Icons.Login className="h-12 w-12 text-primary" />}
-    >
+    <div className="w-full">
+        <div className="text-center md:text-left mb-8">
+            <Link href="/" className="inline-block mb-4">
+                <Icons.Logo className="h-10 w-10 text-primary" />
+            </Link>
+            <h1 className="text-3xl font-bold font-headline">{authPageSettings?.loginTitle || "Welcome Back"}</h1>
+            <p className="text-muted-foreground mt-1">{authPageSettings?.loginSubtitle?.replace('{appName}', appName) || `Enter your credentials to access your account.`}</p>
+        </div>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
@@ -109,7 +117,7 @@ export function LoginForm() {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="you@example.com" {...field} />
+                  <Input type="email" placeholder="you@example.com" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -130,14 +138,14 @@ export function LoginForm() {
                     </Link>
                 </div>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input type="password" placeholder="••••••••" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:ring-0 focus:border-primary transition" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={form.formState.isSubmitting || isGoogleLoading}>
-            {form.formState.isSubmitting ? "Logging in..." : "Log In"}
+          <Button type="submit" className="w-full bg-secondary-foreground text-secondary hover:bg-secondary-foreground/90" disabled={form.formState.isSubmitting || isGoogleLoading}>
+            {form.formState.isSubmitting ? "Logging in..." : "Sign In"}
           </Button>
         </form>
       </Form>
@@ -147,8 +155,8 @@ export function LoginForm() {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or continue with
+          <span className="bg-card px-2 text-muted-foreground">
+            Or
           </span>
         </div>
       </div>
@@ -164,10 +172,9 @@ export function LoginForm() {
       <div className="mt-6 text-center text-sm">
         Don't have an account?{" "}
         <Link href="/auth/signup" className="font-medium text-primary hover:underline">
-          Sign up
+          Create Account
         </Link>
       </div>
-    </AuthCard>
+    </div>
   );
 }
-
