@@ -144,4 +144,15 @@ export interface SiteSettings {
   logoUrl?: string;
   coverImages: string[];
   landingImages: string[];
+  about?: {
+    title: string;
+    subtitle: string;
+    mainContent: string;
+    ownerName: string;
+    ownerTitle: string;
+    ownerBio: string;
+    githubUrl?: string;
+    linkedinUrl?: string;
+    portfolioUrl?: string;
+  }
 }

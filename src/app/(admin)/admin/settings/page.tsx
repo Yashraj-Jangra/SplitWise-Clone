@@ -15,6 +15,8 @@ import type { SiteSettings } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -104,6 +106,17 @@ export default function AdminSettingsPage() {
     setSettings({ ...settings, appName: e.target.value });
   };
   
+  const handleAboutChange = (field: keyof NonNullable<SiteSettings['about']>, value: string) => {
+    if (!settings) return;
+    setSettings({
+        ...settings,
+        about: {
+            ...settings.about!,
+            [field]: value,
+        },
+    });
+  };
+
   const handleSaveChanges = async () => {
     if (!settings) return;
     setIsSaving(true);
@@ -281,6 +294,58 @@ export default function AdminSettingsPage() {
                         </div>
                     </CardContent>
                     </Card>
+                </div>
+            </CardContent>
+        </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>About Page Settings</CardTitle>
+                <CardDescription>Customize the content of the "About Us" page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Label htmlFor="aboutTitle">Page Title</Label>
+                    <Input id="aboutTitle" value={settings.about?.title || ''} onChange={(e) => handleAboutChange('title', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="aboutSubtitle">Page Subtitle</Label>
+                    <Input id="aboutSubtitle" value={settings.about?.subtitle || ''} onChange={(e) => handleAboutChange('subtitle', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="aboutContent">Main Content</Label>
+                    <Textarea id="aboutContent" value={settings.about?.mainContent || ''} onChange={(e) => handleAboutChange('mainContent', e.target.value)} rows={5} />
+                </div>
+                
+                <Separator />
+                <h3 className="text-lg font-medium">Owner Details</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="ownerName">Owner Name</Label>
+                        <Input id="ownerName" value={settings.about?.ownerName || ''} onChange={(e) => handleAboutChange('ownerName', e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="ownerTitle">Owner Title</Label>
+                        <Input id="ownerTitle" value={settings.about?.ownerTitle || ''} onChange={(e) => handleAboutChange('ownerTitle', e.target.value)} />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="ownerBio">Owner Bio</Label>
+                    <Textarea id="ownerBio" value={settings.about?.ownerBio || ''} onChange={(e) => handleAboutChange('ownerBio', e.target.value)} rows={3} />
+                </div>
+                
+                <div className="space-y-2">
+                    <Label htmlFor="githubUrl">GitHub URL</Label>
+                    <Input id="githubUrl" value={settings.about?.githubUrl || ''} onChange={(e) => handleAboutChange('githubUrl', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+                    <Input id="linkedinUrl" value={settings.about?.linkedinUrl || ''} onChange={(e) => handleAboutChange('linkedinUrl', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="portfolioUrl">Portfolio URL</Label>
+                    <Input id="portfolioUrl" value={settings.about?.portfolioUrl || ''} onChange={(e) => handleAboutChange('portfolioUrl', e.target.value)} />
                 </div>
             </CardContent>
         </Card>

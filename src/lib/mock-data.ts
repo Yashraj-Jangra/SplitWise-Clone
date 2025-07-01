@@ -961,6 +961,18 @@ const FALLBACK_LANDING_IMAGES = [
     'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop',
 ];
 
+const DEFAULT_ABOUT_SETTINGS = {
+    title: 'About SettleEase',
+    subtitle: 'Simplifying shared expenses for everyone, everywhere.',
+    mainContent: 'Welcome to SettleEase, the ultimate solution for managing group expenses without the hassle. Born from the common frustration of tracking who paid for what during trips, shared housing, and group events, SettleEase was designed to be intuitive, powerful, and transparent.',
+    ownerName: 'Yashraj Jangra',
+    ownerTitle: 'Full-Stack Developer & Project Lead',
+    ownerBio: 'Yashraj is a passionate developer who built SettleEase to solve a real-world problem. He specializes in creating modern, user-friendly web applications with a focus on clean code and great user experience.',
+    githubUrl: 'https://github.com/Yashraj-Jangra',
+    linkedinUrl: 'https://www.linkedin.com/in/yashraj-jangra-24016a213/',
+    portfolioUrl: 'https://yashraj-jangra.netlify.app/',
+};
+
 export async function getSiteSettings(): Promise<SiteSettings> {
     const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
     const docSnap = await getDoc(docRef);
@@ -972,6 +984,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             logoUrl: data.logoUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
+            about: { ...DEFAULT_ABOUT_SETTINGS, ...(data.about || {}) },
         };
     } else {
         const defaultSettings = {
@@ -979,6 +992,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             logoUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
+            about: DEFAULT_ABOUT_SETTINGS,
         };
         await setDoc(docRef, defaultSettings);
         return defaultSettings;
