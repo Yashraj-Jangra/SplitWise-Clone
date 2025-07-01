@@ -79,30 +79,6 @@
 }
 
 @layer utilities {
-  .animated-gradient-bg {
-    background: linear-gradient(
-      -45deg,
-      hsl(var(--primary) / 0.15),
-      hsl(var(--background)),
-      hsl(var(--background)),
-      hsl(var(--accent) / 0.15)
-    );
-    background-size: 400% 400%;
-    animation: gradient 20s ease infinite;
-  }
-
-  @keyframes gradient {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-  
   .glass-pane {
     @apply bg-card/50 backdrop-blur-sm border-border/50;
   }

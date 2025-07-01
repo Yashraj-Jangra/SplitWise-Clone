@@ -8,7 +8,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const settings = await getSiteSettings();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background animated-gradient-bg">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <main className="w-full max-w-4xl mx-auto z-10">
         <div className="relative flex min-h-[600px] rounded-2xl shadow-2xl overflow-hidden bg-card/80 backdrop-blur-sm border border-border/50">
           {/* Left Panel: Image */}
