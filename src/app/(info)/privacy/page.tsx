@@ -23,7 +23,6 @@ function PolicySection({ title, children }: { title: string, children: React.Rea
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="mx-auto max-w-3xl">
       <Card className="p-6 sm:p-8">
         <CardHeader className="text-center p-0 mb-8">
           <CardTitle className="text-4xl font-bold font-headline">Privacy Policy</CardTitle>
@@ -61,6 +60,5 @@ export default function PrivacyPolicyPage() {
           </PolicySection>
         </CardContent>
       </Card>
-    </div>
   );
 }

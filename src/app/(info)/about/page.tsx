@@ -12,7 +12,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-3xl">
       <Card className="p-6 sm:p-8">
         <div className="text-center mb-8">
             <h1 className="text-4xl font-bold font-headline mb-2 text-foreground">About SettleEase</h1>
@@ -39,6 +38,5 @@ export default function AboutPage() {
           </p>
         </div>
       </Card>
-    </div>
   );
 }

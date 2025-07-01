@@ -24,8 +24,8 @@ export default function InfoLayout({
                     </Link>
                 </div>
             </header>
-            <main className="flex-1">
-                <div className="container py-8 md:py-12">{children}</div>
+            <main className="flex flex-1 flex-col items-center">
+                <div className="container w-full max-w-3xl py-8 md:py-12">{children}</div>
             </main>
             <footer className="py-6 md:px-8 md:py-0 border-t">
                 <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
