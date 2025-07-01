@@ -1,9 +1,11 @@
+
 'use client';
 
 import Link from 'next/link';
 import { Icons } from '@/components/icons';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DynamicYear } from '@/components/layout/dynamic-year';
 
 export default function AuthLayout({
   children,
@@ -27,8 +29,13 @@ export default function AuthLayout({
       <div className="w-full max-w-md z-10">
         {children}
       </div>
-      <footer className="mt-8 text-center text-sm text-muted-foreground z-10">
-        {loading ? <Skeleton className="h-4 w-48" /> : <p>&copy; {new Date().getFullYear()} {settings.appName}. All rights reserved.</p>}
+      <footer className="mt-8 w-full max-w-md text-center text-sm text-muted-foreground z-10">
+        <div className="flex justify-center items-center gap-4 mb-2">
+            <Link href="/about" className="hover:text-primary transition-colors">About</Link>
+            <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+        </div>
+        {loading ? <Skeleton className="h-4 w-48 mx-auto" /> : <p>&copy; <DynamicYear /> {settings.appName}. All rights reserved.</p>}
       </footer>
     </div>
   );

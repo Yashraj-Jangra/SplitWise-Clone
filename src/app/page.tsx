@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -44,8 +45,13 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <footer className="absolute bottom-5 text-center text-white/60 z-10">
-        <p>&copy; <DynamicYear /> {settings.appName}. The Future of Shared Expenses.</p>
+      <footer className="absolute bottom-5 w-full px-6 text-center text-white/60 z-10">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-6 text-sm">
+           <p>&copy; <DynamicYear /> {settings.appName}.</p>
+           <Link href="/about" className="hover:text-white transition-colors">About Us</Link>
+           <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+           <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+        </div>
       </footer>
     </main>
   );
