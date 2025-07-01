@@ -141,6 +141,17 @@ export interface HistoryEvent extends Omit<HistoryEventDocument, 'timestamp' | '
     actor: UserProfile;
 }
 
+export interface PolicySection {
+  id: string;
+  title: string;
+  content: string;
+}
+
+export interface PolicyPage {
+  title: string;
+  sections: PolicySection[];
+}
+
 export interface SiteSettings {
   appName: string;
   logoUrl?: string;
@@ -157,20 +168,6 @@ export interface SiteSettings {
     linkedinUrl?: string;
     portfolioUrl?: string;
   };
-  privacyPolicy?: {
-    title: string;
-    introduction: string;
-    informationWeCollect: string;
-    howWeUseYourInformation: string;
-    securityOfYourInformation: string;
-    contactUs: string;
-  };
-  termsAndConditions?: {
-    title: string;
-    acceptanceOfTerms: string;
-    userAccounts: string;
-    userConduct: string;
-    limitationOfLiability: string;
-    governingLaw: string;
-  };
+  privacyPolicy?: PolicyPage;
+  termsAndConditions?: PolicyPage;
 }

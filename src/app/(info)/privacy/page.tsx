@@ -5,6 +5,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSiteSettings } from '@/contexts/site-settings-context';
+import { format } from 'date-fns';
 
 function PolicySection({ title, children }: { title: string, children: React.ReactNode }) {
     return (
@@ -53,28 +54,14 @@ export default function PrivacyPolicyPage() {
       <Card className="p-6 sm:p-8">
         <CardHeader className="text-center p-0 mb-8">
           <CardTitle className="text-4xl font-bold font-headline">{policy.title}</CardTitle>
-          <CardDescription>Last Updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</CardDescription>
+          <CardDescription>Last Updated: {format(new Date(), "PPP")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0 space-y-8">
-          <PolicySection title="1. Introduction">
-              <p>{policy.introduction}</p>
-          </PolicySection>
-
-          <PolicySection title="2. Information We Collect">
-              <p>{policy.informationWeCollect}</p>
-          </PolicySection>
-          
-          <PolicySection title="3. Use of Your Information">
-               <p>{policy.howWeUseYourInformation}</p>
-          </PolicySection>
-
-          <PolicySection title="4. Security of Your Information">
-              <p>{policy.securityOfYourInformation}</p>
-          </PolicySection>
-
-          <PolicySection title="5. Contact Us">
-              <p>{policy.contactUs}</p>
-          </PolicySection>
+            {policy.sections.map((section, index) => (
+                <PolicySection key={section.id || index} title={section.title}>
+                    <div className="whitespace-pre-wrap">{section.content}</div>
+                </PolicySection>
+            ))}
         </CardContent>
       </Card>
   );

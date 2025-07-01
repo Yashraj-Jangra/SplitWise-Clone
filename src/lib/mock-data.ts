@@ -34,6 +34,7 @@ import type {
   HistoryEventDocument,
   SiteSettings,
   SimplifiedSettlement,
+  PolicyPage,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -974,22 +975,26 @@ const DEFAULT_ABOUT_SETTINGS = {
     portfolioUrl: 'https://yashraj-jangra.netlify.app/',
 };
 
-const DEFAULT_PRIVACY_POLICY = {
+const DEFAULT_PRIVACY_POLICY: PolicyPage = {
     title: 'Privacy Policy',
-    introduction: 'Welcome to SettleEase ("we", "our", "us"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the application.',
-    informationWeCollect: 'We may collect information about you in a variety of ways. The information we may collect on the Site includes: Personally identifiable information, such as your name, shipping address, email address, and telephone number, and demographic information, such as your age, gender, hometown, and interests, that you voluntarily give to us when you register with the Application.',
-    howWeUseYourInformation: 'Having accurate information about you permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you via the Application to: Create and manage your account, Email you regarding your account or order, Enable user-to-user communications, and Manage purchases, orders, payments, and other transactions related to the Application.',
-    securityOfYourInformation: 'We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.',
-    contactUs: 'If you have questions or comments about this Privacy Policy, please contact us at: [email protected]',
+    sections: [
+        { id: 'pp_intro', title: '1. Introduction', content: 'Welcome to SettleEase ("we", "our", "us"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the application.' },
+        { id: 'pp_collect', title: '2. Information We Collect', content: 'We may collect information about you in a variety of ways. The information we may collect on the Site includes: Personally identifiable information, such as your name, shipping address, email address, and telephone number, and demographic information, such as your age, gender, hometown, and interests, that you voluntarily give to us when you register with the Application.'},
+        { id: 'pp_use', title: '3. Use of Your Information', content: 'Having accurate information about you permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you via the Application to: Create and manage your account, Email you regarding your account or order, Enable user-to-user communications, and Manage purchases, orders, payments, and other transactions related to the Application.'},
+        { id: 'pp_security', title: '4. Security of Your Information', content: 'We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.'},
+        { id: 'pp_contact', title: '5. Contact Us', content: 'If you have questions or comments about this Privacy Policy, please contact us at: [email protected]'},
+    ]
 };
 
-const DEFAULT_TERMS_AND_CONDITIONS = {
+const DEFAULT_TERMS_AND_CONDITIONS: PolicyPage = {
     title: 'Terms of Service',
-    acceptanceOfTerms: 'By accessing or using the SettleEase application ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of the terms, then you may not access the Service.',
-    userAccounts: 'When you create an account with us, you must provide us with information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Service. You are responsible for safeguarding the password that you use to access the Service and for any activities or actions under your password, whether your password is with our Service or a third-party service.',
-    userConduct: 'You agree not to use the Service to: Violate any local, state, national, or international law; Transmit any material that is abusive, harassing, tortious, defamatory, vulgar, pornographic, obscene, libelous, invasive of another\'s privacy, hateful, or racially, ethnically, or otherwise objectionable; Impersonate any person or entity, or falsely state or otherwise misrepresent your affiliation with a person or entity.',
-    limitationOfLiability: 'In no event shall SettleEase, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.',
-    governingLaw: 'These Terms shall be governed and construed in accordance with the laws of the jurisdiction in which the company is based, without regard to its conflict of law provisions.',
+    sections: [
+        { id: 'tc_acceptance', title: '1. Acceptance of Terms', content: 'By accessing or using the SettleEase application ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of the terms, then you may not access the Service.' },
+        { id: 'tc_accounts', title: '2. User Accounts', content: 'When you create an account with us, you must provide us with information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Service. You are responsible for safeguarding the password that you use to access the Service and for any activities or actions under your password, whether your password is with our Service or a third-party service.' },
+        { id: 'tc_conduct', title: '3. User Conduct', content: 'You agree not to use the Service to: Violate any local, state, national, or international law; Transmit any material that is abusive, harassing, tortious, defamatory, vulgar, pornographic, obscene, libelous, invasive of another\'s privacy, hateful, or racially, ethnically, or otherwise objectionable; Impersonate any person or entity, or falsely state or otherwise misrepresent your affiliation with a person or entity.' },
+        { id: 'tc_liability', title: '4. Limitation of Liability', content: 'In no event shall SettleEase, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.' },
+        { id: 'tc_law', title: '5. Governing Law', content: 'These Terms shall be governed and construed in accordance with the laws of the jurisdiction in which the company is based, without regard to its conflict of law provisions.' },
+    ]
 };
 
 
@@ -999,14 +1004,23 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 
     if (docSnap.exists()) {
         const data = docSnap.data();
+        
+        const privacyPolicy = data.privacyPolicy && Array.isArray(data.privacyPolicy.sections)
+            ? data.privacyPolicy
+            : DEFAULT_PRIVACY_POLICY;
+            
+        const termsAndConditions = data.termsAndConditions && Array.isArray(data.termsAndConditions.sections)
+            ? data.termsAndConditions
+            : DEFAULT_TERMS_AND_CONDITIONS;
+
         return {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
             about: { ...DEFAULT_ABOUT_SETTINGS, ...(data.about || {}) },
-            privacyPolicy: { ...DEFAULT_PRIVACY_POLICY, ...(data.privacyPolicy || {}) },
-            termsAndConditions: { ...DEFAULT_TERMS_AND_CONDITIONS, ...(data.termsAndConditions || {}) },
+            privacyPolicy,
+            termsAndConditions,
         };
     } else {
         const defaultSettings = {
