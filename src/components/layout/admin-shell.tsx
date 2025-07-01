@@ -36,6 +36,12 @@ const adminNavItems: NavItem[] = [
     title: "Site Settings",
     href: "/admin/settings",
     icon: "Settings",
+    subItems: [
+        { title: "Branding", href: "/admin/settings#branding", icon: "Wallet" },
+        { title: "Landing Images", href: "/admin/settings#landing-images", icon: "Wallet" },
+        { title: "Cover Images", href: "/admin/settings#cover-images", icon: "Wallet" },
+        { title: "About Page", href: "/admin/settings#about-settings", icon: "Wallet" },
+    ],
   },
    {
     title: "Back to App",
@@ -62,11 +68,68 @@ function AdminHeader() {
   );
 }
 
+function CollapsibleNavItem({ item, onLinkClick }: { item: NavItem; onLinkClick?: () => void; }) {
+    const pathname = usePathname();
+    const isParentActive = pathname.startsWith(item.href);
+    const [isOpen, setIsOpen] = React.useState(isParentActive);
+    const Icon = Icons[item.icon];
+
+    React.useEffect(() => {
+        if (isParentActive) {
+            setIsOpen(true);
+        }
+    }, [isParentActive, pathname]);
+
+    return (
+        <div>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={cn(
+                    "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
+                    isParentActive && "text-primary bg-primary/20 font-semibold"
+                )}
+            >
+                <Icon className="h-5 w-5" />
+                <span>{item.title}</span>
+                <Icons.ChevronDown
+                    className={cn(
+                        "ml-auto h-4 w-4 transition-transform",
+                        isOpen && "rotate-180"
+                    )}
+                />
+            </button>
+            {isOpen && (
+                <div className="ml-7 mt-1 space-y-1 border-l pl-4">
+                    {item.subItems?.map((subItem) => {
+                        const isSubActive = pathname === subItem.href;
+                        return (
+                             <Link
+                                key={subItem.href}
+                                href={subItem.href}
+                                onClick={onLinkClick}
+                                className={cn(
+                                    "flex items-center gap-3 rounded-md py-2 px-3 text-sm text-muted-foreground transition-all hover:text-primary",
+                                    isSubActive && "text-primary font-semibold"
+                                )}
+                            >
+                               {subItem.title}
+                            </Link>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () => void }) {
     const pathname = usePathname();
     return (
         <nav className="flex flex-col gap-1">
             {items.map((item) => {
+                 if (item.subItems) {
+                    return <CollapsibleNavItem key={item.href} item={item} onLinkClick={onLinkClick} />;
+                 }
                  const Icon = Icons[item.icon || "Dashboard"];
                  const isActive = pathname === item.href || (item.href !== "/admin/dashboard" && item.href !== "/dashboard" && pathname.startsWith(item.href));
                  return (

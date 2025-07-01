@@ -130,7 +130,8 @@ export interface NavItem {
   icon: IconName;
   disabled?: boolean;
   external?: boolean;
-  label?: string
+  label?: string;
+  subItems?: NavItem[];
 }
 
 export interface HistoryEvent extends Omit<HistoryEventDocument, 'timestamp' | 'actorId'> {

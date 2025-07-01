@@ -174,7 +174,7 @@ export default function AdminSettingsPage() {
 
     return (
      <>
-        <Card>
+        <Card id="branding" className="scroll-mt-24">
             <CardHeader>
                 <CardTitle>Branding</CardTitle>
                 <CardDescription>Customize the application's name and logo.</CardDescription>
@@ -200,7 +200,7 @@ export default function AdminSettingsPage() {
             </CardContent>
         </Card>
         
-        <Card>
+        <Card id="landing-images" className="scroll-mt-24">
             <CardHeader>
             <CardTitle>Landing Page Backgrounds</CardTitle>
             <CardDescription>Manage the background images for the public home page. One will be chosen randomly on each visit.</CardDescription>
@@ -249,7 +249,7 @@ export default function AdminSettingsPage() {
             </CardContent>
         </Card>
 
-        <Card>
+        <Card id="cover-images" className="scroll-mt-24">
             <CardHeader>
             <CardTitle>Default Group Cover Images</CardTitle>
             <CardDescription>These images are used as default covers when creating new groups. Paste URLs from any image hosting service.</CardDescription>
@@ -298,7 +298,7 @@ export default function AdminSettingsPage() {
             </CardContent>
         </Card>
         
-        <Card>
+        <Card id="about-settings" className="scroll-mt-24">
             <CardHeader>
                 <CardTitle>About Page Settings</CardTitle>
                 <CardDescription>Customize the content of the "About Us" page.</CardDescription>
