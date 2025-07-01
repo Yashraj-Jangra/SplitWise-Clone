@@ -12,15 +12,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold font-headline mb-2 text-foreground">About SettleEase</h1>
-        <p className="text-xl text-muted-foreground">
-          Simplifying shared expenses for everyone, everywhere.
-        </p>
-      </div>
-
+    <div className="mx-auto max-w-3xl">
       <Card className="p-6 sm:p-8">
+        <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold font-headline mb-2 text-foreground">About SettleEase</h1>
+            <p className="text-xl text-muted-foreground">
+            Simplifying shared expenses for everyone, everywhere.
+            </p>
+        </div>
+
         <div className="space-y-6 text-base text-muted-foreground">
           <p>
             Welcome to SettleEase, the ultimate solution for managing group expenses without the hassle. Born from the common frustration of tracking who paid for what during trips, shared housing, and group events, SettleEase was designed to be intuitive, powerful, and transparent.
