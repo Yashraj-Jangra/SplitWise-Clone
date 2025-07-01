@@ -64,7 +64,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         {userProfile.role === 'admin' && (
            <>
-            <DropdownMenuItem asChild className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem asChild className="focus:text-destructive focus:bg-destructive/10">
               <Link href="/admin/dashboard">
                 <Icons.ShieldCheck className="mr-2 h-4 w-4" />
                 <span>Admin Panel</span>
@@ -74,13 +74,13 @@ export function UserNav() {
           </>
         )}
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild className="text-primary focus:text-primary focus:bg-primary/10">
+          <DropdownMenuItem asChild className="focus:text-primary focus:bg-primary/10">
             <Link href="/dashboard">
               <Icons.Dashboard className="mr-2 h-4 w-4" />
               <span>Dashboard</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild className="text-primary focus:text-primary focus:bg-primary/10">
+          <DropdownMenuItem asChild className="focus:text-primary focus:bg-primary/10">
             <Link href="/settings">
               <Icons.Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
@@ -88,7 +88,7 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+        <DropdownMenuItem onClick={handleLogout} className="focus:text-destructive focus:bg-destructive/10">
           <Icons.Logout className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
