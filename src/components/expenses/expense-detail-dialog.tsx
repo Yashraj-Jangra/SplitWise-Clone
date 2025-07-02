@@ -202,19 +202,21 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
                                             {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                                         </div>
                                     ) : expenseHistory.length > 0 ? (
-                                        <div className="space-y-3 pt-2">
-                                            {expenseHistory.map(event => (
-                                                <div key={event.id} className="flex items-center gap-3 text-xs">
-                                                     <div className="flex-shrink-0">
-                                                        {eventIcons[event.eventType] || eventIcons.default}
+                                        <ScrollArea className="max-h-40">
+                                            <div className="space-y-3 pt-2 pr-4">
+                                                {expenseHistory.map(event => (
+                                                    <div key={event.id} className="flex items-center gap-3 text-xs">
+                                                         <div className="flex-shrink-0">
+                                                            {eventIcons[event.eventType] || eventIcons.default}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-muted-foreground">{event.description}</p>
+                                                            <p className="text-muted-foreground/80">{formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <p className="text-muted-foreground">{event.description}</p>
-                                                        <p className="text-muted-foreground/80">{formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
                                     ) : (
                                         <p className="text-xs text-muted-foreground text-center pt-4">No history found for this expense.</p>
                                     )}
