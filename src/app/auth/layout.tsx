@@ -31,8 +31,8 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           {/* Decorative Wave */}
            <div className="absolute bottom-0 right-0 w-full h-48 text-primary overflow-hidden -z-10 pointer-events-none">
                 <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="absolute bottom-0 right-0 h-full w-full">
-                    <path d="M-4.22,33.53 C151.32,234.23 241.29,-84.38 503.31,104.28 L500.00,150.00 L0.00,150.00 Z" style={{stroke: 'none', fill: 'hsl(var(--primary)/0.1)'}}></path>
-                    <path d="M-4.22,63.53 C121.32,184.23 300.29,-4.38 503.31,74.28 L500.00,150.00 L0.00,150.00 Z" style={{stroke: 'none', fill: 'hsl(var(--primary)/0.2)'}}></path>
+                    <path d="M-4.22,33.53 C151.32,234.23 241.29,-84.38 503.31,104.28 L500.00,150.00 L0.00,150.00 Z" style={{stroke: 'none', fill: 'hsla(0, 0%, 0%, 0.2)'}}></path>
+                    <path d="M-4.22,63.53 C121.32,184.23 300.29,-4.38 503.31,74.28 L500.00,150.00 L0.00,150.00 Z" style={{stroke: 'none', fill: 'hsla(0, 0%, 0%, 0.4)'}}></path>
                 </svg>
            </div>
         </div>
