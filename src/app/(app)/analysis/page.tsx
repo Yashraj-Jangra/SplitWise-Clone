@@ -42,10 +42,7 @@ export default function AnalysisPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
+  const [date, setDate] = useState<DateRange | undefined>();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
@@ -66,6 +63,14 @@ export default function AnalysisPage() {
       loadExpenses();
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    // Set initial date on the client to avoid hydration mismatch
+    setDate({
+        from: startOfMonth(new Date()),
+        to: endOfMonth(new Date()),
+    });
+  }, []);
 
   const filteredExpenses = useMemo(() => {
     if (!date?.from) return [];
@@ -255,4 +260,3 @@ export default function AnalysisPage() {
     </div>
   );
 }
-

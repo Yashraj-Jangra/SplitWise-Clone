@@ -1,22 +1,53 @@
 
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { DynamicYear } from '@/components/layout/dynamic-year';
 import { getSiteSettings } from '@/lib/mock-data';
+import { useEffect, useState } from 'react';
+import type { SiteSettings } from '@/types';
 
-export default async function HomePage() {
-  const settings = await getSiteSettings();
+export default function HomePage() {
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   
-  const randomImage = settings.landingImages?.length > 0
-    ? settings.landingImages[Math.floor(Math.random() * settings.landingImages.length)]
-    : 'https://placehold.co/1920x1080.png';
+  useEffect(() => {
+    async function fetchSettingsAndSetImage() {
+      const siteSettings = await getSiteSettings();
+      setSettings(siteSettings);
+
+      if (siteSettings.landingImages?.length > 0) {
+        const randomImage = siteSettings.landingImages[Math.floor(Math.random() * siteSettings.landingImages.length)];
+        setImageUrl(randomImage);
+      } else {
+        setImageUrl('https://placehold.co/1920x1080.png');
+      }
+    }
+    fetchSettingsAndSetImage();
+  }, []);
+
+  if (!settings || !imageUrl) {
+    return (
+        <main className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden bg-black">
+             <div className="text-center max-w-4xl mx-auto z-10">
+                <div className="flex justify-center mb-8">
+                  <Icons.AppLogo className="h-28 w-28 text-primary animate-spin" />
+                </div>
+                <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-white mb-6 leading-tight drop-shadow-lg">
+                  Loading...
+                </h1>
+            </div>
+        </main>
+    )
+  }
 
   return (
     <main className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden">
       <Image
-        src={randomImage}
+        src={imageUrl}
         alt="Office background"
         fill
         className="object-cover -z-10"
