@@ -8,7 +8,7 @@ import { getHistoryByGroupId, restoreExpense, deleteHistoryEvent } from '@/lib/m
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/components/icons';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -30,6 +30,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Timestamp } from 'firebase/firestore';
 
 interface GroupHistoryTabProps {
   groupId: string;
@@ -61,6 +62,23 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
     const [isRestoring, setIsRestoring] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const expenseDate = useMemo(() => {
+        // Only show expense date for expense-related events
+        if (event.data?.date && event.eventType.startsWith('expense_')) {
+            const dateValue = event.data.date;
+            // The date from a deleted expense's data is a Firestore Timestamp
+            if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+                return dateValue.toDate();
+            }
+            // It might also be an ISO string if processed elsewhere
+            const parsedDate = new Date(dateValue);
+            if (!isNaN(parsedDate.getTime())) {
+                return parsedDate;
+            }
+        }
+        return null;
+    }, [event.data, event.eventType]);
 
     const handleRestore = async () => {
         if (!userProfile) return;
@@ -113,9 +131,19 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
                         {eventIcons[event.eventType] || eventIcons.default}
                     </div>
                     <div className="flex-1 grid gap-1">
-                        <p className={cn("text-sm", isDeleted && "line-through text-muted-foreground/80")}>{event.description}</p>
+                        <p className={cn("text-sm", isDeleted && "line-through text-muted-foreground/80")}>
+                            {event.description}
+                            {expenseDate && (
+                                <span className="text-muted-foreground text-xs ml-2 font-normal">
+                                    (for {format(expenseDate, 'MMM d')})
+                                </span>
+                            )}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
+                            <span className="ml-1">
+                                ({format(new Date(event.timestamp), "MMM d, h:mm a")})
+                            </span>
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
