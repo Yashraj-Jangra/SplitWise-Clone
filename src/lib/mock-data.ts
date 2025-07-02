@@ -918,6 +918,8 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
     }
     
     const expenseToRestore = historyData.data;
+    const originalExpenseId = expenseToRestore.expenseId;
+
     // Convert Firestore Timestamps back to JS Dates for addExpense function
     if (expenseToRestore.date && expenseToRestore.date instanceof Timestamp) {
         expenseToRestore.date = expenseToRestore.date.toDate();
@@ -931,7 +933,12 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
         
         const actor = await getUserProfile(actorId);
         const restoreDescription = `${getFullName(actor?.firstName, actor?.lastName)} restored expense "${expenseToRestore.description}" for ${CURRENCY_SYMBOL}${(expenseToRestore.amount || 0).toFixed(2)}.`;
-        await logHistoryEvent(expenseToRestore.groupId, 'expense_restored', actorId, restoreDescription, { restoredFromHistoryId: historyEventId, newExpenseId });
+        await logHistoryEvent(expenseToRestore.groupId, 'expense_restored', actorId, restoreDescription, { 
+            restoredFromHistoryId: historyEventId, 
+            newExpenseId: newExpenseId,
+            originalExpenseId: originalExpenseId,
+            expenseId: originalExpenseId, // Also add this for simpler querying on the original expense
+        });
 
         return newExpenseId;
     }

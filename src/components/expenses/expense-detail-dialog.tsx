@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Expense, Group, HistoryEvent } from "@/types";
 import {
@@ -35,7 +35,7 @@ import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { getFullName, getInitials } from '@/lib/utils';
-import { deleteExpense, getHistoryForExpense } from '@/lib/mock-data';
+import { deleteExpense } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,7 @@ interface ExpenseDetailDialogProps {
   expense: Expense;
   currentUserId: string;
   group?: Group;
+  groupHistory: HistoryEvent[];
   onActionComplete?: () => void;
 }
 
@@ -61,33 +62,44 @@ const eventIcons: { [key: string]: React.ReactNode } = {
 };
 
 
-export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId, group, onActionComplete }: ExpenseDetailDialogProps) {
+export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId, group, groupHistory, onActionComplete }: ExpenseDetailDialogProps) {
     const { toast } = useToast();
     const router = useRouter();
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    
-    const [expenseHistory, setExpenseHistory] = useState<HistoryEvent[]>([]);
-    const [historyLoading, setHistoryLoading] = useState(true);
 
-    useEffect(() => {
-        if (open) {
-        async function fetchHistory() {
-            setHistoryLoading(true);
-            try {
-            const history = await getHistoryForExpense(expense.id, expense.groupId);
-            setExpenseHistory(history);
-            } catch (error) {
-            console.error("Failed to fetch expense history:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not load expense history.' });
-            } finally {
-            setHistoryLoading(false);
+    const expenseHistory = useMemo(() => {
+        if (!groupHistory) return [];
+
+        // Find if this expense is a result of a restore operation
+        const restoreEvent = groupHistory.find(e => e.eventType === 'expense_restored' && e.data?.newExpenseId === expense.id);
+        const originalExpenseId = restoreEvent?.data?.originalExpenseId;
+        
+        const relevantIds = new Set([expense.id]);
+        if (originalExpenseId) {
+            relevantIds.add(originalExpenseId);
+        }
+
+        const filtered = groupHistory.filter(event => {
+            const eventExpenseId = event.data?.expenseId;
+            // Event is related to the current expense OR its original incarnation
+            if (eventExpenseId && relevantIds.has(eventExpenseId)) {
+                return true;
             }
-        }
-        fetchHistory();
-        }
-    }, [open, expense.id, expense.groupId, toast]);
+            // Also include the restore event itself which links them
+            if (restoreEvent && event.id === restoreEvent.id) {
+                return true;
+            }
+            return false;
+        });
+        
+        // The group history is already sorted, but filtering can change order, so re-sort.
+        return filtered.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+     }, [groupHistory, expense.id]);
+
+    const historyLoading = !groupHistory;
 
 
     const handleDelete = async () => {

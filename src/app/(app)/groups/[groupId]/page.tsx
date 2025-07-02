@@ -22,9 +22,10 @@ import {
   getExpensesByGroupId,
   getSettlementsByGroupId,
   getGroupBalances,
+  getHistoryByGroupId,
 } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
-import type { Group, Expense, Settlement, Balance } from '@/types';
+import type { Group, Expense, Settlement, Balance, HistoryEvent } from '@/types';
 import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
@@ -47,6 +48,7 @@ export default function GroupDetailPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
+  const [groupHistory, setGroupHistory] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('expenses');
   const [targetExpenseId, setTargetExpenseId] = useState<string | null>(null);
@@ -55,13 +57,19 @@ export default function GroupDetailPage() {
     if (!groupId) return;
     setLoading(true);
     try {
-      const [groupData, expensesData, settlementsData, balancesData] =
-        await Promise.all([
-          getGroupById(groupId),
-          getExpensesByGroupId(groupId),
-          getSettlementsByGroupId(groupId),
-          getGroupBalances(groupId),
-        ]);
+      const [
+        groupData,
+        expensesData,
+        settlementsData,
+        balancesData,
+        historyData,
+      ] = await Promise.all([
+        getGroupById(groupId),
+        getExpensesByGroupId(groupId),
+        getSettlementsByGroupId(groupId),
+        getGroupBalances(groupId),
+        getHistoryByGroupId(groupId),
+      ]);
 
       if (!groupData) {
         notFound();
@@ -80,6 +88,7 @@ export default function GroupDetailPage() {
         )
       );
       setBalances(balancesData);
+      setGroupHistory(historyData);
     } catch (error) {
       console.error('Failed to load group data', error);
       // Handle error state
@@ -186,6 +195,7 @@ export default function GroupDetailPage() {
                       currentUserId={userProfile.uid}
                       group={group}
                       onActionComplete={loadGroupData}
+                      groupHistory={groupHistory}
                     />
                   ))}
                 </div>

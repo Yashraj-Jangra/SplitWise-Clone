@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { Expense, Group } from "@/types";
+import type { Expense, Group, HistoryEvent } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { format } from "date-fns";
@@ -14,10 +14,11 @@ interface ExpenseListItemProps {
   expense: Expense;
   currentUserId: string;
   group?: Group;
+  groupHistory: HistoryEvent[];
   onActionComplete?: () => void;
 }
 
-export function ExpenseListItem({ expense, currentUserId, group, onActionComplete }: ExpenseListItemProps) {
+export function ExpenseListItem({ expense, currentUserId, group, groupHistory, onActionComplete }: ExpenseListItemProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
@@ -121,6 +122,7 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
         group={group}
         currentUserId={currentUserId}
         onActionComplete={onActionComplete}
+        groupHistory={groupHistory}
       />
     </>
   );
