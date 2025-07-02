@@ -1,76 +1,26 @@
 
-
-'use client';
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { DynamicYear } from '@/components/layout/dynamic-year';
 import { getSiteSettings } from '@/lib/mock-data';
-import { useEffect, useState } from 'react';
-import type { SiteSettings } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
 
-function LandingPageSkeleton() {
-    return (
-        <main className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden bg-black">
-            <Skeleton className="absolute inset-0 w-full h-full" />
-            <div className="absolute inset-0 bg-black/60 -z-10" />
-
-            <div className="text-center max-w-4xl mx-auto z-10">
-                <div className="flex justify-center mb-8">
-                    <Icons.AppLogo className="h-28 w-28 text-primary animate-pulse" />
-                </div>
-                <Skeleton className="h-16 w-3/4 mx-auto mb-6" />
-                <Skeleton className="h-5 w-full mx-auto mb-10" />
-                <Skeleton className="h-5 w-2/3 mx-auto mb-10" />
-                
-                <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
-                    <Skeleton className="h-12 w-48" />
-                </div>
-            </div>
-
-            <footer className="absolute bottom-5 w-full px-6 text-center text-white/60 z-10">
-                <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-6 text-sm">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-24" />
-                </div>
-            </footer>
-        </main>
-    );
-}
-
-export default function HomePage() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+// This is now a Server Component
+export default async function HomePage() {
+  // Fetch settings directly on the server
+  const settings = await getSiteSettings();
   
-  useEffect(() => {
-    async function fetchSettingsAndSetImage() {
-      try {
-        const siteSettings = await getSiteSettings();
-        setSettings(siteSettings);
-
-        if (siteSettings.landingImages?.length > 0) {
-          const randomImage = siteSettings.landingImages[Math.floor(Math.random() * siteSettings.landingImages.length)];
-          setImageUrl(randomImage);
-        } else {
-          setImageUrl('https://placehold.co/1920x1080.png');
-        }
-      } catch (error) {
-        console.error("Failed to load site settings:", error);
-        setImageUrl('https://placehold.co/1920x1080.png');
-      }
-    }
-    fetchSettingsAndSetImage();
-  }, []);
-
-  if (!settings || !imageUrl) {
-    return <LandingPageSkeleton />;
+  // Select a random image on the server
+  let imageUrl: string;
+  if (settings.landingImages?.length > 0) {
+    const randomImage = settings.landingImages[Math.floor(Math.random() * settings.landingImages.length)];
+    imageUrl = randomImage;
+  } else {
+    imageUrl = 'https://placehold.co/1920x1080.png';
   }
 
+  // The component can now render directly without a loading state
   return (
     <main className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden">
       <Image
