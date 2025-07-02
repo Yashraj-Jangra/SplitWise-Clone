@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
 import { X } from 'lucide-react';
 import Image from 'next/image';
-import type { SiteSettings, PolicySection } from '@/types';
+import type { SiteSettings, PolicySection, TeamMember } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
@@ -112,10 +112,39 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleAboutChange = (field: string, value: string) => {
-      if (!settings) return;
-      setSettings(prev => prev ? ({ ...prev, about: { ...prev.about!, [field]: value }}) : null);
-  }
+    const handleAboutChange = (field: keyof SiteSettings['about'], value: string) => {
+        if (!settings) return;
+        setSettings(prev => prev ? ({ ...prev, about: { ...prev.about!, [field]: value }}) : null);
+    }
+    
+    const handleTeamMemberChange = (index: number, field: keyof TeamMember, value: string) => {
+        if (!settings?.about?.team) return;
+        const newTeam = [...settings.about.team];
+        newTeam[index] = { ...newTeam[index], [field]: value };
+        handleAboutChange('team', newTeam as any); 
+    };
+
+    const addTeamMember = () => {
+        if (!settings?.about) return;
+        const newMember: TeamMember = {
+            id: `tm-${Date.now()}`,
+            name: 'New Member',
+            title: 'Role',
+            bio: '',
+            avatarUrl: 'https://placehold.co/100x100.png',
+            githubUrl: '',
+            linkedinUrl: '',
+            portfolioUrl: '',
+        };
+        const newTeam = [...settings.about.team, newMember];
+        handleAboutChange('team', newTeam as any);
+    };
+
+    const removeTeamMember = (index: number) => {
+        if (!settings?.about?.team) return;
+        const newTeam = settings.about.team.filter((_, i) => i !== index);
+        handleAboutChange('team', newTeam as any);
+    };
   
   const handlePolicyChange = (
     policy: 'privacyPolicy' | 'termsAndConditions',
@@ -426,35 +455,64 @@ export default function AdminSettingsPage() {
                 </div>
                 
                 <Separator />
-                <h3 className="text-lg font-medium">Owner Details</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="ownerName">Owner Name</Label>
-                        <Input id="ownerName" value={settings.about?.ownerName || ''} onChange={(e) => handleAboutChange('ownerName', e.target.value)} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="ownerTitle">Owner Title</Label>
-                        <Input id="ownerTitle" value={settings.about?.ownerTitle || ''} onChange={(e) => handleAboutChange('ownerTitle', e.target.value)} />
-                    </div>
+                <h3 className="text-lg font-medium">Meet the Team</h3>
+                <div className="space-y-6">
+                    {settings.about?.team.map((member, index) => (
+                        <div key={member.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
+                            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeTeamMember(index)}>
+                                <X className="h-4 w-4 text-destructive" />
+                                <span className="sr-only">Remove Member</span>
+                            </Button>
+                            
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="space-y-2 sm:w-1/3">
+                                    <Label htmlFor={`team-avatar-${index}`}>Avatar URL</Label>
+                                    <Input id={`team-avatar-${index}`} value={member.avatarUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'avatarUrl', e.target.value)} />
+                                    <Avatar className="h-20 w-20 mt-2">
+                                        <AvatarImage src={member.avatarUrl} alt={member.name} />
+                                        <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                                    </Avatar>
+                                </div>
+                                <div className="space-y-4 sm:w-2/3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor={`team-name-${index}`}>Name</Label>
+                                            <Input id={`team-name-${index}`} value={member.name} onChange={(e) => handleTeamMemberChange(index, 'name', e.target.value)} />
+                                        </div>
+                                         <div className="space-y-2">
+                                            <Label htmlFor={`team-title-${index}`}>Title</Label>
+                                            <Input id={`team-title-${index}`} value={member.title} onChange={(e) => handleTeamMemberChange(index, 'title', e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor={`team-bio-${index}`}>Bio</Label>
+                                        <Textarea id={`team-bio-${index}`} value={member.bio} onChange={(e) => handleTeamMemberChange(index, 'bio', e.target.value)} rows={3}/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Separator />
+                             <h4 className="text-sm font-medium">Social Links</h4>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor={`team-github-${index}`}>GitHub URL</Label>
+                                    <Input id={`team-github-${index}`} value={member.githubUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'githubUrl', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor={`team-linkedin-${index}`}>LinkedIn URL</Label>
+                                    <Input id={`team-linkedin-${index}`} value={member.linkedinUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'linkedinUrl', e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor={`team-portfolio-${index}`}>Portfolio URL</Label>
+                                    <Input id={`team-portfolio-${index}`} value={member.portfolioUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'portfolioUrl', e.target.value)} />
+                                </div>
+                             </div>
+                        </div>
+                    ))}
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="ownerBio">Owner Bio</Label>
-                    <Textarea id="ownerBio" value={settings.about?.ownerBio || ''} onChange={(e) => handleAboutChange('ownerBio', e.target.value)} rows={3} />
-                </div>
-                
-                <div className="space-y-2">
-                    <Label htmlFor="githubUrl">GitHub URL</Label>
-                    <Input id="githubUrl" value={settings.about?.githubUrl || ''} onChange={(e) => handleAboutChange('githubUrl', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-                    <Input id="linkedinUrl" value={settings.about?.linkedinUrl || ''} onChange={(e) => handleAboutChange('linkedinUrl', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="portfolioUrl">Portfolio URL</Label>
-                    <Input id="portfolioUrl" value={settings.about?.portfolioUrl || ''} onChange={(e) => handleAboutChange('portfolioUrl', e.target.value)} />
-                </div>
+                <Button variant="secondary" onClick={addTeamMember}>
+                    <Icons.Add className="mr-2" /> Add Team Member
+                </Button>
             </CardContent>
         </Card>
 

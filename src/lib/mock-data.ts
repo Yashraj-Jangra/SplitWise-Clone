@@ -35,6 +35,7 @@ import type {
   SiteSettings,
   SimplifiedSettlement,
   PolicyPage,
+  TeamMember,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -983,12 +984,18 @@ const DEFAULT_ABOUT_SETTINGS = {
     title: 'About SettleEase',
     subtitle: 'Simplifying shared expenses for everyone, everywhere.',
     mainContent: 'Welcome to SettleEase, the ultimate solution for managing group expenses without the hassle. Born from the common frustration of tracking who paid for what during trips, shared housing, and group events, SettleEase was designed to be intuitive, powerful, and transparent.',
-    ownerName: 'Yashraj Jangra',
-    ownerTitle: 'Full-Stack Developer & Project Lead',
-    ownerBio: 'Yashraj is a passionate developer who built SettleEase to solve a real-world problem. He specializes in creating modern, user-friendly web applications with a focus on clean code and great user experience.',
-    githubUrl: 'https://github.com/Yashraj-Jangra',
-    linkedinUrl: 'https://www.linkedin.com/in/yashraj-jangra-24016a213/',
-    portfolioUrl: 'https://yashraj-jangra.netlify.app/',
+    team: [
+        {
+            id: 'tm-1',
+            name: 'Yashraj Jangra',
+            title: 'Full-Stack Developer & Project Lead',
+            bio: 'Yashraj is a passionate developer who built SettleEase to solve a real-world problem. He specializes in creating modern, user-friendly web applications with a focus on clean code and great user experience.',
+            avatarUrl: 'https://github.com/Yashraj-Jangra.png',
+            githubUrl: 'https://github.com/Yashraj-Jangra',
+            linkedinUrl: 'https://www.linkedin.com/in/yashraj-jangra-24016a213/',
+            portfolioUrl: 'https://yashraj-jangra.netlify.app/',
+        }
+    ]
 };
 
 const DEFAULT_PRIVACY_POLICY: PolicyPage = {
@@ -1028,6 +1035,14 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         const termsAndConditions = data.termsAndConditions && Array.isArray(data.termsAndConditions.sections)
             ? data.termsAndConditions
             : DEFAULT_TERMS_AND_CONDITIONS;
+        
+        const about = {
+            ...DEFAULT_ABOUT_SETTINGS,
+            ...(data.about || {}),
+        };
+        if (!about.team || !Array.isArray(about.team) || about.team.length === 0) {
+            about.team = DEFAULT_ABOUT_SETTINGS.team;
+        }
 
         return {
             appName: data.appName || DEFAULT_APP_NAME,
@@ -1036,7 +1051,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
-            about: { ...DEFAULT_ABOUT_SETTINGS, ...(data.about || {}) },
+            about,
             privacyPolicy,
             termsAndConditions,
         };

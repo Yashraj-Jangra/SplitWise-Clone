@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { OverviewCard } from '@/components/dashboard/overview-card';
 import Link from 'next/link';
+import { getInitials } from '@/lib/utils';
 
 interface AboutPageData {
     settings: SiteSettings;
@@ -38,7 +40,7 @@ function AboutPageSkeleton() {
                     <Skeleton className="h-24 w-full" />
                 </div>
             </div>
-            {/* Owner section */}
+            {/* Team section */}
              <div className="space-y-4 pt-6 border-t">
                 <Skeleton className="h-8 w-1/3" />
                  <div className="flex flex-col md:flex-row items-center gap-6">
@@ -114,24 +116,28 @@ export default function AboutPage() {
                     </div>
                 </div>
 
-                {/* Meet the Creator */}
-                <div className="space-y-4 pt-6 border-t">
-                     <h2 className="text-2xl font-bold font-headline text-foreground text-center">Meet the Creator</h2>
-                     <div className="flex flex-col md:flex-row items-center gap-6 bg-card/50 p-6 rounded-lg">
-                        <Avatar className="h-24 w-24">
-                           <AvatarImage src={`https://github.com/${about.githubUrl?.split('/').pop()}.png`} alt={about.ownerName} />
-                           <AvatarFallback className="text-3xl">YJ</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 text-center md:text-left">
-                            <h3 className="text-xl font-semibold">{about.ownerName}</h3>
-                            <p className="text-primary">{about.ownerTitle}</p>
-                            <p className="text-muted-foreground mt-2">{about.ownerBio}</p>
-                            <div className="flex justify-center md:justify-start gap-2 mt-4">
-                                {about.githubUrl && <Button variant="ghost" size="icon" asChild><Link href={about.githubUrl} target="_blank" rel="noopener noreferrer"><Icons.Github className="h-5 w-5" /></Link></Button>}
-                                {about.linkedinUrl && <Button variant="ghost" size="icon" asChild><Link href={about.linkedinUrl} target="_blank" rel="noopener noreferrer"><Icons.Linkedin className="h-5 w-5" /></Link></Button>}
-                                {about.portfolioUrl && <Button variant="ghost" size="icon" asChild><Link href={about.portfolioUrl} target="_blank" rel="noopener noreferrer"><Icons.Link className="h-5 w-5" /></Link></Button>}
+                {/* Meet the Team */}
+                <div className="space-y-6 pt-6 border-t">
+                     <h2 className="text-2xl font-bold font-headline text-foreground text-center">Meet the Team</h2>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {about.team.map(member => (
+                            <div key={member.id} className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-6 bg-card/50 p-6 rounded-lg">
+                                <Avatar className="h-24 w-24 flex-shrink-0">
+                                <AvatarImage src={member.avatarUrl || `https://github.com/${member.githubUrl?.split('/').pop()}.png`} alt={member.name} />
+                                <AvatarFallback className="text-3xl">{getInitials(member.name)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-semibold">{member.name}</h3>
+                                    <p className="text-primary">{member.title}</p>
+                                    <p className="text-muted-foreground mt-2 text-sm">{member.bio}</p>
+                                    <div className="flex justify-center sm:justify-start gap-2 mt-4">
+                                        {member.githubUrl && <Button variant="ghost" size="icon" asChild><Link href={member.githubUrl} target="_blank" rel="noopener noreferrer"><Icons.Github className="h-5 w-5" /></Link></Button>}
+                                        {member.linkedinUrl && <Button variant="ghost" size="icon" asChild><Link href={member.linkedinUrl} target="_blank" rel="noopener noreferrer"><Icons.Linkedin className="h-5 w-5" /></Link></Button>}
+                                        {member.portfolioUrl && <Button variant="ghost" size="icon" asChild><Link href={member.portfolioUrl} target="_blank" rel="noopener noreferrer"><Icons.Link className="h-5 w-5" /></Link></Button>}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        ))}
                      </div>
                 </div>
 

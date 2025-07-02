@@ -152,6 +152,17 @@ export interface PolicyPage {
   sections: PolicySection[];
 }
 
+export interface TeamMember {
+  id: string;
+  name: string;
+  title: string;
+  bio: string;
+  avatarUrl?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+}
+
 export interface SiteSettings {
   appName: string;
   logoUrl?: string;
@@ -175,12 +186,7 @@ export interface SiteSettings {
     title: string;
     subtitle: string;
     mainContent: string;
-    ownerName: string;
-    ownerTitle: string;
-    ownerBio: string;
-    githubUrl?: string;
-    linkedinUrl?: string;
-    portfolioUrl?: string;
+    team: TeamMember[];
   };
   privacyPolicy?: PolicyPage;
   termsAndConditions?: PolicyPage;
