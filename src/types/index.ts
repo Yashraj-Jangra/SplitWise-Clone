@@ -157,6 +157,11 @@ export interface SiteSettings {
   logoUrl?: string;
   coverImages: string[];
   landingImages: string[];
+  landingPage?: {
+    headline: string;
+    subheadline: string;
+    ctaButtonText: string;
+  };
   authPage?: {
     imageUrl: string;
     loginTitle: string;

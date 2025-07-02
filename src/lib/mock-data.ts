@@ -963,6 +963,12 @@ const FALLBACK_LANDING_IMAGES = [
     'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop',
 ];
 
+const DEFAULT_LANDING_PAGE_SETTINGS = {
+    headline: 'SettleEase',
+    subheadline: 'The quantum leap in managing shared expenses. Track, split, and settle your group costs with futuristic ease.',
+    ctaButtonText: 'Enter the Grid',
+};
+
 const DEFAULT_AUTH_PAGE_SETTINGS = {
     imageUrl: 'https://images.unsplash.com/photo-1549880338-65ddcdfd017b?q=80&w=2070&auto=format&fit=crop',
     loginTitle: 'Welcome Back',
@@ -1028,6 +1034,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             logoUrl: data.logoUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
+            landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
             about: { ...DEFAULT_ABOUT_SETTINGS, ...(data.about || {}) },
             privacyPolicy,
@@ -1039,6 +1046,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             logoUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
+            landingPage: DEFAULT_LANDING_PAGE_SETTINGS,
             authPage: DEFAULT_AUTH_PAGE_SETTINGS,
             about: DEFAULT_ABOUT_SETTINGS,
             privacyPolicy: DEFAULT_PRIVACY_POLICY,

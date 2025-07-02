@@ -39,6 +39,7 @@ const adminNavItems: NavItem[] = [
     icon: "Settings",
     subItems: [
         { title: "Branding", href: "/admin/settings#branding", icon: "Wallet" },
+        { title: "Landing Page", href: "/admin/settings#landing-page", icon: "Wallet" },
         { title: "Authentication Page", href: "/admin/settings#auth-page", icon: "Wallet" },
         { title: "Landing Images", href: "/admin/settings#landing-images", icon: "Wallet" },
         { title: "Cover Images", href: "/admin/settings#cover-images", icon: "Wallet" },

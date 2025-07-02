@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -46,6 +47,11 @@ export default function AdminSettingsPage() {
       if (!settings) return;
       setSettings({ ...settings, [key]: value });
   };
+
+  const handleLandingPageChange = (field: string, value: string) => {
+    if (!settings) return;
+    setSettings(prev => prev ? ({ ...prev, landingPage: { ...prev.landingPage!, [field]: value }}) : null);
+  }
   
    const handleAuthPageChange = (field: string, value: string) => {
       if (!settings) return;
@@ -237,6 +243,27 @@ export default function AdminSettingsPage() {
                             <Input id="logoUrl" value={settings.logoUrl || ''} onChange={(e) => handleValueChange('logoUrl', e.target.value)} placeholder="https://example.com/logo.png" />
                          </div>
                     </div>
+                </div>
+            </CardContent>
+        </Card>
+        
+        <Card id="landing-page" className="scroll-mt-24">
+            <CardHeader>
+                <CardTitle>Landing Page</CardTitle>
+                <CardDescription>Customize the content on the public landing page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Label htmlFor="landingHeadline">Headline</Label>
+                    <Input id="landingHeadline" value={settings.landingPage?.headline || ''} onChange={(e) => handleLandingPageChange('headline', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="landingSubheadline">Sub-headline</Label>
+                    <Textarea id="landingSubheadline" value={settings.landingPage?.subheadline || ''} onChange={(e) => handleLandingPageChange('subheadline', e.target.value)} rows={3} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="landingCta">CTA Button Text</Label>
+                    <Input id="landingCta" value={settings.landingPage?.ctaButtonText || ''} onChange={(e) => handleLandingPageChange('ctaButtonText', e.target.value)} />
                 </div>
             </CardContent>
         </Card>
