@@ -232,7 +232,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
           <CardDescription>Comparing each member's share of expenses per day. Affected by global filters.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={userChartConfig} className="h-[400px] w-full">
+          <ChartContainer config={userChartConfig} className="h-[350px] w-full">
             <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: isMobile ? -10 : 20, right: 12 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
@@ -278,7 +278,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 </div>
             </CardHeader>
           <CardContent>
-            <ChartContainer config={barChartConfig} className="h-[300px] w-full">
+            <ChartContainer config={barChartConfig} className="h-[250px] w-full">
               <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: isMobile ? -5 : 10, right: isMobile ? 10 : 20}}>
                 <XAxis type="number" hide />
                 <YAxis
@@ -312,7 +312,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 <CardDescription>Breakdown of spending for the selected period.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ChartContainer config={barChartConfig} className="h-[300px] w-full">
+                <ChartContainer config={barChartConfig} className="h-[250px] w-full">
                 <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: isMobile ? -5 : 10, right: isMobile ? 10 : 20}}>
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
