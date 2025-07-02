@@ -279,7 +279,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
             </CardHeader>
           <CardContent>
             <ChartContainer config={barChartConfig} className="h-[300px] w-full">
-              <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
+              <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: isMobile ? -5 : 10, right: isMobile ? 10 : 20}}>
                 <XAxis type="number" hide />
                 <YAxis
                   dataKey="name"
@@ -287,10 +287,10 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                   tickLine={false}
                   axisLine={false}
                   tickMargin={5}
-                  width={isMobile ? 60 : 80}
+                  width={isMobile ? 70 : 80}
                   className="text-xs"
                   stroke="hsl(var(--muted-foreground))"
-                  tickFormatter={(value) => isMobile && value.length > 7 ? `${value.substring(0, 7)}...` : value}
+                  tickFormatter={(value) => isMobile && value.length > 8 ? `${value.substring(0, 8)}...` : value}
                 />
                 <Tooltip
                   cursor={false}
@@ -313,9 +313,9 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
             </CardHeader>
             <CardContent>
                 <ChartContainer config={barChartConfig} className="h-[300px] w-full">
-                <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
+                <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: isMobile ? -5 : 10, right: isMobile ? 10 : 20}}>
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 9 ? `${value.substring(0, 9)}...` : value} />
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
                     <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                     <Bar dataKey="total" radius={4}>
                         {expensesByCategory.map((entry, index) => (
