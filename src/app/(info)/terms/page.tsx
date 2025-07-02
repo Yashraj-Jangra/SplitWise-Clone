@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -12,7 +11,7 @@ function PolicySection({ title, children }: { title: string, children: React.Rea
         <div className="space-y-2">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
             <div className="space-y-4 text-muted-foreground prose prose-invert max-w-none">
-                {children}
+                <p className="whitespace-pre-wrap">{children}</p>
             </div>
         </div>
     );
@@ -59,7 +58,7 @@ export default function TermsAndConditionsPage() {
       <CardContent className="p-0 space-y-8">
         {terms.sections.map((section, index) => (
             <PolicySection key={section.id || index} title={section.title}>
-                <div className="whitespace-pre-wrap">{section.content.replace(/{appName}/g, appName)}</div>
+                {section.content.replace(/{appName}/g, appName)}
             </PolicySection>
         ))}
       </CardContent>
