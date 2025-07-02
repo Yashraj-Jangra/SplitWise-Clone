@@ -52,12 +52,12 @@ export default function PrivacyPolicyPage() {
   return (
       <Card className="p-6 sm:p-8">
         <CardHeader className="text-center p-0 mb-8">
-          <CardTitle className="text-4xl font-bold font-headline">{policy.title}</CardTitle>
+          <CardTitle className="text-4xl font-bold font-headline">{policy.title.replace(/{appName}/g, appName)}</CardTitle>
           <CardDescription>Last Updated: {format(new Date(), "PPP")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0 space-y-8">
             {policy.sections.map((section, index) => (
-                <PolicySection key={section.id || index} title={section.title}>
+                <PolicySection key={section.id || index} title={section.title.replace(/{appName}/g, appName)}>
                     {section.content.replace(/{appName}/g, appName)}
                 </PolicySection>
             ))}

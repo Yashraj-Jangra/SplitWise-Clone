@@ -52,12 +52,12 @@ export default function TermsAndConditionsPage() {
   return (
     <Card className="p-6 sm:p-8">
       <CardHeader className="text-center p-0 mb-8">
-        <CardTitle className="text-4xl font-bold font-headline">{terms.title}</CardTitle>
+        <CardTitle className="text-4xl font-bold font-headline">{terms.title.replace(/{appName}/g, appName)}</CardTitle>
         <CardDescription>Last Updated: {format(new Date(), "PPP")}</CardDescription>
       </CardHeader>
       <CardContent className="p-0 space-y-8">
         {terms.sections.map((section, index) => (
-            <PolicySection key={section.id || index} title={section.title}>
+            <PolicySection key={section.id || index} title={section.title.replace(/{appName}/g, appName)}>
                 {section.content.replace(/{appName}/g, appName)}
             </PolicySection>
         ))}
