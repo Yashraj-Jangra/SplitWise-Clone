@@ -978,6 +978,13 @@ const DEFAULT_AUTH_PAGE_SETTINGS = {
     signupSubtitle: 'Join {appName} to simplify your group expenses.',
     forgotPasswordTitle: 'Forgot Password',
     forgotPasswordSubtitle: 'Enter your email to receive a reset link.',
+    loginEmailPlaceholder: 'elon@x.com',
+    loginPasswordPlaceholder: 'it\'s a secret...',
+    signupFirstNamePlaceholder: 'Bartholomew',
+    signupLastNamePlaceholder: 'Cubbins',
+    signupUsernamePlaceholder: 'the_real_slim_shady',
+    signupEmailPlaceholder: 'also.elon@x.com',
+    signupPasswordPlaceholder: 'at_least_6_characters',
 }
 
 const DEFAULT_ABOUT_SETTINGS = {

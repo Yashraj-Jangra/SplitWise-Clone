@@ -334,6 +334,37 @@ export default function AdminSettingsPage() {
                     <Label htmlFor="authForgotSubtitle">Forgot Password Subtitle</Label>
                     <Input id="authForgotSubtitle" value={settings.authPage?.forgotPasswordSubtitle || ''} onChange={(e) => handleAuthPageChange('forgotPasswordSubtitle', e.target.value)} />
                 </div>
+                <Separator />
+                <h4 className="text-md font-medium pt-2">Form Placeholders</h4>
+                <div className="space-y-2">
+                    <Label htmlFor="authLoginEmailPlaceholder">Login Email Placeholder</Label>
+                    <Input id="authLoginEmailPlaceholder" value={settings.authPage?.loginEmailPlaceholder || ''} onChange={(e) => handleAuthPageChange('loginEmailPlaceholder', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="authLoginPasswordPlaceholder">Login Password Placeholder</Label>
+                    <Input id="authLoginPasswordPlaceholder" value={settings.authPage?.loginPasswordPlaceholder || ''} onChange={(e) => handleAuthPageChange('loginPasswordPlaceholder', e.target.value)} />
+                </div>
+                 <Separator />
+                <div className="space-y-2">
+                    <Label htmlFor="authSignupFirstNamePlaceholder">Signup First Name Placeholder</Label>
+                    <Input id="authSignupFirstNamePlaceholder" value={settings.authPage?.signupFirstNamePlaceholder || ''} onChange={(e) => handleAuthPageChange('signupFirstNamePlaceholder', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="authSignupLastNamePlaceholder">Signup Last Name Placeholder</Label>
+                    <Input id="authSignupLastNamePlaceholder" value={settings.authPage?.signupLastNamePlaceholder || ''} onChange={(e) => handleAuthPageChange('signupLastNamePlaceholder', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="authSignupUsernamePlaceholder">Signup Username Placeholder</Label>
+                    <Input id="authSignupUsernamePlaceholder" value={settings.authPage?.signupUsernamePlaceholder || ''} onChange={(e) => handleAuthPageChange('signupUsernamePlaceholder', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="authSignupEmailPlaceholder">Signup Email Placeholder</Label>
+                    <Input id="authSignupEmailPlaceholder" value={settings.authPage?.signupEmailPlaceholder || ''} onChange={(e) => handleAuthPageChange('signupEmailPlaceholder', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="authSignupPasswordPlaceholder">Signup Password Placeholder</Label>
+                    <Input id="authSignupPasswordPlaceholder" value={settings.authPage?.signupPasswordPlaceholder || ''} onChange={(e) => handleAuthPageChange('signupPasswordPlaceholder', e.target.value)} />
+                </div>
             </CardContent>
         </Card>
         

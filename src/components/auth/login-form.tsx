@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -117,7 +118,7 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="you@example.com" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
+                  <Input type="email" placeholder={authPageSettings?.loginEmailPlaceholder || "you@example.com"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -138,7 +139,7 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
                     </Link>
                 </div>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
+                  <Input type="password" placeholder={authPageSettings?.loginPasswordPlaceholder || "••••••••"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

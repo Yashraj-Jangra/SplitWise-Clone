@@ -181,6 +181,13 @@ export interface SiteSettings {
     signupSubtitle: string;
     forgotPasswordTitle: string;
     forgotPasswordSubtitle: string;
+    loginEmailPlaceholder?: string;
+    loginPasswordPlaceholder?: string;
+    signupFirstNamePlaceholder?: string;
+    signupLastNamePlaceholder?: string;
+    signupUsernamePlaceholder?: string;
+    signupEmailPlaceholder?: string;
+    signupPasswordPlaceholder?: string;
   };
   about?: {
     title: string;
