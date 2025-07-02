@@ -48,7 +48,7 @@ export default function PrivacyPolicyPage() {
         return <PrivacyPolicySkeleton />;
     }
 
-    const { privacyPolicy: policy } = settings;
+    const { privacyPolicy: policy, appName } = settings;
 
   return (
       <Card className="p-6 sm:p-8">
@@ -59,7 +59,7 @@ export default function PrivacyPolicyPage() {
         <CardContent className="p-0 space-y-8">
             {policy.sections.map((section, index) => (
                 <PolicySection key={section.id || index} title={section.title}>
-                    <div className="whitespace-pre-wrap">{section.content}</div>
+                    <div className="whitespace-pre-wrap">{section.content.replace(/{appName}/g, appName)}</div>
                 </PolicySection>
             ))}
         </CardContent>

@@ -48,7 +48,7 @@ export default function TermsAndConditionsPage() {
         return <TermsSkeleton />;
     }
 
-    const { termsAndConditions: terms } = settings;
+    const { termsAndConditions: terms, appName } = settings;
 
   return (
     <Card className="p-6 sm:p-8">
@@ -59,7 +59,7 @@ export default function TermsAndConditionsPage() {
       <CardContent className="p-0 space-y-8">
         {terms.sections.map((section, index) => (
             <PolicySection key={section.id || index} title={section.title}>
-                <div className="whitespace-pre-wrap">{section.content}</div>
+                <div className="whitespace-pre-wrap">{section.content.replace(/{appName}/g, appName)}</div>
             </PolicySection>
         ))}
       </CardContent>
