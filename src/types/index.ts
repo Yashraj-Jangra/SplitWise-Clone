@@ -190,4 +190,9 @@ export interface SiteSettings {
   };
   privacyPolicy?: PolicyPage;
   termsAndConditions?: PolicyPage;
+  stats?: {
+    users: number;
+    groups: number;
+    expenses: number;
+  };
 }

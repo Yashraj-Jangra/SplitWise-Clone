@@ -1054,6 +1054,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             about,
             privacyPolicy,
             termsAndConditions,
+            stats: data.stats || { users: 0, groups: 0, expenses: 0 },
         };
     } else {
         const defaultSettings = {
@@ -1066,6 +1067,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             about: DEFAULT_ABOUT_SETTINGS,
             privacyPolicy: DEFAULT_PRIVACY_POLICY,
             termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS,
+            stats: { users: 0, groups: 0, expenses: 0 },
         };
         await setDoc(docRef, defaultSettings);
         return defaultSettings;

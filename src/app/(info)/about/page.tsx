@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import type { SiteSettings } from '@/types';
-import { getSiteSettings, getAllUsers, getAllGroups, getAllExpenses } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/mock-data';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -64,19 +64,10 @@ export default function AboutPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [settings, users, groups, expenses] = await Promise.all([
-                    getSiteSettings(),
-                    getAllUsers(),
-                    getAllGroups(),
-                    getAllExpenses()
-                ]);
+                const settings = await getSiteSettings();
                 setData({
                     settings,
-                    stats: {
-                        users: users.length,
-                        groups: groups.length,
-                        expenses: expenses.length,
-                    }
+                    stats: settings.stats || { users: 0, groups: 0, expenses: 0 }
                 });
             } catch (error) {
                 console.error("Failed to load About page data:", error);

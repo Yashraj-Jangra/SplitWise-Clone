@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import type { UserProfile, Group, Expense } from '@/types';
 import { OverviewCard } from "@/components/dashboard/overview-card";
-import { getAllUsers, getAllGroups, getAllExpenses } from "@/lib/mock-data";
+import { getAllUsers, getAllGroups, getAllExpenses, updateSiteSettings } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -38,6 +38,14 @@ export default function AdminDashboardPage() {
                     getAllExpenses(),
                 ]);
                 setData({ users, groups, expenses });
+                
+                const newStats = {
+                    users: users.length,
+                    groups: groups.length,
+                    expenses: expenses.length,
+                };
+                await updateSiteSettings({ stats: newStats });
+                
             } catch (error) {
                 console.error("Error fetching admin data:", error);
                 toast({
