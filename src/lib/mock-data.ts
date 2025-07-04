@@ -1057,8 +1057,12 @@ const DEFAULT_TERMS_AND_CONDITIONS: PolicyPage = {
 
 const DEFAULT_NOT_FOUND_PAGE_SETTINGS = {
     title: "404 - Page Not Found",
-    subtitle: "Oops! The page you are looking for does not exist. It might have been moved or deleted.",
-    buttonText: "Return to Homepage"
+    heading: "Lost in the Cosmos?",
+    mainContent: "It seems you've drifted into uncharted territory. The page you're looking for might have been moved to another galaxy or never existed in the first place.",
+    helpfulHint: "Try checking the URL for typos or navigate back to a known constellation.",
+    supportNote: "If you believe this is a black hole in our system, please contact support.",
+    buttonText: "Return to Home Base",
+    imageUrl: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?q=80&w=1974&auto=format&fit=crop",
 };
 
 

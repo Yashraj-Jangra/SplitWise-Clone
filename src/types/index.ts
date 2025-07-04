@@ -220,8 +220,12 @@ export interface SiteSettings {
   termsAndConditions?: PolicyPage;
   notFoundPage?: {
     title: string;
-    subtitle: string;
+    heading: string;
+    mainContent: string;
+    helpfulHint: string;
+    supportNote: string;
     buttonText: string;
+    imageUrl: string;
   };
   stats?: {
     users: number;

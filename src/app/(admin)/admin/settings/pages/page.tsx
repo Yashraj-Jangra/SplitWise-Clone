@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
-import { X } from 'lucide-react';
+import { X, Lightbulb, Mail } from 'lucide-react';
 import type { SiteSettings, TeamMember } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -311,17 +311,35 @@ export default function AdminContentPagesPage() {
         <Card id="404-settings" className="scroll-mt-24">
             <CardHeader>
                 <CardTitle>404 "Not Found" Page</CardTitle>
-                <CardDescription>Customize the content of your 404 error page.</CardDescription>
+                <CardDescription>Customize the content and look of your 404 error page.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="space-y-2">
-                    <Label htmlFor="404Title">Page Title</Label>
+                    <Label htmlFor="404ImageUrl">Side Image URL</Label>
+                    <Input id="404ImageUrl" value={settings.notFoundPage?.imageUrl || ''} onChange={(e) => handleNotFoundPageChange('imageUrl', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="404Title">Page Title (for browser tab)</Label>
                     <Input id="404Title" value={settings.notFoundPage?.title || ''} onChange={(e) => handleNotFoundPageChange('title', e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="404Subtitle">Page Subtitle</Label>
-                    <Textarea id="404Subtitle" value={settings.notFoundPage?.subtitle || ''} onChange={(e) => handleNotFoundPageChange('subtitle', e.target.value)} rows={3} />
+                    <Label htmlFor="404Heading">Heading</Label>
+                    <Input id="404Heading" value={settings.notFoundPage?.heading || ''} onChange={(e) => handleNotFoundPageChange('heading', e.target.value)} />
                 </div>
+                <div className="space-y-2">
+                    <Label htmlFor="404MainContent">Main Content</Label>
+                    <Textarea id="404MainContent" value={settings.notFoundPage?.mainContent || ''} onChange={(e) => handleNotFoundPageChange('mainContent', e.target.value)} rows={3} />
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                    <Label htmlFor="404Hint" className="flex items-center gap-2"><Lightbulb className="h-4 w-4 text-yellow-400" /> Helpful Hint</Label>
+                    <Textarea id="404Hint" value={settings.notFoundPage?.helpfulHint || ''} onChange={(e) => handleNotFoundPageChange('helpfulHint', e.target.value)} rows={2} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="404Support" className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-400" /> Support Note</Label>
+                    <Textarea id="404Support" value={settings.notFoundPage?.supportNote || ''} onChange={(e) => handleNotFoundPageChange('supportNote', e.target.value)} rows={2} />
+                </div>
+                 <Separator />
                 <div className="space-y-2">
                     <Label htmlFor="404Button">Button Text</Label>
                     <Input id="404Button" value={settings.notFoundPage?.buttonText || ''} onChange={(e) => handleNotFoundPageChange('buttonText', e.target.value)} />
