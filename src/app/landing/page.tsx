@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -116,21 +117,21 @@ export default async function LandingPage() {
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                                 <div>
-                                    <h4 className="font-semibold">1. Create a Group</h4>
+                                    <h4 className="font-semibold">Create a Group</h4>
                                     <p className="text-sm text-muted-foreground">Start a new group for any occasion and invite your friends, family, or roommates.</p>
                                 </div>
                             </li>
                             <li className="flex items-start gap-3">
                                 <CheckCircle2 className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                                 <div>
-                                    <h4 className="font-semibold">2. Add Expenses</h4>
+                                    <h4 className="font-semibold">Add Expenses</h4>
                                     <p className="text-sm text-muted-foreground">Log expenses as they happen. Our flexible splitting options handle any scenario.</p>
                                 </div>
                             </li>
                              <li className="flex items-start gap-3">
                                 <CheckCircle2 className="mt-1 h-5 w-5 flex-shrink-0 text-primary" />
                                 <div>
-                                    <h4 className="font-semibold">3. Settle Up</h4>
+                                    <h4 className="font-semibold">Settle Up</h4>
                                     <p className="text-sm text-muted-foreground">View balances and settle debts with the minimal number of payments. Everyone is happy!</p>
                                 </div>
                             </li>
