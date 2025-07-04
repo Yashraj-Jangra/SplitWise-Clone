@@ -57,7 +57,7 @@ export default async function LandingPage() {
 
         <main className="flex-1">
             {/* Hero Section */}
-            <section className="relative flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-6 overflow-hidden">
+            <section className="relative flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 overflow-hidden">
                 <Image
                     src={randomImage}
                     alt="Background image"
@@ -69,11 +69,11 @@ export default async function LandingPage() {
                 />
                 <div className="absolute inset-0 bg-black/60 -z-10" />
 
-                <div className="text-center max-w-4xl mx-auto z-10">
+                <div className="container relative z-10 text-center">
                     <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-white mb-6 leading-tight animate-in fade-in slide-in-from-top-10 duration-1000 delay-200 drop-shadow-lg">
                     {settings.landingPage?.headline || settings.appName}
                     </h1>
-                    <p className="text-xl text-slate-200 mb-10 animate-in fade-in slide-in-from-top-8 duration-1000 delay-400 drop-shadow-md">
+                    <p className="text-xl text-slate-200 mb-10 animate-in fade-in slide-in-from-top-8 duration-1000 delay-400 drop-shadow-md max-w-4xl mx-auto">
                     {settings.landingPage?.subheadline || 'A default subheadline for your amazing application.'}
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12 animate-in fade-in zoom-in-95 duration-500 delay-700">
