@@ -41,6 +41,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Skeleton } from '../ui/skeleton';
+import { Timestamp } from 'firebase/firestore';
 
 
 interface ExpenseDetailDialogProps {
@@ -202,19 +203,47 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
                                             {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                                         </div>
                                     ) : expenseHistory.length > 0 ? (
-                                        <ScrollArea className="max-h-40">
+                                        <ScrollArea className="h-40">
                                             <div className="space-y-3 pt-2 pr-4">
-                                                {expenseHistory.map(event => (
-                                                    <div key={event.id} className="flex items-center gap-3 text-xs">
-                                                         <div className="flex-shrink-0">
-                                                            {eventIcons[event.eventType] || eventIcons.default}
+                                                {expenseHistory.map(event => {
+                                                    const expenseDate = (() => {
+                                                        if (event.data?.date && event.eventType.startsWith('expense_')) {
+                                                            const dateValue = event.data.date;
+                                                            if (dateValue instanceof Timestamp) {
+                                                                return dateValue.toDate();
+                                                            }
+                                                            const parsedDate = new Date(dateValue);
+                                                            if (!isNaN(parsedDate.getTime())) {
+                                                                return parsedDate;
+                                                            }
+                                                        }
+                                                        return null;
+                                                    })();
+
+                                                    return (
+                                                        <div key={event.id} className="flex items-center gap-3 text-xs">
+                                                            <div className="flex-shrink-0">
+                                                                {eventIcons[event.eventType] || eventIcons.default}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-muted-foreground">
+                                                                    {event.description}
+                                                                    {expenseDate && (
+                                                                        <span className="text-muted-foreground text-xs ml-2 font-normal">
+                                                                            (for {format(expenseDate, 'MMM d')})
+                                                                        </span>
+                                                                    )}
+                                                                </p>
+                                                                <p className="text-muted-foreground/80">
+                                                                    {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
+                                                                    <span className="ml-1">
+                                                                        ({format(new Date(event.timestamp), "MMM d, h:mm a")})
+                                                                    </span>
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex-1">
-                                                            <p className="text-muted-foreground">{event.description}</p>
-                                                            <p className="text-muted-foreground/80">{formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </ScrollArea>
                                     ) : (
