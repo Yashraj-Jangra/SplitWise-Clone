@@ -15,14 +15,24 @@ import type { SiteSettings, LandingPageFeature, LandingPageStep } from '@/types'
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function AdminLandingSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [newLandingImageUrl, setNewLandingImageUrl] = useState('');
-
   const { toast } = useToast();
+  
+  const iconNames = Object.keys(Icons).filter(
+    (key) => key !== 'AppLogo' && key !== 'Logo'
+  ) as IconName[];
 
   useEffect(() => {
     async function fetchSettings() {
@@ -240,8 +250,28 @@ export default function AdminLandingSettingsPage() {
                                 </Button>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Icon Name</Label>
-                                        <Input value={feature.icon} onChange={(e) => handleLandingFeatureChange(index, 'icon', e.target.value as IconName)} />
+                                        <Label>Icon</Label>
+                                        <Select
+                                            value={feature.icon}
+                                            onValueChange={(value) => handleLandingFeatureChange(index, 'icon', value as IconName)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select an icon" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {iconNames.map(name => {
+                                                    const IconComponent = Icons[name];
+                                                    return (
+                                                        <SelectItem key={name} value={name}>
+                                                            <div className="flex items-center gap-2">
+                                                                <IconComponent className="h-4 w-4" />
+                                                                <span>{name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    )
+                                                })}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Title</Label>
