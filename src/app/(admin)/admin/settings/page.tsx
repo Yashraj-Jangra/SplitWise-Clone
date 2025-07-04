@@ -344,6 +344,51 @@ export default function AdminSettingsPage() {
                 </div>
 
                 <Separator />
+                <h4 className="text-md font-medium text-primary">Hero Background Images</h4>
+                 <div className="space-y-6">
+                    <p className="text-sm text-muted-foreground">Manage the background images for the public landing page hero section. A random image is chosen on each visit.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {settings.landingImages.map((url, index) => (
+                        <div key={index} className="relative group space-y-2">
+                        <div className="relative aspect-video w-full overflow-hidden rounded-md">
+                            <Image src={url} alt={`Landing Image ${index + 1}`} fill className="object-cover" />
+                            <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemoveLandingImage(index)}
+                            >
+                            <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <Input
+                            value={url}
+                            onChange={(e) => handleLandingImageChange(index, e.target.value)}
+                            placeholder="Image URL"
+                        />
+                        </div>
+                    ))}
+                    </div>
+                    <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Add New Background Image</CardTitle>
+                        <CardDescription className="text-sm">Add a new image by pasting a publicly accessible URL.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex gap-2">
+                        <Input
+                            placeholder="https://images.unsplash.com/..."
+                            value={newLandingImageUrl}
+                            onChange={(e) => setNewLandingImageUrl(e.target.value)}
+                        />
+                        <Button onClick={handleAddLandingImage}>Add Image</Button>
+                        </div>
+                    </CardContent>
+                    </Card>
+                </div>
+
+
+                <Separator />
                 <h4 className="text-md font-medium text-primary">Features Section</h4>
                 <div className="space-y-2">
                     <Label htmlFor="featuresTitle">Features Title</Label>
@@ -495,55 +540,6 @@ export default function AdminSettingsPage() {
                  <div className="space-y-2">
                     <Label htmlFor="authSignupPasswordPlaceholder">Signup Password Placeholder</Label>
                     <Input id="authSignupPasswordPlaceholder" value={settings.authPage?.signupPasswordPlaceholder || ''} onChange={(e) => handleAuthPageChange('signupPasswordPlaceholder', e.target.value)} />
-                </div>
-            </CardContent>
-        </Card>
-        
-        <Card id="landing-images" className="scroll-mt-24">
-            <CardHeader>
-                <CardTitle>Landing Page: Hero Backgrounds</CardTitle>
-                <CardDescription>Manage the background images for the public landing page hero section. A random image is chosen on each visit.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {settings.landingImages.map((url, index) => (
-                        <div key={index} className="relative group space-y-2">
-                        <div className="relative aspect-video w-full overflow-hidden rounded-md">
-                            <Image src={url} alt={`Landing Image ${index + 1}`} fill className="object-cover" />
-                            <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleRemoveLandingImage(index)}
-                            >
-                            <X className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        <Input
-                            value={url}
-                            onChange={(e) => handleLandingImageChange(index, e.target.value)}
-                            placeholder="Image URL"
-                        />
-                        </div>
-                    ))}
-                    </div>
-                    <Card>
-                    <CardHeader>
-                        <CardTitle>Add New Background Image</CardTitle>
-                        <CardDescription>Add a new image by pasting a publicly accessible URL.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex gap-2">
-                        <Input
-                            placeholder="https://images.unsplash.com/..."
-                            value={newLandingImageUrl}
-                            onChange={(e) => setNewLandingImageUrl(e.target.value)}
-                        />
-                        <Button onClick={handleAddLandingImage}>Add Image</Button>
-                        </div>
-                    </CardContent>
-                    </Card>
                 </div>
             </CardContent>
         </Card>
