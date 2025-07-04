@@ -39,18 +39,20 @@ export default async function LandingPage() {
         <main className="flex-1">
             {/* Hero Section */}
             <section className="relative flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 overflow-hidden">
-                <Image
-                    src={randomImage}
-                    alt="Background image"
-                    fill
-                    className="object-cover -z-20"
-                    quality={100}
-                    priority
-                    data-ai-hint="office workspace"
-                />
-                <div className="absolute inset-0 bg-black/60 -z-10" />
+                <div className="absolute inset-0 z-0">
+                    <Image
+                        src={randomImage}
+                        alt="Background image"
+                        fill
+                        className="object-cover"
+                        quality={100}
+                        priority
+                        data-ai-hint="office workspace"
+                    />
+                </div>
+                <div className="absolute inset-0 bg-black/60 z-10" />
 
-                <div className="container mx-auto relative z-10 text-center">
+                <div className="container mx-auto relative z-20 text-center">
                     <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-white mb-6 leading-tight animate-in fade-in slide-in-from-top-10 duration-1000 delay-200 drop-shadow-lg">
                         {replaceAppName(lp.headline)}
                     </h1>
