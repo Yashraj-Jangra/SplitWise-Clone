@@ -1092,6 +1092,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         return {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
+            faviconUrl: data.faviconUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
@@ -1106,6 +1107,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         const defaultSettings = {
             appName: DEFAULT_APP_NAME,
             logoUrl: '',
+            faviconUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
             landingPage: DEFAULT_LANDING_PAGE_SETTINGS,

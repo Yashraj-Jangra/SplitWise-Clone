@@ -79,6 +79,7 @@ export default function AdminGeneralSettingsPage() {
       await updateSiteSettings({
         appName: settings.appName,
         logoUrl: settings.logoUrl,
+        faviconUrl: settings.faviconUrl,
         coverImages: settings.coverImages,
       });
       toast({
@@ -150,6 +151,11 @@ export default function AdminGeneralSettingsPage() {
                             <Input id="logoUrl" value={settings.logoUrl || ''} onChange={(e) => handleValueChange('logoUrl', e.target.value)} placeholder="https://example.com/logo.png" />
                          </div>
                     </div>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="faviconUrl">Favicon URL</Label>
+                    <Input id="faviconUrl" value={settings.faviconUrl || ''} onChange={(e) => handleValueChange('faviconUrl', e.target.value)} placeholder="https://example.com/favicon.ico" />
+                    <p className="text-xs text-muted-foreground">Recommended size: 32x32px. Use .ico, .png, or .svg format.</p>
                 </div>
             </CardContent>
         </Card>

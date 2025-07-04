@@ -177,6 +177,7 @@ export interface LandingPageStep {
 export interface SiteSettings {
   appName: string;
   logoUrl?: string;
+  faviconUrl?: string;
   coverImages: string[];
   landingImages: string[];
   landingPage?: {

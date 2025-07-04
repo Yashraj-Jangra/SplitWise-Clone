@@ -11,6 +11,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${settings.appName} - Effortless Group Expense Management`,
     description: `Simplify group expenses with ${settings.appName}. Track, split, and settle shared costs with ease.`,
+    icons: {
+      icon: settings.faviconUrl || '/favicon.ico',
+    }
   };
 }
 
