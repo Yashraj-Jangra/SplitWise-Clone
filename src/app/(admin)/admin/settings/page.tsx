@@ -501,8 +501,8 @@ export default function AdminSettingsPage() {
         
         <Card id="landing-images" className="scroll-mt-24">
             <CardHeader>
-            <CardTitle>Landing Page Backgrounds</CardTitle>
-            <CardDescription>Manage the background images for the public home page. One will be chosen randomly on each visit.</CardDescription>
+                <CardTitle>Landing Page: Hero Backgrounds</CardTitle>
+                <CardDescription>Manage the background images for the public landing page hero section. A random image is chosen on each visit.</CardDescription>
             </CardHeader>
             <CardContent>
                  <div className="space-y-6">
@@ -530,17 +530,17 @@ export default function AdminSettingsPage() {
                     </div>
                     <Card>
                     <CardHeader>
-                        <CardTitle>Add New Landing Image</CardTitle>
-                        <CardDescription>Add a new image by pasting a URL.</CardDescription>
+                        <CardTitle>Add New Background Image</CardTitle>
+                        <CardDescription>Add a new image by pasting a publicly accessible URL.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex gap-2">
                         <Input
-                            placeholder="https://example.com/image.png"
+                            placeholder="https://images.unsplash.com/..."
                             value={newLandingImageUrl}
                             onChange={(e) => setNewLandingImageUrl(e.target.value)}
                         />
-                        <Button onClick={handleAddLandingImage}>Add by URL</Button>
+                        <Button onClick={handleAddLandingImage}>Add Image</Button>
                         </div>
                     </CardContent>
                     </Card>
@@ -550,8 +550,8 @@ export default function AdminSettingsPage() {
 
         <Card id="cover-images" className="scroll-mt-24">
             <CardHeader>
-            <CardTitle>Default Group Cover Images</CardTitle>
-            <CardDescription>These images are used as default covers when creating new groups. Paste URLs from any image hosting service.</CardDescription>
+                <CardTitle>Group Creation: Default Cover Images</CardTitle>
+                <CardDescription>Manage the default cover images used when users create a new group. This does not affect the landing page.</CardDescription>
             </CardHeader>
             <CardContent>
                  <div className="space-y-6">
