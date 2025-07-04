@@ -128,7 +128,7 @@ export interface SimplifiedSettlement {
 export interface NavItem {
   title: string;
   href: string;
-  icon: IconName;
+  icon?: IconName;
   disabled?: boolean;
   external?: boolean;
   label?: string;
