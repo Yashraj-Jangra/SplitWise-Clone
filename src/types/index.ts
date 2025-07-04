@@ -163,6 +163,17 @@ export interface TeamMember {
   portfolioUrl?: string;
 }
 
+export interface LandingPageFeature {
+    icon: IconName;
+    title: string;
+    description: string;
+}
+
+export interface LandingPageStep {
+    title: string;
+    description: string;
+}
+
 export interface SiteSettings {
   appName: string;
   logoUrl?: string;
@@ -172,6 +183,16 @@ export interface SiteSettings {
     headline: string;
     subheadline: string;
     ctaButtonText: string;
+    featuresTitle: string;
+    featuresSubtitle: string;
+    features: LandingPageFeature[];
+    howItWorksTitle: string;
+    howItWorksSubtitle: string;
+    howItWorksSteps: LandingPageStep[];
+    howItWorksImageUrl: string;
+    finalCtaTitle: string;
+    finalCtaSubtitle: string;
+    finalCtaButtonText: string;
   };
   authPage?: {
     imageUrl: string;

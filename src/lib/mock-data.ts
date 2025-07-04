@@ -36,6 +36,8 @@ import type {
   SimplifiedSettlement,
   PolicyPage,
   TeamMember,
+  LandingPageFeature,
+  LandingPageStep,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -975,6 +977,25 @@ const DEFAULT_LANDING_PAGE_SETTINGS = {
     headline: 'SettleEase',
     subheadline: 'The quantum leap in managing shared expenses. Track, split, and settle your group costs with futuristic ease.',
     ctaButtonText: 'Enter the Grid',
+    featuresTitle: "Everything You Need to Settle Up",
+    featuresSubtitle: "From weekend trips to monthly bills, {appName} handles the math so you don't have to.",
+    features: [
+        { icon: 'Users', title: "Group Management", description: "Create shared expense groups, invite members via email, and manage group settings." },
+        { icon: 'Expense', title: "Complex Expense Tracking", description: "Add detailed expenses with complex splits (equal, unequal, by shares, by percentage)." },
+        { icon: 'Wallet', title: "Real-time Balances", description: "Instantly see who owes whom within each group with a clear and concise balance sheet." },
+        { icon: 'Settle', title: "Simplified Settlements", description: "A smart algorithm calculates the most efficient way to settle all debts in the group." },
+    ] as LandingPageFeature[],
+    howItWorksTitle: "Split Expenses in a Snap",
+    howItWorksSubtitle: "Get started in three simple steps. Spend more time making memories, less time on math.",
+    howItWorksSteps: [
+        { title: 'Create a Group', description: 'Start a new group for any occasion and invite your friends, family, or roommates.' },
+        { title: 'Add Expenses', description: 'Log expenses as they happen. Our flexible splitting options handle any scenario.' },
+        { title: 'Settle Up', description: 'View balances and settle debts with the minimal number of payments. Everyone is happy!' },
+    ] as LandingPageStep[],
+    howItWorksImageUrl: 'https://placehold.co/800x600.png',
+    finalCtaTitle: "Ready to Simplify Your Shared Expenses?",
+    finalCtaSubtitle: "Create an account for free and say goodbye to awkward money conversations.",
+    finalCtaButtonText: "Sign Up Now - It's Free"
 };
 
 const DEFAULT_AUTH_PAGE_SETTINGS = {

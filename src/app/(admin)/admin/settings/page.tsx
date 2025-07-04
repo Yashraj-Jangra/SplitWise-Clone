@@ -5,14 +5,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Icons } from '@/components/icons';
+import { Icons, IconName } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
 import { X } from 'lucide-react';
 import Image from 'next/image';
-import type { SiteSettings, PolicySection, TeamMember } from '@/types';
+import type { SiteSettings, PolicySection, TeamMember, LandingPageFeature, LandingPageStep } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
@@ -48,7 +48,7 @@ export default function AdminSettingsPage() {
       setSettings({ ...settings, [key]: value });
   };
 
-  const handleLandingPageChange = (field: string, value: string) => {
+  const handleLandingPageChange = (field: string, value: any) => {
     if (!settings) return;
     setSettings(prev => prev ? ({ ...prev, landingPage: { ...prev.landingPage!, [field]: value }}) : null);
   }
@@ -112,7 +112,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-    const handleAboutChange = (field: keyof SiteSettings['about'], value: string) => {
+    const handleAboutChange = (field: keyof SiteSettings['about'], value: any) => {
         if (!settings) return;
         setSettings(prev => prev ? ({ ...prev, about: { ...prev.about!, [field]: value }}) : null);
     }
@@ -144,6 +144,53 @@ export default function AdminSettingsPage() {
         if (!settings?.about?.team) return;
         const newTeam = settings.about.team.filter((_, i) => i !== index);
         handleAboutChange('team', newTeam as any);
+    };
+
+    const handleLandingFeatureChange = (index: number, field: keyof LandingPageFeature, value: string) => {
+        if (!settings?.landingPage) return;
+        const newFeatures = [...settings.landingPage.features];
+        newFeatures[index] = { ...newFeatures[index], [field]: value };
+        handleLandingPageChange('features', newFeatures);
+    };
+
+    const addLandingFeature = () => {
+        if (!settings?.landingPage) return;
+        const newFeature: LandingPageFeature = {
+            icon: 'Wallet',
+            title: 'New Feature',
+            description: 'A description for the new feature.',
+        };
+        const newFeatures = [...settings.landingPage.features, newFeature];
+        handleLandingPageChange('features', newFeatures);
+    };
+
+    const removeLandingFeature = (index: number) => {
+        if (!settings?.landingPage) return;
+        const newFeatures = settings.landingPage.features.filter((_, i) => i !== index);
+        handleLandingPageChange('features', newFeatures);
+    };
+
+    const handleLandingStepChange = (index: number, field: keyof LandingPageStep, value: string) => {
+        if (!settings?.landingPage) return;
+        const newSteps = [...settings.landingPage.howItWorksSteps];
+        newSteps[index] = { ...newSteps[index], [field]: value };
+        handleLandingPageChange('howItWorksSteps', newSteps);
+    };
+
+    const addLandingStep = () => {
+        if (!settings?.landingPage) return;
+        const newStep: LandingPageStep = {
+            title: 'New Step',
+            description: 'A description for the new step.',
+        };
+        const newSteps = [...settings.landingPage.howItWorksSteps, newStep];
+        handleLandingPageChange('howItWorksSteps', newSteps);
+    };
+
+    const removeLandingStep = (index: number) => {
+        if (!settings?.landingPage) return;
+        const newSteps = settings.landingPage.howItWorksSteps.filter((_, i) => i !== index);
+        handleLandingPageChange('howItWorksSteps', newSteps);
     };
   
   const handlePolicyChange = (
@@ -279,9 +326,10 @@ export default function AdminSettingsPage() {
         <Card id="landing-page" className="scroll-mt-24">
             <CardHeader>
                 <CardTitle>Landing Page</CardTitle>
-                <CardDescription>Customize the content on the public landing page.</CardDescription>
+                <CardDescription>Customize the content on the public landing page. Use {'{appName}'} to insert your app name.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+                <h4 className="text-md font-medium text-primary">Hero Section</h4>
                 <div className="space-y-2">
                     <Label htmlFor="landingHeadline">Headline</Label>
                     <Input id="landingHeadline" value={settings.landingPage?.headline || ''} onChange={(e) => handleLandingPageChange('headline', e.target.value)} />
@@ -293,6 +341,89 @@ export default function AdminSettingsPage() {
                 <div className="space-y-2">
                     <Label htmlFor="landingCta">CTA Button Text</Label>
                     <Input id="landingCta" value={settings.landingPage?.ctaButtonText || ''} onChange={(e) => handleLandingPageChange('ctaButtonText', e.target.value)} />
+                </div>
+
+                <Separator />
+                <h4 className="text-md font-medium text-primary">Features Section</h4>
+                <div className="space-y-2">
+                    <Label htmlFor="featuresTitle">Features Title</Label>
+                    <Input id="featuresTitle" value={settings.landingPage?.featuresTitle || ''} onChange={(e) => handleLandingPageChange('featuresTitle', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="featuresSubtitle">Features Subtitle</Label>
+                    <Input id="featuresSubtitle" value={settings.landingPage?.featuresSubtitle || ''} onChange={(e) => handleLandingPageChange('featuresSubtitle', e.target.value)} />
+                </div>
+                <div className="space-y-4">
+                    {settings.landingPage?.features.map((feature, index) => (
+                        <div key={index} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
+                             <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeLandingFeature(index)}>
+                                <X className="h-4 w-4 text-destructive" /><span className="sr-only">Remove Feature</span>
+                            </Button>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Icon Name</Label>
+                                    <Input value={feature.icon} onChange={(e) => handleLandingFeatureChange(index, 'icon', e.target.value as IconName)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Title</Label>
+                                    <Input value={feature.title} onChange={(e) => handleLandingFeatureChange(index, 'title', e.target.value)} />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Description</Label>
+                                <Textarea value={feature.description} onChange={(e) => handleLandingFeatureChange(index, 'description', e.target.value)} rows={2} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <Button variant="outline" size="sm" onClick={addLandingFeature}><Icons.Add className="mr-2"/>Add Feature</Button>
+
+                <Separator />
+                <h4 className="text-md font-medium text-primary">"How It Works" Section</h4>
+                 <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input value={settings.landingPage?.howItWorksTitle || ''} onChange={(e) => handleLandingPageChange('howItWorksTitle', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label>Subtitle</Label>
+                    <Input value={settings.landingPage?.howItWorksSubtitle || ''} onChange={(e) => handleLandingPageChange('howItWorksSubtitle', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Image URL</Label>
+                    <Input value={settings.landingPage?.howItWorksImageUrl || ''} onChange={(e) => handleLandingPageChange('howItWorksImageUrl', e.target.value)} />
+                </div>
+                <div className="space-y-4">
+                    {settings.landingPage?.howItWorksSteps.map((step, index) => (
+                         <div key={index} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
+                             <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeLandingStep(index)}>
+                                <X className="h-4 w-4 text-destructive" /><span className="sr-only">Remove Step</span>
+                            </Button>
+                            <div className="space-y-2">
+                                <Label>Step Title</Label>
+                                <Input value={step.title} onChange={(e) => handleLandingStepChange(index, 'title', e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Step Description</Label>
+                                <Textarea value={step.description} onChange={(e) => handleLandingStepChange(index, 'description', e.target.value)} rows={2}/>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <Button variant="outline" size="sm" onClick={addLandingStep}><Icons.Add className="mr-2"/>Add Step</Button>
+
+                <Separator />
+                <h4 className="text-md font-medium text-primary">Final CTA Section</h4>
+                <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input value={settings.landingPage?.finalCtaTitle || ''} onChange={(e) => handleLandingPageChange('finalCtaTitle', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Subtitle</Label>
+                    <Input value={settings.landingPage?.finalCtaSubtitle || ''} onChange={(e) => handleLandingPageChange('finalCtaSubtitle', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Button Text</Label>
+                    <Input value={settings.landingPage?.finalCtaButtonText || ''} onChange={(e) => handleLandingPageChange('finalCtaButtonText', e.target.value)} />
                 </div>
             </CardContent>
         </Card>
