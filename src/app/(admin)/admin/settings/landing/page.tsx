@@ -269,7 +269,7 @@ export default function AdminLandingSettingsPage() {
                     </div>
                     <div className="space-y-2">
                         <Label>Image URL</Label>
-                        <Input value={settings.landingPage?.howItWorksImageUrl || ''} onChange={(e) => handleLandingPageChange('howItWorksImageUrl', e.target.value)} />
+                        <Input value={settings.landingPage?.howItWorksImageUrl || ''} onChange={(e) => handleLandingPageChange('howItWorksImageUrl', e.target.value)} placeholder="https://images.unsplash.com/..."/>
                     </div>
                     <div className="space-y-4">
                         {settings.landingPage?.howItWorksSteps.map((step, index) => (

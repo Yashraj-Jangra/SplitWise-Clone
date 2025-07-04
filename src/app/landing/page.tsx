@@ -43,7 +43,7 @@ export default async function LandingPage() {
                     src={randomImage}
                     alt="Background image"
                     fill
-                    className="object-cover -z-10"
+                    className="object-cover -z-20"
                     quality={100}
                     priority
                     data-ai-hint="office workspace"
