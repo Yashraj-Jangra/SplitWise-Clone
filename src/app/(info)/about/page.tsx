@@ -85,15 +85,17 @@ export default function AboutPage() {
     const { settings, stats } = data;
     const about = settings.about!;
 
+    const replaceAppName = (text: string) => text.replace(/{appName}/g, settings.appName);
+
     return (
         <Card className="p-6 sm:p-8">
             <div className="text-center mb-8">
-                <h1 className="text-4xl font-bold font-headline mb-2 text-foreground">{about.title}</h1>
-                <p className="text-xl text-muted-foreground">{about.subtitle}</p>
+                <h1 className="text-4xl font-bold font-headline mb-2 text-foreground">{replaceAppName(about.title)}</h1>
+                <p className="text-xl text-muted-foreground">{replaceAppName(about.subtitle)}</p>
             </div>
 
             <div className="prose prose-invert max-w-none text-muted-foreground mb-12 text-center">
-                <p>{about.mainContent}</p>
+                <p>{replaceAppName(about.mainContent)}</p>
             </div>
 
             <div className="space-y-12">
