@@ -39,7 +39,7 @@ function Sidebar() {
     <div className="hidden border-r bg-background md:block">
         <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
           <div className="flex h-[60px] items-center border-b px-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
+            <Link href="/landing" className="flex items-center gap-2 font-semibold">
               <Icons.Logo className="h-8 w-8 text-primary" />
               {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
             </Link>
@@ -110,7 +110,7 @@ function Header() {
             <SheetContent side="left" className="w-[280px] flex flex-col p-0">
                 <SheetHeader className="p-4 border-b">
                     <SheetTitle>
-                        <Link href="/" className="flex items-center space-x-2" onClick={() => setOpen(false)}>
+                        <Link href="/landing" className="flex items-center space-x-2" onClick={() => setOpen(false)}>
                             <Icons.Logo className="h-8 w-8 text-primary" />
                             {loading ? <Skeleton className="h-6 w-32" /> : <span className="font-bold text-xl">{settings.appName}</span>}
                         </Link>

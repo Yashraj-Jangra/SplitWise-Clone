@@ -102,7 +102,7 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
   return (
     <div className="w-full">
         <div className="text-center md:text-left mb-8">
-            <Link href="/" className="inline-block mb-4">
+            <Link href="/landing" className="inline-block mb-4">
                 <Icons.Logo className="h-10 w-10 text-primary" />
             </Link>
             <h1 className="text-3xl font-bold font-headline">{authPageSettings?.loginTitle || "Welcome Back"}</h1>

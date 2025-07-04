@@ -18,7 +18,7 @@ export default function InfoLayout({
         <div className="flex min-h-screen flex-col bg-background">
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
                 <div className="container flex h-16 items-center">
-                    <Link href="/" className="flex items-center space-x-2">
+                    <Link href="/landing" className="flex items-center space-x-2">
                         <Icons.Logo className="h-8 w-8 text-primary" />
                         {loading ? <Skeleton className="h-6 w-32" /> : <span className="inline-block font-bold text-xl">{settings.appName}</span>}
                     </Link>
