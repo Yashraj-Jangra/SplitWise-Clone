@@ -1,31 +1,27 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Icons, IconName } from '@/components/icons';
+import { Icons } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
 import { X } from 'lucide-react';
 import Image from 'next/image';
-import type { SiteSettings, PolicySection, TeamMember, LandingPageFeature, LandingPageStep } from '@/types';
+import type { SiteSettings } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 
-export default function AdminSettingsPage() {
+export default function AdminGeneralSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [newCoverImageUrl, setNewCoverImageUrl] = useState('');
-  const [newLandingImageUrl, setNewLandingImageUrl] = useState('');
-
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,16 +43,6 @@ export default function AdminSettingsPage() {
       if (!settings) return;
       setSettings({ ...settings, [key]: value });
   };
-
-  const handleLandingPageChange = (field: string, value: any) => {
-    if (!settings) return;
-    setSettings(prev => prev ? ({ ...prev, landingPage: { ...prev.landingPage!, [field]: value }}) : null);
-  }
-  
-   const handleAuthPageChange = (field: string, value: string) => {
-      if (!settings) return;
-      setSettings(prev => prev ? ({ ...prev, authPage: { ...prev.authPage!, [field]: value }}) : null);
-  }
 
   const handleCoverImageChange = (index: number, value: string) => {
     if (!settings) return;
@@ -84,170 +70,20 @@ export default function AdminSettingsPage() {
       });
     }
   };
-  
-  const handleLandingImageChange = (index: number, value: string) => {
-    if (!settings) return;
-    const newImages = [...settings.landingImages];
-    newImages[index] = value;
-    setSettings({ ...settings, landingImages: newImages });
-  };
-  
-  const handleRemoveLandingImage = (index: number) => {
-    if (!settings) return;
-    const newImages = settings.landingImages.filter((_, i) => i !== index);
-    setSettings({ ...settings, landingImages: newImages });
-  };
-
-  const handleAddLandingImage = () => {
-    if (!settings) return;
-    if (newLandingImageUrl && !settings.landingImages.includes(newLandingImageUrl)) {
-      setSettings({ ...settings, landingImages: [...settings.landingImages, newLandingImageUrl] });
-      setNewLandingImageUrl('');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid URL',
-        description: 'Please enter a valid and unique image URL.',
-      });
-    }
-  };
-
-    const handleAboutChange = (field: keyof SiteSettings['about'], value: any) => {
-        if (!settings) return;
-        setSettings(prev => prev ? ({ ...prev, about: { ...prev.about!, [field]: value }}) : null);
-    }
-    
-    const handleTeamMemberChange = (index: number, field: keyof TeamMember, value: string) => {
-        if (!settings?.about?.team) return;
-        const newTeam = [...settings.about.team];
-        newTeam[index] = { ...newTeam[index], [field]: value };
-        handleAboutChange('team', newTeam as any); 
-    };
-
-    const addTeamMember = () => {
-        if (!settings?.about) return;
-        const newMember: TeamMember = {
-            id: `tm-${Date.now()}`,
-            name: 'New Member',
-            title: 'Role',
-            bio: '',
-            avatarUrl: 'https://placehold.co/100x100.png',
-            githubUrl: '',
-            linkedinUrl: '',
-            portfolioUrl: '',
-        };
-        const newTeam = [...settings.about.team, newMember];
-        handleAboutChange('team', newTeam as any);
-    };
-
-    const removeTeamMember = (index: number) => {
-        if (!settings?.about?.team) return;
-        const newTeam = settings.about.team.filter((_, i) => i !== index);
-        handleAboutChange('team', newTeam as any);
-    };
-
-    const handleLandingFeatureChange = (index: number, field: keyof LandingPageFeature, value: string) => {
-        if (!settings?.landingPage) return;
-        const newFeatures = [...settings.landingPage.features];
-        newFeatures[index] = { ...newFeatures[index], [field]: value };
-        handleLandingPageChange('features', newFeatures);
-    };
-
-    const addLandingFeature = () => {
-        if (!settings?.landingPage) return;
-        const newFeature: LandingPageFeature = {
-            icon: 'Wallet',
-            title: 'New Feature',
-            description: 'A description for the new feature.',
-        };
-        const newFeatures = [...settings.landingPage.features, newFeature];
-        handleLandingPageChange('features', newFeatures);
-    };
-
-    const removeLandingFeature = (index: number) => {
-        if (!settings?.landingPage) return;
-        const newFeatures = settings.landingPage.features.filter((_, i) => i !== index);
-        handleLandingPageChange('features', newFeatures);
-    };
-
-    const handleLandingStepChange = (index: number, field: keyof LandingPageStep, value: string) => {
-        if (!settings?.landingPage) return;
-        const newSteps = [...settings.landingPage.howItWorksSteps];
-        newSteps[index] = { ...newSteps[index], [field]: value };
-        handleLandingPageChange('howItWorksSteps', newSteps);
-    };
-
-    const addLandingStep = () => {
-        if (!settings?.landingPage) return;
-        const newStep: LandingPageStep = {
-            title: 'New Step',
-            description: 'A description for the new step.',
-        };
-        const newSteps = [...settings.landingPage.howItWorksSteps, newStep];
-        handleLandingPageChange('howItWorksSteps', newSteps);
-    };
-
-    const removeLandingStep = (index: number) => {
-        if (!settings?.landingPage) return;
-        const newSteps = settings.landingPage.howItWorksSteps.filter((_, i) => i !== index);
-        handleLandingPageChange('howItWorksSteps', newSteps);
-    };
-  
-  const handlePolicyChange = (
-    policy: 'privacyPolicy' | 'termsAndConditions',
-    index: number,
-    field: 'title' | 'content',
-    value: string
-  ) => {
-    if (!settings) return;
-    setSettings(prev => {
-        if (!prev) return null;
-        const newPolicyData = { ...prev[policy]! };
-        const newSections = [...newPolicyData.sections];
-        if (index === -1) { // -1 is a sentinel for the main title
-            newPolicyData.title = value;
-        } else {
-            newSections[index] = { ...newSections[index], [field]: value };
-            newPolicyData.sections = newSections;
-        }
-        return { ...prev, [policy]: newPolicyData };
-    });
-  };
-
-  const addPolicySection = (policy: 'privacyPolicy' | 'termsAndConditions') => {
-    if (!settings) return;
-    setSettings(prev => {
-        if (!prev) return null;
-        const newPolicyData = { ...prev[policy]! };
-        const newSections = [
-            ...newPolicyData.sections,
-            { id: `new-${Date.now()}`, title: 'New Section', content: '' }
-        ];
-        newPolicyData.sections = newSections;
-        return { ...prev, [policy]: newPolicyData };
-    });
-  };
-
-  const removePolicySection = (policy: 'privacyPolicy' | 'termsAndConditions', index: number) => {
-    if (!settings) return;
-    setSettings(prev => {
-        if (!prev) return null;
-        const newPolicyData = { ...prev[policy]! };
-        const newSections = newPolicyData.sections.filter((_, i) => i !== index);
-        newPolicyData.sections = newSections;
-        return { ...prev, [policy]: newPolicyData };
-    });
-  };
-
 
   const handleSaveChanges = async () => {
     if (!settings) return;
     setIsSaving(true);
     try {
-      await updateSiteSettings(settings);
+      // Only save the settings relevant to this page
+      await updateSiteSettings({
+        appName: settings.appName,
+        logoUrl: settings.logoUrl,
+        coverImages: settings.coverImages,
+      });
       toast({
         title: 'Settings Saved',
-        description: 'Site settings have been updated.',
+        description: 'General site settings have been updated.',
       });
     } catch (error) {
       toast({
@@ -259,11 +95,11 @@ export default function AdminSettingsPage() {
       setIsSaving(false);
     }
   };
-
+  
   const renderContent = () => {
     if (loading || !settings) {
       return (
-        <>
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <Skeleton className="h-6 w-1/3" />
@@ -282,22 +118,17 @@ export default function AdminSettingsPage() {
               <Skeleton className="h-6 w-1/3" />
               <Skeleton className="h-4 w-1/2" />
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="aspect-video w-full rounded-md" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ))}
+            <CardContent>
+              <Skeleton className="h-48 w-full" />
             </CardContent>
           </Card>
-        </>
+        </div>
       );
     }
 
     return (
-     <>
-        <Card id="branding" className="scroll-mt-24">
+     <div className="space-y-6">
+        <Card id="branding">
             <CardHeader>
                 <CardTitle>Branding</CardTitle>
                 <CardDescription>Customize the application's name and logo.</CardDescription>
@@ -323,231 +154,10 @@ export default function AdminSettingsPage() {
             </CardContent>
         </Card>
         
-        <Card id="landing-page" className="scroll-mt-24">
-            <CardHeader>
-                <CardTitle>Landing Page</CardTitle>
-                <CardDescription>Customize the content on the public landing page. Use {'{appName}'} to insert your app name.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <h4 className="text-md font-medium text-primary">Hero Section</h4>
-                <div className="space-y-2">
-                    <Label htmlFor="landingHeadline">Headline</Label>
-                    <Input id="landingHeadline" value={settings.landingPage?.headline || ''} onChange={(e) => handleLandingPageChange('headline', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="landingSubheadline">Sub-headline</Label>
-                    <Textarea id="landingSubheadline" value={settings.landingPage?.subheadline || ''} onChange={(e) => handleLandingPageChange('subheadline', e.target.value)} rows={3} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="landingCta">CTA Button Text</Label>
-                    <Input id="landingCta" value={settings.landingPage?.ctaButtonText || ''} onChange={(e) => handleLandingPageChange('ctaButtonText', e.target.value)} />
-                </div>
-
-                <Separator />
-                <h4 className="text-md font-medium text-primary">Hero Background Images</h4>
-                 <div className="space-y-6">
-                    <p className="text-sm text-muted-foreground">Manage the background images for the public landing page hero section. A random image is chosen on each visit.</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {settings.landingImages.map((url, index) => (
-                        <div key={index} className="relative group space-y-2">
-                        <div className="relative aspect-video w-full overflow-hidden rounded-md">
-                            <Image src={url} alt={`Landing Image ${index + 1}`} fill className="object-cover" />
-                            <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleRemoveLandingImage(index)}
-                            >
-                            <X className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        <Input
-                            value={url}
-                            onChange={(e) => handleLandingImageChange(index, e.target.value)}
-                            placeholder="Image URL"
-                        />
-                        </div>
-                    ))}
-                    </div>
-                    <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Add New Background Image</CardTitle>
-                        <CardDescription className="text-sm">Add a new image by pasting a publicly accessible URL.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex gap-2">
-                        <Input
-                            placeholder="https://images.unsplash.com/..."
-                            value={newLandingImageUrl}
-                            onChange={(e) => setNewLandingImageUrl(e.target.value)}
-                        />
-                        <Button onClick={handleAddLandingImage}>Add Image</Button>
-                        </div>
-                    </CardContent>
-                    </Card>
-                </div>
-
-
-                <Separator />
-                <h4 className="text-md font-medium text-primary">Features Section</h4>
-                <div className="space-y-2">
-                    <Label htmlFor="featuresTitle">Features Title</Label>
-                    <Input id="featuresTitle" value={settings.landingPage?.featuresTitle || ''} onChange={(e) => handleLandingPageChange('featuresTitle', e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="featuresSubtitle">Features Subtitle</Label>
-                    <Input id="featuresSubtitle" value={settings.landingPage?.featuresSubtitle || ''} onChange={(e) => handleLandingPageChange('featuresSubtitle', e.target.value)} />
-                </div>
-                <div className="space-y-4">
-                    {settings.landingPage?.features.map((feature, index) => (
-                        <div key={index} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
-                             <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeLandingFeature(index)}>
-                                <X className="h-4 w-4 text-destructive" /><span className="sr-only">Remove Feature</span>
-                            </Button>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Icon Name</Label>
-                                    <Input value={feature.icon} onChange={(e) => handleLandingFeatureChange(index, 'icon', e.target.value as IconName)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Title</Label>
-                                    <Input value={feature.title} onChange={(e) => handleLandingFeatureChange(index, 'title', e.target.value)} />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Description</Label>
-                                <Textarea value={feature.description} onChange={(e) => handleLandingFeatureChange(index, 'description', e.target.value)} rows={2} />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <Button variant="outline" size="sm" onClick={addLandingFeature}><Icons.Add className="mr-2"/>Add Feature</Button>
-
-                <Separator />
-                <h4 className="text-md font-medium text-primary">"How It Works" Section</h4>
-                 <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input value={settings.landingPage?.howItWorksTitle || ''} onChange={(e) => handleLandingPageChange('howItWorksTitle', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Subtitle</Label>
-                    <Input value={settings.landingPage?.howItWorksSubtitle || ''} onChange={(e) => handleLandingPageChange('howItWorksSubtitle', e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Image URL</Label>
-                    <Input value={settings.landingPage?.howItWorksImageUrl || ''} onChange={(e) => handleLandingPageChange('howItWorksImageUrl', e.target.value)} />
-                </div>
-                <div className="space-y-4">
-                    {settings.landingPage?.howItWorksSteps.map((step, index) => (
-                         <div key={index} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
-                             <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeLandingStep(index)}>
-                                <X className="h-4 w-4 text-destructive" /><span className="sr-only">Remove Step</span>
-                            </Button>
-                            <div className="space-y-2">
-                                <Label>Step Title</Label>
-                                <Input value={step.title} onChange={(e) => handleLandingStepChange(index, 'title', e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Step Description</Label>
-                                <Textarea value={step.description} onChange={(e) => handleLandingStepChange(index, 'description', e.target.value)} rows={2}/>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <Button variant="outline" size="sm" onClick={addLandingStep}><Icons.Add className="mr-2"/>Add Step</Button>
-
-                <Separator />
-                <h4 className="text-md font-medium text-primary">Final CTA Section</h4>
-                <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input value={settings.landingPage?.finalCtaTitle || ''} onChange={(e) => handleLandingPageChange('finalCtaTitle', e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Subtitle</Label>
-                    <Input value={settings.landingPage?.finalCtaSubtitle || ''} onChange={(e) => handleLandingPageChange('finalCtaSubtitle', e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Button Text</Label>
-                    <Input value={settings.landingPage?.finalCtaButtonText || ''} onChange={(e) => handleLandingPageChange('finalCtaButtonText', e.target.value)} />
-                </div>
-            </CardContent>
-        </Card>
-
-        <Card id="auth-page" className="scroll-mt-24">
-            <CardHeader>
-                <CardTitle>Authentication Page</CardTitle>
-                <CardDescription>Customize the content on the Login, Signup, and Forgot Password pages.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                 <div className="space-y-2">
-                    <Label htmlFor="authImageUrl">Side Image URL</Label>
-                    <Input id="authImageUrl" value={settings.authPage?.imageUrl || ''} onChange={(e) => handleAuthPageChange('imageUrl', e.target.value)} placeholder="https://images.unsplash.com/..."/>
-                    <p className="text-xs text-muted-foreground">Recommended aspect ratio: 2:3 (e.g., 800x1200px).</p>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="authLoginTitle">Login Title</Label>
-                    <Input id="authLoginTitle" value={settings.authPage?.loginTitle || ''} onChange={(e) => handleAuthPageChange('loginTitle', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="authLoginSubtitle">Login Subtitle</Label>
-                    <Input id="authLoginSubtitle" value={settings.authPage?.loginSubtitle || ''} onChange={(e) => handleAuthPageChange('loginSubtitle', e.target.value)} />
-                </div>
-                 <Separator />
-                <div className="space-y-2">
-                    <Label htmlFor="authSignupTitle">Signup Title</Label>
-                    <Input id="authSignupTitle" value={settings.authPage?.signupTitle || ''} onChange={(e) => handleAuthPageChange('signupTitle', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="authSignupSubtitle">Signup Subtitle</Label>
-                    <Input id="authSignupSubtitle" value={settings.authPage?.signupSubtitle || ''} onChange={(e) => handleAuthPageChange('signupSubtitle', e.target.value)} />
-                </div>
-                 <Separator />
-                <div className="space-y-2">
-                    <Label htmlFor="authForgotTitle">Forgot Password Title</Label>
-                    <Input id="authForgotTitle" value={settings.authPage?.forgotPasswordTitle || ''} onChange={(e) => handleAuthPageChange('forgotPasswordTitle', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="authForgotSubtitle">Forgot Password Subtitle</Label>
-                    <Input id="authForgotSubtitle" value={settings.authPage?.forgotPasswordSubtitle || ''} onChange={(e) => handleAuthPageChange('forgotPasswordSubtitle', e.target.value)} />
-                </div>
-                <Separator />
-                <h4 className="text-md font-medium pt-2">Form Placeholders</h4>
-                <div className="space-y-2">
-                    <Label htmlFor="authLoginEmailPlaceholder">Login Email Placeholder</Label>
-                    <Input id="authLoginEmailPlaceholder" value={settings.authPage?.loginEmailPlaceholder || ''} onChange={(e) => handleAuthPageChange('loginEmailPlaceholder', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="authLoginPasswordPlaceholder">Login Password Placeholder</Label>
-                    <Input id="authLoginPasswordPlaceholder" value={settings.authPage?.loginPasswordPlaceholder || ''} onChange={(e) => handleAuthPageChange('loginPasswordPlaceholder', e.target.value)} />
-                </div>
-                 <Separator />
-                <div className="space-y-2">
-                    <Label htmlFor="authSignupFirstNamePlaceholder">Signup First Name Placeholder</Label>
-                    <Input id="authSignupFirstNamePlaceholder" value={settings.authPage?.signupFirstNamePlaceholder || ''} onChange={(e) => handleAuthPageChange('signupFirstNamePlaceholder', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="authSignupLastNamePlaceholder">Signup Last Name Placeholder</Label>
-                    <Input id="authSignupLastNamePlaceholder" value={settings.authPage?.signupLastNamePlaceholder || ''} onChange={(e) => handleAuthPageChange('signupLastNamePlaceholder', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="authSignupUsernamePlaceholder">Signup Username Placeholder</Label>
-                    <Input id="authSignupUsernamePlaceholder" value={settings.authPage?.signupUsernamePlaceholder || ''} onChange={(e) => handleAuthPageChange('signupUsernamePlaceholder', e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="authSignupEmailPlaceholder">Signup Email Placeholder</Label>
-                    <Input id="authSignupEmailPlaceholder" value={settings.authPage?.signupEmailPlaceholder || ''} onChange={(e) => handleAuthPageChange('signupEmailPlaceholder', e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="authSignupPasswordPlaceholder">Signup Password Placeholder</Label>
-                    <Input id="authSignupPasswordPlaceholder" value={settings.authPage?.signupPasswordPlaceholder || ''} onChange={(e) => handleAuthPageChange('signupPasswordPlaceholder', e.target.value)} />
-                </div>
-            </CardContent>
-        </Card>
-
-        <Card id="cover-images" className="scroll-mt-24">
+        <Card id="cover-images">
             <CardHeader>
                 <CardTitle>Group Creation: Default Cover Images</CardTitle>
-                <CardDescription>Manage the default cover images used when users create a new group. This does not affect the landing page.</CardDescription>
+                <CardDescription>Manage the default cover images used when users create a new group. A random image from this list will be chosen.</CardDescription>
             </CardHeader>
             <CardContent>
                  <div className="space-y-6">
@@ -575,8 +185,8 @@ export default function AdminSettingsPage() {
                     </div>
                     <Card>
                     <CardHeader>
-                        <CardTitle>Add New Cover Image</CardTitle>
-                        <CardDescription>Add a new image by pasting a URL.</CardDescription>
+                        <CardTitle className="text-base">Add New Cover Image</CardTitle>
+                        <CardDescription className="text-sm">Add a new image by pasting a URL.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex gap-2">
@@ -593,171 +203,15 @@ export default function AdminSettingsPage() {
             </CardContent>
         </Card>
         
-        <Card id="about-settings" className="scroll-mt-24">
-            <CardHeader>
-                <CardTitle>About Page Settings</CardTitle>
-                <CardDescription>Customize the content of the "About Us" page.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-2">
-                    <Label htmlFor="aboutTitle">Page Title</Label>
-                    <Input id="aboutTitle" value={settings.about?.title || ''} onChange={(e) => handleAboutChange('title', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="aboutSubtitle">Page Subtitle</Label>
-                    <Input id="aboutSubtitle" value={settings.about?.subtitle || ''} onChange={(e) => handleAboutChange('subtitle', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="aboutContent">Main Content</Label>
-                    <Textarea id="aboutContent" value={settings.about?.mainContent || ''} onChange={(e) => handleAboutChange('mainContent', e.target.value)} rows={5} />
-                </div>
-                
-                <Separator />
-                <h3 className="text-lg font-medium">Meet the Team</h3>
-                <div className="space-y-6">
-                    {settings.about?.team.map((member, index) => (
-                        <div key={member.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
-                            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeTeamMember(index)}>
-                                <X className="h-4 w-4 text-destructive" />
-                                <span className="sr-only">Remove Member</span>
-                            </Button>
-                            
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="space-y-2 sm:w-1/3">
-                                    <Label htmlFor={`team-avatar-${index}`}>Avatar URL</Label>
-                                    <Input id={`team-avatar-${index}`} value={member.avatarUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'avatarUrl', e.target.value)} />
-                                    <Avatar className="h-20 w-20 mt-2">
-                                        <AvatarImage src={member.avatarUrl} alt={member.name} />
-                                        <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                                    </Avatar>
-                                </div>
-                                <div className="space-y-4 sm:w-2/3">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor={`team-name-${index}`}>Name</Label>
-                                            <Input id={`team-name-${index}`} value={member.name} onChange={(e) => handleTeamMemberChange(index, 'name', e.target.value)} />
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor={`team-title-${index}`}>Title</Label>
-                                            <Input id={`team-title-${index}`} value={member.title} onChange={(e) => handleTeamMemberChange(index, 'title', e.target.value)} />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor={`team-bio-${index}`}>Bio</Label>
-                                        <Textarea id={`team-bio-${index}`} value={member.bio} onChange={(e) => handleTeamMemberChange(index, 'bio', e.target.value)} rows={3}/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Separator />
-                             <h4 className="text-sm font-medium">Social Links</h4>
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor={`team-github-${index}`}>GitHub URL</Label>
-                                    <Input id={`team-github-${index}`} value={member.githubUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'githubUrl', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor={`team-linkedin-${index}`}>LinkedIn URL</Label>
-                                    <Input id={`team-linkedin-${index}`} value={member.linkedinUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'linkedinUrl', e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor={`team-portfolio-${index}`}>Portfolio URL</Label>
-                                    <Input id={`team-portfolio-${index}`} value={member.portfolioUrl || ''} onChange={(e) => handleTeamMemberChange(index, 'portfolioUrl', e.target.value)} />
-                                </div>
-                             </div>
-                        </div>
-                    ))}
-                </div>
-                <Button variant="secondary" onClick={addTeamMember}>
-                    <Icons.Add className="mr-2" /> Add Team Member
-                </Button>
-            </CardContent>
-        </Card>
-
-        <Card id="privacy-settings" className="scroll-mt-24">
-          <CardHeader>
-            <CardTitle>Privacy Policy Settings</CardTitle>
-            <CardDescription>Customize the content of the "Privacy Policy" page.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-                <Label>Page Title</Label>
-                <Input value={settings.privacyPolicy?.title || ''} onChange={(e) => handlePolicyChange('privacyPolicy', -1, 'title', e.target.value)} />
-            </div>
-            {settings.privacyPolicy?.sections.map((section, index) => (
-                <div key={section.id} className="space-y-3 p-4 border rounded-md relative">
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removePolicySection('privacyPolicy', index)}>
-                        <X className="h-4 w-4 text-destructive" />
-                    </Button>
-                    <div className="space-y-2">
-                        <Label>Section Title</Label>
-                        <Input value={section.title} onChange={(e) => handlePolicyChange('privacyPolicy', index, 'title', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Section Content</Label>
-                        <Textarea value={section.content} onChange={(e) => handlePolicyChange('privacyPolicy', index, 'content', e.target.value)} rows={5} />
-                    </div>
-                </div>
-            ))}
-          </CardContent>
-          <CardFooter>
-             <Button variant="secondary" onClick={() => addPolicySection('privacyPolicy')}>
-                <Icons.Add className="mr-2" /> Add Section
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card id="terms-settings" className="scroll-mt-24">
-          <CardHeader>
-            <CardTitle>Terms & Conditions Settings</CardTitle>
-            <CardDescription>Customize the content of the "Terms & Conditions" page.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-             <div className="space-y-2">
-                <Label>Page Title</Label>
-                <Input value={settings.termsAndConditions?.title || ''} onChange={(e) => handlePolicyChange('termsAndConditions', -1, 'title', e.target.value)} />
-            </div>
-            {settings.termsAndConditions?.sections.map((section, index) => (
-                <div key={section.id} className="space-y-3 p-4 border rounded-md relative">
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removePolicySection('termsAndConditions', index)}>
-                        <X className="h-4 w-4 text-destructive" />
-                    </Button>
-                    <div className="space-y-2">
-                        <Label>Section Title</Label>
-                        <Input value={section.title} onChange={(e) => handlePolicyChange('termsAndConditions', index, 'title', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Section Content</Label>
-                        <Textarea value={section.content} onChange={(e) => handlePolicyChange('termsAndConditions', index, 'content', e.target.value)} rows={5} />
-                    </div>
-                </div>
-            ))}
-          </CardContent>
-           <CardFooter>
-             <Button variant="secondary" onClick={() => addPolicySection('termsAndConditions')}>
-                <Icons.Add className="mr-2" /> Add Section
-            </Button>
-          </CardFooter>
-        </Card>
-      </>
+        <div className="flex justify-end">
+          <Button onClick={handleSaveChanges} disabled={isSaving || loading || !settings} size="lg">
+            {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
+            Save Changes
+          </Button>
+        </div>
+      </div>
     );
   };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-headline text-foreground">Site Settings</h1>
-        <p className="text-muted-foreground">Manage application-wide configurations.</p>
-      </div>
-      
-      {renderContent()}
-
-      <div className="flex justify-end sticky bottom-6">
-        <Button onClick={handleSaveChanges} disabled={isSaving || loading || !settings} size="lg">
-          {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
-          Save All Changes
-        </Button>
-      </div>
-    </div>
-  );
+  
+  return renderContent();
 }
