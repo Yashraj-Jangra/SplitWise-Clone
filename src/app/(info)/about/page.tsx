@@ -13,6 +13,7 @@ import { Icons } from '@/components/icons';
 import { OverviewCard } from '@/components/dashboard/overview-card';
 import Link from 'next/link';
 import { getInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 interface AboutPageData {
     settings: SiteSettings;
@@ -55,6 +56,17 @@ function AboutPageSkeleton() {
         </Card>
     )
 }
+
+const technologies = [
+  { name: 'Firebase Studio', icon: Icons.Logo, color: 'text-primary' },
+  { name: 'Next.js', icon: Icons.NextJs, color: 'text-foreground' },
+  { name: 'React', icon: Icons.ReactLogo, color: 'text-sky-400' },
+  { name: 'Firebase', icon: Icons.FirebaseLogo, color: 'text-amber-500' },
+  { name: 'Tailwind CSS', icon: Icons.TailwindLogo, color: 'text-cyan-400' },
+  { name: 'ShadCN UI', icon: Icons.ShadcnLogo, color: 'text-foreground' },
+  { name: 'Genkit', icon: Icons.GenkitLogo, color: 'text-emerald-400' },
+];
+
 
 export default function AboutPage() {
     const [data, setData] = useState<AboutPageData | null>(null);
@@ -140,17 +152,13 @@ export default function AboutPage() {
                      <p className="text-muted-foreground text-center">
                         This project is proudly built with modern technologies, including a special development environment.
                      </p>
-                     <div className="flex flex-wrap gap-4 justify-center">
-                        <div className="flex items-center gap-2 py-1 px-3 rounded-md bg-card/50 border">
-                            <Icons.Logo className="h-5 w-5 text-primary"/>
-                            <span className="font-medium">Firebase Studio</span>
-                        </div>
-                        <div className="flex items-center gap-2 py-1 px-3 rounded-md bg-card/50 border"><span className="font-medium">Next.js</span></div>
-                        <div className="flex items-center gap-2 py-1 px-3 rounded-md bg-card/50 border"><span className="font-medium">React</span></div>
-                        <div className="flex items-center gap-2 py-1 px-3 rounded-md bg-card/50 border"><span className="font-medium">Firebase</span></div>
-                        <div className="flex items-center gap-2 py-1 px-3 rounded-md bg-card/50 border"><span className="font-medium">Tailwind CSS</span></div>
-                        <div className="flex items-center gap-2 py-1 px-3 rounded-md bg-card/50 border"><span className="font-medium">ShadCN UI</span></div>
-                        <div className="flex items-center gap-2 py-1 px-3 rounded-md bg-card/50 border"><span className="font-medium">Genkit</span></div>
+                     <div className="flex flex-wrap gap-4 justify-center pt-4">
+                        {technologies.map((tech) => (
+                             <div key={tech.name} className="flex items-center gap-3 py-2 px-4 rounded-lg bg-card/50 border hover:bg-muted transition-colors">
+                                <tech.icon className={cn("h-6 w-6", tech.color)} />
+                                <span className="font-medium text-foreground">{tech.name}</span>
+                            </div>
+                        ))}
                      </div>
                 </div>
             </div>
