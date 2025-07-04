@@ -142,7 +142,11 @@ export const Icons = {
     <svg role="img" className={cn("h-5 w-5", className)} viewBox="-10.5 -9.45 21 18.9" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="0" cy="0" r="1" fill="currentColor"></circle><g stroke="currentColor" strokeWidth="1" fill="none"><ellipse rx="10" ry="3.45"></ellipse><ellipse rx="10" ry="3.45" transform="rotate(60)"></ellipse><ellipse rx="10" ry="3.45" transform="rotate(120)"></ellipse></g></svg>
   ),
   FirebaseLogo: ({ className }: { className?: string }) => (
-    <svg role="img" className={cn("h-5 w-5", className)} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12.24 3.66L3.37 19.02c-.4.69.05 1.58.84 1.58h17.74c.79 0 1.24-.89.84-1.58L13.92 3.66a.985.985 0 00-1.68 0z" opacity=".25"></path><path d="M12.24 3.66L3.37 19.02c-.4.69.05 1.58.84 1.58h4.49l8.03-13.9-4.49 7.78c-.4.69-1.28.69-1.68 0L9.12 12.3l3.12-8.64z"></path></svg>
+    <svg role="img" className={cn("h-5 w-5", className)} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.24 3.66L3.37 19.02c-.4.69.05 1.58.84 1.58h17.74c.79 0 1.24-.89.84-1.58L13.92 3.66a.985.985 0 00-1.68 0z" fill="#FFC24A"/>
+        <path d="M12.24 3.66L3.37 19.02c-.4.69.05 1.58.84 1.58h4.49l8.03-13.9-4.49 7.78c-.4.69-1.28.69-1.68 0L9.12 12.3l3.12-8.64z" fill="#F47121"/>
+        <path d="M16.73 6.7L3.37 19.02c-.4.69.05 1.58.84 1.58h4.49l8.87-12.32z" fill="#FFA000"/>
+    </svg>
   ),
   TailwindLogo: ({ className }: { className?: string }) => (
     <svg role="img" className={cn("h-5 w-5", className)} fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.007 8.257c.29.545.437 1.06.437 1.734 0 1.545-.96 2.488-2.58 2.488-1.56 0-2.618-.943-2.618-2.678 0-1.83 1.1-2.91 2.73-2.91.438 0 .84.14 1.15.394.02.015.03.02.04.02s.013-.005.02-.02c-.15-.24-.465-.66-.465-1.29 0-1.02.73-1.635 1.76-1.635.885 0 1.515.54 1.515 1.545 0 .825-.435 1.44-1.2 2.145l-1.035.96zM15.12 8c0 4.02-3.15 7.17-7.17 7.17S.78 12.02.78 8 .78.83 4.8.83s7.17 3.15 7.17 7.17zm-1.8 0c0-3.09-2.43-5.52-5.37-5.52S2.58 4.91 2.58 8s2.43 5.52 5.37 5.52 5.37-2.43 5.37-5.52z"></path></svg>
@@ -150,6 +154,7 @@ export const Icons = {
   ShadcnLogo: ({ className }: { className?: string }) => (
      <svg role="img" className={cn("h-5 w-5", className)} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M208.33,88.42a8,8,0,0,1,7.44,12.39L128,192,40.23,100.81a8,8,0,0,1,7.44-12.39H208.33M208.33,72.42H48.67a16,16,0,0,0-14.88,24.78l87.77,91.19a8,8,0,0,0,12.23,0l87.77-91.19A16,16,0,0,0,208.33,72.42Z"></path></svg>
   ),
+  FirebaseStudio: QuantumLogo,
   GenkitLogo: ({ className }: { className?: string }) => (
     <svg role="img" className={cn("h-5 w-5", className)} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 9.24434 20.9407 6.75841 19.1662 5M12 2V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M19.1662 5C19.1662 5 18.4234 8.71078 15.5 10.5C12.5766 12.2892 12 15.5 12 15.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M12 15.5H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
   ),
