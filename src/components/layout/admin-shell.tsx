@@ -72,7 +72,7 @@ function AdminHeader() {
 
 function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () => void }) {
     const pathname = usePathname();
-    const defaultAccordionValue = items.find(item => item.subItems?.some(subItem => pathname === subItem.href))?.href;
+    const defaultAccordionValue = items.find(item => item.subItems?.some(subItem => pathname === subItem.href || pathname.startsWith(subItem.href)))?.href;
 
     return (
         <Accordion type="single" collapsible className="w-full" defaultValue={defaultAccordionValue}>
@@ -96,7 +96,7 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
                     );
                 }
 
-                const isParentActive = item.subItems.some(sub => sub.href === pathname);
+                const isParentActive = item.subItems.some(sub => pathname.startsWith(sub.href));
                 const Icon = item.icon && Icons[item.icon];
 
                 return (
@@ -112,8 +112,8 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
                                 <span>{item.title}</span>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="pl-8 pr-1 pb-0 pt-2">
-                            <nav className="flex flex-col space-y-1">
+                        <AccordionContent className="pl-6 pb-1">
+                           <div className="flex flex-col space-y-1 border-l-2 border-border ml-5 pl-4 pt-1">
                                 {item.subItems.map((subItem) => {
                                     const isSubActive = pathname === subItem.href;
                                     return (
@@ -130,7 +130,7 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
                                         </Link>
                                     );
                                 })}
-                            </nav>
+                            </div>
                         </AccordionContent>
                     </AccordionItem>
                 );
