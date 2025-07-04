@@ -118,6 +118,11 @@ export default function AdminContentPagesPage() {
     });
   };
 
+  const handleNotFoundPageChange = (field: string, value: string) => {
+    if (!settings) return;
+    setSettings(prev => prev ? ({ ...prev, notFoundPage: { ...prev.notFoundPage!, [field]: value }}) : null);
+  }
+
   const handleSaveChanges = async () => {
     if (!settings) return;
     setIsSaving(true);
@@ -126,6 +131,7 @@ export default function AdminContentPagesPage() {
           about: settings.about,
           privacyPolicy: settings.privacyPolicy,
           termsAndConditions: settings.termsAndConditions,
+          notFoundPage: settings.notFoundPage,
       });
       toast({
         title: 'Settings Saved',
@@ -300,6 +306,27 @@ export default function AdminContentPagesPage() {
                 <Icons.Add className="mr-2" /> Add Section
             </Button>
           </CardFooter>
+        </Card>
+        
+        <Card id="404-settings" className="scroll-mt-24">
+            <CardHeader>
+                <CardTitle>404 "Not Found" Page</CardTitle>
+                <CardDescription>Customize the content of your 404 error page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Label htmlFor="404Title">Page Title</Label>
+                    <Input id="404Title" value={settings.notFoundPage?.title || ''} onChange={(e) => handleNotFoundPageChange('title', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="404Subtitle">Page Subtitle</Label>
+                    <Textarea id="404Subtitle" value={settings.notFoundPage?.subtitle || ''} onChange={(e) => handleNotFoundPageChange('subtitle', e.target.value)} rows={3} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="404Button">Button Text</Label>
+                    <Input id="404Button" value={settings.notFoundPage?.buttonText || ''} onChange={(e) => handleNotFoundPageChange('buttonText', e.target.value)} />
+                </div>
+            </CardContent>
         </Card>
 
         <div className="flex justify-end">

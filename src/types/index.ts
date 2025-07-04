@@ -218,6 +218,11 @@ export interface SiteSettings {
   };
   privacyPolicy?: PolicyPage;
   termsAndConditions?: PolicyPage;
+  notFoundPage?: {
+    title: string;
+    subtitle: string;
+    buttonText: string;
+  };
   stats?: {
     users: number;
     groups: number;

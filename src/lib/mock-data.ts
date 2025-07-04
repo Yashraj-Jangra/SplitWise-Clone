@@ -1055,6 +1055,12 @@ const DEFAULT_TERMS_AND_CONDITIONS: PolicyPage = {
     ]
 };
 
+const DEFAULT_NOT_FOUND_PAGE_SETTINGS = {
+    title: "404 - Page Not Found",
+    subtitle: "Oops! The page you are looking for does not exist. It might have been moved or deleted.",
+    buttonText: "Return to Homepage"
+};
+
 
 export async function getSiteSettings(): Promise<SiteSettings> {
     const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
@@ -1089,6 +1095,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             about,
             privacyPolicy,
             termsAndConditions,
+            notFoundPage: { ...DEFAULT_NOT_FOUND_PAGE_SETTINGS, ...(data.notFoundPage || {}) },
             stats: data.stats || { users: 0, groups: 0, expenses: 0 },
         };
     } else {
@@ -1102,6 +1109,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             about: DEFAULT_ABOUT_SETTINGS,
             privacyPolicy: DEFAULT_PRIVACY_POLICY,
             termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS,
+            notFoundPage: DEFAULT_NOT_FOUND_PAGE_SETTINGS,
             stats: { users: 0, groups: 0, expenses: 0 },
         };
         await setDoc(docRef, defaultSettings);
