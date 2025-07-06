@@ -8,14 +8,8 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,6 +26,8 @@ import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { getFullName } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "../ui/scroll-area";
 
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
@@ -60,6 +56,7 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
   const { userProfile } = useAuth();
   const [group, setGroup] = useState<Group | null>(initialGroup || null);
   const [isGroupLoading, setIsGroupLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   const form = useForm<EditSettlementFormValues>({
     resolver: zodResolver(settlementSchema),
@@ -134,7 +131,7 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
 
   const renderForm = () => (
     <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4" id="edit-settlement-form">
+        <form id="edit-settlement-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                 control={form.control}
@@ -226,23 +223,47 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
               )}
             />
           </form>
-        </FormProvider>
-  )
+    </FormProvider>
+  );
+
+  const MainContent = isGroupLoading || !group ? renderSkeleton() : renderForm();
+  const title = "Edit Settlement";
+  const formId = "edit-settlement-form";
+
+  if(isMobile) {
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent side="bottom" className="glass-pane h-[80vh] flex flex-col rounded-t-2xl border-border/20 p-0">
+                <SheetHeader className="p-4 border-b">
+                    <SheetTitle className="text-center text-lg font-semibold">{title}</SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="flex-1">
+                    <div className="p-4">{MainContent}</div>
+                </ScrollArea>
+                <SheetFooter className="p-4 bg-background/50 border-t">
+                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading} className="w-full" size="lg">
+                        {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                    </Button>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="glass-pane sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-headline">Edit Settlement</DialogTitle>
+          <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
           <DialogDescription>
             Update the details of this payment.
           </DialogDescription>
         </DialogHeader>
-        {isGroupLoading || !group ? renderSkeleton() : renderForm()}
+        {MainContent}
         <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" form="edit-settlement-form" disabled={form.formState.isSubmitting || isGroupLoading}>
-            {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+            <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading}>
+                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
         </DialogFooter>
       </DialogContent>
