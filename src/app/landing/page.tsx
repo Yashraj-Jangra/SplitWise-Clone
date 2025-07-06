@@ -26,7 +26,7 @@ export default async function LandingPage() {
                     <span className="inline-block font-bold text-xl">{settings.appName}</span>
                 </Link>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" asChild>
+                    <Button variant="ghost" asChild className="text-white hover:bg-white/10 hover:text-white">
                         <Link href="/auth/login">Log In</Link>
                     </Button>
                     <Button asChild>
@@ -93,8 +93,8 @@ export default async function LandingPage() {
             </section>
 
             {/* How it Works */}
-            <section className="bg-muted/30 py-16 md:py-24">
-                <div className="container mx-auto grid gap-12 px-6 md:grid-cols-2 md:items-center">
+            <section className="bg-muted/30 py-16 md:py-24 px-6">
+                <div className="container mx-auto grid gap-12 md:grid-cols-2 md:items-center">
                      <div>
                         <h2 className="text-3xl font-bold font-headline md:text-4xl">{replaceAppName(lp.howItWorksTitle)}</h2>
                         <p className="mt-4 text-lg text-muted-foreground">{replaceAppName(lp.howItWorksSubtitle)}</p>
