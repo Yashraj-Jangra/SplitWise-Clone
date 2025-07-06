@@ -19,8 +19,8 @@ export default async function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
-            <div className="container mx-auto flex h-16 items-center justify-between">
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm">
+            <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 <Link href="/landing" className="flex items-center space-x-2">
                     <Icons.Logo className="h-8 w-8 text-primary" />
                     <span className="inline-block font-bold text-xl">{settings.appName}</span>
@@ -52,7 +52,7 @@ export default async function LandingPage() {
                 </div>
                 <div className="absolute inset-0 bg-black/60 z-10" />
 
-                <div className="container mx-auto relative z-20 text-center">
+                <div className="container mx-auto relative z-20 text-center px-4">
                     <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-white mb-6 leading-tight animate-in fade-in slide-in-from-top-10 duration-1000 delay-200 drop-shadow-lg">
                         {replaceAppName(lp.headline)}
                     </h1>
@@ -71,7 +71,7 @@ export default async function LandingPage() {
             </section>
 
             {/* Features Section */}
-            <section id="features" className="container mx-auto py-16 md:py-24">
+            <section id="features" className="container mx-auto py-16 px-6 md:py-24">
                 <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
                     <h2 className="text-3xl font-bold font-headline md:text-4xl">{replaceAppName(lp.featuresTitle)}</h2>
                     <p className="mt-4 text-lg text-muted-foreground">{replaceAppName(lp.featuresSubtitle)}</p>
@@ -81,7 +81,7 @@ export default async function LandingPage() {
                         const Icon = Icons[feature.icon as IconName] || Icons.Wallet;
                         return (
                             <div key={feature.title} className="flex items-start gap-4">
-                                <div><Icon className="h-8 w-8 text-primary" /></div>
+                                <div className="flex-shrink-0 pt-1"><Icon className="h-8 w-8 text-primary" /></div>
                                 <div>
                                     <h3 className="font-semibold">{feature.title}</h3>
                                     <p className="mt-1 text-sm text-muted-foreground">{feature.description}</p>
@@ -94,7 +94,7 @@ export default async function LandingPage() {
 
             {/* How it Works */}
             <section className="bg-muted/30 py-16 md:py-24">
-                <div className="container mx-auto grid gap-12 md:grid-cols-2 md:items-center">
+                <div className="container mx-auto grid gap-12 px-6 md:grid-cols-2 md:items-center">
                      <div>
                         <h2 className="text-3xl font-bold font-headline md:text-4xl">{replaceAppName(lp.howItWorksTitle)}</h2>
                         <p className="mt-4 text-lg text-muted-foreground">{replaceAppName(lp.howItWorksSubtitle)}</p>
@@ -124,7 +124,7 @@ export default async function LandingPage() {
             </section>
             
              {/* Final CTA */}
-            <section className="container mx-auto py-16 md:py-24 text-center">
+            <section className="container mx-auto py-16 px-6 md:py-24 text-center">
                 <h2 className="text-3xl font-bold font-headline md:text-4xl">{replaceAppName(lp.finalCtaTitle)}</h2>
                 <p className="mt-4 text-lg text-muted-foreground max-w-xl mx-auto">{replaceAppName(lp.finalCtaSubtitle)}</p>
                 <div className="mt-8">
@@ -138,7 +138,7 @@ export default async function LandingPage() {
         </main>
 
         <footer className="border-t">
-            <div className="container mx-auto flex flex-col items-center justify-between gap-4 py-8 md:h-24 md:flex-row">
+            <div className="container mx-auto flex flex-col items-center justify-between gap-4 py-8 px-4 md:h-24 md:flex-row">
                 <p className="text-sm text-muted-foreground">
                     &copy; <DynamicYear /> {settings.appName}. All rights reserved.
                 </p>
