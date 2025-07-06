@@ -24,11 +24,9 @@ interface GroupDetailHeaderProps {
   user: UserProfile;
   currentUserBalance: number;
   onActionComplete: () => void;
-  onSettingsClick: () => void;
-  activeTab: string;
 }
 
-export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete, onSettingsClick, activeTab }: GroupDetailHeaderProps) {
+export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete }: GroupDetailHeaderProps) {
   const { toast } = useToast();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [coverImages, setCoverImages] = useState<string[]>([]);
@@ -103,18 +101,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
                     )}
                 </PopoverContent>
             </Popover>
-            <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                    "text-white bg-black/30 hover:bg-black/50 hover:text-white",
-                    activeTab === 'settings' && 'bg-white/25' // Highlight if settings tab is active
-                )}
-                onClick={onSettingsClick}
-            >
-                <Icons.Settings className="h-4 w-4"/>
-                <span className="sr-only">Settings</span>
-            </Button>
         </div>
 
 
