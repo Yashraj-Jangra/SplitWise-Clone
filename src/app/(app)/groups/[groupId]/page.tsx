@@ -39,6 +39,8 @@ const TABS: { value: string; label: string; icon: IconName }[] = [
     { value: 'history', label: 'History', icon: 'History' },
 ];
 
+type ActivityItem = { id: string; type: 'expense' | 'settlement'; date: string; data: Expense | Settlement };
+
 export default function GroupDetailPage() {
   const params = useParams();
   const groupId = params.groupId as string;
@@ -100,6 +102,15 @@ export default function GroupDetailPage() {
   useEffect(() => {
     loadGroupData();
   }, [loadGroupData]);
+
+  const activityItems: ActivityItem[] = useMemo(() => {
+      const combined = [
+          ...expenses.map(e => ({ id: `exp-${e.id}`, type: 'expense' as const, date: e.date, data: e })),
+          ...settlements.map(s => ({ id: `set-${s.id}`, type: 'settlement' as const, date: s.date, data: s }))
+      ];
+      return combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [expenses, settlements]);
+
 
   useEffect(() => {
     // Handles scrolling to and highlighting an expense when navigated from history
@@ -180,29 +191,45 @@ export default function GroupDetailPage() {
         <TabsContent value="expenses" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Expense Log</CardTitle>
+              <CardTitle>Activity Log</CardTitle>
               <CardDescription>
-                All expenses recorded in this group.
+                A chronological log of all expenses and settlements in this group.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              {expenses.length > 0 ? (
+              {activityItems.length > 0 ? (
                 <div className="divide-y divide-border/50">
-                  {expenses.map((expense) => (
-                    <ExpenseListItem
-                      key={expense.id}
-                      expense={expense}
-                      currentUserId={userProfile.uid}
-                      group={group}
-                      onActionComplete={loadGroupData}
-                      groupHistory={groupHistory}
-                    />
-                  ))}
+                  {activityItems.map((item) => {
+                    if (item.type === 'expense') {
+                        const expense = item.data as Expense;
+                        return (
+                           <ExpenseListItem
+                              key={item.id}
+                              expense={expense}
+                              currentUserId={userProfile.uid}
+                              group={group}
+                              onActionComplete={loadGroupData}
+                              groupHistory={groupHistory}
+                            />
+                        )
+                    } else {
+                        const settlement = item.data as Settlement;
+                        return (
+                             <SettlementListItem
+                                key={item.id}
+                                settlement={settlement}
+                                currentUserId={userProfile.uid}
+                                group={group}
+                                onActionComplete={loadGroupData}
+                            />
+                        )
+                    }
+                  })}
                 </div>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
-                  <Icons.Details className="h-12 w-12 mx-auto mb-2" />
-                  No expenses recorded yet.
+                  <Icons.History className="h-12 w-12 mx-auto mb-2" />
+                  No activity recorded yet.
                 </div>
               )}
             </CardContent>
