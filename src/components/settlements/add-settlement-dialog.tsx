@@ -165,8 +165,8 @@ export function AddSettlementDialog({ group, onSettlementAdded, initialSettlemen
             control={form.control}
             name="date"
             render={({ field }) => (
-                <FormItem className="flex flex-col pt-2">
-                <FormLabel className="mb-[0.6rem]">Date of Payment</FormLabel>
+                <FormItem>
+                <FormLabel>Date of Payment</FormLabel>
                 <Popover>
                     <PopoverTrigger asChild>
                     <FormControl>
