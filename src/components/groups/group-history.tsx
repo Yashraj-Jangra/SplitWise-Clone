@@ -46,9 +46,11 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   member_added: <Icons.UserPlus className="h-4 w-4 text-green-500" />,
   // Updates
   expense_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
+  settlement_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
   group_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
   // Deletions
   expense_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
+  settlement_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   // Restorations
   expense_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
   // Default
@@ -110,7 +112,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
     
     const canRestore = event.eventType === 'expense_deleted' && !event.restored;
     const canDelete = userProfile?.role === 'admin';
-    const isUpdateWithDetails = (event.eventType === 'expense_updated' || event.eventType === 'group_updated') && event.data?.changes && event.data.changes.length > 0;
+    const isUpdateWithDetails = (event.eventType === 'expense_updated' || event.eventType === 'group_updated' || event.eventType === 'settlement_updated') && event.data?.changes && event.data.changes.length > 0;
 
     let viewableExpenseId: string | null = null;
     if ((event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId) {

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,16 +25,18 @@ export default function AllSettlementsPage() {
   const [userSettlements, setUserSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadSettlements = useCallback(async () => {
+    if (!userProfile?.uid) return;
+    setLoading(true);
+    const settlements = await getSettlementsByUserId(userProfile.uid);
+    setUserSettlements(settlements.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    setLoading(false);
+  }, [userProfile?.uid]);
+
   useEffect(() => {
-    async function loadSettlements() {
-      if (!userProfile?.uid) return;
-      setLoading(true);
-      const settlements = await getSettlementsByUserId(userProfile.uid);
-      setUserSettlements(settlements.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      setLoading(false);
-    }
     loadSettlements();
-  }, [userProfile]);
+  }, [loadSettlements]);
+
 
   return (
     <div className="space-y-6">
@@ -64,7 +66,12 @@ export default function AllSettlementsPage() {
             <ScrollArea className="h-[calc(100vh-22rem)]">
               <div className="divide-y divide-border/50">
                 {userSettlements.map((settlement) => (
-                  <SettlementListItem key={settlement.id} settlement={settlement} currentUserId={userProfile!.uid} />
+                  <SettlementListItem
+                    key={settlement.id}
+                    settlement={settlement}
+                    currentUserId={userProfile!.uid}
+                    onActionComplete={loadSettlements}
+                  />
                 ))}
               </div>
             </ScrollArea>

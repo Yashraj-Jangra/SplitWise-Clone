@@ -1,5 +1,6 @@
 
 
+
 import {
   collection,
   doc,
@@ -738,6 +739,76 @@ export async function getAllSettlements(): Promise<Settlement[]> {
 
     return settlements;
 }
+
+
+export async function updateSettlement(settlementId: string, data: Partial<SettlementDocument>, actorId: string): Promise<void> {
+    const settlementDocRef = doc(db, 'settlements', settlementId);
+    const settlementSnap = await getDoc(settlementDocRef);
+    if (!settlementSnap.exists()) {
+        throw new Error("Settlement not found.");
+    }
+    const oldData = settlementSnap.data() as SettlementDocument;
+
+    const cleanData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
+    
+    const updateData: {[key: string]: any} = { ...cleanData };
+    if (data.date) {
+      updateData.date = Timestamp.fromDate(new Date(data.date as any));
+    }
+
+    await updateDoc(settlementDocRef, updateData);
+
+    const [actor, newPaidBy, newPaidTo, oldPaidBy, oldPaidTo] = await Promise.all([
+        getUserProfile(actorId),
+        getUserProfile(data.paidById || oldData.paidById),
+        getUserProfile(data.paidToId || oldData.paidToId),
+        getUserProfile(oldData.paidById),
+        getUserProfile(oldData.paidToId),
+    ]);
+
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const changes: { field: string; from: any; to: any }[] = [];
+
+    if (data.amount !== undefined && data.amount !== oldData.amount) {
+        changes.push({ field: 'Amount', from: `${CURRENCY_SYMBOL}${oldData.amount.toFixed(2)}`, to: `${CURRENCY_SYMBOL}${data.amount.toFixed(2)}` });
+    }
+    if (data.paidById && data.paidById !== oldData.paidById) {
+        changes.push({ field: 'Payer', from: getFullName(oldPaidBy?.firstName, oldPaidBy?.lastName), to: getFullName(newPaidBy?.firstName, newPaidBy?.lastName) });
+    }
+    if (data.paidToId && data.paidToId !== oldData.paidToId) {
+        changes.push({ field: 'Recipient', from: getFullName(oldPaidTo?.firstName, oldPaidTo?.lastName), to: getFullName(newPaidTo?.firstName, newPaidTo?.lastName) });
+    }
+    if (data.date && (data.date as Date).toISOString().split('T')[0] !== (oldData.date.toDate()).toISOString().split('T')[0]) {
+        changes.push({ field: 'Date', from: format(oldData.date.toDate(), 'PPP'), to: format(data.date as Date, 'PPP') });
+    }
+    if (data.notes !== undefined && data.notes !== (oldData.notes || '')) {
+         changes.push({ field: 'Notes', from: `"${oldData.notes || ''}"`, to: `"${data.notes || ''}"` });
+    }
+    
+    const description = `${actorName} updated a settlement.`;
+    await logHistoryEvent(oldData.groupId, 'settlement_updated', actorId, description, { settlementId, changes });
+}
+
+export async function deleteSettlement(settlementId: string, groupId: string, actorId:string): Promise<void> {
+    const settlementDocRef = doc(db, 'settlements', settlementId);
+    const settlementSnap = await getDoc(settlementDocRef);
+    if (!settlementSnap.exists()) return;
+    const deletedSettlementData = settlementSnap.data() as SettlementDocument;
+
+    await deleteDoc(settlementDocRef);
+
+    const [actor, paidBy, paidTo] = await Promise.all([
+        getUserProfile(actorId),
+        getUserProfile(deletedSettlementData.paidById),
+        getUserProfile(deletedSettlementData.paidToId),
+    ]);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const paidByName = getFullName(paidBy?.firstName, paidBy?.lastName);
+    const paidToName = getFullName(paidTo?.firstName, paidTo?.lastName);
+    const description = `${actorName} deleted a settlement of ${CURRENCY_SYMBOL}${deletedSettlementData.amount.toFixed(2)} from ${paidByName} to ${paidToName}.`;
+    await logHistoryEvent(groupId, 'settlement_deleted', actorId, description, { ...deletedSettlementData, settlementId: settlementId });
+}
+
 
 // --- Balance Calculation ---
 

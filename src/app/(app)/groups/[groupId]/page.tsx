@@ -231,6 +231,8 @@ export default function GroupDetailPage() {
                       key={settlement.id}
                       settlement={settlement}
                       currentUserId={userProfile.uid}
+                      group={group}
+                      onActionComplete={loadGroupData}
                     />
                   ))}
                 </div>
