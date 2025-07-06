@@ -180,7 +180,7 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Amount ({CURRENCY_SYMBOL})</FormLabel>
-                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
+                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                     </FormItem>
                 )}

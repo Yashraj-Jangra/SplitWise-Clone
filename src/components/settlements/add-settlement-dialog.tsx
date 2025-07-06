@@ -177,7 +177,7 @@ export function AddSettlementDialog({ group, onSettlementAdded, initialSettlemen
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Amount ({CURRENCY_SYMBOL})</FormLabel>
-                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
+                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
