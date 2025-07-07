@@ -17,7 +17,8 @@ import { Input } from "../ui/input";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { Skeleton } from "../ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PanelLeftClose } from "lucide-react";
+import { PanelLeftClose, PanelRightOpen } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 
 const mainNavItems: NavItem[] = [
@@ -90,22 +91,21 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
     <div className="hidden border-r bg-background md:block">
         <TooltipProvider>
             <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
-            <div className="flex h-[60px] items-center border-b px-4">
-                <Link href="/landing" className="flex items-center gap-2 font-semibold" aria-label={settings.appName}>
-                    <Icons.Logo className="h-8 w-8 text-primary" />
-                    {!isCollapsed && (
-                        <>
-                        {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
-                        </>
-                    )}
-                </Link>
+            <div className={cn(
+                "flex h-[60px] items-center border-b px-4",
+                isCollapsed && "justify-center px-2"
+              )}>
                 {!isCollapsed && (
-                    <Button variant="ghost" size="icon" className="ml-auto h-8 w-8" onClick={onToggle}>
-                        <PanelLeftClose className="h-4 w-4" />
-                        <span className="sr-only">Toggle sidebar</span>
-                    </Button>
+                  <Link href="/dashboard" className="flex items-center gap-2 font-semibold mr-auto" aria-label={settings.appName}>
+                      <Icons.Logo className="h-8 w-8 text-primary" />
+                      {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
+                  </Link>
                 )}
-            </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggle}>
+                    {isCollapsed ? <PanelRightOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+                    <span className="sr-only">Toggle sidebar</span>
+                </Button>
+              </div>
             <div className="flex-1 overflow-y-auto py-2">
                 <nav className={cn("grid items-start text-sm font-medium", isCollapsed ? "px-2 justify-center" : "px-4")}>
                 <MainNav items={mainNavItems} isCollapsed={isCollapsed} />
@@ -216,7 +216,13 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const isMobile = useIsMobile();
+  const [isCollapsed, setIsCollapsed] = React.useState(isMobile);
+  
+  React.useEffect(() => {
+    setIsCollapsed(isMobile);
+  }, [isMobile]);
+
   return (
     <div className={cn(
         "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
