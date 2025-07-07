@@ -78,7 +78,7 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
 
     if (isSimplified) {
       return (
-        <div className="space-y-3">
+        <div className="space-y-3 p-4 sm:p-0">
           <h4 className="font-semibold text-center text-muted-foreground">Simplified Settlement Plan</h4>
           {simplifiedSettlements.map((s, index) => (
             <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors gap-2">
@@ -122,14 +122,14 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
 
     // Default detailed view
     return (
-      <div className="space-y-2">
+      <div className="divide-y divide-border/50">
         {sortedBalances.map(balance => {
           const isOwed = balance.netBalance > 0.01;
           const isDebtor = balance.netBalance < -0.01;
           const isSettled = !isOwed && !isDebtor;
 
           return (
-            <div key={balance.user.uid} className="flex items-center justify-between p-3 border-b border-border/50 last:border-b-0">
+            <div key={balance.user.uid} className="flex items-center justify-between py-3 px-4 sm:p-3">
               <div className="flex items-center gap-3">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={balance.user.avatarUrl} alt={getFullName(balance.user.firstName, balance.user.lastName)} />
@@ -157,7 +157,7 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <CardTitle className="flex items-center">
                     <Icons.Settle className="h-5 w-5 mr-2 text-primary" />
@@ -165,25 +165,23 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                 </CardTitle>
                 <CardDescription>Summary of who owes whom in this group.</CardDescription>
             </div>
-            {!everythingIsSettled && (
-              <div className="flex items-center space-x-2">
-                  <Label htmlFor="simplify-switch" className="text-sm font-medium">Simplify Debts</Label>
-                  <Switch
-                      id="simplify-switch"
-                      checked={isSimplified}
-                      onCheckedChange={setIsSimplified}
-                  />
-              </div>
-            )}
+             <div className="flex items-center justify-between sm:justify-end gap-4">
+                {!everythingIsSettled && (
+                <div className="flex items-center space-x-2">
+                    <Label htmlFor="simplify-switch" className="text-sm font-medium">Simplify Debts</Label>
+                    <Switch
+                        id="simplify-switch"
+                        checked={isSimplified}
+                        onCheckedChange={setIsSimplified}
+                    />
+                </div>
+                )}
+                 <AddSettlementDialog group={group} onSettlementAdded={onSettlementAdded} />
+            </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="p-1">
+      <CardContent className="p-0">
           {renderContent()}
-        </div>
-        <div className="pt-4 border-t flex justify-end">
-            <AddSettlementDialog group={group} onSettlementAdded={onSettlementAdded} />
-        </div>
       </CardContent>
     </Card>
   );
