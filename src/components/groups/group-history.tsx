@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import type { HistoryEvent } from '@/types';
-import { getHistoryByGroupId, restoreExpense, deleteHistoryEvent } from '@/lib/mock-data';
+import { getHistoryByGroupId, restoreExpense, restoreSettlement, deleteHistoryEvent } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/components/icons';
@@ -53,6 +54,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   settlement_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   // Restorations
   expense_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
+  settlement_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
   // Default
   default: <Icons.History className="h-4 w-4 text-muted-foreground" />,
 };
@@ -86,11 +88,16 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
         if (!userProfile) return;
         setIsRestoring(true);
         try {
-            await restoreExpense(event.id, userProfile.uid);
-            toast({ title: "Expense Restored", description: "The expense has been successfully restored."});
+            if (event.eventType === 'expense_deleted') {
+                await restoreExpense(event.id, userProfile.uid);
+                toast({ title: "Expense Restored", description: "The expense has been successfully restored."});
+            } else if (event.eventType === 'settlement_deleted') {
+                await restoreSettlement(event.id, userProfile.uid);
+                toast({ title: "Settlement Restored", description: "The settlement has been successfully restored."});
+            }
             onActionComplete();
         } catch (error) {
-            toast({ variant: "destructive", title: "Restore Failed", description: error instanceof Error ? error.message : "Could not restore the expense."});
+            toast({ variant: "destructive", title: "Restore Failed", description: error instanceof Error ? error.message : "Could not restore the item."});
         } finally {
             setIsRestoring(false);
         }
@@ -110,7 +117,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
         }
     };
     
-    const canRestore = event.eventType === 'expense_deleted' && !event.restored;
+    const canRestore = (event.eventType === 'expense_deleted' || event.eventType === 'settlement_deleted') && !event.restored;
     const canDelete = userProfile?.role === 'admin';
     const isUpdateWithDetails = (event.eventType === 'expense_updated' || event.eventType === 'group_updated' || event.eventType === 'settlement_updated') && event.data?.changes && event.data.changes.length > 0;
 
@@ -169,7 +176,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Restore Expense</p>
+                                    <p>Restore {event.eventType === 'expense_deleted' ? 'Expense' : 'Settlement'}</p>
                                 </TooltipContent>
                             </Tooltip>
                         )}

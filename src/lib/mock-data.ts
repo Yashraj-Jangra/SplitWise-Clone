@@ -1,6 +1,5 @@
 
 
-
 import {
   collection,
   doc,
@@ -1014,6 +1013,56 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
         });
 
         return newExpenseId;
+    }
+    
+    return null;
+}
+
+export async function restoreSettlement(historyEventId: string, actorId: string): Promise<string | null> {
+    const historyDocRef = doc(db, 'history', historyEventId);
+    const historySnap = await getDoc(historyDocRef);
+    
+    if (!historySnap.exists()) {
+        throw new Error("History event not found.");
+    }
+    
+    const historyData = historySnap.data() as HistoryEventDocument;
+    if (historyData.eventType !== 'settlement_deleted' || !historyData.data) {
+        throw new Error("This history event cannot be restored.");
+    }
+    
+    const settlementToRestore = historyData.data;
+    const originalSettlementId = settlementToRestore.settlementId;
+
+    // Convert Firestore Timestamps back to JS Dates for addSettlement function
+    if (settlementToRestore.date && settlementToRestore.date instanceof Timestamp) {
+        settlementToRestore.date = settlementToRestore.date.toDate();
+    }
+    
+    // The data for a deleted settlement is the full SettlementDocument. We can pass this to addSettlement.
+    const newSettlementId = await addSettlement(settlementToRestore, actorId);
+
+    if (newSettlementId) {
+        await updateDoc(historyDocRef, { restored: true });
+        
+        const actor = await getUserProfile(actorId);
+        const [paidBy, paidTo] = await Promise.all([
+            getUserProfile(settlementToRestore.paidById),
+            getUserProfile(settlementToRestore.paidToId),
+        ]);
+        const paidByName = getFullName(paidBy?.firstName, paidBy?.lastName);
+        const paidToName = getFullName(paidTo?.firstName, paidTo?.lastName);
+
+        const restoreDescription = `${getFullName(actor?.firstName, actor?.lastName)} restored a settlement from ${paidByName} to ${paidToName} for ${CURRENCY_SYMBOL}${(settlementToRestore.amount || 0).toFixed(2)}.`;
+        
+        await logHistoryEvent(settlementToRestore.groupId, 'settlement_restored', actorId, restoreDescription, { 
+            restoredFromHistoryId: historyEventId, 
+            newSettlementId: newSettlementId,
+            originalSettlementId: originalSettlementId,
+            settlementId: originalSettlementId, // Also add this for simpler querying on the original settlement
+        });
+
+        return newSettlementId;
     }
     
     return null;
