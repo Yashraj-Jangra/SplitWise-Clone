@@ -53,7 +53,7 @@ function Sidebar() {
           <div className="mt-auto p-4 border-t">
              <nav className="grid items-start px-2 text-sm font-medium">
                 {userProfile?.role === 'admin' && (
-                  <Link href="/admin/dashboard" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 mb-2">
+                  <Link href="/admin/dashboard" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 mb-2 transform hover:translate-x-1">
                     <Icons.ShieldCheck className="h-5 w-5" />
                     Admin Panel
                   </Link>
@@ -78,7 +78,7 @@ function MainNav({ items }: { items: NavItem[] }) {
                         key={item.href}
                         href={item.href}
                         className={cn(
-                            "flex items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
+                            "flex items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 transform hover:translate-x-1",
                             isActive && "text-primary bg-primary/20 font-semibold"
                         )}
                         >

@@ -78,7 +78,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground tracking-tighter">Dashboard</h1>
+        <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground tracking-tighter animate-in fade-in slide-in-from-bottom-2 duration-500">Dashboard</h1>
         <p className="text-lg text-muted-foreground">Welcome back, {userProfile.firstName}!</p>
       </div>
 

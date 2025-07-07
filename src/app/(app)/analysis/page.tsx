@@ -140,7 +140,7 @@ export default function AnalysisPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-headline text-foreground">Expense Analysis</h1>
+        <h1 className="text-3xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">Expense Analysis</h1>
         <p className="text-muted-foreground">Visualize your spending patterns.</p>
       </div>
       

@@ -122,7 +122,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold font-headline text-foreground">Settings</h1>
+        <h1 className="text-3xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">Settings</h1>
         <p className="text-muted-foreground">Manage your account preferences and information.</p>
       </div>
 

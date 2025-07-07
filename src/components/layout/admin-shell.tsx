@@ -86,7 +86,7 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
                             href={item.href}
                             onClick={onLinkClick}
                             className={cn(
-                                "flex items-center gap-3 rounded-md px-3 py-2.5 my-1 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
+                                "flex items-center gap-3 rounded-md px-3 py-2.5 my-1 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 transform hover:translate-x-1",
                                 isActive && "text-primary bg-primary/20 font-semibold"
                             )}
                         >
@@ -103,7 +103,7 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
                     <AccordionItem value={item.href} key={item.href} className="border-b-0 my-1">
                         <AccordionTrigger
                             className={cn(
-                                "flex w-full items-center justify-between rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 hover:no-underline",
+                                "flex w-full items-center justify-between rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 hover:no-underline transform hover:translate-x-1",
                                 isParentActive && "text-primary bg-primary/20 font-semibold"
                             )}
                         >
@@ -122,7 +122,7 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
                                             href={subItem.href}
                                             onClick={onLinkClick}
                                             className={cn(
-                                                "block rounded-md px-3 py-2 text-sm text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
+                                                "block rounded-md px-3 py-2 text-sm text-muted-foreground transition-all hover:text-primary hover:bg-primary/10 transform hover:translate-x-1",
                                                 isSubActive && "text-primary bg-primary/20 font-semibold"
                                             )}
                                         >
