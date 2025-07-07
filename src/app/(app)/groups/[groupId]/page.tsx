@@ -32,11 +32,11 @@ import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
 
 const TABS: { value: string; label: string; icon: IconName }[] = [
-    { value: 'expenses', label: 'Expenses', icon: 'Expense' },
+    { value: 'expenses', label: 'Activity', icon: 'History' },
     { value: 'settlements', label: 'Settlements', icon: 'Settle' },
     { value: 'balances', label: 'Balances', icon: 'Wallet' },
     { value: 'analysis', label: 'Analysis', icon: 'Analysis' },
-    { value: 'history', label: 'History', icon: 'History' },
+    { value: 'history', label: 'Audit', icon: 'ShieldCheck' },
     { value: 'settings', label: 'Settings', icon: 'Settings' },
 ];
 
@@ -169,27 +169,22 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="relative">
-          <div className="w-full overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <TabsList className="inline-flex w-max md:w-auto">
-              {TABS.map((tab) => {
-                const Icon = Icons[tab.icon];
-                return (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="gap-2 md:px-4"
-                    title={tab.label}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="hidden md:inline">{tab.label}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
-          <div className="absolute top-0 right-0 h-full w-8 bg-gradient-to-l from-background to-transparent pointer-events-none md:hidden" />
-        </div>
+        <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex">
+          {TABS.map((tab) => {
+            const Icon = Icons[tab.icon];
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="gap-2 px-2 md:px-4"
+                title={tab.label}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="hidden md:inline">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
         
 
         <TabsContent value="expenses" className="mt-4">
