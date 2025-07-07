@@ -77,8 +77,19 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
         <CardContent className="p-0">
             <div className="flex flex-col md:grid md:grid-cols-3 md:items-center">
                 
+                {/* You are Owed - Left on desktop, part of a grid on mobile */}
+                <div className="flex flex-col items-center gap-1 text-center p-4 border-b md:border-b-0 md:border-r border-border/50 md:py-6">
+                    <div className="flex items-center text-sm text-green-500">
+                        <Icons.TrendingUp className="h-5 w-5 mr-2" />
+                        <span className="font-semibold">You Get Back</span>
+                    </div>
+                    <span className="text-xl sm:text-2xl md:text-3xl font-bold text-green-500">
+                        {CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}
+                    </span>
+                </div>
+                
                 {/* Net Balance - Center on desktop, top on mobile */}
-                <div className="flex flex-col items-center gap-2 text-center p-4 border-b border-border/50 md:order-2 md:border-x md:border-b-0 md:px-4 md:py-6">
+                <div className="flex flex-col items-center gap-2 text-center p-6 border-b md:border-b-0 md:border-r border-border/50 md:py-6">
                     <p className="text-sm text-muted-foreground">Your Net Balance</p>
                     <p className={cn(
                         "text-3xl sm:text-4xl md:text-5xl font-bold tracking-tighter",
@@ -91,31 +102,16 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                     </p>
                 </div>
                 
-                {/* Wrapper for side elements on mobile. 'md:contents' makes this div disappear on desktop, and its children become direct children of the parent grid. */}
-                <div className="grid grid-cols-2 md:contents">
-                    {/* You are Owed - Left on desktop, part of a grid on mobile */}
-                    <div className="flex flex-col items-center gap-1 text-center p-4 border-r border-border/50 md:order-1 md:border-r-0 md:py-6">
-                        <div className="flex items-center text-sm text-green-500">
-                            <Icons.TrendingUp className="h-5 w-5 mr-2" />
-                            <span className="font-semibold">You get back</span>
-                        </div>
-                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-green-500">
-                            {CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}
-                        </span>
+                {/* You Owe - Right on desktop, part of a grid on mobile */}
+                <div className="flex flex-col items-center gap-1 text-center p-4 md:py-6">
+                    <div className="flex items-center text-sm text-red-500">
+                        <Icons.TrendingDown className="h-5 w-5 mr-2" />
+                        <span className="font-semibold">You Owe</span>
                     </div>
-
-                    {/* You Owe - Right on desktop, part of a grid on mobile */}
-                    <div className="flex flex-col items-center gap-1 text-center p-4 md:order-3 md:py-6">
-                        <div className="flex items-center text-sm text-red-500">
-                            <Icons.TrendingDown className="h-5 w-5 mr-2" />
-                            <span className="font-semibold">You owe</span>
-                        </div>
-                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-red-500">
-                            {CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}
-                        </span>
-                    </div>
+                    <span className="text-xl sm:text-2xl md:text-3xl font-bold text-red-500">
+                        {CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}
+                    </span>
                 </div>
-
             </div>
         </CardContent>
     </Card>

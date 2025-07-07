@@ -1,23 +1,22 @@
+
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Link from "next/link";
-import Image from 'next/image';
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { RecentActivityList } from "@/components/dashboard/recent-activity-list";
 import { BalanceOverviewSummary } from "@/components/dashboard/balance-overview-summary";
 import { Icons } from "@/components/icons";
 import { getGroupsByUserId } from "@/lib/mock-data";
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
-import type { UserProfile, Group } from '@/types';
+import type { Group } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getFullName, getInitials } from '@/lib/utils';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
 import { DashboardAddExpenseButton } from '@/components/expenses/dashboard-add-expense-button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
@@ -36,6 +35,7 @@ function DashboardSkeleton() {
                     <Skeleton className="h-96 rounded-xl" />
                 </div>
                 <div className="space-y-6">
+                    <Skeleton className="h-24 rounded-xl" />
                     <Skeleton className="h-64 rounded-xl" />
                 </div>
             </div>
@@ -86,38 +86,20 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Net Balance */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
             <BalanceOverviewSummary currentUserId={userProfile.uid} />
         </div>
 
-        {/* Quick Actions */}
-        <div className="lg:col-start-3 lg:row-start-1">
-            <Card className="glass-pane">
-                <CardHeader>
-                    <CardTitle className="text-lg">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-3">
-                    <CreateGroupDialog buttonVariant="secondary" />
-                    <DashboardAddExpenseButton groups={groups} />
-                </CardContent>
-            </Card>
-        </div>
-        
-        {/* Recent Activity (History) */}
-        <div className="lg:col-span-2">
-            <RecentActivityList />
-        </div>
-
         {/* Recent Groups */}
-        <div className="lg:col-start-3 lg:row-start-2">
-            <Card className="glass-pane">
+        <div className="lg:col-span-2">
+            <Card className="glass-pane h-full">
                 <CardHeader>
                     <CardTitle className="text-lg">Recent Groups</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {groups.length > 0 ? (
                         <div className="space-y-3">
-                            {groups.slice(0, 3).map(group => (
+                            {groups.slice(0, 4).map(group => (
                                 <Link href={`/groups/${group.id}`} key={group.id} className="block p-4 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors">
                                     <div className="flex justify-between items-start">
                                         <h3 className="font-semibold truncate pr-4">{group.name}</h3>
@@ -149,6 +131,20 @@ export default function DashboardPage() {
                     </Button>
                  </CardFooter>
             </Card>
+        </div>
+
+        {/* Side column for Quick Actions & Activity */}
+        <div className="space-y-8">
+            <Card className="glass-pane">
+                <CardHeader>
+                    <CardTitle className="text-lg">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3">
+                    <CreateGroupDialog buttonVariant="secondary" />
+                    <DashboardAddExpenseButton groups={groups} />
+                </CardContent>
+            </Card>
+            <RecentActivityList />
         </div>
       </div>
     </div>

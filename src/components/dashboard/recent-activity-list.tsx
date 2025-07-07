@@ -3,12 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Icons } from '@/components/icons';
 import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId } from '@/lib/mock-data';
-import type { Expense, Settlement, Group, UserProfile } from '@/types';
+import type { Expense, Settlement, UserProfile } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,7 +84,7 @@ export function RecentActivityList() {
 
         const combined = [...expenseActivities, ...settlementActivities]
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice(0, 15);
+          .slice(0, 10);
 
         setActivities(combined);
       } catch (error) {
@@ -111,7 +110,6 @@ export function RecentActivityList() {
         <Card className="glass-pane">
             <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
                 {[...Array(5)].map((_, i) => (
@@ -138,7 +136,6 @@ export function RecentActivityList() {
         <CardContent className="text-center text-muted-foreground py-8">
           <Icons.Details className="h-12 w-12 mx-auto mb-2" />
           <p>Your recent activity will show up here.</p>
-          <p>Start by adding an expense or settling up in a group!</p>
         </CardContent>
       </Card>
     );
@@ -148,10 +145,9 @@ export function RecentActivityList() {
     <Card className="glass-pane">
       <CardHeader>
         <CardTitle>Recent Activity</CardTitle>
-        <CardDescription>Latest expenses and settlements across your groups.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[450px]">
+        <ScrollArea className="h-[280px]">
           <div className="divide-y divide-border/50">
             {activities.map((activity) => (
               <div key={activity.id} className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors">
