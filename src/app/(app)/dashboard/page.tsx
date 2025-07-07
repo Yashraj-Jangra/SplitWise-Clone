@@ -84,12 +84,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+        
+        {/* Net Balance */}
+        <div className="lg:col-span-2">
             <BalanceOverviewSummary currentUserId={userProfile.uid} />
-            <RecentActivityList />
         </div>
 
-        <div className="space-y-6">
+        {/* Quick Actions */}
+        <div className="lg:col-start-3 lg:row-start-1">
             <Card className="glass-pane">
                 <CardHeader>
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
@@ -99,7 +101,15 @@ export default function DashboardPage() {
                     <DashboardAddExpenseButton groups={groups} />
                 </CardContent>
             </Card>
-            
+        </div>
+        
+        {/* Recent Activity (History) */}
+        <div className="lg:col-span-2">
+            <RecentActivityList />
+        </div>
+
+        {/* Recent Groups */}
+        <div className="lg:col-start-3 lg:row-start-2">
             <Card className="glass-pane">
                 <CardHeader>
                     <CardTitle className="text-lg">Recent Groups</CardTitle>
