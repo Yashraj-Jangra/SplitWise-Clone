@@ -148,7 +148,7 @@ export function EditUserForm({ user }: EditUserFormProps) {
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting ? (
                       <>
-                        <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                        <Icons.AppLogo className="mr-2 h-4 w-4 animate-orbit" /> Saving...
                       </>
                   ) : "Save Changes"}
                 </Button>

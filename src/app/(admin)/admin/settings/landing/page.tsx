@@ -339,7 +339,7 @@ export default function AdminLandingSettingsPage() {
             
             <div className="flex justify-end">
                 <Button onClick={handleSaveChanges} disabled={isSaving || loading || !settings} size="lg">
-                    {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
+                    {isSaving ? <Icons.AppLogo className="animate-orbit mr-2" /> : null}
                     Save Changes
                 </Button>
             </div>

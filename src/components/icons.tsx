@@ -53,24 +53,16 @@ const QuantumLogo = ({className}: {className?: string}) => (
         fill="none"
     >
         <path 
-            d="M50 2.5C23.79 2.5 2.5 23.79 2.5 50C2.5 76.21 23.79 97.5 50 97.5C76.21 97.5 97.5 76.21 97.5 50" 
+            d="M50 2.5C23.79 2.5 2.5 23.79 2.5 50" 
             stroke="hsl(var(--primary))" 
             strokeWidth="5"
             strokeLinecap="round"
-            strokeLinejoin="round"
-            pathLength="1"
-            strokeDasharray="0.2 0.8"
-            strokeDashoffset="0.15"
         />
         <path 
-            d="M50 2.5C76.21 2.5 97.5 23.79 97.5 50C97.5 76.21 76.21 97.5 50 97.5"
+            d="M50 97.5C76.21 97.5 97.5 76.21 97.5 50"
             stroke="hsl(var(--primary))" 
             strokeWidth="5"
             strokeLinecap="round"
-            strokeLinejoin="round"
-            pathLength="1"
-            strokeDasharray="0.2 0.8"
-            strokeDashoffset="-0.15"
         />
         <circle cx="50" cy="50" r="10" fill="hsl(var(--primary) / 0.5)"/>
         <circle cx="50" cy="50" r="5" fill="hsl(var(--primary))"/>

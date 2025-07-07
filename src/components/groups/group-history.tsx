@@ -172,7 +172,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleRestore} disabled={isRestoring}>
-                                        {isRestoring ? <Icons.AppLogo className="h-4 w-4 animate-spin"/> : <Icons.Restore className="h-4 w-4" />}
+                                        {isRestoring ? <Icons.AppLogo className="h-4 w-4 animate-orbit"/> : <Icons.Restore className="h-4 w-4" />}
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -311,12 +311,14 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
       </CardHeader>
       <CardContent className="p-0">
         {history.length > 0 ? (
-          <div className="divide-y divide-border">
-              {history.map(event => {
-                  const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
-                  return (<HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
-              })}
-          </div>
+          <ScrollArea className="h-[calc(100vh-22rem)]">
+            <div className="divide-y divide-border">
+                {history.map(event => {
+                    const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
+                    return (<HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
+                })}
+            </div>
+          </ScrollArea>
         ) : (
           <div className="text-center p-8 text-muted-foreground">
             <Icons.History className="h-12 w-12 mx-auto mb-2" />

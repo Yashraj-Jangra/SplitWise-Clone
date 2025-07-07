@@ -156,7 +156,7 @@ export function SettlementDetailDialog({ open, onOpenChange, settlement, group, 
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+                    {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-orbit" />}
                     Delete Settlement
                     </AlertDialogAction>
                 </AlertDialogFooter>
