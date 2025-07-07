@@ -231,9 +231,9 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
           <CardTitle>Daily Expense Share</CardTitle>
           <CardDescription>Comparing each member's share of expenses per day. Affected by global filters.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
           <ChartContainer config={userChartConfig} className="h-[300px] md:h-[350px] w-full">
-            <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: isMobile ? -10 : 20, right: 12 }}>
+            <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: -10, right: 20 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`} className="text-xs" />
@@ -277,9 +277,9 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     </Select>
                 </div>
             </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
             <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
-              <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: isMobile ? -5 : 10, right: isMobile ? 10 : 20}}>
+              <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: 0, right: 20}}>
                 <XAxis type="number" hide />
                 <YAxis
                   dataKey="name"
@@ -311,9 +311,9 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 <CardTitle>Spending by Category</CardTitle>
                 <CardDescription>Breakdown of spending for the selected period.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
                 <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
-                <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: isMobile ? -5 : 10, right: isMobile ? 10 : 20}}>
+                <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 20}}>
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
                     <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />

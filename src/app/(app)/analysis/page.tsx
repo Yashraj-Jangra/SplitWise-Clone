@@ -214,9 +214,9 @@ export default function AnalysisPage() {
                 Total expenses aggregated by month for the selected range and category.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
                 <ChartContainer config={barChartConfig} className="h-[300px] w-full">
-                <BarChart data={expensesByMonth} accessibilityLayer>
+                <BarChart data={expensesByMonth} accessibilityLayer margin={{ left: -10, right: 20 }}>
                     <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
                     <YAxis
                     tickFormatter={value => `${CURRENCY_SYMBOL}${value}`}
@@ -240,7 +240,7 @@ export default function AnalysisPage() {
                 Breakdown of total spending by category for the selected date range.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
                  <ChartContainer config={barChartConfig} className="h-[300px] w-full">
                     <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
                         <XAxis type="number" hide />
