@@ -94,7 +94,7 @@ export default function DashboardPage() {
                 <CardHeader>
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <CardContent className="grid grid-cols-2 gap-3">
                     <CreateGroupDialog buttonVariant="secondary" />
                     <DashboardAddExpenseButton groups={groups} />
                 </CardContent>
