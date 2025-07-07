@@ -78,21 +78,21 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
             <div className="flex flex-col md:grid md:grid-cols-3 md:items-center">
                 
                 {/* You are Owed - Left on desktop, part of a grid on mobile */}
-                <div className="flex flex-col items-center gap-1 text-center p-4 border-b md:border-b-0 md:border-r border-border/50 md:py-6">
+                <div className="flex flex-col items-center gap-1 text-center p-3 sm:p-4 border-b md:border-b-0 md:border-r border-border/50 md:py-6">
                     <div className="flex items-center text-sm text-green-500">
-                        <Icons.TrendingUp className="h-5 w-5 mr-2" />
+                        <Icons.TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                         <span className="font-semibold">You Get Back</span>
                     </div>
-                    <span className="text-xl sm:text-2xl md:text-3xl font-bold text-green-500">
+                    <span className="text-lg sm:text-2xl md:text-3xl font-bold text-green-500">
                         {CURRENCY_SYMBOL}{totalOwedToUser.toFixed(2)}
                     </span>
                 </div>
                 
                 {/* Net Balance - Center on desktop, top on mobile */}
-                <div className="flex flex-col items-center gap-2 text-center p-6 border-b md:border-b-0 md:border-r border-border/50 md:py-6">
+                <div className="flex flex-col items-center gap-1 sm:gap-2 text-center p-4 sm:p-6 border-b md:border-b-0 md:border-r border-border/50 md:py-6">
                     <p className="text-sm text-muted-foreground">Your Net Balance</p>
                     <p className={cn(
-                        "text-3xl sm:text-4xl md:text-5xl font-bold tracking-tighter",
+                        "text-2xl sm:text-4xl md:text-5xl font-bold tracking-tighter",
                         isOwed ? 'text-primary' : 'text-accent'
                     )}>
                         {isOwed ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
@@ -103,12 +103,12 @@ export function BalanceOverviewSummary({ currentUserId }: { currentUserId: strin
                 </div>
                 
                 {/* You Owe - Right on desktop, part of a grid on mobile */}
-                <div className="flex flex-col items-center gap-1 text-center p-4 md:py-6">
+                <div className="flex flex-col items-center gap-1 text-center p-3 sm:p-4 md:py-6">
                     <div className="flex items-center text-sm text-red-500">
-                        <Icons.TrendingDown className="h-5 w-5 mr-2" />
+                        <Icons.TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                         <span className="font-semibold">You Owe</span>
                     </div>
-                    <span className="text-xl sm:text-2xl md:text-3xl font-bold text-red-500">
+                    <span className="text-lg sm:text-2xl md:text-3xl font-bold text-red-500">
                         {CURRENCY_SYMBOL}{totalUserOwes.toFixed(2)}
                     </span>
                 </div>
