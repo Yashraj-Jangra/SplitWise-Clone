@@ -14,6 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { addDays, format, startOfMonth, endOfMonth } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import {
   Bar,
@@ -41,6 +42,7 @@ export default function AnalysisPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
   
   const [date, setDate] = useState<DateRange | undefined>();
 
@@ -215,7 +217,7 @@ export default function AnalysisPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
-                <ChartContainer config={barChartConfig} className="h-[300px] w-full">
+                <ChartContainer config={barChartConfig} className="h-[250px] md:h-[300px] w-full">
                 <BarChart data={expensesByMonth} accessibilityLayer margin={{ left: -10, right: 20 }}>
                     <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
                     <YAxis
@@ -241,10 +243,10 @@ export default function AnalysisPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
-                 <ChartContainer config={barChartConfig} className="h-[300px] w-full">
+                 <ChartContainer config={barChartConfig} className="h-[250px] md:h-[300px] w-full">
                     <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 30}}>
                         <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={100} className="text-xs" stroke="hsl(var(--muted-foreground))"/>
+                        <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0,10)}...` : value} />
                         <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                         <Bar dataKey="total" radius={2}>
                             {expensesByCategory.map((entry, index) => (

@@ -232,7 +232,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
           <CardDescription>Comparing each member's share of expenses per day. Affected by global filters.</CardDescription>
         </CardHeader>
         <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
-          <ChartContainer config={userChartConfig} className="h-[300px] md:h-[350px] w-full">
+          <ChartContainer config={userChartConfig} className="h-[250px] md:h-[350px] w-full">
             <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: -10, right: 20 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
