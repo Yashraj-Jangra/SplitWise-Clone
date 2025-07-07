@@ -2,22 +2,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { RecentActivityList } from "@/components/dashboard/recent-activity-list";
 import { BalanceOverviewSummary } from "@/components/dashboard/balance-overview-summary";
 import { Icons } from "@/components/icons";
 import { getGroupsByUserId } from "@/lib/mock-data";
-import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getFullName, getInitials } from '@/lib/utils';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
 import { DashboardAddExpenseButton } from '@/components/expenses/dashboard-add-expense-button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SpendingBreakdown } from '@/components/dashboard/spending-breakdown';
 
 
 function DashboardSkeleton() {
@@ -30,9 +27,11 @@ function DashboardSkeleton() {
                 </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-6">
-                    <Skeleton className="h-36 rounded-xl" />
-                    <Skeleton className="h-96 rounded-xl" />
+                <div className="lg:col-span-3">
+                     <Skeleton className="h-36 rounded-xl" />
+                </div>
+                <div className="lg:col-span-2">
+                     <Skeleton className="h-96 rounded-xl" />
                 </div>
                 <div className="space-y-6">
                     <Skeleton className="h-24 rounded-xl" />
@@ -90,47 +89,9 @@ export default function DashboardPage() {
             <BalanceOverviewSummary currentUserId={userProfile.uid} />
         </div>
 
-        {/* Recent Groups */}
+        {/* Spending Breakdown Chart */}
         <div className="lg:col-span-2">
-            <Card className="glass-pane h-full">
-                <CardHeader>
-                    <CardTitle className="text-lg">Recent Groups</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {groups.length > 0 ? (
-                        <div className="space-y-3">
-                            {groups.slice(0, 4).map(group => (
-                                <Link href={`/groups/${group.id}`} key={group.id} className="block p-4 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors">
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="font-semibold truncate pr-4">{group.name}</h3>
-                                        <p className="font-bold text-sm shrink-0">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</p>
-                                    </div>
-                                    <div className="flex -space-x-2 overflow-hidden mt-3">
-                                        {group.members.slice(0, 5).map(member => (
-                                            <Avatar key={member.uid} className="inline-block h-6 w-6 rounded-full border border-background">
-                                                <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
-                                                <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
-                                            </Avatar>
-                                        ))}
-                                        {group.members.length > 5 && (
-                                            <Avatar className="h-6 w-6 rounded-full border border-background bg-secondary text-secondary-foreground">
-                                                <AvatarFallback className="text-xs">+{group.members.length - 5}</AvatarFallback>
-                                            </Avatar>
-                                        )}
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">You haven't joined any groups yet.</p>
-                    )}
-                </CardContent>
-                 <CardFooter>
-                    <Button variant="outline" size="sm" asChild className="w-full">
-                        <Link href="/groups">View All Groups</Link>
-                    </Button>
-                 </CardFooter>
-            </Card>
+            <SpendingBreakdown />
         </div>
 
         {/* Side column for Quick Actions & Activity */}
