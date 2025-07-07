@@ -96,7 +96,7 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory, o
 
   return (
     <>
-      <div id={`expense-${expense.id}`} onClick={() => setIsDetailOpen(true)} className="flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors">
+      <div id={`expense-${expense.id}`} onClick={() => setIsDetailOpen(true)} className="flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-muted/50 hover:scale-[1.01] hover:shadow-lg">
         <div className="flex items-center gap-4 flex-1">
           <div className="text-center w-12 text-xs text-muted-foreground">
              <div className="font-bold text-lg text-foreground">{format(new Date(expense.date), 'dd')}</div>

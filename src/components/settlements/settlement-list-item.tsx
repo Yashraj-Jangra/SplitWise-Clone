@@ -24,7 +24,7 @@ export function SettlementListItem({ settlement, currentUserId, group, onActionC
 
   return (
     <>
-      <div onClick={() => setIsDetailOpen(true)} className="flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors">
+      <div onClick={() => setIsDetailOpen(true)} className="flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-muted/50 hover:scale-[1.01] hover:shadow-lg">
         <div className="flex items-center gap-4 flex-1">
           <div className="text-center w-12 flex-shrink-0">
             <Icons.Settle className="h-7 w-7 text-green-500 mx-auto"/>

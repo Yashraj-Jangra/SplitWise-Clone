@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -187,7 +188,7 @@ export function AppShell({ children }: AppShellProps) {
        <div className="flex flex-col">
           <Header />
           <EmailVerificationBanner />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pt-0">
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pt-0 animate-in fade-in-0 zoom-in-98 duration-300">
             {children}
           </main>
       </div>

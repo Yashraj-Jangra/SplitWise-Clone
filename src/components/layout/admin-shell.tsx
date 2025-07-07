@@ -204,7 +204,7 @@ export function AdminShell({ children }: AdminShellProps) {
       </div>
        <div className="flex flex-col">
           <AdminHeader />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 animate-in fade-in-0 zoom-in-98 duration-300">
             {children}
           </main>
       </div>
