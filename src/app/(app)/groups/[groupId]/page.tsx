@@ -30,10 +30,10 @@ import GroupDetailLoading from './loading'; // Import loading component
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const TABS: { value: string; label: string; icon: IconName }[] = [
     { value: 'expenses', label: 'Activity', icon: 'History' },
-    { value: 'settlements', label: 'Settlements', icon: 'Settle' },
     { value: 'balances', label: 'Balances', icon: 'Wallet' },
     { value: 'analysis', label: 'Analysis', icon: 'Analysis' },
     { value: 'history', label: 'Audit', icon: 'ShieldCheck' },
@@ -169,7 +169,7 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex">
+        <TabsList className="grid w-full grid-cols-5 md:w-auto md:inline-flex">
           {TABS.map((tab) => {
             const Icon = Icons[tab.icon];
             return (
@@ -189,85 +189,53 @@ export default function GroupDetailPage() {
 
         <TabsContent value="expenses" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Activity Log</CardTitle>
-              <CardDescription>
-                A chronological log of all expenses and settlements in this group.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {activityItems.length > 0 ? (
-                <div className="divide-y divide-border/50">
-                  {activityItems.map((item) => {
-                    if (item.type === 'expense') {
-                        const expense = item.data as Expense;
-                        return (
-                           <ExpenseListItem
-                              key={item.id}
-                              expense={expense}
-                              currentUserId={userProfile.uid}
-                              group={group}
-                              onActionComplete={loadGroupData}
-                              groupHistory={groupHistory}
-                            />
-                        )
-                    } else {
-                        const settlement = item.data as Settlement;
-                        return (
-                             <SettlementListItem
-                                key={item.id}
-                                settlement={settlement}
-                                currentUserId={userProfile.uid}
-                                group={group}
-                                onActionComplete={loadGroupData}
-                            />
-                        )
-                    }
-                  })}
-                </div>
-              ) : (
-                <div className="text-center p-8 text-muted-foreground">
-                  <Icons.History className="h-12 w-12 mx-auto mb-2" />
-                  No activity recorded yet.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settlements" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row justify-between items-center">
+            <CardHeader className="flex-row justify-between items-center">
               <div>
-                <CardTitle>Settlements Log</CardTitle>
+                <CardTitle>Activity Log</CardTitle>
                 <CardDescription>
-                  All settlements made in this group.
+                  A chronological log of all expenses and settlements.
                 </CardDescription>
               </div>
-              <AddSettlementDialog
-                group={group}
-                onSettlementAdded={loadGroupData}
-              />
+              <AddSettlementDialog group={group} onSettlementAdded={loadGroupData} />
             </CardHeader>
             <CardContent className="p-0">
-              {settlements.length > 0 ? (
-                <div className="divide-y divide-border/50">
-                  {settlements.map((settlement) => (
-                    <SettlementListItem
-                      key={settlement.id}
-                      settlement={settlement}
-                      currentUserId={userProfile.uid}
-                      group={group}
-                      onActionComplete={loadGroupData}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center p-8 text-muted-foreground">
-                  <Icons.Settle className="h-12 w-12 mx-auto mb-2" />
-                  No settlements recorded yet.
-                </div>
-              )}
+               <ScrollArea className="h-[calc(100vh-22rem)]">
+                  {activityItems.length > 0 ? (
+                    <div className="divide-y divide-border/50">
+                      {activityItems.map((item) => {
+                        if (item.type === 'expense') {
+                            const expense = item.data as Expense;
+                            return (
+                              <ExpenseListItem
+                                  key={item.id}
+                                  expense={expense}
+                                  currentUserId={userProfile.uid}
+                                  group={group}
+                                  onActionComplete={loadGroupData}
+                                  groupHistory={groupHistory}
+                                />
+                            )
+                        } else {
+                            const settlement = item.data as Settlement;
+                            return (
+                                <SettlementListItem
+                                    key={item.id}
+                                    settlement={settlement}
+                                    currentUserId={userProfile.uid}
+                                    group={group}
+                                    onActionComplete={loadGroupData}
+                                />
+                            )
+                        }
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center p-8 text-muted-foreground">
+                      <Icons.History className="h-12 w-12 mx-auto mb-2" />
+                      No activity recorded yet.
+                    </div>
+                  )}
+               </ScrollArea>
             </CardContent>
           </Card>
         </TabsContent>

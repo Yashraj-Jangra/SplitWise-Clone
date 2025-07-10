@@ -140,7 +140,7 @@ export default function AnalysisPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">Expense Analysis</h1>
+        <h1 className="text-3xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-1000">Expense Analysis</h1>
         <p className="text-muted-foreground">Visualize your spending patterns.</p>
       </div>
       
@@ -219,11 +219,12 @@ export default function AnalysisPage() {
             <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
                 <ChartContainer config={barChartConfig} className="h-[250px] md:h-[300px] w-full">
                 <BarChart data={expensesByMonth} accessibilityLayer margin={{ left: -10, right: 20 }}>
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
                     <YAxis
                     tickFormatter={value => `${CURRENCY_SYMBOL}${value}`}
                     tickLine={false}
                     axisLine={false}
+                    className="text-xs"
                     />
                     <Tooltip
                     cursor={false}

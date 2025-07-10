@@ -49,7 +49,7 @@ export default function GroupsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-4xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">My Groups</h1>
+          <h1 className="text-4xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-1000">My Groups</h1>
           <p className="text-lg text-muted-foreground">Manage your shared expense groups.</p>
         </div>
         <CreateGroupDialog />
