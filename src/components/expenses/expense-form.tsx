@@ -416,7 +416,7 @@ export function ExpenseForm({ group }: { group: Group }) {
                     </FormItem>
                 )} />
                 ) : (
-                <ScrollArea className="h-32">
+                <ScrollArea className="h-40 md:h-32">
                     <div className="space-y-3 pr-3">
                         {getValues('multiPayers')?.map((item: any, index: number) => (
                              <FormField key={item.userId} control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (
@@ -456,7 +456,7 @@ export function ExpenseForm({ group }: { group: Group }) {
                         <TabsTrigger value="by_percentage" className="py-2">By %</TabsTrigger>
                         </TabsList>
                     </div>
-                    <ScrollArea className="px-4 py-2 flex-1">
+                    <ScrollArea className="px-4 py-2 flex-1 h-64 md:h-auto">
                         <TabsContent value="equally"><Splitter /></TabsContent>
                         <TabsContent value="unequally"><Splitter /></TabsContent>
                         <TabsContent value="by_shares"><Splitter /></TabsContent>
