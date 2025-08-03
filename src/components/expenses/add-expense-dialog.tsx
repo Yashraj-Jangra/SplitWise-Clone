@@ -40,7 +40,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       description: "",
       amount: undefined,
       date: new Date(),
-      isMultiplePayers: false,
+      payerType: 'single',
       singlePayerId: userProfile?.uid || "",
       splitType: "equally",
       participants: [],
@@ -54,7 +54,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         description: "",
         amount: undefined,
         date: new Date(),
-        isMultiplePayers: false,
+        payerType: 'single',
         singlePayerId: userProfile.uid,
         multiPayers: group.members.map(member => ({
             userId: member.uid,
@@ -80,14 +80,14 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
     if (!userProfile) return;
 
     let payers: { userId: string, amount: number }[] = [];
-    if (!values.isMultiplePayers && values.singlePayerId) {
+    if (values.payerType === 'single' && values.singlePayerId) {
         payers = [{ userId: values.singlePayerId, amount: values.amount }];
     } else {
         payers = values.multiPayers?.filter(p => p.amount && p.amount > 0).map(p => ({ userId: p.userId, amount: p.amount! })) || [];
     }
     
     if (payers.length === 0) {
-        form.setError("isMultiplePayers", { type: "manual", message: "At least one payer must be specified."});
+        form.setError("payerType", { type: "manual", message: "At least one payer must be specified."});
         return;
     }
 
@@ -115,6 +115,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       splitType: values.splitType,
       participants: finalParticipants,
       category: values.category,
+      createdAt: new Date(),
     };
     
     try {
@@ -125,7 +126,6 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         });
         setOpen(false);
         if (onExpenseAdded) onExpenseAdded();
-        router.refresh();
     } catch (error) {
         toast({ title: "Error", description: "Failed to add expense.", variant: "destructive" });
     }
@@ -144,7 +144,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
             </SheetTrigger>
             <SheetContent side="bottom" className="glass-pane h-[95vh] flex flex-col rounded-t-2xl border-border/20 p-0">
                 <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="text-center text-lg font-semibold">New Expense in "{group.name}"</SheetTitle>
+                    <SheetTitle className="text-center text-lg font-semibold">New Expense</SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="flex-1">
                     <FormProvider {...form}>
@@ -181,7 +181,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
               </FormProvider>
           </ScrollArea>
         </div>
-        <DialogFooter className="border-t pt-4 px-6 pb-6 -mx-6 -mb-6">
+        <DialogFooter className="border-t pt-4 px-6 pb-6 -mx-6 -mb-6 bg-background/50 rounded-b-lg">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
           <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
             {form.formState.isSubmitting ? "Adding..." : "Add Expense"}

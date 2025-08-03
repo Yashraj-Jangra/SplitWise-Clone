@@ -45,7 +45,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         description: "",
         amount: 0,
         date: new Date(),
-        isMultiplePayers: false,
+        payerType: 'single',
         splitType: "equally",
         participants: [],
         category: "Other",
@@ -96,7 +96,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             description: expense.description,
             amount: expense.amount,
             date: new Date(expense.date),
-            isMultiplePayers: expense.payers.length > 1,
+            payerType: expense.payers.length > 1 ? 'multiple' : 'single',
             singlePayerId: expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
             multiPayers: group.members.map(member => ({
                 userId: member.uid,
@@ -114,14 +114,14 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     if (!userProfile || !group) return;
 
     let payers: { userId: string, amount: number }[] = [];
-    if (!values.isMultiplePayers && values.singlePayerId) {
+    if (values.payerType === 'single' && values.singlePayerId) {
         payers = [{ userId: values.singlePayerId, amount: values.amount }];
     } else {
         payers = values.multiPayers?.filter(p => p.amount && p.amount > 0).map(p => ({ userId: p.userId, amount: p.amount! })) || [];
     }
 
     if (payers.length === 0) {
-        form.setError("isMultiplePayers", { type: "manual", message: "At least one payer must be specified."});
+        form.setError("payerType", { type: "manual", message: "At least one payer must be specified."});
         return;
     }
 
@@ -151,6 +151,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       category: values.category,
       expenseCreatorId: expense.expenseCreatorId,
       groupCreatorId: expense.groupCreatorId,
+      createdAt: expense.createdAt ? new Date(expense.createdAt) : new Date(), // Preserve original creation time
     };
 
     try {
@@ -163,8 +164,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         onOpenChange(false);
         if (onActionComplete) {
             onActionComplete();
-        } else {
-            router.refresh();
         }
     } catch(error) {
         toast({ title: "Error", description: "Failed to update expense", variant: "destructive"})
@@ -218,12 +217,14 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 -mx-6">
-            <div className="px-6 py-4">{FormContent}</div>
-        </ScrollArea>
-        <DialogFooter className="border-t pt-4">
+        <div className="flex-1 overflow-hidden -mx-6 px-1">
+            <ScrollArea className="h-full px-5 py-4">
+                {FormContent}
+            </ScrollArea>
+        </div>
+        <DialogFooter className="border-t pt-4 px-6 pb-6 -mx-6 -mb-6 bg-background/50 rounded-b-lg">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
+            <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading} className="w-full sm:w-auto">
                 {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
         </DialogFooter>
