@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
@@ -33,6 +33,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
+import { Label } from "@/components/ui/label";
+
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
@@ -651,5 +653,3 @@ function Splitter({ onActionComplete }: { onActionComplete: () => void }) {
       </div>
   )
 }
-
-    
