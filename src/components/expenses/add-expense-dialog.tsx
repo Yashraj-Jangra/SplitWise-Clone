@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -28,9 +28,11 @@ import { classifyExpense, categoryList } from "@/lib/expense-categories";
 import { getFullName, getInitials } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { Switch } from "../ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Separator } from "../ui/separator";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
@@ -332,131 +334,143 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
 
   const FormContent = (
     <FormProvider {...form}>
-      <form id="add-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-6">
-          {/* LEFT COLUMN */}
-          <div className="space-y-6">
-            {/* Main Inputs */}
-            <div className="space-y-4">
-               <FormField control={form.control} name="description" render={({ field }) => ( 
-                    <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} className="text-base" /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="amount" render={({ field }) => ( 
-                    <FormItem>
-                        <FormLabel>Amount</FormLabel>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">{CURRENCY_SYMBOL}</span>
-                            <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 text-2xl font-bold h-12" /></FormControl>
-                        </div>
-                        <FormMessage />
-                    </FormItem>
-                 )} />
-            </div>
-
-            {/* Secondary Details */}
-             <div className="grid grid-cols-2 gap-4">
-                 <FormField control={form.control} name="date" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    <Icons.Calendar className="mr-2 h-4 w-4" />
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                            </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                        </Popover>
-                         <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="category" render={({ field }) => (
-                    <FormItem>
-                         <FormLabel>Category</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
-                        </SelectContent>
-                        </Select>
-                         <FormMessage />
-                    </FormItem>
-                )} />
-             </div>
-        
-            {/* Payer Section */}
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-base">Paid By</FormLabel>
-                <div className="flex items-center gap-2 text-sm">
-                    <FormLabel htmlFor="isMultiplePayers" className="text-muted-foreground">Multiple</FormLabel>
-                    <FormField control={form.control} name="isMultiplePayers" render={({ field }) => (
-                    <FormControl>
-                        <Switch id="isMultiplePayers" checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    )} />
-                </div>
+      <form id="add-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-6 gap-y-4">
+          <div className="space-y-4">
+             <FormField control={form.control} name="description" render={({ field }) => ( 
+                <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl><Input placeholder="e.g., Dinner, Movie Tickets" {...field} className="text-base" /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )} />
+            <FormField control={form.control} name="amount" render={({ field }) => ( 
+                <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                        <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 text-2xl font-bold h-12" /></FormControl>
+                    </div>
+                    <FormMessage />
+                </FormItem>
+            )} />
+          </div>
+          <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="date" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <Popover>
+                              <PopoverTrigger asChild>
+                              <FormControl>
+                                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                      <Icons.Calendar className="mr-2 h-4 w-4" />
+                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                  </Button>
+                              </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
+                  <FormField control={form.control} name="category" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                              {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
+                          </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                  )} />
               </div>
-              {!watchIsMultiplePayers ? (
-                <FormField control={form.control} name="singlePayerId" render={({ field }) => (
-                  <FormItem>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                      {group.members.map(member => (
-                          <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
-                      ))}
-                      </SelectContent>
-                  </Select>
-                  <FormMessage />
-                  </FormItem>
-              )} />
-              ) : (
-                <>
-                <p className={cn("text-right text-sm font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
-                    {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
-                    amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} over` :
-                    'All assigned'}
-                </p>
-                <ScrollArea className="h-32 pr-2">
-                    <div className="space-y-3">
-                    {form.getValues('multiPayers')?.map((item, index) => (
-                        <div key={item.userId} className="flex items-center justify-between gap-4">
-                        <FormLabel className="font-normal truncate">{item.name}</FormLabel>
-                            <FormField control={form.control} name={`multiPayers.${index}.amount`} render={({ field }) => (
-                            <FormControl><Input type="number" step="0.01" placeholder={`${CURRENCY_SYMBOL}0.00`} {...field} value={field.value ?? ''} className="h-8 w-28 text-right"/></FormControl>
+              <Card>
+                <CardHeader className="p-4">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">Paid By</CardTitle>
+                        <div className="flex items-center gap-2 text-sm">
+                            <Label htmlFor="isMultiplePayers" className="text-muted-foreground">Multiple</Label>
+                            <FormField control={form.control} name="isMultiplePayers" render={({ field }) => (
+                            <FormControl>
+                                <Switch id="isMultiplePayers" checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                             )} />
                         </div>
-                    ))}
                     </div>
-                </ScrollArea>
-                </>
-              )}
-            </div>
-          </div>
-          {/* RIGHT COLUMN */}
-          <div className="space-y-6">
-             <div className="rounded-lg border p-4 flex flex-col">
-                <FormLabel className="text-base mb-4 block">Split Details</FormLabel>
-                <Tabs defaultValue="equally" className="w-full flex-1 flex flex-col" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
-                    <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="equally">Equally</TabsTrigger>
-                    <TabsTrigger value="unequally">Unequally</TabsTrigger>
-                    <TabsTrigger value="by_shares">Shares</TabsTrigger>
-                    <TabsTrigger value="by_percentage">%</TabsTrigger>
-                    </TabsList>
-                    <div className="mt-4 flex-1">
-                        <SplitContent form={form} userProfile={userProfile} runningTotal={runningTotal} watchAmount={watchAmount} watchSplitType={watchSplitType}/>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  {!watchIsMultiplePayers ? (
+                    <FormField control={form.control} name="singlePayerId" render={({ field }) => (
+                      <FormItem>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select who paid" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                          {group.members.map(member => (
+                              <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
+                          ))}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      </FormItem>
+                  )} />
+                  ) : (
+                    <div className="space-y-3">
+                        <p className={cn("text-right text-sm font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
+                            {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
+                            amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} over` :
+                            'All assigned'}
+                        </p>
+                        <ScrollArea className="h-28">
+                            <div className="space-y-3 pr-3">
+                                {form.getValues('multiPayers')?.map((item, index) => (
+                                    <div key={item.userId} className="grid grid-cols-2 items-center gap-4">
+                                        <Label htmlFor={`payer-${index}`} className="font-normal truncate">{item.name}</Label>
+                                        <FormField control={form.control} name={`multiPayers.${index}.amount`} render={({ field }) => (
+                                        <FormControl>
+                                            <div className="relative">
+                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                                                <Input id={`payer-${index}`} type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="h-8 text-right pl-6"/>
+                                            </div>
+                                        </FormControl>
+                                        )} />
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
                     </div>
-                </Tabs>
-            </div>
+                  )}
+                </CardContent>
+              </Card>
           </div>
+        </div>
+
+        <Separator />
+        
+        <div className="space-y-4">
+            <h3 className="text-lg font-medium">Split Details</h3>
+             <Tabs defaultValue="equally" className="w-full" value={watchSplitType} onValueChange={(value) => form.setValue('splitType', value as any)}>
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+                <TabsTrigger value="equally" className="py-2">Equally</TabsTrigger>
+                <TabsTrigger value="unequally" className="py-2">Unequally</TabsTrigger>
+                <TabsTrigger value="by_shares" className="py-2">By Shares</TabsTrigger>
+                <TabsTrigger value="by_percentage" className="py-2">By %</TabsTrigger>
+                </TabsList>
+                <TabsContent value="equally">
+                    <Splitter onActionComplete={form.trigger} />
+                </TabsContent>
+                <TabsContent value="unequally">
+                     <Splitter onActionComplete={form.trigger} />
+                </TabsContent>
+                <TabsContent value="by_shares">
+                    <Splitter onActionComplete={form.trigger} />
+                </TabsContent>
+                <TabsContent value="by_percentage">
+                    <Splitter onActionComplete={form.trigger} />
+                </TabsContent>
+            </Tabs>
         </div>
       </form>
     </FormProvider>
@@ -475,7 +489,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
             </SheetTrigger>
             <SheetContent side="bottom" className="glass-pane h-[95vh] flex flex-col rounded-t-2xl border-border/20 p-0">
                 <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="text-center text-lg font-semibold">New Expense</SheetTitle>
+                    <SheetTitle className="text-center text-lg font-semibold">New Expense in "{group.name}"</SheetTitle>
                 </SheetHeader>
                 <ScrollArea className="flex-1">
                     <div className="p-4">{FormContent}</div>
@@ -499,10 +513,13 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">New Expense in "{group.name}"</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 -mx-6">
-            <div className="px-6 py-4">{FormContent}</div>
-        </ScrollArea>
-        <DialogFooter className="border-t pt-4">
+        <div className="flex-1 overflow-hidden -mx-6 px-1">
+          <ScrollArea className="h-full px-5">
+              {FormContent}
+          </ScrollArea>
+        </div>
+        <DialogFooter className="border-t pt-4 px-6 pb-6 -mx-6 -mb-6">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
           <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
             {form.formState.isSubmitting ? "Adding..." : "Add Expense"}
           </Button>
@@ -513,19 +530,38 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
 }
 
 
-function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplitType }: {form: any, userProfile: any, runningTotal: any, watchAmount: number, watchSplitType: string}) {
+function Splitter({ onActionComplete }: { onActionComplete: () => void }) {
+  const { control, watch, getValues, formState: { errors } } = useFormContext();
+  const watchSplitType = watch("splitType");
+  const watchAmount = watch("amount");
+
+  const runningTotal = useMemo(() => {
+    const participants = getValues("participants") || [];
+    const splitType = getValues("splitType");
+
+    if (splitType === 'unequally') {
+      const sum = participants.filter((p:any) => p.selected).reduce((acc:number, p:any) => acc + (Number(p.amountOwed) || 0), 0);
+      return { type: 'amount', sum };
+    }
+    if (splitType === 'by_percentage') {
+      const sum = participants.filter((p:any) => p.selected).reduce((acc:number, p:any) => acc + (Number(p.percentage) || 0), 0);
+      return { type: 'percentage', sum };
+    }
+    return { type: 'none', sum: 0 };
+  }, [JSON.stringify(watch("participants")), watchSplitType, watchAmount, getValues]);
+
   return (
      <div className="space-y-4 pt-2 flex flex-col h-full">
-        <ScrollArea className="flex-1 pr-3 h-[240px]">
+        <ScrollArea className="flex-1 pr-3 max-h-[25vh] md:max-h-none">
           <div className="space-y-3">
-              {form.getValues('participants').map((item: any, index: number) => (
-                <div key={item.userId} className="flex items-center justify-between gap-x-2 gap-y-2">
+              {getValues('participants').map((item: any, index: number) => (
+                <div key={item.userId} className="flex items-center justify-between gap-x-4 gap-y-2">
                   <FormField
-                    control={form.control}
+                    control={control}
                     name={`participants.${index}.selected`}
                     render={({ field }) => (
                       <FormItem className="flex items-center space-x-3 flex-grow min-w-[150px]">
-                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        <FormControl><Checkbox checked={field.value} onCheckedChange={(checked) => { field.onChange(checked); onActionComplete(); }} /></FormControl>
                         <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
                                 <AvatarImage src={item.avatarUrl} alt={item.name} />
@@ -538,30 +574,55 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
                       </FormItem>
                     )}
                   />
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                      {form.watch(`participants.${index}.selected`) && (
+                  <div className="flex items-center gap-2 flex-shrink-0 w-32">
+                      {watch(`participants.${index}.selected`) && (
                       <>
                           {watchSplitType === "unequally" && (
                           <FormField
-                              control={form.control}
+                              control={control}
                               name={`participants.${index}.amountOwed`}
-                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="Amt" {...field} value={field.value ?? ''} className="h-8 w-24 text-right"/></FormControl> )}
+                              render={({ field }) => ( 
+                                <FormControl>
+                                    <div className="relative">
+                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                                        <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="h-8 w-full text-right pl-6"/>
+                                    </div>
+                                </FormControl> )}
                           />
                           )}
                           {watchSplitType === "by_shares" && (
                           <FormField
-                              control={form.control}
+                              control={control}
                               name={`participants.${index}.shares`}
-                              render={({ field }) => ( <FormControl><Input type="number" step="1" placeholder="Shares" {...field} value={field.value ?? ''} className="h-8 w-24 text-right"/></FormControl> )}
+                              render={({ field }) => ( 
+                                <FormControl>
+                                    <div className="relative">
+                                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">shares</span>
+                                        <Input type="number" step="1" placeholder="1" {...field} value={field.value ?? ''} className="h-8 w-full text-left pr-14"/>
+                                    </div>
+                                </FormControl>
+                               )}
                           />
                           )}
                           {watchSplitType === "by_percentage" && (
                               <FormField
-                              control={form.control}
+                              control={control}
                               name={`participants.${index}.percentage`}
-                              render={({ field }) => ( <FormControl><Input type="number" step="0.01" placeholder="%" {...field} value={field.value ?? ''} className="h-8 w-24 text-right"/></FormControl> )}
+                              render={({ field }) => (
+                                <FormControl>
+                                     <div className="relative">
+                                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                                        <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="h-8 w-full text-right pr-6"/>
+                                    </div>
+                                </FormControl>
+                                )}
                               />
                           )}
+                           {watchSplitType === "equally" && (
+                               <p className="text-sm text-right text-muted-foreground w-full">
+                                    {CURRENCY_SYMBOL}{watch(`participants.${index}.amountOwed`).toFixed(2)}
+                                </p>
+                           )}
                       </>
                       )}
                   </div>
@@ -581,8 +642,14 @@ function SplitContent({ form, userProfile, runningTotal, watchAmount, watchSplit
               </p>
           )}
         </div>
-        <FormMessage>{form.formState.errors.participants?.message}</FormMessage>
-        {form.formState.errors.participants?.root?.message && <FormMessage>{form.formState.errors.participants.root.message}</FormMessage>}
+        {(errors.participants?.message || errors.participants?.root?.message) && (
+            <div className="text-center">
+                 <FormMessage>{errors.participants?.message?.toString()}</FormMessage>
+                 {errors.participants?.root?.message && <FormMessage>{errors.participants.root.message}</FormMessage>}
+            </div>
+        )}
       </div>
   )
 }
+
+    
