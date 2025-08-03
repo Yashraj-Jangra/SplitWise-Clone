@@ -8,7 +8,7 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -121,7 +121,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         await addExpense(newExpense, userProfile.uid);
         toast({
         title: "Expense Added!",
-        description: `"${values.description}" for ${CURRENCY_SYMBOL}${totalAmount.toFixed(2)} added to ${group.name}.`,
+        description: `"${values.description}" has been successfully added to ${group.name}.`,
         });
         setOpen(false);
         if (onExpenseAdded) onExpenseAdded();
