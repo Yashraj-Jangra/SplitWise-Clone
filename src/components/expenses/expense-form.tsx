@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Icons } from "@/components/icons";
-import type { Group, UserProfile } from "@/types";
+import type { Group } from "@/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { useAuth } from "@/contexts/auth-context";
 import { classifyExpense, categoryList } from "@/lib/expense-categories";
 import { getFullName, getInitials } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
@@ -134,7 +133,6 @@ function Splitter() {
         </div>
         <div className="space-y-2 pr-2 h-full">
           {getValues('participants').map((item: any, index: number) => {
-             const participantErrors = (errors.participants as any)?.[index];
              return (
                 <div key={item.userId} className={cn("flex items-center gap-x-4 gap-y-2 p-2 rounded-md transition-colors", watch(`participants.${index}.selected`) ? 'bg-muted/50' : 'opacity-60 hover:bg-muted/30')}>
                   <FormField
@@ -170,7 +168,7 @@ function Splitter() {
                           )}
                            {watchSplitType === "equally" && (
                                <p className="text-sm text-right text-muted-foreground w-full">
-                                    {CURRENCY_SYMBOL}{watch(`participants.${index}.amountOwed`).toFixed(2)}
+                                    {CURRENCY_SYMBOL}{(watch(`participants.${index}.amountOwed`) || 0).toFixed(2)}
                                 </p>
                            )}
                       </>
@@ -195,7 +193,6 @@ function Splitter() {
 
 export function ExpenseForm({ group }: { group: Group }) {
   const form = useFormContext();
-  const { userProfile } = useAuth();
 
   const { control, watch, setValue, getValues } = form;
 
@@ -315,6 +312,21 @@ export function ExpenseForm({ group }: { group: Group }) {
         )} />
       </div>
 
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+            <FormField control={control} name="category" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )} />
+      </div>
+
       {/* Second Row: Payer & Split Config */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Paid By Section */}
@@ -322,7 +334,7 @@ export function ExpenseForm({ group }: { group: Group }) {
             <CardHeader className="p-4">
                 <CardTitle className="text-base">Paid By</CardTitle>
             </CardHeader>
-            <CardContent className="p-0 flex-1">
+            <CardContent className="p-0 flex-1 flex flex-col">
                 <Tabs defaultValue="single" className="w-full h-full flex flex-col" value={watchPayerType} onValueChange={(v) => setValue('payerType', v as any)}>
                     <div className="px-4">
                         <TabsList className="grid w-full grid-cols-2">
@@ -335,7 +347,7 @@ export function ExpenseForm({ group }: { group: Group }) {
                             <FormItem>
                             <FormControl>
                                 <RadioGroup onValueChange={field.onChange} value={field.value} className="p-4">
-                                    <ScrollArea className="h-40 pr-2">
+                                    <ScrollArea className="h-[180px] pr-2">
                                         <div className="space-y-2">
                                         {group.members.map(member => (
                                             <FormItem key={member.uid} className="flex items-center space-x-3 space-y-0 p-2 rounded-md hover:bg-muted/50 transition-colors has-[:checked]:bg-muted">
@@ -356,13 +368,13 @@ export function ExpenseForm({ group }: { group: Group }) {
                             </FormItem>
                         )} />
                     </TabsContent>
-                    <TabsContent value="multiple" className="flex-1 p-4 space-y-2">
+                    <TabsContent value="multiple" className="flex-1 p-4 space-y-2 flex flex-col">
                          <p className={cn("text-right text-xs font-medium", amountRemainingToPay !== 0 ? 'text-destructive' : 'text-primary')}>
                             {amountRemainingToPay > 0 ? `${CURRENCY_SYMBOL}${amountRemainingToPay.toFixed(2)} remaining` :
                             amountRemainingToPay < 0 ? `${CURRENCY_SYMBOL}${Math.abs(amountRemainingToPay).toFixed(2)} over` :
                             'All assigned'}
                         </p>
-                        <ScrollArea className="h-32 pr-3">
+                        <ScrollArea className="h-[148px] pr-3">
                             <div className="space-y-2">
                             {getValues('multiPayers')?.map((item: any, index: number) => (
                                 <FormField key={item.userId} control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (
@@ -392,7 +404,7 @@ export function ExpenseForm({ group }: { group: Group }) {
                           <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="by_percentage" className="py-2 flex-col gap-1 h-auto"><Icons.PieChart className="h-5 w-5"/><span className="text-xs">By %</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split by percentage</p></TooltipContent></Tooltip></TooltipProvider>
                         </TabsList>
                     </div>
-                    <ScrollArea className="px-4 py-2 flex-1 md:h-52">
+                    <ScrollArea className="px-4 py-2 flex-1 md:h-[220px]">
                         <TabsContent value="equally"><Splitter /></TabsContent>
                         <TabsContent value="unequally"><Splitter /></TabsContent>
                         <TabsContent value="by_shares"><Splitter /></TabsContent>
@@ -401,22 +413,6 @@ export function ExpenseForm({ group }: { group: Group }) {
                 </Tabs>
              </CardContent>
         </Card>
-      </div>
-
-      {/* Category Picker */}
-       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <FormField control={control} name="category" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-            )} />
       </div>
     </div>
   )
