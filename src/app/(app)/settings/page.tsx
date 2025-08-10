@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { FirebaseError } from 'firebase/app';
 
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormProvider } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -268,7 +268,7 @@ export default function SettingsPage() {
       <Separator />
 
       <Card>
-          <FormProvider {...passwordForm}>
+          <Form {...passwordForm}>
             <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -349,7 +349,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </form>
-          </FormProvider>
+          </Form>
       </Card>
       
       <Separator />
