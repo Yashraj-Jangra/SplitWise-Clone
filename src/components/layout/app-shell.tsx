@@ -83,6 +83,59 @@ function MainNav({ items, isCollapsed }: { items: NavItem[]; isCollapsed: boolea
     );
 }
 
+const AnimatedHamburgerIcon = ({ open }: { open: boolean }) => (
+  <div className="flex h-6 w-6 flex-col justify-center items-center gap-[5px] transition-all duration-300 ease-in-out">
+    <div
+      className={cn(
+        "h-[2px] w-full rounded-full bg-current transition-all duration-300 ease-in-out",
+        open ? "rotate-45 translate-y-[7px]" : ""
+      )}
+    />
+    <div
+      className={cn(
+        "h-[2px] w-full rounded-full bg-current transition-all duration-300 ease-in-out",
+        open ? "opacity-0" : "opacity-100"
+      )}
+    />
+    <div
+      className={cn(
+        "h-[2px] w-full rounded-full bg-current transition-all duration-300 ease-in-out",
+        open ? "-rotate-45 -translate-y-[7px]" : ""
+      )}
+    />
+  </div>
+);
+
+const AnimatedSidebarToggle = ({ isCollapsed }: { isCollapsed: boolean }) => (
+  <div className="relative h-5 w-5">
+    <span className={cn(
+        "absolute right-0 h-[2px] w-3/5 bg-foreground transition-all duration-300 ease-in-out",
+        isCollapsed ? 'top-1/2 -translate-y-1/2 w-full rotate-0' : 'top-[3px] w-3/5 rotate-0'
+    )} />
+    <span className="absolute right-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-foreground" />
+    <span className={cn(
+        "absolute right-0 h-[2px] w-3/5 bg-foreground transition-all duration-300 ease-in-out",
+        isCollapsed ? 'top-1/2 -translate-y-1/2 w-full rotate-0' : 'bottom-[3px] w-3/5 rotate-0'
+    )} />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(
+        "absolute top-1/2 -translate-y-1/2 h-4 w-4 transition-all duration-300 ease-in-out",
+        isCollapsed ? '-left-0.5 rotate-0' : '-left-1 -rotate-180'
+      )}
+    >
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  </div>
+);
+
+
 function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void; }) {
   const { userProfile } = useAuth();
   const { settings, loading } = useSiteSettings();
@@ -101,12 +154,8 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
                       {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
                   </Link>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8 group hover:bg-transparent" onClick={onToggle}>
-                    {isCollapsed ? (
-                       <PanelRightOpen className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-                    ) : (
-                       <PanelLeftClose className="h-5 w-5 transition-transform duration-300 group-hover:-translate-x-1" />
-                    )}
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50" onClick={onToggle}>
+                    <AnimatedSidebarToggle isCollapsed={isCollapsed} />
                     <span className="sr-only">Toggle sidebar</span>
                 </Button>
               </div>
@@ -140,9 +189,9 @@ function Header() {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="mr-2 md:hidden"
+                    className="mr-2 md:hidden hover:bg-muted/50"
                 >
-                    <Icons.Menu className="h-6 w-6" />
+                    <AnimatedHamburgerIcon open={open} />
                     <span className="sr-only">Toggle Menu</span>
                 </Button>
             </SheetTrigger>
