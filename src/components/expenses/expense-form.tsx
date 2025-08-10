@@ -273,7 +273,7 @@ export function ExpenseForm({ group }: { group: Group }) {
   const amountRemainingToPay = (Number(watchAmount) || 0) - totalPaid;
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-2">
       {/* Top Row: Main Details */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
          <FormField control={control} name="description" render={({ field }) => ( 
