@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail, sendEmailVerification, linkWithPopup, unlink } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
@@ -28,6 +28,8 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
+  linkWithGoogle: () => Promise<void>;
+  unlinkFromGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -205,6 +207,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!auth?.currentUser) throw new Error("You must be logged in to resend a verification email.");
     await sendEmailVerification(auth.currentUser);
   }, []);
+  
+  const linkWithGoogle = useCallback(async () => {
+    if (!auth?.currentUser) throw new Error("You must be logged in to link an account.");
+    const provider = new GoogleAuthProvider();
+    await linkWithPopup(auth.currentUser, provider);
+    // After linking, the onAuthStateChanged listener will automatically update the user state.
+  }, []);
+
+  const unlinkFromGoogle = useCallback(async () => {
+    if (!auth?.currentUser) throw new Error("You must be logged in to unlink an account.");
+    if (auth.currentUser.providerData.length <= 1) {
+      throw new Error("You cannot remove your only sign-in method.");
+    }
+    await unlink(auth.currentUser, GoogleAuthProvider.PROVIDER_ID);
+    // After unlinking, the onAuthStateChanged listener will automatically update the user state.
+  }, []);
+
 
   const hasPassword = useMemo(() => {
     return firebaseUser?.providerData.some(p => p.providerId === 'password');
@@ -228,7 +247,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginWithGoogle,
     sendPasswordResetEmail,
     resendVerificationEmail,
-  }), [firebaseUser, userProfile, loading, firebaseError, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail]);
+    linkWithGoogle,
+    unlinkFromGoogle,
+  }), [firebaseUser, userProfile, loading, firebaseError, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');

@@ -8,6 +8,7 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { FirebaseError } from 'firebase/app';
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -43,10 +44,11 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function SettingsPage() {
-  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked } = useAuth();
+  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle } = useAuth();
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const { toast } = useToast();
   const router = useRouter();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -108,6 +110,39 @@ export default function SettingsPage() {
         });
     }
   }
+
+  const handleConnectGoogle = async () => {
+    setIsGoogleLoading(true);
+    try {
+      await linkWithGoogle();
+      toast({ title: 'Google Account Connected', description: 'You can now sign in using Google.' });
+    } catch (error) {
+      let description = 'An unknown error occurred.';
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/credential-already-in-use') {
+          description = 'This Google account is already linked to another user.';
+        } else {
+          description = error.message;
+        }
+      }
+      toast({ variant: 'destructive', title: 'Connection Failed', description });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    setIsGoogleLoading(true);
+    try {
+      await unlinkFromGoogle();
+      toast({ title: 'Google Account Disconnected' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Disconnection Failed', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
 
   if (loading || !userProfile || siteSettingsLoading) {
     return (
@@ -232,10 +267,14 @@ export default function SettingsPage() {
                    {isGoogleLinked ? (
                      <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Connected</span>
-                        <Button variant="outline" size="sm">Disconnect</Button>
+                        <Button variant="outline" size="sm" onClick={handleDisconnectGoogle} disabled={isGoogleLoading}>
+                          {isGoogleLoading && <Icons.AppLogo className="animate-spin mr-2"/>} Disconnect
+                        </Button>
                      </div>
                    ) : (
-                     <Button variant="secondary" size="sm">Connect</Button>
+                     <Button variant="secondary" size="sm" onClick={handleConnectGoogle} disabled={isGoogleLoading}>
+                       {isGoogleLoading && <Icons.AppLogo className="animate-spin mr-2"/>} Connect
+                     </Button>
                    )}
                 </div>
            </div>
