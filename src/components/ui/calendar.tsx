@@ -26,7 +26,7 @@ function Calendar({
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium hidden", // Hide default label as we use dropdowns
+        caption_label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -55,52 +55,11 @@ function Calendar({
         day_range_middle:
           "aria-selected:bg-primary/20 aria-selected:text-foreground rounded-none",
         day_hidden: "invisible",
-        caption_dropdowns: "flex gap-2",
         ...classNames,
       }}
-      captionLayout="dropdown-buttons"
-      fromYear={props.fromYear || new Date().getFullYear() - 100}
-      toYear={props.toYear || new Date().getFullYear()}
       components={{
-        Dropdown: ({ value, onChange, children, ...dropdownProps }: DropdownProps) => {
-          const options = React.Children.toArray(children) as React.ReactElement<React.HTMLProps<HTMLOptionElement>>[];
-          const selected = options.find((child) => child.props.value === value);
-          const handleChange = (newValue: string) => {
-            const e = {
-              target: { value: newValue },
-            } as React.ChangeEvent<HTMLSelectElement>
-            onChange?.(e)
-          }
-          return (
-            <Select
-              value={value?.toString()}
-              onValueChange={(newValue) => {
-                if(newValue) handleChange(newValue)
-              }}
-            >
-              <SelectTrigger className="h-8 text-sm focus:ring-0 w-full min-w-[5rem]">
-                <SelectValue>{selected?.props.children}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-48">
-                  {options.map((option, id: number) => (
-                    <SelectItem
-                      key={`${option.props.value}-${id}`}
-                      value={option.props.value?.toString() ?? ""}
-                    >
-                      {option.props.children}
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          )
-        },
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" {...props} />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" {...props} />,
-      }}
-      formatters={{
-        formatMonthCaption: (date) => date.toLocaleDateString('en-US', { month: 'short' }),
       }}
       {...props}
     />
