@@ -93,7 +93,7 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
             <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
             <div className={cn(
                 "flex h-[60px] items-center border-b px-4",
-                isCollapsed && "justify-center px-2"
+                isCollapsed ? "justify-center px-2" : "justify-between"
               )}>
                 {!isCollapsed && (
                   <Link href="/dashboard" className="flex items-center gap-2 font-semibold mr-auto" aria-label={settings.appName}>
@@ -102,7 +102,11 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
                   </Link>
                 )}
                 <Button variant="ghost" size="icon" className="h-8 w-8 group hover:bg-transparent" onClick={onToggle}>
-                    <PanelRightOpen className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                    {isCollapsed ? (
+                       <PanelRightOpen className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                    ) : (
+                       <PanelLeftClose className="h-5 w-5 transition-transform duration-300 group-hover:-translate-x-1" />
+                    )}
                     <span className="sr-only">Toggle sidebar</span>
                 </Button>
               </div>
@@ -223,12 +227,14 @@ export function AppShell({ children }: AppShellProps) {
     setIsCollapsed(isMobile);
   }, [isMobile]);
 
+  const handleToggle = () => setIsCollapsed(prev => !prev);
+
   return (
     <div className={cn(
         "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
         isCollapsed ? "md:grid-cols-[80px_1fr]" : "md:grid-cols-[280px_1fr]"
     )}>
-      <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(prev => !prev)} />
+      <Sidebar isCollapsed={isCollapsed} onToggle={handleToggle} />
        <div className="flex flex-col">
           <Header />
           <EmailVerificationBanner />
