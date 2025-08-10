@@ -42,7 +42,7 @@ function Calendar({
         cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-primary/50 [&:has([aria-selected])]:bg-primary first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary/20"
+          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary/20 hover:text-foreground"
         ),
         day_range_end: "day-range-end",
         day_selected:
@@ -97,6 +97,9 @@ function Calendar({
         },
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" {...props} />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" {...props} />,
+      }}
+      formatters={{
+        formatMonthCaption: (date) => date.toLocaleDateString('en-US', { month: 'short' }),
       }}
       {...props}
     />
