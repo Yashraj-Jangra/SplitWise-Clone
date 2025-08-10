@@ -17,7 +17,6 @@ import { Input } from "../ui/input";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { Skeleton } from "../ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PanelLeftClose, PanelRightOpen } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 
@@ -106,35 +105,6 @@ const AnimatedHamburgerIcon = ({ open }: { open: boolean }) => (
   </div>
 );
 
-const AnimatedSidebarToggle = ({ isCollapsed }: { isCollapsed: boolean }) => (
-  <div className="relative h-5 w-5">
-    <span className={cn(
-        "absolute right-0 h-[2px] w-3/5 bg-foreground transition-all duration-300 ease-in-out",
-        isCollapsed ? 'top-1/2 -translate-y-1/2 w-full rotate-0' : 'top-[3px] w-3/5 rotate-0'
-    )} />
-    <span className="absolute right-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-foreground" />
-    <span className={cn(
-        "absolute right-0 h-[2px] w-3/5 bg-foreground transition-all duration-300 ease-in-out",
-        isCollapsed ? 'top-1/2 -translate-y-1/2 w-full rotate-0' : 'bottom-[3px] w-3/5 rotate-0'
-    )} />
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cn(
-        "absolute top-1/2 -translate-y-1/2 h-4 w-4 transition-all duration-300 ease-in-out",
-        isCollapsed ? '-left-0.5 rotate-0' : '-left-1 -rotate-180'
-      )}
-    >
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  </div>
-);
-
 
 function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void; }) {
   const { userProfile } = useAuth();
@@ -155,7 +125,7 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
                   </Link>
                 )}
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50" onClick={onToggle}>
-                    <AnimatedSidebarToggle isCollapsed={isCollapsed} />
+                    <Icons.Filter className="h-5 w-5" />
                     <span className="sr-only">Toggle sidebar</span>
                 </Button>
               </div>
@@ -189,7 +159,7 @@ function Header() {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="mr-2 md:hidden hover:bg-muted/50"
+                    className="mr-2 md:hidden hover:bg-transparent"
                 >
                     <AnimatedHamburgerIcon open={open} />
                     <span className="sr-only">Toggle Menu</span>
