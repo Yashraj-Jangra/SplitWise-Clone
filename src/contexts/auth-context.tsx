@@ -20,6 +20,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   firebaseError: string | null;
+  hasPassword?: boolean;
+  isGoogleLinked?: boolean;
   login: (email: string, pass: string) => Promise<void>;
   signup: (data: SignupData, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -204,19 +206,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await sendEmailVerification(auth.currentUser);
   }, []);
 
+  const hasPassword = useMemo(() => {
+    return firebaseUser?.providerData.some(p => p.providerId === 'password');
+  }, [firebaseUser]);
+
+  const isGoogleLinked = useMemo(() => {
+    return firebaseUser?.providerData.some(p => p.providerId === 'google.com');
+  }, [firebaseUser]);
+
 
   const value = useMemo(() => ({
     firebaseUser,
     userProfile,
     loading,
     firebaseError,
+    hasPassword,
+    isGoogleLinked,
     login,
     signup,
     logout,
     loginWithGoogle,
     sendPasswordResetEmail,
     resendVerificationEmail,
-  }), [firebaseUser, userProfile, loading, firebaseError, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail]);
+  }), [firebaseUser, userProfile, loading, firebaseError, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -43,7 +43,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function SettingsPage() {
-  const { userProfile, loading } = useAuth();
+  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked } = useAuth();
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const { toast } = useToast();
   const router = useRouter();
@@ -196,26 +196,49 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Icons.ShieldCheck className="h-5 w-5 mr-2 text-primary" />
-            Security
+            Security & Login
           </CardTitle>
-          <CardDescription>Manage your account security settings.</CardDescription>
+          <CardDescription>Manage your account security and login methods.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="currentPassword">Current Password</Label>
-            <Input id="currentPassword" type="password" />
+        <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-md font-medium">Password Settings</h3>
+              {hasPassword && (
+                <div className="space-y-1">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input id="currentPassword" type="password" />
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input id="newPassword" type="password" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Input id="confirmPassword" type="password" />
+              </div>
+              <div className="flex justify-end">
+                <Button>{hasPassword ? 'Change Password' : 'Set Password'}</Button>
+              </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="newPassword">New Password</Label>
-            <Input id="newPassword" type="password" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
-            <Input id="confirmPassword" type="password" />
-          </div>
-           <div className="flex justify-end">
-            <Button>Change Password</Button>
-          </div>
+          <Separator />
+           <div className="space-y-4">
+                <h3 className="text-md font-medium">Linked Accounts</h3>
+                <div className="flex items-center justify-between p-4 border rounded-md">
+                   <div className="flex items-center gap-3">
+                     <Icons.Google className="h-6 w-6" />
+                     <p className="font-medium">Google</p>
+                   </div>
+                   {isGoogleLinked ? (
+                     <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Connected</span>
+                        <Button variant="outline" size="sm">Disconnect</Button>
+                     </div>
+                   ) : (
+                     <Button variant="secondary" size="sm">Connect</Button>
+                   )}
+                </div>
+           </div>
         </CardContent>
       </Card>
       
