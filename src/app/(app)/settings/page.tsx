@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { FirebaseError } from 'firebase/app';
 
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormProvider } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -43,14 +43,25 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+const passwordSchema = z.object({
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6, "Password must be at least 6 characters."),
+  confirmPassword: z.string().min(6, "Password must be at least 6 characters."),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+
 export default function SettingsPage() {
-  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle } = useAuth();
+  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword } = useAuth();
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const { toast } = useToast();
   const router = useRouter();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const form = useForm<ProfileFormValues>({
+  const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       firstName: '',
@@ -63,9 +74,18 @@ export default function SettingsPage() {
     },
   });
 
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    }
+  });
+
   useEffect(() => {
     if (userProfile) {
-      form.reset({
+      profileForm.reset({
         firstName: userProfile.firstName,
         lastName: userProfile.lastName || '',
         username: userProfile.username,
@@ -75,16 +95,16 @@ export default function SettingsPage() {
         avatarUrl: userProfile.avatarUrl || '',
       });
     }
-  }, [userProfile, form]);
+  }, [userProfile, profileForm]);
 
-  async function onSubmit(values: ProfileFormValues) {
+  async function onProfileSubmit(values: ProfileFormValues) {
     if (!userProfile) return;
 
     try {
         if (values.username.toLowerCase() !== userProfile.username.toLowerCase()) {
             const taken = await isUsernameTaken(values.username, userProfile.uid);
             if (taken) {
-                form.setError("username", { type: "manual", message: "This username is already taken." });
+                profileForm.setError("username", { type: "manual", message: "This username is already taken." });
                 return;
             }
         }
@@ -110,6 +130,26 @@ export default function SettingsPage() {
         });
     }
   }
+
+  async function onPasswordSubmit(values: PasswordFormValues) {
+    try {
+        await updateUserPassword(values.newPassword, hasPassword ? values.currentPassword : undefined);
+        toast({ title: "Password Updated", description: "Your password has been successfully changed." });
+        passwordForm.reset();
+    } catch (error) {
+        let description = "An unknown error occurred.";
+        if (error instanceof FirebaseError) {
+            if (error.code === 'auth/wrong-password') {
+                description = "The current password you entered is incorrect.";
+                passwordForm.setError("currentPassword", { type: "manual", message: description });
+            } else {
+                description = error.message;
+            }
+        }
+        toast({ variant: "destructive", title: "Update Failed", description });
+    }
+  }
+
 
   const handleConnectGoogle = async () => {
     setIsGoogleLoading(true);
@@ -161,8 +201,8 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your account preferences and information.</p>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <Form {...profileForm}>
+        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -174,12 +214,12 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4 mb-6">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={form.watch('avatarUrl') || userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
+                  <AvatarImage src={profileForm.watch('avatarUrl') || userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
                   <AvatarFallback className="text-2xl">{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
                 </Avatar>
                 <div className="w-full">
                     <FormField
-                      control={form.control}
+                      control={profileForm.control}
                       name="avatarUrl"
                       render={({ field }) => (
                         <FormItem>
@@ -194,14 +234,14 @@ export default function SettingsPage() {
                 </div>
               </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={profileForm.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={profileForm.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
-              <FormField control={form.control} name="username" render={({ field }) => (<FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} disabled /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={profileForm.control} name="username" render={({ field }) => (<FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={profileForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} disabled /></FormControl><FormMessage /></FormItem>)} />
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="mobileNumber" render={({ field }) => (<FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="dob" render={({ field }) => (
+                <FormField control={profileForm.control} name="mobileNumber" render={({ field }) => (<FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={profileForm.control} name="dob" render={({ field }) => (
                     <FormItem className="flex flex-col pt-2"><FormLabel className="mb-[0.6rem]">Date of Birth</FormLabel>
                         <Popover><PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -216,8 +256,8 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="flex justify-end">
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? "Saving..." : "Save Profile"}
+                <Button type="submit" disabled={profileForm.formState.isSubmitting}>
+                  {profileForm.formState.isSubmitting ? "Saving..." : "Save Profile"}
                 </Button>
               </div>
             </CardContent>
@@ -228,57 +268,88 @@ export default function SettingsPage() {
       <Separator />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Icons.ShieldCheck className="h-5 w-5 mr-2 text-primary" />
-            Security & Login
-          </CardTitle>
-          <CardDescription>Manage your account security and login methods.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-md font-medium">Password Settings</h3>
-              {hasPassword && (
-                <div className="space-y-1">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input id="currentPassword" type="password" />
+          <FormProvider {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Icons.ShieldCheck className="h-5 w-5 mr-2 text-primary" />
+                  Security & Login
+                </CardTitle>
+                <CardDescription>Manage your account security and login methods.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <h3 className="text-md font-medium">Password Settings</h3>
+                    {hasPassword && (
+                      <FormField
+                          control={passwordForm.control}
+                          name="currentPassword"
+                          render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Current Password</FormLabel>
+                                <FormControl>
+                                    <Input type="password" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                    )}
+                    <FormField
+                        control={passwordForm.control}
+                        name="newPassword"
+                        render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>New Password</FormLabel>
+                                <FormControl>
+                                  <Input type="password" {...field} />
+                                </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={passwordForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Confirm New Password</FormLabel>
+                                <FormControl>
+                                  <Input type="password" {...field} />
+                                </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={passwordForm.formState.isSubmitting}>{hasPassword ? 'Change Password' : 'Set Password'}</Button>
+                    </div>
                 </div>
-              )}
-              <div className="space-y-1">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" type="password" />
-              </div>
-              <div className="flex justify-end">
-                <Button>{hasPassword ? 'Change Password' : 'Set Password'}</Button>
-              </div>
-          </div>
-          <Separator />
-           <div className="space-y-4">
-                <h3 className="text-md font-medium">Linked Accounts</h3>
-                <div className="flex items-center justify-between p-4 border rounded-md">
-                   <div className="flex items-center gap-3">
-                     <Icons.Google className="h-6 w-6" />
-                     <p className="font-medium">Google</p>
-                   </div>
-                   {isGoogleLinked ? (
-                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Connected</span>
-                        <Button variant="outline" size="sm" onClick={handleDisconnectGoogle} disabled={isGoogleLoading}>
-                          {isGoogleLoading && <Icons.AppLogo className="animate-spin mr-2"/>} Disconnect
-                        </Button>
-                     </div>
-                   ) : (
-                     <Button variant="secondary" size="sm" onClick={handleConnectGoogle} disabled={isGoogleLoading}>
-                       {isGoogleLoading && <Icons.AppLogo className="animate-spin mr-2"/>} Connect
-                     </Button>
-                   )}
+                <Separator />
+                <div className="space-y-4">
+                      <h3 className="text-md font-medium">Linked Accounts</h3>
+                      <div className="flex items-center justify-between p-4 border rounded-md">
+                        <div className="flex items-center gap-3">
+                          <Icons.Google className="h-6 w-6" />
+                          <p className="font-medium">Google</p>
+                        </div>
+                        {isGoogleLinked ? (
+                          <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">Connected</span>
+                              <Button variant="outline" size="sm" onClick={handleDisconnectGoogle} disabled={isGoogleLoading}>
+                                {isGoogleLoading && <Icons.AppLogo className="animate-spin mr-2"/>} Disconnect
+                              </Button>
+                          </div>
+                        ) : (
+                          <Button variant="secondary" size="sm" onClick={handleConnectGoogle} disabled={isGoogleLoading}>
+                            {isGoogleLoading && <Icons.AppLogo className="animate-spin mr-2"/>} Connect
+                          </Button>
+                        )}
+                      </div>
                 </div>
-           </div>
-        </CardContent>
+              </CardContent>
+            </form>
+          </FormProvider>
       </Card>
       
       <Separator />

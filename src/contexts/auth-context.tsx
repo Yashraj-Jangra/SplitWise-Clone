@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail, sendEmailVerification, linkWithPopup, unlink } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, deleteUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail, sendEmailVerification, linkWithPopup, unlink, updatePassword as firebaseUpdatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
@@ -30,6 +30,7 @@ interface AuthContextType {
   resendVerificationEmail: () => Promise<void>;
   linkWithGoogle: () => Promise<void>;
   unlinkFromGoogle: () => Promise<void>;
+  updateUserPassword: (newPassword: string, currentPassword?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -223,6 +224,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await unlink(auth.currentUser, GoogleAuthProvider.PROVIDER_ID);
     // After unlinking, the onAuthStateChanged listener will automatically update the user state.
   }, []);
+  
+  const updateUserPassword = useCallback(async (newPassword: string, currentPassword?: string) => {
+    if (!auth?.currentUser) throw new Error("You must be logged in to update your password.");
+
+    // If a current password is provided, re-authenticate for security before updating.
+    if (currentPassword) {
+      if (!auth.currentUser.email) {
+          throw new Error("User email is not available for re-authentication.");
+      }
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+    }
+    
+    // After re-authentication (if required) or for users setting a password for the first time
+    await firebaseUpdatePassword(auth.currentUser, newPassword);
+  }, []);
 
 
   const hasPassword = useMemo(() => {
@@ -249,7 +266,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resendVerificationEmail,
     linkWithGoogle,
     unlinkFromGoogle,
-  }), [firebaseUser, userProfile, loading, firebaseError, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle]);
+    updateUserPassword,
+  }), [firebaseUser, userProfile, loading, firebaseError, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle, updateUserPassword]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');
