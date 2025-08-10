@@ -101,8 +101,8 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
                       {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
                   </Link>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggle}>
-                    {isCollapsed ? <PanelRightOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+                <Button variant="ghost" size="icon" className="h-8 w-8 group hover:bg-transparent" onClick={onToggle}>
+                    <PanelRightOpen className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
                     <span className="sr-only">Toggle sidebar</span>
                 </Button>
               </div>
