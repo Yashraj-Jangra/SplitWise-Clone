@@ -42,6 +42,7 @@ import type {
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
 import { format } from 'date-fns';
+import { defaultExpenseCategories } from './expense-categories';
 
 // --- User Functions ---
 
@@ -1215,6 +1216,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             faviconUrl: data.faviconUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
+            expenseCategories: data.expenseCategories || defaultExpenseCategories,
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
             about,
@@ -1224,12 +1226,13 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             stats: data.stats || { users: 0, groups: 0, expenses: 0 },
         };
     } else {
-        const defaultSettings = {
+        const defaultSettings: SiteSettings = {
             appName: DEFAULT_APP_NAME,
             logoUrl: '',
             faviconUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
+            expenseCategories: defaultExpenseCategories,
             landingPage: DEFAULT_LANDING_PAGE_SETTINGS,
             authPage: DEFAULT_AUTH_PAGE_SETTINGS,
             about: DEFAULT_ABOUT_SETTINGS,

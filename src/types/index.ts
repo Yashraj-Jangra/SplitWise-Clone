@@ -180,6 +180,7 @@ export interface SiteSettings {
   faviconUrl?: string;
   coverImages: string[];
   landingImages: string[];
+  expenseCategories: Record<string, string[]>;
   landingPage?: {
     headline: string;
     subheadline: string;

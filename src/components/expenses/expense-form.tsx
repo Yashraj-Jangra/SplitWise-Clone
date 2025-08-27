@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useMemo } from "react";
@@ -17,13 +18,14 @@ import type { Group } from "@/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { classifyExpense, categoryList } from "@/lib/expense-categories";
+import { classifyExpense } from "@/lib/expense-categories";
 import { getFullName, getInitials } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { useSiteSettings } from "@/contexts/site-settings-context";
 
 export const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
@@ -193,6 +195,8 @@ function Splitter() {
 
 export function ExpenseForm({ group }: { group: Group }) {
   const form = useFormContext();
+  const { settings } = useSiteSettings();
+  const categoryList = Object.keys(settings.expenseCategories || {});
 
   const { control, watch, setValue, getValues } = form;
 
@@ -216,10 +220,10 @@ export function ExpenseForm({ group }: { group: Group }) {
 
   useEffect(() => {
     if (watchDescription) {
-        const suggestedCategory = classifyExpense(watchDescription);
+        const suggestedCategory = classifyExpense(watchDescription, settings.expenseCategories);
         setValue("category", suggestedCategory, { shouldValidate: true });
     }
-  }, [watchDescription, setValue]);
+  }, [watchDescription, setValue, settings.expenseCategories]);
 
   useEffect(() => {
     const totalAmount = Number(getValues("amount")) || 0;
