@@ -299,7 +299,16 @@ export default function SettingsPage() {
                                 </Button>
                             </FormControl></PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date?.toISOString())} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                                <Calendar 
+                                    mode="single" 
+                                    captionLayout="dropdown-buttons"
+                                    fromYear={1900}
+                                    toYear={new Date().getFullYear()}
+                                    selected={field.value ? new Date(field.value) : undefined} 
+                                    onSelect={(date) => field.onChange(date?.toISOString())} 
+                                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")} 
+                                    initialFocus 
+                                />
                             </PopoverContent></Popover><FormMessage />
                         </FormItem>)} 
                     />
