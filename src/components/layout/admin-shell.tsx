@@ -44,6 +44,7 @@ const adminNavItems: NavItem[] = [
       { title: 'Auth Page', href: '/admin/settings/auth' },
       { title: 'Content Pages', href: '/admin/settings/pages' },
       { title: 'Categories', href: '/admin/settings/categories' },
+      { title: 'Misc', href: '/admin/settings/misc'},
     ]
   },
    {

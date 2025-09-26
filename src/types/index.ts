@@ -1,4 +1,5 @@
 
+
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -176,6 +177,12 @@ export interface LandingPageStep {
     description: string;
 }
 
+export interface CountryCode {
+    name: string;
+    code: string;
+    flag: string;
+}
+
 export interface SiteSettings {
   appName: string;
   logoUrl?: string;
@@ -183,6 +190,7 @@ export interface SiteSettings {
   coverImages: string[];
   landingImages: string[];
   expenseCategories: Record<string, string[]>;
+  countryCodes: CountryCode[];
   landingPage?: {
     headline: string;
     subheadline: string;

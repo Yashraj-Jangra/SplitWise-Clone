@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -93,13 +94,13 @@ export default function SettingsPage() {
         lastName: userProfile.lastName || '',
         username: userProfile.username,
         email: userProfile.email,
-        countryCode: userProfile.countryCode || '+91',
+        countryCode: userProfile.countryCode || siteSettings.countryCodes[0]?.code || '',
         mobileNumber: userProfile.mobileNumber || '',
         dob: userProfile.dob ? new Date(userProfile.dob).toISOString() : '',
         avatarUrl: userProfile.avatarUrl || '',
       });
     }
-  }, [userProfile, profileForm]);
+  }, [userProfile, profileForm, siteSettings.countryCodes]);
 
   async function onProfileSubmit(values: ProfileFormValues) {
     if (!userProfile) return;
@@ -257,16 +258,16 @@ export default function SettingsPage() {
                                 name="countryCode"
                                 render={({ field }) => (
                                 <FormItem className="w-1/3">
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                         <SelectValue placeholder="Code" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="+91">IN +91</SelectItem>
-                                        <SelectItem value="+1">US +1</SelectItem>
-                                        <SelectItem value="+44">UK +44</SelectItem>
+                                        {siteSettings.countryCodes.map(cc => (
+                                            <SelectItem key={cc.code} value={cc.code}>{cc.flag} {cc.code}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                     </Select>
                                     <FormMessage />

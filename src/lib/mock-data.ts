@@ -38,6 +38,7 @@ import type {
   TeamMember,
   LandingPageFeature,
   LandingPageStep,
+  CountryCode,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -357,7 +358,7 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
         groupCreatorId: groupData.createdById, 
         expenseCreatorId: oldData?.expenseCreatorId || actorId, 
         date: Timestamp.fromDate(expenseData.date),
-        createdAt: oldData?.createdAt, // Preserve original creation timestamp
+        createdAt: oldData?.createdAt ? oldData.createdAt : Timestamp.fromMillis(Date.parse(expenseData.createdAt)),
     };
     
     await updateDoc(expenseDocRef, dataToUpdate);
@@ -1100,6 +1101,14 @@ const FALLBACK_LANDING_IMAGES = [
     'https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2070&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop',
 ];
+const DEFAULT_COUNTRY_CODES: CountryCode[] = [
+    { name: 'India', code: '+91', flag: '🇮🇳' },
+    { name: 'United States', code: '+1', flag: '🇺🇸' },
+    { name: 'United Kingdom', code: '+44', flag: '🇬🇧' },
+    { name: 'Australia', code: '+61', flag: '🇦🇺' },
+    { name: 'Canada', code: '+1', flag: '🇨🇦' },
+];
+
 
 const DEFAULT_LANDING_PAGE_SETTINGS = {
     headline: 'SettleEase',
@@ -1231,6 +1240,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
             expenseCategories: data.expenseCategories || defaultExpenseCategories,
+            countryCodes: data.countryCodes?.length > 0 ? data.countryCodes : DEFAULT_COUNTRY_CODES,
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
             about,
@@ -1248,6 +1258,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
             expenseCategories: defaultExpenseCategories,
+            countryCodes: DEFAULT_COUNTRY_CODES,
             landingPage: DEFAULT_LANDING_PAGE_SETTINGS,
             authPage: DEFAULT_AUTH_PAGE_SETTINGS,
             about: DEFAULT_ABOUT_SETTINGS,
