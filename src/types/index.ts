@@ -1,5 +1,4 @@
 
-
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -11,6 +10,7 @@ export interface UserProfile {
   username: string;
   email: string;
   avatarUrl?: string;
+  countryCode?: string;
   mobileNumber?: string;
   dob?: string; // ISO string for client
   role: 'admin' | 'user';
@@ -243,3 +243,5 @@ export interface SiteSettings {
     imageUrl: string;
   };
 }
+
+    

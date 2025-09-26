@@ -357,7 +357,7 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
         groupCreatorId: groupData.createdById, 
         expenseCreatorId: oldData?.expenseCreatorId || actorId, 
         date: Timestamp.fromDate(expenseData.date),
-        createdAt: Timestamp.fromDate(new Date(expenseData.createdAt)),
+        createdAt: oldData?.createdAt, // Preserve original creation timestamp
     };
     
     await updateDoc(expenseDocRef, dataToUpdate);
@@ -1267,5 +1267,8 @@ export async function updateSiteSettings(settings: Partial<SiteSettings>): Promi
     const cleanSettings = Object.fromEntries(Object.entries(settings).filter(([_, v]) => v !== undefined));
     await setDoc(docRef, cleanSettings, { merge: true });
 }
+
+    
+
 
     

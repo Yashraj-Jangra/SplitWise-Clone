@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +37,7 @@ const profileSchema = z.object({
     .max(20, "Username must be less than 20 characters.")
     .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores."),
   email: z.string().email(),
+  countryCode: z.string().optional(),
   mobileNumber: z.string().optional(),
   dob: z.string().optional(),
   avatarUrl: z.string().url("Please enter a valid URL.").or(z.literal('')).optional(),
@@ -68,6 +70,7 @@ export default function SettingsPage() {
       lastName: '',
       username: '',
       email: '',
+      countryCode: '+91',
       mobileNumber: '',
       dob: '',
       avatarUrl: '',
@@ -90,6 +93,7 @@ export default function SettingsPage() {
         lastName: userProfile.lastName || '',
         username: userProfile.username,
         email: userProfile.email,
+        countryCode: userProfile.countryCode || '+91',
         mobileNumber: userProfile.mobileNumber || '',
         dob: userProfile.dob ? new Date(userProfile.dob).toISOString() : '',
         avatarUrl: userProfile.avatarUrl || '',
@@ -112,6 +116,7 @@ export default function SettingsPage() {
         await updateUser(userProfile.uid, {
             ...values,
             lastName: values.lastName || undefined,
+            countryCode: values.countryCode || undefined,
             mobileNumber: values.mobileNumber || undefined,
             dob: values.dob || undefined,
             avatarUrl: values.avatarUrl || undefined,
@@ -186,23 +191,23 @@ export default function SettingsPage() {
 
   if (loading || !userProfile || siteSettingsLoading) {
     return (
-        <div className="space-y-8 max-w-3xl mx-auto">
+        <div className="space-y-8 max-w-4xl mx-auto">
             <Skeleton className="h-12 w-1/3" />
+            <Skeleton className="h-80 w-full" />
             <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-48 w-full" />
         </div>
     )
   }
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-8 max-w-4xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">Settings</h1>
         <p className="text-muted-foreground">Manage your account preferences and information.</p>
       </div>
 
       <Form {...profileForm}>
-        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8">
+        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -211,56 +216,99 @@ export default function SettingsPage() {
               </CardTitle>
               <CardDescription>Update your personal details.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4 mb-6">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={profileForm.watch('avatarUrl') || userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
-                  <AvatarFallback className="text-2xl">{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
-                </Avatar>
-                <div className="w-full">
-                    <FormField
-                      control={profileForm.control}
-                      name="avatarUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Avatar URL</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://example.com/avatar.png" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+            <CardContent className="space-y-6">
+                <div className="flex flex-col sm:flex-row items-start gap-6">
+                    <div className="flex-shrink-0">
+                         <Avatar className="h-24 w-24">
+                            <AvatarImage src={profileForm.watch('avatarUrl') || userProfile.avatarUrl} alt={getFullName(userProfile.firstName, userProfile.lastName)} />
+                            <AvatarFallback className="text-3xl">{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
+                        </Avatar>
+                    </div>
+                    <div className="w-full space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormField control={profileForm.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={profileForm.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        </div>
+                         <FormField control={profileForm.control} name="username" render={({ field }) => (<FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    </div>
+                </div>
+                
+                <FormField
+                    control={profileForm.control}
+                    name="avatarUrl"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Avatar URL</FormLabel>
+                        <FormControl>
+                        <Input placeholder="https://example.com/avatar.png" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={profileForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} disabled /></FormControl><FormMessage /></FormItem>)} />
+                    <FormItem>
+                        <FormLabel>Mobile Number</FormLabel>
+                        <div className="flex gap-2">
+                           <FormField
+                                control={profileForm.control}
+                                name="countryCode"
+                                render={({ field }) => (
+                                <FormItem className="w-1/3">
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Code" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="+91">IN +91</SelectItem>
+                                        <SelectItem value="+1">US +1</SelectItem>
+                                        <SelectItem value="+44">UK +44</SelectItem>
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={profileForm.control}
+                                name="mobileNumber"
+                                render={({ field }) => (
+                                <FormItem className="flex-1">
+                                    <FormControl>
+                                    <Input {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        </div>
+                    </FormItem>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={profileForm.control} name="dob" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel className="mb-2">Date of Birth</FormLabel>
+                            <Popover><PopoverTrigger asChild><FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                    <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl></PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date?.toISOString())} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                            </PopoverContent></Popover><FormMessage />
+                        </FormItem>)} 
                     />
                 </div>
-              </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={profileForm.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={profileForm.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              </div>
-              <FormField control={profileForm.control} name="username" render={({ field }) => (<FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={profileForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} disabled /></FormControl><FormMessage /></FormItem>)} />
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={profileForm.control} name="mobileNumber" render={({ field }) => (<FormItem><FormLabel>Mobile Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={profileForm.control} name="dob" render={({ field }) => (
-                    <FormItem className="flex flex-col pt-2"><FormLabel className="mb-[0.6rem]">Date of Birth</FormLabel>
-                        <Popover><PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-                                <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date?.toISOString())} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
-                        </PopoverContent></Popover><FormMessage />
-                    </FormItem>)} 
-                />
-              </div>
-              <div className="flex justify-end">
+            </CardContent>
+             <CardFooter className="border-t px-6 py-4 flex justify-end">
                 <Button type="submit" disabled={profileForm.formState.isSubmitting}>
                   {profileForm.formState.isSubmitting ? "Saving..." : "Save Profile"}
                 </Button>
-              </div>
-            </CardContent>
+            </CardFooter>
           </Card>
         </form>
       </Form>
@@ -374,3 +422,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

@@ -49,6 +49,7 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
       email: data.email,
       role: data.role,
       avatarUrl: data.avatarUrl,
+      countryCode: data.countryCode,
       mobileNumber: data.mobileNumber,
       dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined,
       createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
@@ -310,3 +311,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
