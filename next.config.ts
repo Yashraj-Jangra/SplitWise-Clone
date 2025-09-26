@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         hostname: '*.imgcdn.dev',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'cdn.cvweb.tech',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
