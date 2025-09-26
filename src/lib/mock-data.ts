@@ -348,15 +348,19 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
 
     const participantIds = expenseData.participants.map(p => p.userId);
     const payerIds = expenseData.payers.map(p => p.userId);
-    await updateDoc(expenseDocRef, {
+    
+    const dataToUpdate: any = {
         ...expenseData,
         participantIds,
         payerIds,
         groupMemberIds: groupData.memberIds,
         groupCreatorId: groupData.createdById, 
         expenseCreatorId: oldData?.expenseCreatorId || actorId, 
-        date: Timestamp.fromDate(expenseData.date)
-    });
+        date: Timestamp.fromDate(expenseData.date),
+        createdAt: Timestamp.fromDate(new Date(expenseData.createdAt as any)),
+    };
+    
+    await updateDoc(expenseDocRef, dataToUpdate);
 
     const currentTotal = groupSnap.data().totalExpenses || 0;
     const newTotal = currentTotal - oldAmount + expenseData.amount;
@@ -1186,6 +1190,13 @@ const DEFAULT_NOT_FOUND_PAGE_SETTINGS = {
     imageUrl: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?q=80&w=1974&auto=format&fit=crop",
 };
 
+const DEFAULT_MAINTENANCE_MODE_SETTINGS = {
+  enabled: false,
+  title: 'Under Maintenance',
+  message: "We're currently performing some scheduled maintenance. We'll be back online shortly!",
+  imageUrl: 'https://images.unsplash.com/photo-1589998059171-988d887df646?q=80&w=2070&auto=format&fit=crop'
+};
+
 
 export async function getSiteSettings(): Promise<SiteSettings> {
     const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
@@ -1224,6 +1235,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             termsAndConditions,
             notFoundPage: { ...DEFAULT_NOT_FOUND_PAGE_SETTINGS, ...(data.notFoundPage || {}) },
             stats: data.stats || { users: 0, groups: 0, expenses: 0 },
+            maintenanceMode: { ...DEFAULT_MAINTENANCE_MODE_SETTINGS, ...(data.maintenanceMode || {}) },
         };
     } else {
         const defaultSettings: SiteSettings = {
@@ -1240,6 +1252,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS,
             notFoundPage: DEFAULT_NOT_FOUND_PAGE_SETTINGS,
             stats: { users: 0, groups: 0, expenses: 0 },
+            maintenanceMode: DEFAULT_MAINTENANCE_MODE_SETTINGS,
         };
         await setDoc(docRef, defaultSettings);
         return defaultSettings;
@@ -1251,3 +1264,5 @@ export async function updateSiteSettings(settings: Partial<SiteSettings>): Promi
     const cleanSettings = Object.fromEntries(Object.entries(settings).filter(([_, v]) => v !== undefined));
     await setDoc(docRef, cleanSettings, { merge: true });
 }
+
+    
