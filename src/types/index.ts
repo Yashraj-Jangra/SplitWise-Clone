@@ -55,6 +55,7 @@ export interface ExpenseDocument {
   receiptImageUrl?: string;
   expenseCreatorId: string;
   groupCreatorId: string;
+  createdAt: Timestamp;
 }
 
 export interface SettlementDocument {
@@ -99,11 +100,12 @@ export interface ExpenseParticipant extends Omit<ExpenseParticipantDocument, 'us
     user: UserProfile;
 }
 
-export interface Expense extends Omit<ExpenseDocument, 'payers' | 'participants' | 'date'> {
+export interface Expense extends Omit<ExpenseDocument, 'payers' | 'participants' | 'date' | 'createdAt'> {
     id: string;
     payers: ExpensePayer[];
     participants: ExpenseParticipant[];
     date: string; // ISO string for client
+    createdAt: string; // ISO string for client
 }
 
 export interface Settlement extends Omit<SettlementDocument, 'paidById' | 'paidToId' | 'date'> {
@@ -233,5 +235,11 @@ export interface SiteSettings {
     users: number;
     groups: number;
     expenses: number;
+  };
+  maintenanceMode?: {
+    enabled: boolean;
+    title: string;
+    message: string;
+    imageUrl: string;
   };
 }

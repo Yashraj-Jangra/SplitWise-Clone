@@ -139,7 +139,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     const totalAmount = Number(values.amount);
 
-    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds'> & { date: Date } = {
+    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt'> & { date: Date, createdAt: string } = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
@@ -150,7 +150,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       category: values.category,
       expenseCreatorId: expense.expenseCreatorId,
       groupCreatorId: expense.groupCreatorId,
-      createdAt: expense.createdAt ? new Date(expense.createdAt) : new Date(), // Preserve original creation time
+      createdAt: expense.createdAt, // Preserve original creation time
     };
 
     try {

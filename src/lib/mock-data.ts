@@ -334,7 +334,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
 }
 
 
-export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds'> & { date: Date }, actorId: string): Promise<void> {
+export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt'> & { date: Date; createdAt: string }, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
     const expenseSnap = await getDoc(expenseDocRef);
     const oldData = expenseSnap.exists() ? expenseSnap.data() as ExpenseDocument : null;
@@ -357,7 +357,7 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
         groupCreatorId: groupData.createdById, 
         expenseCreatorId: oldData?.expenseCreatorId || actorId, 
         date: Timestamp.fromDate(expenseData.date),
-        createdAt: Timestamp.fromDate(new Date(expenseData.createdAt as any)),
+        createdAt: Timestamp.fromDate(new Date(expenseData.createdAt)),
     };
     
     await updateDoc(expenseDocRef, dataToUpdate);
@@ -502,6 +502,7 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
                 ...expenseData,
                 id: docSnap.id,
                 date: (expenseData.date as Timestamp).toDate().toISOString(),
+                createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
                 payers,
                 participants
             }
@@ -556,6 +557,7 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
             ...expenseData,
             id: id,
             date: (expenseData.date as Timestamp).toDate().toISOString(),
+            createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
             payers,
             participants
         }
@@ -594,6 +596,7 @@ export async function getAllExpenses(): Promise<Expense[]> {
           ...expenseData,
           id: expenseData.id,
           date: (expenseData.date as Timestamp).toDate().toISOString(),
+          createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
           payers,
           participants
       }
