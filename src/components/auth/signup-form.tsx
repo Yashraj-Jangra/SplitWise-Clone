@@ -131,7 +131,7 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
                     <FormItem>
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
-                            <Input placeholder={authPageSettings?.signupFirstNamePlaceholder || "John"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
+                            <Input placeholder={authPageSettings?.signupFirstNamePlaceholder || "John"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -144,7 +144,7 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
                     <FormItem>
                         <FormLabel>Last Name (Optional)</FormLabel>
                         <FormControl>
-                            <Input placeholder={authPageSettings?.signupLastNamePlaceholder || "Doe"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
+                            <Input placeholder={authPageSettings?.signupLastNamePlaceholder || "Doe"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -158,7 +158,7 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
                 <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                    <Input placeholder={authPageSettings?.signupUsernamePlaceholder || "johndoe99"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
+                    <Input placeholder={authPageSettings?.signupUsernamePlaceholder || "johndoe99"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -171,7 +171,7 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
                 <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                    <Input type="email" placeholder={authPageSettings?.signupEmailPlaceholder || "you@example.com"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
+                    <Input type="email" placeholder={authPageSettings?.signupEmailPlaceholder || "you@example.com"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -184,7 +184,7 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
                 <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                    <Input type="password" placeholder={authPageSettings?.signupPasswordPlaceholder || "••••••••"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition" />
+                    <Input type="password" placeholder={authPageSettings?.signupPasswordPlaceholder || "••••••••"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
