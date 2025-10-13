@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/contexts/auth-context';
 
 type EmailTemplateName = keyof SiteSettings['emailTemplates'];
 
@@ -41,6 +42,7 @@ export default function AdminMailSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const { toast } = useToast();
+  const { firebaseUser } = useAuth(); // Get the firebaseUser for the auth token
 
   useEffect(() => {
     async function fetchSettings() {
@@ -85,23 +87,29 @@ export default function AdminMailSettingsPage() {
   }
   
   const handleSendTestMail = async () => {
+    if (!firebaseUser) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to send a test email.' });
+        return;
+    }
+
     if (!settings?.emailSettings?.smtpSettings || !settings?.emailSettings?.fromEmail) {
         toast({ variant: 'destructive', title: 'Missing Settings', description: 'Please fill out From Email and all SMTP fields first.' });
         return;
     }
     setIsSendingTest(true);
     try {
+        const idToken = await firebaseUser.getIdToken();
         const response = await fetch('/api/send-test-email', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
             },
             body: JSON.stringify(settings.emailSettings),
         });
 
-        const result = await response.json();
-
         if (!response.ok) {
+            const result = await response.json();
             throw new Error(result.error || 'Failed to send email.');
         }
 
