@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -27,7 +26,6 @@ interface ForgotPasswordFormProps {
 }
 
 export function ForgotPasswordForm({ authPageSettings, appName }: ForgotPasswordFormProps) {
-    const { sendPasswordResetEmail } = useAuth();
     const { toast } = useToast();
     const [submitted, setSubmitted] = useState(false);
 
@@ -40,13 +38,21 @@ export function ForgotPasswordForm({ authPageSettings, appName }: ForgotPassword
 
     async function onSubmit(values: ForgotPasswordFormValues) {
         try {
-            await sendPasswordResetEmail(values.email);
+            const response = await fetch('/api/send-password-reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: values.email }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "An unknown error occurred.");
+            }
+
             setSubmitted(true);
         } catch (error) {
-            let description = "An unknown error occurred. Please try again.";
-            if (error instanceof FirebaseError) {
-                description = `Failed to send email: ${error.message}`;
-            }
+            let description = error instanceof Error ? error.message : "An unknown error occurred. Please try again.";
             toast({
                 variant: "destructive",
                 title: "Request Failed",
