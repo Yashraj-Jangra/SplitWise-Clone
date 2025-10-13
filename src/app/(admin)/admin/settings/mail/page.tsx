@@ -1,0 +1,234 @@
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Icons } from '@/components/icons';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
+import type { SiteSettings, EmailTemplate } from '@/types';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
+type EmailTemplateName = keyof SiteSettings['emailTemplates'];
+
+const templatePlaceholders: Record<EmailTemplateName, string[]> = {
+    registration: ['{appName}', '{userName}'],
+    forgotPassword: ['{appName}', '{userName}', '{resetLink}'],
+    loginNotification: ['{appName}', '{userName}'],
+    monthlyReport: ['{appName}', '{userName}', 'totalSpent', 'expenseCount'],
+    paymentReminder: ['{appName}', '{userName}', 'balanceAmount', 'groupName'],
+};
+
+export default function AdminMailSettingsPage() {
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    async function fetchSettings() {
+      setLoading(true);
+      try {
+        const siteSettings = await getSiteSettings();
+        setSettings(siteSettings);
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load site settings.' });
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSettings();
+  }, [toast]);
+
+  const handleEmailSettingsChange = (field: string, value: any) => {
+    if (!settings) return;
+    setSettings(prev => prev ? ({ ...prev, emailSettings: { ...prev.emailSettings!, [field]: value } }) : null);
+  };
+  
+  const handleSmtpChange = (field: string, value: any) => {
+      if (!settings?.emailSettings) return;
+      const newSmtp = { ...settings.emailSettings.smtpSettings, [field]: value };
+      handleEmailSettingsChange('smtpSettings', newSmtp);
+  }
+  
+  const handleTemplateChange = (templateName: EmailTemplateName, field: keyof EmailTemplate, value: string) => {
+    if (!settings) return;
+    setSettings(prev => {
+        if (!prev || !prev.emailTemplates) return prev;
+        const newTemplates = { ...prev.emailTemplates };
+        newTemplates[templateName] = { ...newTemplates[templateName], [field]: value };
+        return { ...prev, emailTemplates: newTemplates };
+    })
+  }
+
+  const handleSaveChanges = async () => {
+    if (!settings) return;
+    setIsSaving(true);
+    try {
+      await updateSiteSettings({ 
+          emailSettings: settings.emailSettings,
+          emailTemplates: settings.emailTemplates,
+       });
+      toast({
+        title: 'Settings Saved',
+        description: 'Mail settings have been updated.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: 'Could not save the settings.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const renderContent = () => {
+    if (loading || !settings) {
+        return (
+            <div className="space-y-6">
+                <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
+            </div>
+        )
+    }
+
+    const { emailSettings, emailTemplates } = settings;
+
+    return (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Mail Sending Method</CardTitle>
+                    <CardDescription>Choose how your application sends transactional emails.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                     <RadioGroup 
+                        value={emailSettings?.sendingMethod} 
+                        onValueChange={(value: 'firebase' | 'custom') => handleEmailSettingsChange('sendingMethod', value)}
+                        className="space-y-4"
+                     >
+                        <Label className="flex items-center gap-4 border p-4 rounded-md has-[:checked]:bg-muted has-[:checked]:border-primary transition-all">
+                            <RadioGroupItem value="firebase" id="firebase-mail" />
+                            <div className="flex-1">
+                                <span className="font-semibold text-base">Firebase Authentication Emailing</span>
+                                <p className="text-sm text-muted-foreground">Use the free, built-in Firebase service for password resets and email verification. No configuration needed, but templates cannot be customized.</p>
+                            </div>
+                        </Label>
+                        <Label className="flex items-start gap-4 border p-4 rounded-md has-[:checked]:bg-muted has-[:checked]:border-primary transition-all">
+                            <RadioGroupItem value="custom" id="custom-mail" />
+                            <div className="flex-1 space-y-4">
+                                <span className="font-semibold text-base">Custom SMTP Server</span>
+                                <p className="text-sm text-muted-foreground">Connect to your own SMTP server (e.g., SendGrid, Postmark, or a Gmail account) for full control over templates and sending.</p>
+                                {emailSettings?.sendingMethod === 'custom' && (
+                                    <div className="space-y-4 pt-4 border-t">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="fromEmail">From Email Address</Label>
+                                            <Input id="fromEmail" value={emailSettings.fromEmail || ''} onChange={(e) => handleEmailSettingsChange('fromEmail', e.target.value)} placeholder="noreply@yourapp.com" />
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="smtpHost">SMTP Host</Label>
+                                                <Input id="smtpHost" value={emailSettings.smtpSettings.host} onChange={(e) => handleSmtpChange('host', e.target.value)} placeholder="smtp.example.com" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="smtpPort">Port</Label>
+                                                <Input id="smtpPort" type="number" value={emailSettings.smtpSettings.port} onChange={(e) => handleSmtpChange('port', parseInt(e.target.value, 10))} />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="smtpUser">Username</Label>
+                                                <Input id="smtpUser" value={emailSettings.smtpSettings.user} onChange={(e) => handleSmtpChange('user', e.target.value)} placeholder="your_smtp_username" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="smtpPass">Password/API Key</Label>
+                                                <Input id="smtpPass" type="password" value={emailSettings.smtpSettings.pass} onChange={(e) => handleSmtpChange('pass', e.target.value)} placeholder="••••••••••••" />
+                                            </div>
+                                        </div>
+                                         <div className="flex items-center space-x-2 pt-2">
+                                            <Switch id="smtp-secure" checked={emailSettings.smtpSettings.secure} onCheckedChange={(checked) => handleSmtpChange('secure', checked)} />
+                                            <Label htmlFor="smtp-secure">Use SSL/TLS</Label>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </Label>
+                    </RadioGroup>
+                </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Email Templates</CardTitle>
+                    <CardDescription>Customize the content of transactional emails. This only applies if you are using a Custom SMTP Server.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <Tabs defaultValue="registration" className="w-full" orientation="vertical">
+                        <TabsList>
+                            <TabsTrigger value="registration">Registration</TabsTrigger>
+                            <TabsTrigger value="forgotPassword">Forgot Password</TabsTrigger>
+                            <TabsTrigger value="loginNotification">Login Alert</TabsTrigger>
+                            <TabsTrigger value="monthlyReport">Monthly Report</TabsTrigger>
+                            <TabsTrigger value="paymentReminder">Reminder</TabsTrigger>
+                        </TabsList>
+                        
+                        {Object.keys(templatePlaceholders).map(key => {
+                            const tKey = key as EmailTemplateName;
+                            return (
+                                <TabsContent key={tKey} value={tKey} className="mt-0">
+                                    <div className="space-y-4 p-4 border rounded-md">
+                                        <h3 className="text-lg font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}</h3>
+                                        <div className="space-y-2">
+                                            <Label htmlFor={`${tKey}-subject`}>Subject</Label>
+                                            <Input id={`${tKey}-subject`} value={emailTemplates?.[tKey]?.subject || ''} onChange={(e) => handleTemplateChange(tKey, 'subject', e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor={`${tKey}-body`}>Body</Label>
+                                            <Textarea id={`${tKey}-body`} value={emailTemplates?.[tKey]?.body || ''} onChange={(e) => handleTemplateChange(tKey, 'body', e.target.value)} rows={8} />
+                                        </div>
+                                        <Accordion type="single" collapsible>
+                                            <AccordionItem value="placeholders" className="border-b-0">
+                                                <AccordionTrigger className="text-xs text-muted-foreground hover:no-underline p-0 h-auto">View available placeholders</AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="flex flex-wrap gap-2 pt-2">
+                                                        {templatePlaceholders[tKey].map(p => <Badge key={p} variant="secondary">{p}</Badge>)}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    </div>
+                                </TabsContent>
+                            )
+                        })}
+                    </Tabs>
+                </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+                <Button onClick={handleSaveChanges} disabled={isSaving || loading || !settings} size="lg">
+                    {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
+                    Save Changes
+                </Button>
+            </div>
+        </div>
+    )
+  }
+
+  return renderContent();
+}

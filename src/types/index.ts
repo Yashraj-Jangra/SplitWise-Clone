@@ -1,5 +1,4 @@
 
-
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -184,6 +183,11 @@ export interface CountryCode {
     flag: string;
 }
 
+export interface EmailTemplate {
+  subject: string;
+  body: string;
+}
+
 export interface SiteSettings {
   appName: string;
   logoUrl?: string;
@@ -239,6 +243,24 @@ export interface SiteSettings {
     supportNote: string;
     buttonText: string;
     imageUrl: string;
+  };
+  emailSettings?: {
+    sendingMethod: 'firebase' | 'custom';
+    fromEmail: string;
+    smtpSettings: {
+      host: string;
+      port: number;
+      user: string;
+      pass: string;
+      secure: boolean;
+    };
+  };
+  emailTemplates?: {
+    registration: EmailTemplate;
+    forgotPassword: EmailTemplate;
+    loginNotification: EmailTemplate;
+    monthlyReport: EmailTemplate;
+    paymentReminder: EmailTemplate;
   };
   stats?: {
     users: number;
