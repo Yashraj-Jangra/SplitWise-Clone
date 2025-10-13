@@ -45,6 +45,7 @@ const adminNavItems: NavItem[] = [
       { title: 'Content Pages', href: '/admin/settings/pages' },
       { title: 'Categories', href: '/admin/settings/categories' },
       { title: 'Mail', href: '/admin/settings/mail'},
+      { title: 'Data Tools', href: '/admin/settings/data-tools'},
       { title: 'Misc', href: '/admin/settings/misc'},
     ]
   },
