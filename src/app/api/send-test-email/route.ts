@@ -1,12 +1,13 @@
 
 import { NextResponse } from 'next/server';
-import { auth as adminAuth } from 'firebase-admin';
+import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { initializeAdminApp } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 
 export async function POST(request: Request) {
     initializeAdminApp();
+    const auth = getAuth();
 
     try {
         const idToken = request.headers.get('Authorization')?.split('Bearer ')[1];
@@ -14,14 +15,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        let decodedToken: adminAuth.DecodedIdToken;
+        let decodedToken: admin.auth.DecodedIdToken;
         try {
-            decodedToken = await getAuth().verifyIdToken(idToken);
+            decodedToken = await auth.verifyIdToken(idToken);
         } catch (error) {
             return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
         }
         
-        const user = await getAuth().getUser(decodedToken.uid);
+        const user = await auth.getUser(decodedToken.uid);
 
         if (user.customClaims?.['role'] !== 'admin') {
              return NextResponse.json({ error: 'Forbidden: User is not an admin' }, { status: 403 });
