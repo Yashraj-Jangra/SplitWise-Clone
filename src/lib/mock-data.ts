@@ -398,6 +398,10 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
              changes.push({ field: 'Split Method', from: `"${oldData.splitType}"`, to: `"${expenseData.splitType}"` });
              changeSummaries.push('split method');
         }
+        if (oldData.notes !== expenseData.notes) {
+          changes.push({ field: 'Notes', from: `"${oldData.notes || ''}"`, to: `"${expenseData.notes || ''}"` });
+          changeSummaries.push('notes');
+        }
 
         const oldPayersStr = JSON.stringify(oldData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
         const newPayersStr = JSON.stringify(expenseData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));

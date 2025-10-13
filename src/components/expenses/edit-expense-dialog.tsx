@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -44,6 +45,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         description: "",
         amount: 0,
         date: new Date(),
+        notes: "",
         payerType: 'single',
         splitType: "equally",
         participants: [],
@@ -95,6 +97,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             description: expense.description,
             amount: expense.amount,
             date: new Date(expense.date),
+            notes: expense.notes || "",
             payerType: expense.payers.length > 1 ? 'multiple' : 'single',
             singlePayerId: expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
             multiPayers: group.members.map(member => ({
@@ -143,6 +146,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
+      notes: values.notes,
       payers: payers,
       date: values.date,
       splitType: values.splitType,

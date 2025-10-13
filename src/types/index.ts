@@ -53,6 +53,7 @@ export interface ExpenseDocument {
   participantIds: string[]; // For querying
   groupMemberIds: string[]; // For security rules
   category?: string;
+  notes?: string;
   receiptImageUrl?: string;
   expenseCreatorId: string;
   groupCreatorId: string;
@@ -251,5 +252,3 @@ export interface SiteSettings {
     imageUrl: string;
   };
 }
-
-    

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -187,6 +188,16 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
                                     ))}
                                 </div>
                             </div>
+
+                            {expense.notes && (
+                                <>
+                                <Separator />
+                                <div>
+                                    <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
+                                    <p className="text-sm text-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{expense.notes}</p>
+                                </div>
+                                </>
+                            )}
 
                              <Separator />
 

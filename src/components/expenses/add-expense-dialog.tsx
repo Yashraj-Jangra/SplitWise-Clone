@@ -40,6 +40,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       description: "",
       amount: undefined,
       date: new Date(),
+      notes: "",
       payerType: 'single',
       singlePayerId: userProfile?.uid || "",
       splitType: "equally",
@@ -54,6 +55,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         description: "",
         amount: undefined,
         date: new Date(),
+        notes: "",
         payerType: 'single',
         singlePayerId: userProfile.uid,
         multiPayers: group.members.map(member => ({
@@ -110,6 +112,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
+      notes: values.notes,
       payers: payers,
       date: values.date,
       splitType: values.splitType,

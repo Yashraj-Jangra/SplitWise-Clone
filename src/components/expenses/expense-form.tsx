@@ -26,11 +26,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useSiteSettings } from "@/contexts/site-settings-context";
+import { Textarea } from "../ui/textarea";
 
 export const expenseSchema = z.object({
   description: z.string().min(1, "Description is required.").max(100),
   amount: z.coerce.number().positive("Amount must be positive."),
   date: z.date({ required_error: "Date is required." }),
+  notes: z.string().max(200, "Notes must be 200 characters or less.").optional(),
   payerType: z.enum(['single', 'multiple']).default('single'),
   singlePayerId: z.string().optional(),
   multiPayers: z.array(z.object({
@@ -330,6 +332,19 @@ export function ExpenseForm({ group }: { group: Group }) {
                 </FormItem>
             )} />
       </div>
+        <FormField
+            control={control}
+            name="notes"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="Add any details, like items purchased or reimbursement info." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
 
       {/* Second Row: Payer & Split Config */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
