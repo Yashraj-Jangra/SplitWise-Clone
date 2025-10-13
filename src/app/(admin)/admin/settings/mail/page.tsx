@@ -91,16 +91,23 @@ export default function AdminMailSettingsPage() {
     }
     setIsSendingTest(true);
     try {
-        // In a real app, this would call a server action to send an email.
-        // We are just simulating the call here.
-        console.log("Simulating sending test email with:", settings.emailSettings);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // This is a mock success response. In a real scenario,
-        // you might get an error from the server action to display.
+        const response = await fetch('/api/send-test-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings.emailSettings),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to send email.');
+        }
+
         toast({
-            title: "Test Email Sent (Simulated)",
-            description: `An email would be sent from ${settings.emailSettings.fromEmail} via ${settings.emailSettings.smtpSettings.host}.`,
+            title: "Test Email Sent",
+            description: `A test email has been sent to your logged-in account email address.`,
         });
 
     } catch (error) {
