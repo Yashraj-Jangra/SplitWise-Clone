@@ -49,7 +49,7 @@ function MainNav({ items, isCollapsed }: { items: NavItem[]; isCollapsed: boolea
                                 <Link
                                     href={item.href}
                                     className={cn(
-                                        "flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary hover:bg-primary/10",
+                                        "flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground hover:bg-muted",
                                         isActive && "bg-primary/20 text-primary"
                                     )}
                                 >
@@ -69,7 +69,7 @@ function MainNav({ items, isCollapsed }: { items: NavItem[]; isCollapsed: boolea
                         key={item.href}
                         href={item.href}
                         className={cn(
-                            "flex items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
+                            "flex items-center gap-3 rounded-md px-3 py-2.5 text-muted-foreground transition-all hover:text-foreground hover:bg-muted",
                             isActive && "text-primary bg-primary/20 font-semibold"
                         )}
                         >
