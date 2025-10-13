@@ -14,7 +14,6 @@ export async function POST(request: Request) {
         const adminAuth = firebaseAdmin.auth();
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         
-        // This is the safe way to check for the custom claim
         if (decodedToken.role !== 'admin') {
              return NextResponse.json({ error: 'Forbidden: User is not an admin.' }, { status: 403 });
         }
@@ -32,10 +31,14 @@ export async function POST(request: Request) {
 
         const { smtpSettings, fromEmail } = emailSettings;
 
+        // The 'secure' option is nuanced.
+        // `true` is for port 465 (direct SSL/TLS connection from the start).
+        // `false` is for other ports like 587, where the connection starts plain and is upgraded to TLS via STARTTLS.
+        // Setting secure: true for port 587 causes the "wrong version number" error.
         const transporter = nodemailer.createTransport({
             host: smtpSettings.host,
             port: smtpSettings.port,
-            secure: smtpSettings.secure,
+            secure: smtpSettings.port === 465, // This is the key fix
             auth: {
                 user: smtpSettings.user,
                 pass: smtpSettings.pass,
