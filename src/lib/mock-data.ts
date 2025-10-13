@@ -1222,7 +1222,7 @@ const DEFAULT_EMAIL_TEMPLATES = {
 };
 
 const DEFAULT_EMAIL_SETTINGS = {
-    sendingMethod: 'firebase' as 'firebase' | 'custom',
+    sendingMethod: 'firebase' as 'firebase' | 'custom' | 'gmail',
     fromEmail: 'noreply@yourapp.com',
     smtpSettings: {
       host: '',
@@ -1231,6 +1231,9 @@ const DEFAULT_EMAIL_SETTINGS = {
       pass: '',
       secure: false,
     },
+    gmailSettings: {
+        connectedEmail: '',
+    }
 };
 
 
@@ -1309,5 +1312,7 @@ export async function updateSiteSettings(settings: Partial<SiteSettings>): Promi
 
     
 
+
+    
 
     

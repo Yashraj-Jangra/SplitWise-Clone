@@ -67,6 +67,12 @@ export default function AdminMailSettingsPage() {
       handleEmailSettingsChange('smtpSettings', newSmtp);
   }
   
+  const handleGmailChange = (field: string, value: any) => {
+    if (!settings?.emailSettings) return;
+    const newGmail = { ...settings.emailSettings.gmailSettings, [field]: value };
+    handleEmailSettingsChange('gmailSettings', newGmail);
+  }
+
   const handleTemplateChange = (templateName: EmailTemplateName, field: keyof EmailTemplate, value: string) => {
     if (!settings) return;
     setSettings(prev => {
@@ -153,7 +159,7 @@ export default function AdminMailSettingsPage() {
                 <CardContent className="space-y-6">
                      <RadioGroup 
                         value={emailSettings?.sendingMethod} 
-                        onValueChange={(value: 'firebase' | 'custom') => handleEmailSettingsChange('sendingMethod', value)}
+                        onValueChange={(value: 'firebase' | 'custom' | 'gmail') => handleEmailSettingsChange('sendingMethod', value)}
                         className="space-y-4"
                      >
                         <Label className="flex items-center gap-4 border p-4 rounded-md has-[:checked]:bg-muted has-[:checked]:border-primary transition-all">
@@ -167,7 +173,7 @@ export default function AdminMailSettingsPage() {
                             <RadioGroupItem value="custom" id="custom-mail" />
                             <div className="flex-1 space-y-4">
                                 <span className="font-semibold text-base">Custom SMTP Server</span>
-                                <p className="text-sm text-muted-foreground">Connect to your own SMTP server (e.g., SendGrid, Postmark, or a Gmail account) for full control over templates and sending.</p>
+                                <p className="text-sm text-muted-foreground">Connect to your own SMTP server (e.g., SendGrid, Postmark, or a personal email account) for full control over templates and sending.</p>
                                 {emailSettings?.sendingMethod === 'custom' && (
                                     <div className="space-y-4 pt-4 border-t">
                                         <div className="space-y-2">
@@ -208,6 +214,35 @@ export default function AdminMailSettingsPage() {
                                 )}
                             </div>
                         </Label>
+                        <Label className="flex items-start gap-4 border p-4 rounded-md has-[:checked]:bg-muted has-[:checked]:border-primary transition-all">
+                            <RadioGroupItem value="gmail" id="gmail-api" />
+                            <div className="flex-1 space-y-4">
+                                <span className="font-semibold text-base">Gmail API</span>
+                                <p className="text-sm text-muted-foreground">Send emails via the official Gmail API for high deliverability. Requires a Google Cloud project with OAuth 2.0 configured.</p>
+                                {emailSettings?.sendingMethod === 'gmail' && (
+                                     <div className="space-y-4 pt-4 border-t">
+                                        {emailSettings.gmailSettings?.connectedEmail ? (
+                                            <div className='flex items-center justify-between p-3 bg-muted rounded-md'>
+                                                <div className='flex items-center gap-2'>
+                                                    <Icons.Mail className='h-5 w-5 text-primary' />
+                                                    <p className='text-sm font-medium'>Connected as {emailSettings.gmailSettings.connectedEmail}</p>
+                                                </div>
+                                                <Button size="sm" variant="secondary" onClick={() => handleGmailChange('connectedEmail', '')}>Disconnect</Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center text-center p-4 border-2 border-dashed rounded-md">
+                                                <Icons.Google className="h-8 w-8 mb-2 text-muted-foreground" />
+                                                <p className='text-sm text-muted-foreground mb-3'>No Gmail account connected.</p>
+                                                <Button type="button" variant="secondary" onClick={() => handleGmailChange('connectedEmail', 'your-gmail@account.com')}>
+                                                    <Icons.Google className='mr-2' />
+                                                    Connect with Gmail
+                                                </Button>
+                                            </div>
+                                        )}
+                                     </div>
+                                )}
+                            </div>
+                        </Label>
                     </RadioGroup>
                 </CardContent>
             </Card>
@@ -215,7 +250,7 @@ export default function AdminMailSettingsPage() {
              <Card>
                 <CardHeader>
                     <CardTitle>Email Templates</CardTitle>
-                    <CardDescription>Customize the content of transactional emails. This only applies if you are using a Custom SMTP Server.</CardDescription>
+                    <CardDescription>Customize the content of transactional emails. This only applies if you are using a Custom SMTP Server or Gmail API.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <Tabs defaultValue="registration" className="w-full" orientation="vertical">
@@ -271,3 +306,5 @@ export default function AdminMailSettingsPage() {
 
   return renderContent();
 }
+
+    

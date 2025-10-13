@@ -245,7 +245,7 @@ export interface SiteSettings {
     imageUrl: string;
   };
   emailSettings?: {
-    sendingMethod: 'firebase' | 'custom';
+    sendingMethod: 'firebase' | 'custom' | 'gmail';
     fromEmail: string;
     smtpSettings: {
       host: string;
@@ -254,6 +254,9 @@ export interface SiteSettings {
       pass: string;
       secure: boolean;
     };
+    gmailSettings?: {
+      connectedEmail?: string;
+    }
   };
   emailTemplates?: {
     registration: EmailTemplate;
@@ -274,3 +277,5 @@ export interface SiteSettings {
     imageUrl: string;
   };
 }
+
+    
