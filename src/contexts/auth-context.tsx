@@ -98,24 +98,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const firstName = nameParts[0] || user.email?.split('@')[0] || 'New';
             const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
+            const userRole = user.email === ADMIN_EMAIL ? 'admin' : 'user';
+
             const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
                 uid: user.uid,
                 firstName: firstName,
                 lastName: lastName,
                 username: username,
                 email: user.email!,
-                role: 'user',
+                role: userRole,
                 avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(firstName)?.substring(0, 1).toUpperCase()}${lastName?.substring(0,1).toUpperCase() || ''}`,
             };
             
-            if (user.email === ADMIN_EMAIL) {
-                newUserProfile.role = 'admin';
-            }
-
             await setDoc(doc(db, "users", user.uid), {
                 ...newUserProfile,
                 createdAt: Timestamp.now(),
             });
+
+            if (userRole === 'admin') {
+                try {
+                    await fetch('/api/set-admin-claim', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uid: user.uid }),
+                    });
+                } catch (e) {
+                    console.error("Failed to set admin claim:", e);
+                }
+            }
+
             await sendEmailVerification(user); // Send verification email for new Google users
             profile = await fetchUserProfile(user.uid);
         }
@@ -150,17 +161,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error("Username is already taken.");
         }
         
+        const userRole = data.email === ADMIN_EMAIL ? 'admin' : 'user';
+
         // 3. If username is available, create the user profile document.
         const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
             uid: user.uid,
             ...data,
-            role: 'user',
+            role: userRole,
             avatarUrl: `https://placehold.co/100x100.png?text=${data.firstName.substring(0, 1).toUpperCase()}${data.lastName?.substring(0, 1).toUpperCase() || ''}`,
         };
-        
-        if (data.email === ADMIN_EMAIL) {
-          newUserProfile.role = 'admin';
-        }
         
         const finalProfileData: any = { ...newUserProfile, createdAt: Timestamp.now() };
         if (data.dob) {
@@ -168,6 +177,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         await setDoc(doc(db, "users", user.uid), finalProfileData);
+        
+        if (userRole === 'admin') {
+            await fetch('/api/set-admin-claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid: user.uid }),
+            });
+        }
+
         await sendEmailVerification(user); // Send verification email on signup
 
     } catch (error) {
@@ -311,5 +329,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
