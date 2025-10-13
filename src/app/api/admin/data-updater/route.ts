@@ -8,9 +8,9 @@ import { CollectionReference } from 'firebase-admin/firestore';
 // Define collections and the fields within them that might contain a UID.
 const COLLECTIONS_AND_FIELDS: { [key: string]: string[] } = {
     'groups': ['memberIds', 'createdById'],
-    'expenses': ['payerIds', 'participantIds', 'expenseCreatorId'],
-    'settlements': ['paidById', 'paidToId'],
-    'history': ['actorId', 'data.paidById', 'data.paidToId'], // Simple paths for now
+    'expenses': ['payerIds', 'participantIds', 'expenseCreatorId', 'groupMemberIds'],
+    'settlements': ['paidById', 'paidToId', 'groupMemberIds'],
+    'history': ['actorId', 'data.paidById', 'data.paidToId', 'groupMemberIds'], 
 };
 
 export async function POST(request: Request) {
@@ -51,19 +51,15 @@ export async function POST(request: Request) {
             const oldUserData = oldUserSnap.data()!;
             const newUserData = newUserSnap.data()!;
             
-            // Create a merged profile, giving precedence to the new user's core data
-            // but filling in missing details from the old one.
+            // Merge profile data, preferring new user's core data
             const mergedData = {
                 ...oldUserData,
-                ...newUserData, // New user data overwrites old, where fields conflict
-                uid: newUid, // Ensure UID is the new one
-                email: newUserData.email, // Explicitly keep new user's email
-                createdAt: newUserData.createdAt || oldUserData.createdAt, // Keep whichever exists, preferring new
-                role: newUserData.role || oldUserData.role, // Keep whichever exists, preferring new
+                ...newUserData,
+                uid: newUid,
+                email: newUserData.email, 
+                createdAt: newUserData.createdAt || oldUserData.createdAt,
+                role: newUserData.role || oldUserData.role,
             };
-
-            // Don't copy over fields that should be unique to the new user
-            delete mergedData.uid;
 
             batch.set(newUserDocRef, mergedData, { merge: true });
             changesCount++;
@@ -74,8 +70,8 @@ export async function POST(request: Request) {
         for (const collectionName of Object.keys(COLLECTIONS_AND_FIELDS)) {
             const collectionRef = db.collection(collectionName) as CollectionReference;
 
-            // Check array fields
-            const arrayFields = ['memberIds', 'payerIds', 'participantIds'];
+            // Check array fields (e.g., memberIds)
+            const arrayFields = ['memberIds', 'payerIds', 'participantIds', 'groupMemberIds'];
             for (const field of arrayFields) {
                 if (COLLECTIONS_AND_FIELDS[collectionName].includes(field)) {
                     const querySnapshot = await collectionRef.where(field, 'array-contains', oldUid).get();
@@ -86,13 +82,13 @@ export async function POST(request: Request) {
                         batch.update(doc.ref, {
                             [field]: firebaseAdmin.firestore.FieldValue.arrayUnion(newUid)
                         });
-                        changesCount += 1; // Considered as one logical change
+                        changesCount++;
                         summary.push(`Updated array field '${field}' in ${collectionName}/${doc.id}`);
                     });
                 }
             }
             
-            // Check direct string fields
+            // Check direct string fields (e.g., createdById)
             const stringFields = ['createdById', 'expenseCreatorId', 'paidById', 'paidToId', 'actorId'];
             for (const field of stringFields) {
                  if (COLLECTIONS_AND_FIELDS[collectionName].includes(field)) {
@@ -106,11 +102,10 @@ export async function POST(request: Request) {
             }
         }
         
-        // --- Complex Field Updates (nested in maps) ---
-        // This requires more specific logic for each case.
-        // Example for expense payers/participants (which are arrays of objects)
-        const expensesRef = db.collection('expenses');
-        const expensesSnap = await expensesRef.get();
+        // --- CORRECTLY handle complex nested fields ---
+
+        // Expenses: payers and participants arrays of objects
+        const expensesSnap = await db.collection('expenses').get();
         expensesSnap.forEach(doc => {
             const expense = doc.data();
             let updated = false;
@@ -145,7 +140,6 @@ export async function POST(request: Request) {
             summary.push(`Deleted user document: users/${oldUid}`);
         }
 
-
         // --- Commit changes ---
         if (changesCount > 0) {
             await batch.commit();
@@ -160,6 +154,6 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error('API Error - /api/admin/data-updater:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
-        return NextResponse.json({ error: `Operation failed: ${errorMessage}` }, { status: 500 });
+        return NextResponse.json({ success: false, error: `Operation failed: ${errorMessage}`, summary: [] }, { status: 500 });
     }
 }
