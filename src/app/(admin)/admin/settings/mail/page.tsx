@@ -23,6 +23,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type EmailTemplateName = keyof SiteSettings['emailTemplates'];
 
@@ -233,10 +234,19 @@ export default function AdminMailSettingsPage() {
                                             <div className="flex flex-col items-center justify-center text-center p-4 border-2 border-dashed rounded-md">
                                                 <Icons.Google className="h-8 w-8 mb-2 text-muted-foreground" />
                                                 <p className='text-sm text-muted-foreground mb-3'>No Gmail account connected.</p>
-                                                <Button type="button" variant="secondary" onClick={() => handleGmailChange('connectedEmail', 'your-gmail@account.com')}>
-                                                    <Icons.Google className='mr-2' />
-                                                    Connect with Gmail
-                                                </Button>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button type="button" variant="secondary" onClick={() => toast({ title: 'Feature Not Implemented', description: 'Gmail API connection requires backend logic not yet implemented.' })}>
+                                                                <Icons.Google className='mr-2' />
+                                                                Connect with Gmail
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>This feature requires backend implementation.</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </div>
                                         )}
                                      </div>
@@ -305,6 +315,5 @@ export default function AdminMailSettingsPage() {
   }
 
   return renderContent();
-}
 
     
