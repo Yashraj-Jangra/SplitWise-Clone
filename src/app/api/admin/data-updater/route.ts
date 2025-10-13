@@ -38,13 +38,38 @@ export async function POST(request: Request) {
         const summary: string[] = [];
 
         // --- Core User Document Update ---
-        // Get new user's data and delete old user's doc
         const oldUserDocRef = db.collection('users').doc(oldUid);
         const newUserDocRef = db.collection('users').doc(newUid);
-        const newUserSnap = await newUserDocRef.get();
+
+        const [oldUserSnap, newUserSnap] = await Promise.all([oldUserDocRef.get(), newUserDocRef.get()]);
+
         if (!newUserSnap.exists) {
             return NextResponse.json({ error: `New user with UID ${newUid} does not exist in Firestore.` }, { status: 404 });
         }
+        
+        if (oldUserSnap.exists) {
+            const oldUserData = oldUserSnap.data()!;
+            const newUserData = newUserSnap.data()!;
+            
+            // Create a merged profile, giving precedence to the new user's core data
+            // but filling in missing details from the old one.
+            const mergedData = {
+                ...oldUserData,
+                ...newUserData, // New user data overwrites old, where fields conflict
+                uid: newUid, // Ensure UID is the new one
+                email: newUserData.email, // Explicitly keep new user's email
+                createdAt: newUserData.createdAt || oldUserData.createdAt, // Keep whichever exists, preferring new
+                role: newUserData.role || oldUserData.role, // Keep whichever exists, preferring new
+            };
+
+            // Don't copy over fields that should be unique to the new user
+            delete mergedData.uid;
+
+            batch.set(newUserDocRef, mergedData, { merge: true });
+            changesCount++;
+            summary.push(`Merged data from users/${oldUid} into users/${newUid}`);
+        }
+        
         batch.delete(oldUserDocRef);
         changesCount++;
         summary.push(`Deleted user document: users/${oldUid}`);
