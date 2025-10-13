@@ -30,7 +30,7 @@ const templatePlaceholders: Record<EmailTemplateName, string[]> = {
     registration: ['{appName}', '{userName}'],
     forgotPassword: ['{appName}', '{userName}', '{resetLink}'],
     loginNotification: ['{appName}', '{userName}'],
-    monthlyReport: ['{appName}', '{userName}', 'totalSpent', 'expenseCount'],
+    monthlyReport: ['{appName}', 'totalSpent', 'expenseCount', 'userName'],
     paymentReminder: ['{appName}', '{userName}', 'balanceAmount', 'groupName'],
 };
 
@@ -38,6 +38,7 @@ export default function AdminMailSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,6 +76,37 @@ export default function AdminMailSettingsPage() {
         return { ...prev, emailTemplates: newTemplates };
     })
   }
+  
+  const handleSendTestMail = async () => {
+    if (!settings?.emailSettings?.smtpSettings || !settings?.emailSettings?.fromEmail) {
+        toast({ variant: 'destructive', title: 'Missing Settings', description: 'Please fill out From Email and all SMTP fields first.' });
+        return;
+    }
+    setIsSendingTest(true);
+    try {
+        // In a real app, this would call a server action to send an email.
+        // We are just simulating the call here.
+        console.log("Simulating sending test email with:", settings.emailSettings);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // This is a mock success response. In a real scenario,
+        // you might get an error from the server action to display.
+        toast({
+            title: "Test Email Sent (Simulated)",
+            description: `An email would be sent from ${settings.emailSettings.fromEmail} via ${settings.emailSettings.smtpSettings.host}.`,
+        });
+
+    } catch (error) {
+         toast({
+            variant: "destructive",
+            title: "Failed to Send Test Email",
+            description: error instanceof Error ? error.message : "An unknown error occurred.",
+        });
+    } finally {
+        setIsSendingTest(false);
+    }
+  }
+
 
   const handleSaveChanges = async () => {
     if (!settings) return;
@@ -165,6 +197,12 @@ export default function AdminMailSettingsPage() {
                                          <div className="flex items-center space-x-2 pt-2">
                                             <Switch id="smtp-secure" checked={emailSettings.smtpSettings.secure} onCheckedChange={(checked) => handleSmtpChange('secure', checked)} />
                                             <Label htmlFor="smtp-secure">Use SSL/TLS</Label>
+                                        </div>
+                                        <div className="pt-4 border-t flex justify-end">
+                                            <Button type="button" variant="secondary" onClick={handleSendTestMail} disabled={isSendingTest}>
+                                                {isSendingTest && <Icons.AppLogo className="mr-2 animate-spin" />}
+                                                Send Test Mail
+                                            </Button>
                                         </div>
                                     </div>
                                 )}
