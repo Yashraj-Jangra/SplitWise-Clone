@@ -22,6 +22,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Badge } from '@/components/ui/badge';
 
 type EmailTemplateName = keyof SiteSettings['emailTemplates'];
 
