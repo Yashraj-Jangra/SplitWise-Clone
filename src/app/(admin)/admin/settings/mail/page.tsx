@@ -315,5 +315,4 @@ export default function AdminMailSettingsPage() {
   }
 
   return renderContent();
-
-    
+}
