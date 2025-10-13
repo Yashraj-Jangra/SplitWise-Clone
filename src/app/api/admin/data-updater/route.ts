@@ -70,11 +70,6 @@ export async function POST(request: Request) {
             summary.push(`Merged data from users/${oldUid} into users/${newUid}`);
         }
         
-        batch.delete(oldUserDocRef);
-        changesCount++;
-        summary.push(`Deleted user document: users/${oldUid}`);
-
-
         // --- Update Collections ---
         for (const collectionName of Object.keys(COLLECTIONS_AND_FIELDS)) {
             const collectionRef = db.collection(collectionName) as CollectionReference;
@@ -142,6 +137,13 @@ export async function POST(request: Request) {
                  summary.push(`Updated nested user ID in expense document: expenses/${doc.id}`);
             }
         });
+
+        // --- Finally, delete the old user document AFTER all other operations are staged
+        if(oldUserSnap.exists) {
+            batch.delete(oldUserDocRef);
+            changesCount++;
+            summary.push(`Deleted user document: users/${oldUid}`);
+        }
 
 
         // --- Commit changes ---
