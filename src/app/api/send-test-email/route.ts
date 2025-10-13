@@ -14,10 +14,14 @@ export async function POST(request: Request) {
         const adminAuth = firebaseAdmin.auth();
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         
-        const user = await adminAuth.getUser(decodedToken.uid);
-
-        if (user.customClaims?.['role'] !== 'admin') {
+        // This is the safe way to check for the custom claim
+        if (decodedToken.role !== 'admin') {
              return NextResponse.json({ error: 'Forbidden: User is not an admin.' }, { status: 403 });
+        }
+
+        const user = await adminAuth.getUser(decodedToken.uid);
+        if (!user.email) {
+            return NextResponse.json({ error: 'User does not have an email address.' }, { status: 400 });
         }
 
         const emailSettings: SiteSettings['emailSettings'] = await request.json();
