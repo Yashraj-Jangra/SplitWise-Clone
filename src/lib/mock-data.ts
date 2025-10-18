@@ -1,4 +1,5 @@
 
+
 import {
   collection,
   doc,
@@ -1372,7 +1373,7 @@ export async function getTicketsByUserId(userId: string): Promise<SupportTicket[
 
 export async function getAllTickets(): Promise<SupportTicket[]> {
     const ticketsCol = collection(db, 'tickets');
-    const ticketSnapshot = await getDocs(query(ticketsCol, orderBy('createdAt', 'desc')));
+    const ticketSnapshot = await getDocs(query(ticketsCol, orderBy('updatedAt', 'desc')));
     
     const userIds = new Set<string>();
     const ticketDocs = ticketSnapshot.docs.map(doc => {
@@ -1411,4 +1412,15 @@ export async function getAllTickets(): Promise<SupportTicket[]> {
     }).filter((t): t is SupportTicket => t !== null);
 
     return tickets;
+}
+
+export async function deleteTicket(ticketId: string): Promise<void> {
+    const ticketDocRef = doc(db, 'tickets', ticketId);
+    await deleteDoc(ticketDocRef);
+}
+
+export async function updateTicket(ticketId: string, data: Partial<SupportTicketDocument>): Promise<void> {
+    const ticketDocRef = doc(db, 'tickets', ticketId);
+    const updateData = { ...data, updatedAt: Timestamp.now() };
+    await updateDoc(ticketDocRef, updateData);
 }
