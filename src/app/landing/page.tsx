@@ -11,8 +11,13 @@ export default async function LandingPage() {
   const settings = await getSiteSettings();
   const lp = settings.landingPage!;
   
-  const randomImage = settings.landingImages?.length > 0
-    ? settings.landingImages[Math.floor(Math.random() * settings.landingImages.length)]
+  const now = new Date();
+  const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60));
+  const rotationInterval = lp.imageRotationInterval || 1;
+  const imageIndex = (Math.floor(hoursSinceEpoch / rotationInterval)) % settings.landingImages.length;
+  
+  const timedImage = settings.landingImages?.length > 0
+    ? settings.landingImages[imageIndex]
     : 'https://placehold.co/1920x1080.png';
 
   const replaceAppName = (text: string) => text.replace(/{appName}/g, settings.appName);
@@ -41,7 +46,7 @@ export default async function LandingPage() {
             <section className="relative flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] py-12 overflow-hidden">
                 <div className="absolute inset-0 z-0">
                     <Image
-                        src={randomImage}
+                        src={timedImage}
                         alt="Background image"
                         fill
                         className="object-cover"

@@ -189,8 +189,21 @@ export default function AdminLandingSettingsPage() {
 
                     <Separator />
                     <h4 className="text-md font-medium text-primary">Hero Background Images</h4>
+                    <div className="space-y-2">
+                        <Label htmlFor="rotationInterval">Image Rotation Interval (in hours)</Label>
+                        <Input
+                            id="rotationInterval"
+                            type="number"
+                            min="1"
+                            value={settings.landingPage?.imageRotationInterval || 1}
+                            onChange={(e) => handleLandingPageChange('imageRotationInterval', parseInt(e.target.value, 10))}
+                            className="w-32"
+                        />
+                        <p className="text-xs text-muted-foreground">How often the hero image should change for all users.</p>
+                    </div>
+
                     <div className="space-y-6">
-                        <p className="text-sm text-muted-foreground">Manage the background images for the public landing page hero section. A random image is chosen on each visit.</p>
+                        <p className="text-sm text-muted-foreground">Manage the background images for the public landing page hero section. An image is chosen based on the rotation interval.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {settings.landingImages.map((url, index) => (
                             <div key={index} className="relative group space-y-2">

@@ -200,6 +200,7 @@ export interface SiteSettings {
     headline: string;
     subheadline: string;
     ctaButtonText: string;
+    imageRotationInterval?: number;
     featuresTitle: string;
     featuresSubtitle: string;
     features: LandingPageFeature[];
@@ -277,5 +278,3 @@ export interface SiteSettings {
     imageUrl: string;
   };
 }
-
-    

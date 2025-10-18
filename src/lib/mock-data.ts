@@ -1118,6 +1118,7 @@ const DEFAULT_LANDING_PAGE_SETTINGS = {
     headline: 'SettleEase',
     subheadline: 'The quantum leap in managing shared expenses. Track, split, and settle your group costs with futuristic ease.',
     ctaButtonText: 'Enter the Grid',
+    imageRotationInterval: 1, // in hours
     featuresTitle: "Everything You Need to Settle Up",
     featuresSubtitle: "From weekend trips to monthly bills, {appName} handles the math so you don't have to.",
     features: [
