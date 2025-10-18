@@ -1,34 +1,68 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function getRole() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+        return isSignedIn() && getRole() == 'admin';
     }
 
-    // Rules for 'users' collection
+    // --- Collections ---
     match /users/{userId} {
-      // Allow users to read their own profile
-      allow read: if isSignedIn() && isOwner(userId);
-      // Allow users to create their own profile, but not overwrite
-      allow create: if isSignedIn() && isOwner(userId);
-      // Allow users to update their own profile
-      allow update: if isSignedIn() && isOwner(userId);
-      // Disallow deleting user profiles for now
-      allow delete: if false;
+      allow read: if isSignedIn();
+      allow create: if isUser(userId);
+      allow update: if isUser(userId);
+      allow delete: if false; 
+    }
+    
+    match /groups/{groupId} {
+        allow read, update: if (isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow create: if isSignedIn();
+        allow delete: if false; 
     }
 
+    match /expenses/{expenseId} {
+        allow read, delete: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow create, update: if (isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+    }
+    
+    match /settlements/{settlementId} {
+        allow read, delete: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow create, update: if (isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+    }
+
+    match /history/{historyId} {
+        allow read: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow create: if isSignedIn();
+        // Allow update only to change the 'restored' flag, by a group member OR an admin.
+        allow update: if ((isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin())
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
+        allow delete: if isAdmin();
+    }
+    
+    match /settings/{docId} {
+        allow read: if true; 
+        allow write: if isAdmin();
+    }
+    
     // Rules for 'tickets' collection
     match /tickets/{ticketId} {
-      // Allow authenticated users to create a ticket for themselves
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Add rules for read, update, delete as needed later
-      allow read, update, delete: if false;
+      // Admins can read, update, and delete any ticket.
+      allow read, update, delete: if isAdmin();
     }
   }
 }
