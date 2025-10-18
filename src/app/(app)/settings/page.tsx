@@ -23,6 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { UserGroupsList } from "@/components/shared/user-groups-list";
 
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
@@ -325,6 +326,10 @@ export default function SettingsPage() {
           </Card>
         </form>
       </Form>
+
+      <Separator />
+
+      <UserGroupsList userId={userProfile.uid} />
 
       <Separator />
 

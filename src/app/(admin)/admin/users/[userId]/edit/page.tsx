@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,6 +12,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { getFullName } from '@/lib/utils';
+import { UserGroupsList } from '@/components/shared/user-groups-list';
+import { Separator } from '@/components/ui/separator';
 
 export default function EditUserPage() {
   const params = useParams();
@@ -45,30 +48,33 @@ export default function EditUserPage() {
   const renderContent = () => {
     if (loading) {
       return (
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-1/4" />
-            <Skeleton className="h-4 w-1/2" />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-             <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-             <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <div className="flex justify-end gap-2">
-                <Skeleton className="h-10 w-24" />
-                <Skeleton className="h-10 w-24" />
-            </div>
-          </CardContent>
-        </Card>
+          <div className="space-y-6">
+            <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-1/4" />
+                <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="space-y-2">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-10 w-full" />
+                </div>
+                <div className="flex justify-end gap-2">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-24" />
+                </div>
+            </CardContent>
+            </Card>
+            <Skeleton className="h-48 w-full" />
+        </div>
       );
     }
 
@@ -85,7 +91,13 @@ export default function EditUserPage() {
     }
 
     if (user) {
-      return <EditUserForm user={user} />;
+      return (
+        <div className="space-y-6">
+            <EditUserForm user={user} />
+            <Separator />
+            <UserGroupsList userId={user.uid} />
+        </div>
+      );
     }
 
     return null; // Should be covered by error state
