@@ -1323,6 +1323,53 @@ export async function updateSiteSettings(settings: Partial<SiteSettings>): Promi
 
 // --- Support Ticket Functions ---
 
+export async function getTicketsByUserId(userId: string): Promise<SupportTicket[]> {
+    const ticketsCol = collection(db, 'tickets');
+    const q = query(
+        ticketsCol, 
+        where('userId', '==', userId), 
+        orderBy('updatedAt', 'desc')
+    );
+    const ticketSnapshot = await getDocs(q);
+
+    const ticketDocs = ticketSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupportTicketDocument & { id: string }));
+
+    const allUserIds = new Set<string>();
+    ticketDocs.forEach(doc => {
+        doc.messages.forEach(msg => allUserIds.add(msg.sentById));
+    });
+
+    const users = await hydrateUsers(Array.from(allUserIds));
+    const userMap = new Map(users.map(u => [u.uid, u]));
+    
+    const tickets: SupportTicket[] = ticketDocs.map(doc => {
+        const user = userMap.get(doc.userId);
+        if (!user) return null;
+
+        const messages: SupportTicketMessage[] = doc.messages.map(msg => {
+            const sentBy = userMap.get(msg.sentById);
+            if (!sentBy) return null;
+            return {
+                ...msg,
+                sentAt: (msg.sentAt as Timestamp).toDate().toISOString(),
+                sentBy: sentBy,
+            };
+        }).filter((m): m is SupportTicketMessage => m !== null);
+
+        return {
+            ...doc,
+            createdAt: (doc.createdAt as Timestamp).toDate().toISOString(),
+            updatedAt: (doc.updatedAt as Timestamp).toDate().toISOString(),
+            user,
+            assignedTo: doc.assignedToId ? userMap.get(doc.assignedToId) : undefined,
+            messages,
+        }
+    }).filter((t): t is SupportTicket => t !== null);
+
+    return tickets;
+}
+
+
 export async function getAllTickets(): Promise<SupportTicket[]> {
     const ticketsCol = collection(db, 'tickets');
     const ticketSnapshot = await getDocs(query(ticketsCol, orderBy('createdAt', 'desc')));

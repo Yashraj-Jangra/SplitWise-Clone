@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -15,9 +16,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
-import type { SupportTicketDocument } from '@/types';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { getInitials, getFullName, cn } from '@/lib/utils';
+import { format, formatDistanceToNow } from 'date-fns';
+
+import type { SupportTicket, SupportTicketDocument } from '@/types';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getTicketsByUserId } from '@/lib/mock-data';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
@@ -28,6 +37,104 @@ const supportTicketSchema = z.object({
 });
 
 type SupportTicketFormValues = z.infer<typeof supportTicketSchema>;
+
+const statusStyles: { [key: string]: string } = {
+  open: 'bg-green-500/20 text-green-400 border-green-500/50',
+  'in-progress': 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+  closed: 'bg-red-500/20 text-red-400 border-red-500/50',
+};
+
+
+function TicketHistory() {
+  const { userProfile, loading: authLoading } = useAuth();
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    async function loadTickets() {
+      if (!userProfile) return;
+      setLoading(true);
+      const userTickets = await getTicketsByUserId(userProfile.uid);
+      setTickets(userTickets);
+      setLoading(false);
+    }
+    if (userProfile) {
+      loadTickets();
+    }
+  }, [userProfile]);
+
+  if (loading || authLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Your Tickets</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (tickets.length === 0) {
+    return (
+       <Card className="text-center py-12 border-dashed">
+          <CardHeader className="p-0">
+              <div className="flex justify-center mb-4">
+                  <Icons.Help className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <CardTitle>No Tickets Found</CardTitle>
+              <CardDescription>
+                  Your submitted support tickets will appear here.
+              </CardDescription>
+          </CardHeader>
+       </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Your Tickets</CardTitle>
+        <CardDescription>A history of your communication with our support team.</CardDescription>
+      </CardHeader>
+      <CardContent>
+         <Accordion type="single" collapsible className="w-full">
+           {tickets.map(ticket => (
+              <AccordionItem value={ticket.id} key={ticket.id}>
+                <AccordionTrigger>
+                  <div className="flex justify-between items-center w-full pr-4">
+                    <div className="text-left">
+                      <p className="font-semibold">{ticket.subject}</p>
+                      <p className="text-sm text-muted-foreground">#{ticket.id.slice(0, 8)} • Last updated {formatDistanceToNow(new Date(ticket.updatedAt), { addSuffix: true })}</p>
+                    </div>
+                    <Badge variant="outline" className={cn("capitalize", statusStyles[ticket.status])}>{ticket.status.replace('-', ' ')}</Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4 pt-2">
+                    {ticket.messages.map((msg, index) => (
+                      <div key={index} className="flex items-start gap-4">
+                          <Avatar>
+                              <AvatarImage src={msg.sentBy.avatarUrl} alt={getFullName(msg.sentBy.firstName, msg.sentBy.lastName)} />
+                              <AvatarFallback>{getInitials(msg.sentBy.firstName, msg.sentBy.lastName)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 space-y-1">
+                              <div className="flex items-center justify-between">
+                                  <p className="font-semibold">{getFullName(msg.sentBy.firstName, msg.sentBy.lastName)}</p>
+                                  <p className="text-xs text-muted-foreground">{format(new Date(msg.sentAt), "MMM d, yyyy h:mm a")}</p>
+                              </div>
+                              <div className="p-3 bg-muted rounded-md text-sm whitespace-pre-wrap">{msg.message}</div>
+                          </div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+           ))}
+         </Accordion>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function SupportPage() {
   const { userProfile } = useAuth();
@@ -76,14 +183,7 @@ export default function SupportPage() {
           description: `Your ticket (ID: ${docRef.id.slice(0, 8)}) has been received. We'll get back to you via email.`,
         });
         form.reset();
-
-        // Trigger admin notification email
-        fetch('/api/admin/notify-new-ticket', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ticketId: docRef.id }),
-        });
-
+        router.refresh();
       })
       .catch((serverError) => {
           const permissionError = new FirestorePermissionError({
@@ -93,12 +193,6 @@ export default function SupportPage() {
           } satisfies SecurityRuleContext);
 
           errorEmitter.emit('permission-error', permissionError);
-
-          toast({
-            variant: 'destructive',
-            title: 'Submission Failed',
-            description: 'Could not submit your support ticket due to a permission error.',
-          });
       });
   }
 
@@ -106,12 +200,14 @@ export default function SupportPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold font-headline">Help & Support</h1>
-        <p className="text-muted-foreground">Have a question or need assistance? Let us know.</p>
+        <p className="text-muted-foreground">Track your support requests or submit a new one.</p>
       </div>
+
+      <TicketHistory />
 
       <Card>
         <CardHeader>
-          <CardTitle>Submit a Support Ticket</CardTitle>
+          <CardTitle>Submit a New Ticket</CardTitle>
           <CardDescription>Our team will get back to you via email as soon as possible.</CardDescription>
         </CardHeader>
         <CardContent>
