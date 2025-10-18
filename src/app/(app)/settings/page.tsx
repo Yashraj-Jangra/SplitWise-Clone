@@ -88,13 +88,14 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile && siteSettings.countryCodes.length > 0) {
+      const defaultCountry = siteSettings.countryCodes.find(c => c.code === userProfile.countryCode) || siteSettings.countryCodes[0];
       profileForm.reset({
         firstName: userProfile.firstName,
         lastName: userProfile.lastName || '',
         username: userProfile.username,
         email: userProfile.email,
-        countryCode: userProfile.countryCode || siteSettings.countryCodes[0]?.code || '',
+        countryCode: `${defaultCountry.name}-${defaultCountry.code}`,
         mobileNumber: userProfile.mobileNumber || '',
         dob: userProfile.dob ? new Date(userProfile.dob).toISOString() : '',
         avatarUrl: userProfile.avatarUrl || '',
@@ -114,10 +115,12 @@ export default function SettingsPage() {
             }
         }
         
+        const countryCodeValue = values.countryCode?.split('-')[1];
+
         await updateUser(userProfile.uid, {
             ...values,
+            countryCode: countryCodeValue || undefined,
             lastName: values.lastName || undefined,
-            countryCode: values.countryCode || undefined,
             mobileNumber: values.mobileNumber || undefined,
             dob: values.dob || undefined,
             avatarUrl: values.avatarUrl || undefined,
@@ -266,7 +269,7 @@ export default function SettingsPage() {
                                     </FormControl>
                                     <SelectContent>
                                         {siteSettings.countryCodes.map(cc => (
-                                            <SelectItem key={`${cc.name}-${cc.code}`} value={cc.code}>{cc.flag} {cc.code}</SelectItem>
+                                            <SelectItem key={`${cc.name}-${cc.code}`} value={`${cc.name}-${cc.code}`}>{cc.flag} {cc.code}</SelectItem>
                                         ))}
                                     </SelectContent>
                                     </Select>
@@ -432,5 +435,7 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
 
     
