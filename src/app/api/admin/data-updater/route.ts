@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { firebaseAdmin } from '@/lib/firebase-admin';
-import { CollectionReference } from 'firebase-admin/firestore';
+import type { CollectionReference } from 'firebase-admin/firestore';
 
 // WARNING: This is a powerful and destructive API. Ensure it is properly secured.
 
