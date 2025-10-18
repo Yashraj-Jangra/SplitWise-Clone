@@ -115,7 +115,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   if (!userProfile) {
     return (
       <Button variant={buttonVariant} size={buttonSize} disabled>
-        <Icons.Add className="mr-2 h-4 w-4" /> Create New Group
+        <Icons.Add className="mr-2 h-4 w-4" /> New Group
       </Button>
     )
   }
@@ -170,7 +170,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant={buttonVariant} size={buttonSize}>
-          <Icons.Add className="mr-2 h-4 w-4" /> Create New Group
+          <Icons.Add className="mr-2 h-4 w-4" /> New Group
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
