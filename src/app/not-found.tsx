@@ -50,12 +50,20 @@ export default async function NotFound() {
                     </div>
                 </div>
 
-                <Button asChild size="lg" className="w-full">
-                    <Link href="/">
-                    <Icons.Home className="mr-2 h-5 w-5" />
-                    {pageContent.buttonText}
-                    </Link>
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <Button asChild size="lg" className="w-full">
+                        <Link href="/">
+                        <Icons.Home className="mr-2 h-5 w-5" />
+                        {pageContent.buttonText}
+                        </Link>
+                    </Button>
+                     <Button asChild size="lg" variant="secondary" className="w-full">
+                        <Link href="/support">
+                            <Icons.Help className="mr-2 h-5 w-5" />
+                            Open a Ticket
+                        </Link>
+                    </Button>
+                </div>
             </div>
         </div>
 

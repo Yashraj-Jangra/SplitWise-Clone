@@ -44,7 +44,7 @@ import {
   PanelRightOpen,
   Layers,
   Baseline,
-  LifeBuoy
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
