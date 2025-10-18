@@ -2,30 +2,46 @@
 import { NextResponse } from 'next/server';
 import { firebaseAdmin } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
-import type { SiteSettings, SupportTicket } from '@/types';
-import { getSiteSettings, getUserProfile } from '@/lib/mock-data';
-import { getDoc, doc } from 'firebase/firestore';
+import type { SiteSettings, SupportTicket, UserProfile } from '@/types';
+import { getSiteSettings } from '@/lib/mock-data';
 import { Timestamp } from 'firebase-admin/firestore';
+
+async function getAdminUserProfile(uid: string): Promise<UserProfile | null> {
+  const db = firebaseAdmin.firestore();
+  const docRef = db.collection('users').doc(uid);
+  const docSnap = await docRef.get();
+  if (docSnap.exists) {
+    const data = docSnap.data();
+    if (!data) return null;
+    return { 
+        ...data, 
+        uid: docSnap.id, 
+        createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+        dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined
+    } as UserProfile;
+  }
+  return null;
+}
 
 
 async function getTicketById(ticketId: string): Promise<SupportTicket | null> {
     const db = firebaseAdmin.firestore();
-    const ticketDocRef = doc(db, 'tickets', ticketId);
-    const ticketSnap = await getDoc(ticketDocRef);
+    const ticketDocRef = db.collection('tickets').doc(ticketId);
+    const ticketSnap = await ticketDocRef.get();
 
-    if (!ticketSnap.exists()) {
+    if (!ticketSnap.exists) {
         return null;
     }
 
     const ticketData = ticketSnap.data();
     if (!ticketData) return null;
 
-    const user = await getUserProfile(ticketData.userId);
+    const user = await getAdminUserProfile(ticketData.userId);
     if (!user) return null;
 
     const messages = await Promise.all(
         ticketData.messages.map(async (msg: any) => {
-            const sentBy = await getUserProfile(msg.sentById);
+            const sentBy = await getAdminUserProfile(msg.sentById);
             if (!sentBy) return null;
             return {
                 ...msg,
@@ -69,7 +85,7 @@ export async function POST(request: Request) {
         const transporter = nodemailer.createTransport({
             host: emailSettings.smtpSettings.host,
             port: emailSettings.smtpSettings.port,
-            secure: emailSettings.smtpSettings.port === 465, // Use true for 465, false for other ports
+            secure: emailSettings.smtpSettings.port === 465, // true for 465, false for other ports
             auth: {
                 user: emailSettings.smtpSettings.user,
                 pass: emailSettings.smtpSettings.pass,
