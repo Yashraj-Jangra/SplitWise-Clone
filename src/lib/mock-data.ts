@@ -1095,7 +1095,7 @@ export async function deleteHistoryEvent(historyEventId: string): Promise<void> 
 const SETTINGS_COLLECTION = 'settings';
 const GENERAL_SETTINGS_DOC = 'general';
 
-const DEFAULT_APP_NAME = 'SettleEase';
+const DEFAULT_APP_NAME = '{AppName}';
 const FALLBACK_GROUP_COVER_IMAGES = [
     'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=2029&auto=format&fit=crop',
@@ -1119,7 +1119,7 @@ const DEFAULT_COUNTRY_CODES: CountryCode[] = [
 
 
 const DEFAULT_LANDING_PAGE_SETTINGS = {
-    headline: 'SettleEase',
+    headline: 'Manage Your Shared Expenses',
     subheadline: 'The quantum leap in managing shared expenses. Track, split, and settle your group costs with futuristic ease.',
     ctaButtonText: 'Enter the Grid',
     imageRotationInterval: 1, // in hours
@@ -1162,15 +1162,15 @@ const DEFAULT_AUTH_PAGE_SETTINGS = {
 }
 
 const DEFAULT_ABOUT_SETTINGS = {
-    title: 'About SettleEase',
+    title: 'About {appName}',
     subtitle: 'Simplifying shared expenses for everyone, everywhere.',
-    mainContent: 'Welcome to SettleEase, the ultimate solution for managing group expenses without the hassle. Born from the common frustration of tracking who paid for what during trips, shared housing, and group events, SettleEase was designed to be intuitive, powerful, and transparent.',
+    mainContent: 'Welcome to {appName}, the ultimate solution for managing group expenses without the hassle. Born from the common frustration of tracking who paid for what during trips, shared housing, and group events, {appName} was designed to be intuitive, powerful, and transparent.',
     team: [
         {
             id: 'tm-1',
             name: 'Yashraj Jangra',
             title: 'Full-Stack Developer & Project Lead',
-            bio: 'Yashraj is a passionate developer who built SettleEase to solve a real-world problem. He specializes in creating modern, user-friendly web applications with a focus on clean code and great user experience.',
+            bio: 'Yashraj is a passionate developer who built this application to solve a real-world problem. He specializes in creating modern, user-friendly web applications with a focus on clean code and great user experience.',
             avatarUrl: 'https://github.com/Yashraj-Jangra.png',
             githubUrl: 'https://github.com/Yashraj-Jangra',
             linkedinUrl: 'https://www.linkedin.com/in/yashraj-jangra-24016a213/',

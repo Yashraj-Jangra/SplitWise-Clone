@@ -1,7 +1,7 @@
 
-# SettleEase UML Class Diagram
+# {AppName} UML Class Diagram
 
-This diagram outlines the core data models and their relationships within the SettleEase application.
+This diagram outlines the core data models and their relationships within the {AppName} application.
 
 ```mermaid
 classDiagram

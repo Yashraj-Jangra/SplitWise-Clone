@@ -1,8 +1,8 @@
-# SettleEase - Effortless Group Expense Management
+# {AppName} - Effortless Group Expense Management
 
-SettleEase is a modern, full-stack web application designed to simplify expense tracking and settlement within groups. Built with Next.js, Firebase, and ShadCN UI, it provides a seamless and intuitive user experience for managing shared costs, whether for trips, household bills, or any group activity.
+{AppName} is a modern, full-stack web application designed to simplify expense tracking and settlement within groups. Built with Next.js, Firebase, and ShadCN UI, it provides a seamless and intuitive user experience for managing shared costs, whether for trips, household bills, or any group activity.
 
-[![SettleEase Dashboard Screenshot](https://placehold.co/800x450.png)](https://placehold.co)
+[![{AppName} Dashboard Screenshot](https://placehold.co/800x450.png)](https://placehold.co)
 *A placeholder for the app's dashboard screenshot.*
 
 ## Table of Contents
@@ -46,7 +46,7 @@ SettleEase is a modern, full-stack web application designed to simplify expense 
 
 ## Getting Started
 
-Follow these instructions to get a local copy of SettleEase up and running on your machine.
+Follow these instructions to get a local copy of {AppName} up and running on your machine.
 
 ### Prerequisites
 
@@ -63,7 +63,7 @@ Follow these instructions to get a local copy of SettleEase up and running on yo
 
 2.  **Register a Web App**:
     - In your project's dashboard, click the web icon (`</>`) to add a new web app.
-    - Give it a nickname (e.g., "SettleEase Web") and click "Register app".
+    - Give it a nickname (e.g., "{AppName} Web") and click "Register app".
     - You will be shown your Firebase configuration credentials. Copy these, as you'll need them for the `.env` file.
 
 3.  **Enable Authentication Methods**:
@@ -137,7 +137,7 @@ This will upload the `firestore.rules` file to your Firebase project, fixing any
 ## Core Concepts
 
 ### Groups
-- Groups are the core of SettleEase. All expenses are contained within a group.
+- Groups are the core of {AppName}. All expenses are contained within a group.
 - You can create a new group and invite other registered users to join.
 - Each group has its own balance sheet, expense log, and history.
 

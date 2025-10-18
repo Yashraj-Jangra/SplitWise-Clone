@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { firebaseAdmin } from '@/lib/firebase-admin'; // Import the initialized admin app
 import nodemailer from 'nodemailer';
 import type { SiteSettings } from '@/types';
+import { getSiteSettings } from '@/lib/mock-data';
 
 type TestEmailRequestBody = {
     emailSettings: SiteSettings['emailSettings'];
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
         }
 
         const { emailSettings, testTarget }: TestEmailRequestBody = await request.json();
+        const { appName } = await getSiteSettings();
 
         if (!emailSettings || !emailSettings.smtpSettings) {
              return NextResponse.json({ error: 'Bad Request: Missing email settings.' }, { status: 400 });
@@ -56,9 +58,9 @@ export async function POST(request: Request) {
         const mailOptions = {
             from: fromAddress,
             to: user.email, 
-            subject: `SettleEase SMTP Test (${testTarget})`,
-            text: `This is a test email from your SettleEase application for the '${testTarget}' address. Your SMTP settings are working correctly!`,
-            html: `<b>This is a test email from your SettleEase application for the '${testTarget}' address.</b><p>Your SMTP settings are working correctly!</p>`,
+            subject: `${appName} SMTP Test (${testTarget})`,
+            text: `This is a test email from your ${appName} application for the '${testTarget}' address. Your SMTP settings are working correctly!`,
+            html: `<b>This is a test email from your ${appName} application for the '${testTarget}' address.</b><p>Your SMTP settings are working correctly!</p>`,
         };
 
         await transporter.sendMail(mailOptions);
