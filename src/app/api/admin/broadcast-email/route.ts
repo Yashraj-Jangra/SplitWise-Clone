@@ -1,9 +1,8 @@
 
 import { NextResponse } from 'next/server';
-import { firebaseAdmin } from '@/lib/firebase-admin';
+import { firebaseAdmin, getSiteSettingsAdmin } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 import type { SiteSettings } from '@/types';
-import { getSiteSettings } from '@/lib/mock-data';
 
 export async function POST(request: Request) {
     try {
@@ -24,7 +23,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Subject and body are required.' }, { status: 400 });
         }
 
-        const siteSettings = await getSiteSettings();
+        const siteSettings = await getSiteSettingsAdmin();
         const emailSettings = siteSettings.emailSettings;
 
         if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail') || !emailSettings.fromAddresses.broadcast) {
