@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -59,10 +58,13 @@ service cloud.firestore {
         allow write: if isAdmin();
     }
     
+    // Rules for 'tickets' collection
     match /tickets/{ticketId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow read: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
-      allow update, delete: if isAdmin();
+      allow read: if isUser(resource.data.userId) || isAdmin();
+      // Allow user to add messages, or admin to do anything
+      allow update: if (isUser(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt', 'status'])) || isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

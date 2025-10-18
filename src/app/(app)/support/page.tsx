@@ -23,8 +23,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getInitials, getFullName, cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 
-import type { SupportTicket, SupportTicketDocument } from '@/types';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import type { SupportTicket } from '@/types';
+import { addDoc, collection, Timestamp, updateDoc, doc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getTicketsByUserId } from '@/lib/mock-data';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -38,6 +38,12 @@ const supportTicketSchema = z.object({
 
 type SupportTicketFormValues = z.infer<typeof supportTicketSchema>;
 
+const replySchema = z.object({
+  replyMessage: z.string().min(1, "Reply cannot be empty.").max(2000),
+});
+type ReplyFormValues = z.infer<typeof replySchema>;
+
+
 const statusStyles: { [key: string]: string } = {
   open: 'bg-green-500/20 text-green-400 border-green-500/50',
   'in-progress': 'bg-blue-500/20 text-blue-400 border-blue-500/50',
@@ -47,21 +53,64 @@ const statusStyles: { [key: string]: string } = {
 
 function TicketHistory() {
   const { userProfile, loading: authLoading } = useAuth();
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const { toast } = useToast();
+  const [allTickets, setAllTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [showAll, setShowAll] = useState(false);
+  const [isReplying, setIsReplying] = useState<string | null>(null);
+
+  const replyForm = useForm<ReplyFormValues>({
+    resolver: zodResolver(replySchema),
+    defaultValues: { replyMessage: '' },
+  });
+
   useEffect(() => {
     async function loadTickets() {
       if (!userProfile) return;
       setLoading(true);
       const userTickets = await getTicketsByUserId(userProfile.uid);
-      setTickets(userTickets);
+      setAllTickets(userTickets);
       setLoading(false);
     }
     if (userProfile) {
       loadTickets();
     }
   }, [userProfile]);
+
+  const handleReplySubmit = async (ticketId: string, values: ReplyFormValues) => {
+    if (!userProfile) return;
+    setIsReplying(ticketId);
+
+    const ticketDocRef = doc(db, 'tickets', ticketId);
+    const newMessage = {
+        sentAt: Timestamp.now(),
+        sentById: userProfile.uid,
+        message: values.replyMessage,
+    };
+    
+    updateDoc(ticketDocRef, {
+        messages: arrayUnion(newMessage),
+        updatedAt: Timestamp.now(),
+        status: 'in-progress'
+    })
+    .then(async () => {
+        toast({ title: 'Reply Sent' });
+        replyForm.reset();
+        const updatedTickets = await getTicketsByUserId(userProfile.uid);
+        setAllTickets(updatedTickets);
+    })
+    .catch((error) => {
+        const permissionError = new FirestorePermissionError({
+            path: ticketDocRef.path,
+            operation: 'update',
+            requestResourceData: { messages: arrayUnion(newMessage) },
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+    })
+    .finally(() => {
+        setIsReplying(null);
+    });
+  }
 
   if (loading || authLoading) {
     return (
@@ -74,7 +123,9 @@ function TicketHistory() {
     );
   }
 
-  if (tickets.length === 0) {
+  const visibleTickets = showAll ? allTickets : allTickets.slice(0, 5);
+
+  if (allTickets.length === 0) {
     return (
        <Card className="text-center py-12 border-dashed">
           <CardHeader className="p-0">
@@ -98,7 +149,7 @@ function TicketHistory() {
       </CardHeader>
       <CardContent>
          <Accordion type="single" collapsible className="w-full">
-           {tickets.map(ticket => (
+           {visibleTickets.map(ticket => (
               <AccordionItem value={ticket.id} key={ticket.id}>
                 <AccordionTrigger>
                   <div className="flex justify-between items-center w-full pr-4">
@@ -126,11 +177,45 @@ function TicketHistory() {
                           </div>
                       </div>
                     ))}
+                    {ticket.status !== 'closed' && (
+                        <div className="pt-4 border-t">
+                            <Form {...replyForm}>
+                                <form onSubmit={replyForm.handleSubmit((values) => handleReplySubmit(ticket.id, values))} className="space-y-3">
+                                    <FormField
+                                        control={replyForm.control}
+                                        name="replyMessage"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="sr-only">Your Reply</FormLabel>
+                                                <FormControl>
+                                                    <Textarea placeholder="Type your reply..." {...field} rows={4} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <div className="flex justify-end">
+                                        <Button type="submit" disabled={isReplying === ticket.id}>
+                                            {isReplying === ticket.id && <Icons.AppLogo className="mr-2 animate-spin" />}
+                                            Send Reply
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Form>
+                        </div>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
            ))}
          </Accordion>
+         {allTickets.length > 5 && !showAll && (
+            <div className="text-center mt-4">
+                <Button variant="outline" onClick={() => setShowAll(true)}>
+                    Show All {allTickets.length} Tickets
+                </Button>
+            </div>
+         )}
       </CardContent>
     </Card>
   )
@@ -158,13 +243,13 @@ export default function SupportPage() {
 
     const ticketsCollection = collection(db, 'tickets');
 
-    const newTicket: Omit<SupportTicketDocument, 'messages'> & { messages: any[] } = {
+    const newTicketData = {
       userId: userProfile.uid,
       userName: `${userProfile.firstName} ${userProfile.lastName || ''}`.trim(),
       userEmail: userProfile.email,
       subject: values.subject,
       category: values.category,
-      status: 'open',
+      status: 'open' as 'open' | 'in-progress' | 'closed',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
       messages: [
@@ -176,20 +261,33 @@ export default function SupportPage() {
       ],
     };
 
-    addDoc(ticketsCollection, newTicket)
-      .then((docRef) => {
+    addDoc(ticketsCollection, newTicketData)
+      .then(async (docRef) => {
         toast({
           title: 'Support Ticket Submitted',
-          description: `Your ticket (ID: ${docRef.id.slice(0, 8)}) has been received. We'll get back to you via email.`,
+          description: `Your ticket (ID: ${docRef.id.slice(0, 8)}) has been received.`,
         });
+        
         form.reset();
+
+        // Trigger admin email notification
+        try {
+          await fetch('/api/admin/notify-new-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticketId: docRef.id })
+          });
+        } catch(e) {
+          console.error("Failed to trigger admin notification but ticket was created.", e);
+        }
+
         router.refresh();
       })
       .catch((serverError) => {
           const permissionError = new FirestorePermissionError({
             path: ticketsCollection.path,
             operation: 'create',
-            requestResourceData: newTicket,
+            requestResourceData: newTicketData,
           } satisfies SecurityRuleContext);
 
           errorEmitter.emit('permission-error', permissionError);
