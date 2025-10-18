@@ -15,13 +15,6 @@ export async function POST(request: Request) {
         }
 
         const siteSettings = await getSiteSettings();
-        if (siteSettings.emailSettings?.sendingMethod === 'firebase') {
-             // Fallback to firebase default if that is the setting.
-             const link = await firebaseAdmin.auth().generatePasswordResetLink(email);
-             // Note: This doesn't send an email, just generates a link. For full fallback, you'd need more logic.
-             // For now, we proceed with custom sending if configured.
-             return NextResponse.json({ success: false, error: 'Password reset via default firebase method is not fully implemented here. Please configure a custom SMTP server.' }, {status: 501});
-        }
         
         // Find user by email to get their name
         const usersRef = collection(db, 'users');
