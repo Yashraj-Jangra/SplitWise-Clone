@@ -1,61 +1,39 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    
-    function getRole() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    function isAdmin() {
-        return isSignedIn() && getRole() == 'admin';
-    }
-
-    // --- Collections ---
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isUser(userId);
-      allow update: if isUser(userId);
-      allow delete: if false; 
+      allow read;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && request.auth.uid == userId;
     }
     
     match /groups/{groupId} {
-        allow read, update: if (isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid])) || isAdmin();
-        allow create: if isSignedIn();
-        allow delete: if false; 
+    	allow read: if request.auth != null && resource.data.memberIds.hasAny([request.auth.uid]);
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && resource.data.memberIds.hasAny([request.auth.uid]);
     }
-
+    
     match /expenses/{expenseId} {
-        allow read, delete: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
-        allow create, update: if (isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
-    }
-    
-    match /settlements/{settlementId} {
-        allow read, delete: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
-        allow create, update: if (isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds.hasAny([request.auth.uid]);
     }
 
-    match /history/{historyId} {
-        allow read: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
-        allow create: if isSignedIn();
-        // Allow update only to change the 'restored' flag, by a group member OR an admin.
-        allow update: if ((isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin())
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
-        allow delete: if isAdmin();
+    match /settlements/{settlementId} {
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds.hasAny([request.auth.uid]);
     }
     
-    match /settings/{docId} {
-        allow read: if true; 
-        allow write: if isAdmin();
+    match /history/{historyId} {
+    	allow read: if request.auth != null && resource.data.groupMemberIds.hasAny([request.auth.uid]);
+      allow create: if request.auth != null;
+    }
+    
+    match /settings/general {
+    	allow read, write;
+    }
+
+    match /tickets/{ticketId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
   }
 }
