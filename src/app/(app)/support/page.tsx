@@ -48,7 +48,6 @@ export default function SupportPage() {
       toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to submit a ticket.' });
       return;
     }
-    form.formState.isSubmitting = true;
 
     const ticketsCollection = collection(db, 'tickets');
 
@@ -92,9 +91,6 @@ export default function SupportPage() {
             title: 'Submission Failed',
             description: 'Could not submit your support ticket due to a permission error.',
           });
-      })
-      .finally(() => {
-          form.formState.isSubmitting = false;
       });
   }
 
