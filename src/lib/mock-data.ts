@@ -1231,8 +1231,11 @@ const DEFAULT_EMAIL_TEMPLATES: SiteSettings['emailTemplates'] = {
 
 const DEFAULT_EMAIL_SETTINGS = {
     sendingMethod: 'firebase' as 'firebase' | 'custom' | 'gmail',
-    fromEmail: 'noreply@yourapp.com',
-    supportEmail: 'support@yourapp.com',
+    fromAddresses: {
+        default: 'noreply@example.com',
+        support: 'support@example.com',
+        broadcast: 'broadcast@example.com',
+    },
     smtpSettings: {
       host: '',
       port: 587,
@@ -1270,7 +1273,29 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         }
 
         const emailTemplates = { ...DEFAULT_EMAIL_TEMPLATES, ...(data.emailTemplates || {})};
-        const emailSettings = { ...DEFAULT_EMAIL_SETTINGS, ...(data.emailSettings || {})};
+        
+        // Merge fromAddresses carefully
+        const defaultFrom = DEFAULT_EMAIL_SETTINGS.fromAddresses;
+        const savedFrom = data.emailSettings?.fromAddresses || {};
+        const fromAddresses = { ...defaultFrom, ...savedFrom };
+
+        // Handle migration from old `fromEmail` and `supportEmail`
+        if (data.emailSettings?.fromEmail && !savedFrom.default) {
+            fromAddresses.default = data.emailSettings.fromEmail;
+        }
+        if (data.emailSettings?.supportEmail && !savedFrom.support) {
+            fromAddresses.support = data.emailSettings.supportEmail;
+        }
+        
+        const emailSettings = { 
+            ...DEFAULT_EMAIL_SETTINGS, 
+            ...(data.emailSettings || {}),
+            fromAddresses,
+        };
+        
+        // Clean up old top-level properties if they exist after merging
+        delete (emailSettings as any).fromEmail;
+        delete (emailSettings as any).supportEmail;
 
         return {
             appName: data.appName || DEFAULT_APP_NAME,

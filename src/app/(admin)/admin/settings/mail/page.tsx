@@ -41,6 +41,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 type EmailTemplateName = keyof SiteSettings['emailTemplates'];
+type FromAddressKey = keyof SiteSettings['emailSettings']['fromAddresses'];
 
 const broadcastSchema = z.object({
   subject: z.string().min(1, "Subject is required."),
@@ -55,17 +56,20 @@ const templatePlaceholders: Record<EmailTemplateName, string[]> = {
     loginNotification: ['{appName}', '{userName}'],
     monthlyReport: ['{appName}', 'totalSpent', 'expenseCount', 'userName'],
     paymentReminder: ['{appName}', '{userName}', 'balanceAmount', 'groupName'],
+    supportTicketConfirmation: ['{appName}', '{userName}', '{ticketId}', '{ticketSubject}'],
+    supportTicketAdminNotification: ['{appName}', '{userName}', '{userEmail}', '{ticketSubject}', '{ticketCategory}', '{ticketMessage}', '{ticketLink}'],
+    supportTicketReply: ['{appName}', '{userName}', '{ticketId}', '{replyMessage}', '{ticketLink}'],
 };
 
 export default function AdminMailSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState<FromAddressKey | null>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [showBroadcastConfirm, setShowBroadcastConfirm] = useState(false);
   const { toast } = useToast();
-  const { firebaseUser } = useAuth(); // Get the firebaseUser for the auth token
+  const { firebaseUser } = useAuth();
 
   const broadcastForm = useForm<BroadcastFormValues>({
     resolver: zodResolver(broadcastSchema),
@@ -91,6 +95,12 @@ export default function AdminMailSettingsPage() {
     if (!settings) return;
     setSettings(prev => prev ? ({ ...prev, emailSettings: { ...prev.emailSettings!, [field]: value } }) : null);
   };
+
+  const handleFromAddressChange = (key: FromAddressKey, value: string) => {
+    if (!settings?.emailSettings) return;
+    const newFrom = { ...settings.emailSettings.fromAddresses, [key]: value };
+    handleEmailSettingsChange('fromAddresses', newFrom);
+  };
   
   const handleSmtpChange = (field: string, value: any) => {
       if (!settings?.emailSettings) return;
@@ -114,17 +124,17 @@ export default function AdminMailSettingsPage() {
     })
   }
   
-  const handleSendTestMail = async () => {
+  const handleSendTestMail = async (testTarget: FromAddressKey) => {
     if (!firebaseUser) {
         toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to send a test email.' });
         return;
     }
 
-    if (!settings?.emailSettings?.smtpSettings || !settings?.emailSettings?.fromEmail) {
-        toast({ variant: 'destructive', title: 'Missing Settings', description: 'Please fill out From Email and all SMTP fields first.' });
+    if (!settings?.emailSettings || !settings.emailSettings.fromAddresses[testTarget] || !settings.emailSettings.smtpSettings) {
+        toast({ variant: 'destructive', title: 'Missing Settings', description: 'Please fill out all SMTP fields and the target "From" address first.' });
         return;
     }
-    setIsSendingTest(true);
+    setIsSendingTest(testTarget);
     try {
         const idToken = await firebaseUser.getIdToken();
         const response = await fetch('/api/send-test-email', {
@@ -133,7 +143,7 @@ export default function AdminMailSettingsPage() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${idToken}`,
             },
-            body: JSON.stringify(settings.emailSettings),
+            body: JSON.stringify({ emailSettings: settings.emailSettings, testTarget }),
         });
 
         if (!response.ok) {
@@ -143,7 +153,7 @@ export default function AdminMailSettingsPage() {
 
         toast({
             title: "Test Email Sent",
-            description: `A test email has been sent to your logged-in account email address.`,
+            description: `A test email has been sent to your account from ${settings.emailSettings.fromAddresses[testTarget]}.`,
         });
 
     } catch (error) {
@@ -153,7 +163,7 @@ export default function AdminMailSettingsPage() {
             description: error instanceof Error ? error.message : "An unknown error occurred.",
         });
     } finally {
-        setIsSendingTest(false);
+        setIsSendingTest(null);
     }
   }
 
@@ -257,11 +267,27 @@ export default function AdminMailSettingsPage() {
                                 <span className="font-semibold text-base">Custom SMTP Server</span>
                                 <p className="text-sm text-muted-foreground">Connect to your own SMTP server (e.g., SendGrid, Postmark, or a personal email account) for full control over templates and sending.</p>
                                 {emailSettings?.sendingMethod === 'custom' && (
-                                    <div className="space-y-4 pt-4 border-t">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="fromEmail">From Email Address</Label>
-                                            <Input id="fromEmail" value={emailSettings.fromEmail || ''} onChange={(e) => handleEmailSettingsChange('fromEmail', e.target.value)} placeholder="noreply@yourapp.com" />
+                                    <div className="space-y-6 pt-4 border-t">
+                                        <div className="space-y-4">
+                                            <h4 className="text-md font-medium">From Addresses</h4>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="fromDefault">Default</Label>
+                                                <Input id="fromDefault" value={emailSettings.fromAddresses.default} onChange={(e) => handleFromAddressChange('default', e.target.value)} placeholder="noreply@yourapp.com" />
+                                                <p className="text-xs text-muted-foreground">Used for password resets, registration, etc.</p>
+                                            </div>
+                                             <div className="space-y-2">
+                                                <Label htmlFor="fromSupport">Support</Label>
+                                                <Input id="fromSupport" value={emailSettings.fromAddresses.support} onChange={(e) => handleFromAddressChange('support', e.target.value)} placeholder="support@yourapp.com" />
+                                                <p className="text-xs text-muted-foreground">Used for support ticket notifications.</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="fromBroadcast">Broadcast</Label>
+                                                <Input id="fromBroadcast" value={emailSettings.fromAddresses.broadcast} onChange={(e) => handleFromAddressChange('broadcast', e.target.value)} placeholder="newsletter@yourapp.com" />
+                                                <p className="text-xs text-muted-foreground">Used for sending bulk emails to all users.</p>
+                                            </div>
                                         </div>
+                                        <Separator />
+                                        <h4 className="text-md font-medium">SMTP Server</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="smtpHost">SMTP Host</Label>
@@ -286,10 +312,15 @@ export default function AdminMailSettingsPage() {
                                             <Switch id="smtp-secure" checked={emailSettings.smtpSettings.secure} onCheckedChange={(checked) => handleSmtpChange('secure', checked)} />
                                             <Label htmlFor="smtp-secure">Use SSL/TLS</Label>
                                         </div>
-                                        <div className="pt-4 border-t flex justify-end">
-                                            <Button type="button" variant="secondary" onClick={handleSendTestMail} disabled={isSendingTest}>
-                                                {isSendingTest && <Icons.AppLogo className="mr-2 animate-spin" />}
-                                                Send Test Mail
+                                        <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                            <Button type="button" variant="secondary" onClick={() => handleSendTestMail('default')} disabled={!!isSendingTest}>
+                                                {isSendingTest === 'default' && <Icons.AppLogo className="mr-2 animate-spin" />} Test Default
+                                            </Button>
+                                            <Button type="button" variant="secondary" onClick={() => handleSendTestMail('support')} disabled={!!isSendingTest}>
+                                                {isSendingTest === 'support' && <Icons.AppLogo className="mr-2 animate-spin" />} Test Support
+                                            </Button>
+                                             <Button type="button" variant="secondary" onClick={() => handleSendTestMail('broadcast')} disabled={!!isSendingTest}>
+                                                {isSendingTest === 'broadcast' && <Icons.AppLogo className="mr-2 animate-spin" />} Test Broadcast
                                             </Button>
                                         </div>
                                     </div>
@@ -349,11 +380,10 @@ export default function AdminMailSettingsPage() {
                             <TabsTrigger value="registration">Registration</TabsTrigger>
                             <TabsTrigger value="forgotPassword">Forgot Password</TabsTrigger>
                             <TabsTrigger value="loginNotification">Login Alert</TabsTrigger>
-                            <TabsTrigger value="monthlyReport">Monthly Report</TabsTrigger>
-                            <TabsTrigger value="paymentReminder">Reminder</TabsTrigger>
+                            <TabsTrigger value="supportTicketReply">Support Replies</TabsTrigger>
                         </TabsList>
                         
-                        {Object.keys(templatePlaceholders).map(key => {
+                        {Object.keys(templatePlaceholders).filter(k => ["registration", "forgotPassword", "loginNotification", "supportTicketReply"].includes(k)).map(key => {
                             const tKey = key as EmailTemplateName;
                             return (
                                 <TabsContent key={tKey} value={tKey} className="mt-0">

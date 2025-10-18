@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
         const siteSettings = await getSiteSettings();
         const { emailSettings, appName } = siteSettings;
-        const supportEmail = emailSettings?.supportEmail || emailSettings?.fromEmail;
+        const supportEmail = emailSettings?.fromAddresses.support;
 
         if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail') || !supportEmail) {
             console.log("Admin notification skipped: Custom mail sending or support email is not configured.");
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         const transporter = nodemailer.createTransport({
             host: emailSettings.smtpSettings.host,
             port: emailSettings.smtpSettings.port,
-            secure: emailSettings.smtpSettings.port === 465,
+            secure: emailSettings.smtpSettings.secure,
             auth: {
                 user: emailSettings.smtpSettings.user,
                 pass: emailSettings.smtpSettings.pass,
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         await transporter.verify();
 
         const mailOptions = {
-            from: emailSettings.fromEmail,
+            from: supportEmail,
             to: supportEmail,
             subject: `[${appName} Support] New Ticket #${ticket.id.slice(0,6)}: ${ticket.subject}`,
             html: `

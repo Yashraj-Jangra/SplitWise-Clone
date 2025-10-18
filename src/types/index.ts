@@ -282,8 +282,11 @@ export interface SiteSettings {
   };
   emailSettings?: {
     sendingMethod: 'firebase' | 'custom' | 'gmail';
-    fromEmail: string;
-    supportEmail?: string;
+    fromAddresses: {
+        default: string;
+        support: string;
+        broadcast: string;
+    };
     smtpSettings: {
       host: string;
       port: number;

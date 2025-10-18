@@ -27,21 +27,20 @@ export async function POST(request: Request) {
         const siteSettings = await getSiteSettings();
         const emailSettings = siteSettings.emailSettings;
 
-        if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail')) {
-            return NextResponse.json({ error: 'Custom mail sending is not configured.' }, { status: 501 });
+        if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail') || !emailSettings.fromAddresses.broadcast) {
+            return NextResponse.json({ error: 'Broadcast email sending is not configured.' }, { status: 501 });
         }
 
         const transporter = nodemailer.createTransport({
             host: emailSettings.smtpSettings.host,
             port: emailSettings.smtpSettings.port,
-            secure: emailSettings.smtpSettings.port === 465, // Use direct SSL for port 465
+            secure: emailSettings.smtpSettings.secure,
             auth: {
                 user: emailSettings.smtpSettings.user,
                 pass: emailSettings.smtpSettings.pass,
             },
         });
         
-        // Verify SMTP connection
         await transporter.verify();
 
         const listUsersResult = await adminAuth.listUsers(1000); // Batched fetching might be needed for >1000 users
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
         // For this implementation, we'll send them sequentially.
         const sendPromises = allUserEmails.map(email => {
              const mailOptions = {
-                from: emailSettings.fromEmail,
+                from: emailSettings.fromAddresses.broadcast,
                 to: email, 
                 subject: subject,
                 text: body,

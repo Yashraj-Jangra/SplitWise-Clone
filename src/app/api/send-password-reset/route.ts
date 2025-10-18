@@ -46,11 +46,11 @@ export async function POST(request: Request) {
         let subject = template.subject.replace(/{appName}/g, appName).replace(/{userName}/g, userName);
         let body = template.body.replace(/{appName}/g, appName).replace(/{userName}/g, userName).replace(/{resetLink}/g, link);
 
-        const { smtpSettings, fromEmail } = emailSettings;
+        const { smtpSettings, fromAddresses } = emailSettings;
         const transporter = nodemailer.createTransport({
             host: smtpSettings.host,
             port: smtpSettings.port,
-            secure: smtpSettings.port === 465,
+            secure: smtpSettings.secure,
             auth: {
                 user: smtpSettings.user,
                 pass: smtpSettings.pass,
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
         await transporter.verify();
 
         const mailOptions = {
-            from: fromEmail,
+            from: fromAddresses.default,
             to: email, 
             subject: subject,
             text: body, // Basic text version

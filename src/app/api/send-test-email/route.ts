@@ -4,6 +4,11 @@ import { firebaseAdmin } from '@/lib/firebase-admin'; // Import the initialized 
 import nodemailer from 'nodemailer';
 import type { SiteSettings } from '@/types';
 
+type TestEmailRequestBody = {
+    emailSettings: SiteSettings['emailSettings'];
+    testTarget: 'default' | 'support' | 'broadcast';
+};
+
 export async function POST(request: Request) {
     try {
         const idToken = request.headers.get('Authorization')?.split('Bearer ')[1];
@@ -23,40 +28,39 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'User does not have an email address.' }, { status: 400 });
         }
 
-        const emailSettings: SiteSettings['emailSettings'] = await request.json();
+        const { emailSettings, testTarget }: TestEmailRequestBody = await request.json();
 
         if (!emailSettings || !emailSettings.smtpSettings) {
              return NextResponse.json({ error: 'Bad Request: Missing email settings.' }, { status: 400 });
         }
 
-        const { smtpSettings, fromEmail } = emailSettings;
+        const { smtpSettings, fromAddresses } = emailSettings;
+        const fromAddress = fromAddresses[testTarget];
 
-        // The 'secure' option is nuanced.
-        // `true` is for port 465 (direct SSL/TLS connection from the start).
-        // `false` is for other ports like 587, where the connection starts plain and is upgraded to TLS via STARTTLS.
-        // Setting secure: true for port 587 causes the "wrong version number" error.
+        if (!fromAddress) {
+             return NextResponse.json({ error: `Bad Request: Missing 'from' address for target '${testTarget}'.`}, { status: 400 });
+        }
+
         const transporter = nodemailer.createTransport({
             host: smtpSettings.host,
             port: smtpSettings.port,
-            secure: smtpSettings.port === 465, // This is the key fix
+            secure: smtpSettings.secure,
             auth: {
                 user: smtpSettings.user,
                 pass: smtpSettings.pass,
             },
         });
 
-        // Verify connection configuration
         await transporter.verify();
 
         const mailOptions = {
-            from: fromEmail,
+            from: fromAddress,
             to: user.email, 
-            subject: 'SettleEase SMTP Test',
-            text: 'This is a test email from your SettleEase application. Your SMTP settings are working correctly!',
-            html: '<b>This is a test email from your SettleEase application.</b><p>Your SMTP settings are working correctly!</p>',
+            subject: `SettleEase SMTP Test (${testTarget})`,
+            text: `This is a test email from your SettleEase application for the '${testTarget}' address. Your SMTP settings are working correctly!`,
+            html: `<b>This is a test email from your SettleEase application for the '${testTarget}' address.</b><p>Your SMTP settings are working correctly!</p>`,
         };
 
-        // Send the email
         await transporter.sendMail(mailOptions);
 
         return NextResponse.json({ success: true, message: 'Test email sent successfully.' });
@@ -64,7 +68,6 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error('API Error - /api/send-test-email:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
-        // Ensure a JSON response is always sent, even on failure
         return NextResponse.json({ error: `Failed to send test email: ${errorMessage}` }, { status: 500 });
     }
 }

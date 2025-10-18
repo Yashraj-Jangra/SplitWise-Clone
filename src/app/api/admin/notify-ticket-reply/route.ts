@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { getSiteSettings, getUserProfile } from '@/lib/mock-data';
@@ -5,7 +6,7 @@ import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { SupportTicket, UserProfile } from '@/types';
 import { getFullName } from '@/lib/utils';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase/firestore';
 
 async function getTicketById(ticketId: string): Promise<SupportTicket | null> {
     const ticketDocRef = doc(db, 'tickets', ticketId);
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
         const template = siteSettings.emailTemplates?.supportTicketReply;
 
         const isAdminReply = replier.role === 'admin';
-        const recipientEmail = isAdminReply ? ticket.user.email : emailSettings?.supportEmail;
+        const recipientEmail = isAdminReply ? ticket.user.email : emailSettings?.fromAddresses.support;
         const recipientName = isAdminReply ? getFullName(ticket.user.firstName, ticket.user.lastName) : 'Support Team';
 
         if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail') || !recipientEmail || !template) {
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
         const transporter = nodemailer.createTransport({
             host: emailSettings.smtpSettings.host,
             port: emailSettings.smtpSettings.port,
-            secure: emailSettings.smtpSettings.port === 465,
+            secure: emailSettings.smtpSettings.secure,
             auth: {
                 user: emailSettings.smtpSettings.user,
                 pass: emailSettings.smtpSettings.pass,
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
             .replace(/{ticketLink}/g, ticketLink);
 
         const mailOptions = {
-            from: emailSettings.fromEmail,
+            from: emailSettings.fromAddresses.support,
             to: recipientEmail,
             subject: subject,
             html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
