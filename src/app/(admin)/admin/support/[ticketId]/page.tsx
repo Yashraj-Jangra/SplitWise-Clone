@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -14,7 +15,7 @@ import { getSiteSettings, getUserProfile } from '@/lib/mock-data';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/ui/icons';
+import { Icons } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -109,8 +110,6 @@ export default function TicketDetailPage() {
     const handleReplySubmit = async (values: ReplyFormValues, sendEmail: boolean) => {
         if (!adminProfile || !ticket) return;
 
-        replyForm.formState.isSubmitting = true;
-
         const ticketDocRef = doc(db, 'tickets', ticket.id);
         const newMessage = {
             sentAt: Timestamp.now(),
@@ -141,8 +140,6 @@ export default function TicketDetailPage() {
             
         } catch (error) {
              toast({ variant: 'destructive', title: 'Error', description: 'Failed to send reply.' });
-        } finally {
-            replyForm.formState.isSubmitting = false;
         }
     };
     
