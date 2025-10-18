@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -96,8 +97,21 @@ function TicketHistory() {
     .then(async () => {
         toast({ title: 'Reply Sent' });
         replyForm.reset();
+        
+        // Fetch updated tickets to show new message immediately
         const updatedTickets = await getTicketsByUserId(userProfile.uid);
         setAllTickets(updatedTickets);
+
+        // Trigger email notification
+        try {
+            await fetch('/api/admin/notify-ticket-reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketId: ticketId, replyMessage: values.replyMessage, replierId: userProfile.uid }),
+            });
+        } catch (emailError) {
+            console.error("Failed to trigger reply notification email:", emailError);
+        }
     })
     .catch((error) => {
         const permissionError = new FirestorePermissionError({

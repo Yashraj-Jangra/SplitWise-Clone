@@ -1,4 +1,5 @@
 
+
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -300,7 +301,6 @@ export interface SiteSettings {
     loginNotification: EmailTemplate;
     monthlyReport: EmailTemplate;
     paymentReminder: EmailTemplate;
-    // New templates for support system
     supportTicketConfirmation: EmailTemplate;
     supportTicketAdminNotification: EmailTemplate;
     supportTicketReply: EmailTemplate;

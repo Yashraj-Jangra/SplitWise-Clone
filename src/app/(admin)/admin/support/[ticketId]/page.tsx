@@ -24,6 +24,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { getFullName, getInitials, cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ChevronDown } from 'lucide-react';
+
 
 const replySchema = z.object({
   message: z.string().min(1, "Message cannot be empty."),
@@ -103,8 +106,10 @@ export default function TicketDetailPage() {
         }
     }, [ticketId]);
 
-    const handleReplySubmit = async (values: ReplyFormValues) => {
+    const handleReplySubmit = async (values: ReplyFormValues, sendEmail: boolean) => {
         if (!adminProfile || !ticket) return;
+
+        replyForm.formState.isSubmitting = true;
 
         const ticketDocRef = doc(db, 'tickets', ticket.id);
         const newMessage = {
@@ -120,15 +125,24 @@ export default function TicketDetailPage() {
                 status: 'in-progress',
             });
             
+            if (sendEmail) {
+                await fetch('/api/admin/notify-ticket-reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId: ticket.id, replyMessage: values.message, replierId: adminProfile.uid }),
+                });
+            }
+            
             // Re-fetch ticket to show new message
             const updatedTicket = await getTicketById(ticketId);
             setTicket(updatedTicket);
             replyForm.reset();
             toast({ title: "Reply Sent", description: "Your reply has been added to the ticket." });
             
-            // TODO: Send email to user
         } catch (error) {
              toast({ variant: 'destructive', title: 'Error', description: 'Failed to send reply.' });
+        } finally {
+            replyForm.formState.isSubmitting = false;
         }
     };
     
@@ -189,7 +203,7 @@ export default function TicketDetailPage() {
                     </CardHeader>
                     <CardContent>
                         <Form {...replyForm}>
-                            <form onSubmit={replyForm.handleSubmit(handleReplySubmit)} className="space-y-4">
+                            <form onSubmit={replyForm.handleSubmit((values) => handleReplySubmit(values, false))} className="space-y-4">
                                 <FormField control={replyForm.control} name="message" render={({ field }) => (
                                     <FormItem>
                                         <FormControl><Textarea rows={6} placeholder="Type your response here..." {...field} /></FormControl>
@@ -197,9 +211,23 @@ export default function TicketDetailPage() {
                                     </FormItem>
                                 )}/>
                                 <div className="flex justify-end">
-                                    <Button type="submit" disabled={replyForm.formState.isSubmitting}>
-                                        {replyForm.formState.isSubmitting ? "Sending..." : "Send Reply"}
-                                    </Button>
+                                     <DropdownMenu>
+                                        <div className="inline-flex items-center rounded-md">
+                                            <Button type="submit" disabled={replyForm.formState.isSubmitting} className="rounded-r-none">
+                                                {replyForm.formState.isSubmitting ? "Sending..." : "Send Reply"}
+                                            </Button>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="default" size="icon" className="w-8 rounded-l-none border-l">
+                                                    <ChevronDown className="h-4 w-4"/>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                        </div>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={replyForm.handleSubmit((values) => handleReplySubmit(values, true))}>
+                                                Send Reply & Email
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </form>
                         </Form>
