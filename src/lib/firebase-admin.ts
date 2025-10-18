@@ -4,6 +4,9 @@ import type { SiteSettings, PolicyPage } from '@/types';
 import { Timestamp } from 'firebase-admin/firestore';
 import { defaultExpenseCategories } from './expense-categories';
 
+// Explicitly load environment variables from .env file
+require('dotenv').config();
+
 // Check if the service account JSON is provided in the environment variables
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
   throw new Error('Firebase service account credentials are not set in the environment variables. Please set FIREBASE_SERVICE_ACCOUNT.');
@@ -142,5 +145,3 @@ export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
         } as SiteSettings;
     }
 }
-
-    
