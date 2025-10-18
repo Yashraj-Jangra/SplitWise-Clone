@@ -18,6 +18,8 @@ import { Icons } from '@/components/icons';
 import type { SupportTicketDocument } from '@/types';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const supportTicketSchema = z.object({
   subject: z.string().min(5, "Subject must be at least 5 characters long.").max(100),
@@ -46,46 +48,54 @@ export default function SupportPage() {
       toast({ variant: 'destructive', title: 'Not Logged In', description: 'You must be logged in to submit a ticket.' });
       return;
     }
+    form.formState.isSubmitting = true;
 
-    try {
-      const newTicket: Omit<SupportTicketDocument, 'messages'> & { messages: any[] } = {
-        userId: userProfile.uid,
-        userName: `${userProfile.firstName} ${userProfile.lastName || ''}`.trim(),
-        userEmail: userProfile.email,
-        subject: values.subject,
-        category: values.category,
-        status: 'open',
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        messages: [
-          {
-            sentAt: Timestamp.now(),
-            sentById: userProfile.uid,
-            message: values.message,
-          },
-        ],
-      };
+    const ticketsCollection = collection(db, 'tickets');
 
-      const docRef = await addDoc(collection(db, 'tickets'), newTicket);
+    const newTicket: Omit<SupportTicketDocument, 'messages'> & { messages: any[] } = {
+      userId: userProfile.uid,
+      userName: `${userProfile.firstName} ${userProfile.lastName || ''}`.trim(),
+      userEmail: userProfile.email,
+      subject: values.subject,
+      category: values.category,
+      status: 'open',
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      messages: [
+        {
+          sentAt: Timestamp.now(),
+          sentById: userProfile.uid,
+          message: values.message,
+        },
+      ],
+    };
 
-      // In a real app, an API route would be triggered here to send emails
-      // For now, we'll just show a success message.
+    addDoc(ticketsCollection, newTicket)
+      .then((docRef) => {
+        toast({
+          title: 'Support Ticket Submitted',
+          description: `Your ticket (ID: ${docRef.id.slice(0, 8)}) has been received. We'll get back to you via email.`,
+        });
+        form.reset();
+      })
+      .catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: ticketsCollection.path,
+            operation: 'create',
+            requestResourceData: newTicket,
+          } satisfies SecurityRuleContext);
 
-      toast({
-        title: 'Support Ticket Submitted',
-        description: `Your ticket (ID: ${docRef.id.slice(0, 8)}) has been received. We'll get back to you via email.`,
+          errorEmitter.emit('permission-error', permissionError);
+
+          toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: 'Could not submit your support ticket due to a permission error.',
+          });
+      })
+      .finally(() => {
+          form.formState.isSubmitting = false;
       });
-      
-      form.reset();
-      
-    } catch (error) {
-      console.error("Error creating support ticket:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Submission Failed',
-        description: 'Could not submit your support ticket. Please try again later.',
-      });
-    }
   }
 
   return (

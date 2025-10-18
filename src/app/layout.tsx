@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
 import { getSiteSettings } from '@/lib/mock-data';
 import { SiteSettingsProvider } from '@/contexts/site-settings-context';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body className="font-body antialiased min-h-screen flex flex-col bg-background" suppressHydrationWarning>
         <SiteSettingsProvider>
           <AuthProvider>
+            <FirebaseErrorListener />
             {children}
           </AuthProvider>
         </SiteSettingsProvider>
