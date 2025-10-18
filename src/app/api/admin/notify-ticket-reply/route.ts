@@ -1,7 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { getSiteSettings, getUserProfile } from '@/lib/mock-data';
+import { getUserProfile } from '@/lib/mock-data';
+import { getSiteSettingsAdmin } from '@/lib/firebase-admin';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { SupportTicket, UserProfile } from '@/types';
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
         }
 
         const [siteSettings, ticket, replier] = await Promise.all([
-            getSiteSettings(),
+            getSiteSettingsAdmin(),
             getTicketById(ticketId),
             getUserProfile(replierId)
         ]);

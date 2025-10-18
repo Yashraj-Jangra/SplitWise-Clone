@@ -1,9 +1,8 @@
 
 import { NextResponse } from 'next/server';
-import { firebaseAdmin } from '@/lib/firebase-admin'; // Import the initialized admin app
+import { firebaseAdmin, getSiteSettingsAdmin } from '@/lib/firebase-admin'; // Import the initialized admin app
 import nodemailer from 'nodemailer';
 import type { SiteSettings } from '@/types';
-import { getSiteSettings } from '@/lib/mock-data';
 
 type TestEmailRequestBody = {
     emailSettings: SiteSettings['emailSettings'];
@@ -30,7 +29,7 @@ export async function POST(request: Request) {
         }
 
         const { emailSettings, testTarget }: TestEmailRequestBody = await request.json();
-        const { appName } = await getSiteSettings();
+        const { appName } = await getSiteSettingsAdmin();
 
         if (!emailSettings || !emailSettings.smtpSettings) {
              return NextResponse.json({ error: 'Bad Request: Missing email settings.' }, { status: 400 });

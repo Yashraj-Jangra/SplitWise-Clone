@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { firebaseAdmin } from '@/lib/firebase-admin';
-import { getSiteSettings } from '@/lib/mock-data';
+import { firebaseAdmin, getSiteSettingsAdmin } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 import { getFullName } from '@/lib/utils';
 import { getAuth } from 'firebase-admin/auth';
@@ -13,7 +12,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Bad Request: Email is required.' }, { status: 400 });
         }
 
-        const siteSettings = await getSiteSettings();
+        const siteSettings = await getSiteSettingsAdmin();
         const db = firebaseAdmin.firestore();
         
         // Find user by email to get their name, using the Admin SDK
