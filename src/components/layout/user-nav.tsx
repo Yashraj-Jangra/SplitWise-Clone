@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -78,6 +79,12 @@ export function UserNav() {
             <Link href="/dashboard">
               <Icons.Dashboard className="mr-2 h-4 w-4" />
               <span>Dashboard</span>
+            </Link>
+          </DropdownMenuItem>
+           <DropdownMenuItem asChild className="focus:text-primary focus:bg-primary/10">
+            <Link href="/support">
+              <Icons.Help className="mr-2 h-4 w-4" />
+              <span>Help & Support</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="focus:text-primary focus:bg-primary/10">

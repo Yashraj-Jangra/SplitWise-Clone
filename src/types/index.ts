@@ -1,4 +1,5 @@
 
+
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -82,6 +83,25 @@ export interface HistoryEventDocument {
   groupMemberIds: string[]; // For security rules
 }
 
+export interface SupportTicketMessageDocument {
+    sentAt: Timestamp;
+    sentById: string; // user or admin uid
+    message: string;
+}
+
+export interface SupportTicketDocument {
+    userId: string;
+    userName: string;
+    userEmail: string;
+    subject: string;
+    category: 'bug' | 'feature' | 'billing' | 'general';
+    status: 'open' | 'in-progress' | 'closed';
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
+    messages: SupportTicketMessageDocument[];
+    assignedToId?: string; // Admin UID
+}
+
 
 // --- Hydrated Types for Client-side Usage ---
 // These types include the full nested objects for easier display
@@ -115,6 +135,21 @@ export interface Settlement extends Omit<SettlementDocument, 'paidById' | 'paidT
     paidTo: UserProfile;
     date: string; // ISO string for client
 }
+
+export interface SupportTicketMessage extends Omit<SupportTicketMessageDocument, 'sentAt'> {
+    sentBy: UserProfile; // Hydrated user
+    sentAt: string; // ISO string
+}
+
+export interface SupportTicket extends Omit<SupportTicketDocument, 'createdAt' | 'updatedAt' | 'messages' | 'userId' | 'assignedToId'> {
+    id: string;
+    user: UserProfile;
+    assignedTo?: UserProfile;
+    messages: SupportTicketMessage[];
+    createdAt: string; // ISO string
+    updatedAt: string; // ISO string
+}
+
 
 export interface Balance {
   user: UserProfile;
@@ -248,6 +283,7 @@ export interface SiteSettings {
   emailSettings?: {
     sendingMethod: 'firebase' | 'custom' | 'gmail';
     fromEmail: string;
+    supportEmail?: string;
     smtpSettings: {
       host: string;
       port: number;
@@ -265,6 +301,9 @@ export interface SiteSettings {
     loginNotification: EmailTemplate;
     monthlyReport: EmailTemplate;
     paymentReminder: EmailTemplate;
+    supportTicketConfirmation: EmailTemplate;
+    supportTicketAdminNotification: EmailTemplate;
+    supportTicketReply: EmailTemplate;
   };
   stats?: {
     users: number;
