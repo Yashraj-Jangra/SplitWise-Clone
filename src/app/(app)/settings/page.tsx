@@ -266,7 +266,7 @@ export default function SettingsPage() {
                                     </FormControl>
                                     <SelectContent>
                                         {siteSettings.countryCodes.map(cc => (
-                                            <SelectItem key={cc.code} value={cc.code}>{cc.flag} {cc.code}</SelectItem>
+                                            <SelectItem key={`${cc.name}-${cc.code}`} value={cc.code}>{cc.flag} {cc.code}</SelectItem>
                                         ))}
                                     </SelectContent>
                                     </Select>
