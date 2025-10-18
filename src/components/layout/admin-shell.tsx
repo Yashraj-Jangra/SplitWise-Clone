@@ -35,6 +35,11 @@ const adminNavItems: NavItem[] = [
     icon: "Details",
   },
   {
+    title: "Support Tickets",
+    href: "/admin/support",
+    icon: "Help",
+  },
+  {
     title: "Site Settings",
     href: "/admin/settings",
     icon: "Settings",
