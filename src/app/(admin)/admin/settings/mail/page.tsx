@@ -2,6 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
@@ -22,11 +25,29 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/auth-context';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 
 type EmailTemplateName = keyof SiteSettings['emailTemplates'];
+
+const broadcastSchema = z.object({
+  subject: z.string().min(1, "Subject is required."),
+  body: z.string().min(1, "Body is required."),
+});
+
+type BroadcastFormValues = z.infer<typeof broadcastSchema>;
 
 const templatePlaceholders: Record<EmailTemplateName, string[]> = {
     registration: ['{appName}', '{userName}'],
@@ -41,8 +62,15 @@ export default function AdminMailSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [showBroadcastConfirm, setShowBroadcastConfirm] = useState(false);
   const { toast } = useToast();
   const { firebaseUser } = useAuth(); // Get the firebaseUser for the auth token
+
+  const broadcastForm = useForm<BroadcastFormValues>({
+    resolver: zodResolver(broadcastSchema),
+    defaultValues: { subject: '', body: '' },
+  });
 
   useEffect(() => {
     async function fetchSettings() {
@@ -153,6 +181,44 @@ export default function AdminMailSettingsPage() {
     }
   };
   
+  const handleBroadcastSubmit = async (values: BroadcastFormValues) => {
+    setShowBroadcastConfirm(false);
+    setIsBroadcasting(true);
+    if (!firebaseUser) {
+      toast({ variant: "destructive", title: "Not Authenticated" });
+      setIsBroadcasting(false);
+      return;
+    }
+
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch('/api/admin/broadcast-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify(values),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send broadcast.");
+      }
+
+      toast({
+        title: "Broadcast Sent",
+        description: `Your message has been sent to ${result.sentCount} users.`,
+      });
+      broadcastForm.reset();
+    } catch (error) {
+       toast({
+          variant: "destructive",
+          title: "Broadcast Failed",
+          description: error instanceof Error ? error.message : "An unknown error occurred.",
+      });
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   const renderContent = () => {
     if (loading || !settings) {
         return (
@@ -319,12 +385,70 @@ export default function AdminMailSettingsPage() {
                 </CardContent>
             </Card>
 
+            <Card>
+                <Form {...broadcastForm}>
+                    <form onSubmit={(e) => { e.preventDefault(); setShowBroadcastConfirm(true); }}>
+                        <CardHeader>
+                            <CardTitle>Broadcast Email</CardTitle>
+                            <CardDescription>Send a one-time email to all registered users. Use with caution.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <FormField
+                                control={broadcastForm.control}
+                                name="subject"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Subject</FormLabel>
+                                        <FormControl><Input placeholder="Important Site Update" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={broadcastForm.control}
+                                name="body"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Body</FormLabel>
+                                        <FormControl><Textarea placeholder="Hello everyone, we are writing to inform you about..." {...field} rows={6} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                        <CardFooter>
+                            <Button type="submit" variant="secondary" disabled={isBroadcasting || emailSettings?.sendingMethod === 'firebase'}>
+                                {isBroadcasting && <Icons.AppLogo className="mr-2 animate-spin" />}
+                                Send Broadcast to All Users
+                            </Button>
+                        </CardFooter>
+                    </form>
+                </Form>
+            </Card>
+
             <div className="flex justify-end">
                 <Button onClick={handleSaveChanges} disabled={isSaving || loading || !settings} size="lg">
                     {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
-                    Save Changes
+                    Save All Settings
                 </Button>
             </div>
+            
+             <AlertDialog open={showBroadcastConfirm} onOpenChange={setShowBroadcastConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You are about to send an email to every single user on this platform. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={broadcastForm.handleSubmit(handleBroadcastSubmit)} disabled={isBroadcasting} className="bg-destructive hover:bg-destructive/90">
+                           Confirm and Send
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
   }
