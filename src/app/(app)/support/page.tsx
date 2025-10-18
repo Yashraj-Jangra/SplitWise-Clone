@@ -76,6 +76,14 @@ export default function SupportPage() {
           description: `Your ticket (ID: ${docRef.id.slice(0, 8)}) has been received. We'll get back to you via email.`,
         });
         form.reset();
+
+        // Trigger admin notification email
+        fetch('/api/admin/notify-new-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticketId: docRef.id }),
+        });
+
       })
       .catch((serverError) => {
           const permissionError = new FirestorePermissionError({

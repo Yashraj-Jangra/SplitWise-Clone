@@ -1,5 +1,4 @@
 
-
 import {
   collection,
   doc,
@@ -1204,7 +1203,7 @@ const DEFAULT_TERMS_AND_CONDITIONS: PolicyPage = {
 const DEFAULT_NOT_FOUND_PAGE_SETTINGS = {
     title: "404 - Page Not Found",
     heading: "Lost in the Cosmos?",
-    mainContent: "It seems you\'ve drifted into uncharted territory. The page you\'re looking for might have been moved to another galaxy or never existed in the first place.",
+    mainContent: "It seems you've drifted into uncharted territory. The page you're looking for might have been moved to another galaxy or never existed in the first place.",
     helpfulHint: "Try checking the URL for typos or navigate back to a known constellation.",
     supportNote: "If you believe this is a black hole in our system, please contact support.",
     buttonText: "Return to Home Base",
@@ -1214,21 +1213,25 @@ const DEFAULT_NOT_FOUND_PAGE_SETTINGS = {
 const DEFAULT_MAINTENANCE_MODE_SETTINGS = {
   enabled: false,
   title: 'Under Maintenance',
-  message: "We\'re currently performing some scheduled maintenance. We\'ll be back online shortly!",
+  message: "We're currently performing some scheduled maintenance. We'll be back online shortly!",
   imageUrl: 'https://images.unsplash.com/photo-1589998059171-988d887df646?q=80&w=2070&auto=format&fit=crop'
 };
 
-const DEFAULT_EMAIL_TEMPLATES = {
+const DEFAULT_EMAIL_TEMPLATES: SiteSettings['emailTemplates'] = {
     registration: { subject: 'Welcome to {appName}!', body: 'Hi {userName},\n\nWelcome to {appName}! We are excited to have you on board. You can now start creating groups and managing your shared expenses.\n\nThanks,\nThe {appName} Team' },
     forgotPassword: { subject: 'Password Reset Request for {appName}', body: 'Hi {userName},\n\nYou requested to reset your password. Please click the link below to set a new password:\n{resetLink}\n\nIf you did not request this, you can safely ignore this email.\n\nThanks,\nThe {appName} Team' },
     loginNotification: { subject: 'New Login to Your {appName} Account', body: 'Hi {userName},\n\nWe detected a new login to your {appName} account. If this was you, you can ignore this email. If you do not recognize this activity, please reset your password immediately.\n\nThanks,\nThe {appName} Team' },
     monthlyReport: { subject: 'Your Monthly Report from {appName}', body: 'Hi {userName},\n\nHere is your expense report for the last month.\n\nTotal Spent: {totalSpent}\nNumber of Expenses: {expenseCount}\n\nLog in to see more details.\n\nThanks,\nThe {appName} Team' },
     paymentReminder: { subject: 'Payment Reminder from {appName}', body: 'Hi {userName},\n\nThis is a friendly reminder that you have outstanding balances in one or more of your groups. Please log in to settle your debts.\n\nThanks,\nThe {appName} Team' },
+    supportTicketConfirmation: { subject: 'Your Support Ticket has been Received', body: 'Hi {userName},\n\nThank you for reaching out. We have received your support ticket (ID: {ticketId}) and a member of our team will get back to you shortly.\n\nSubject: {ticketSubject}\n\nThanks,\nThe {appName} Team'},
+    supportTicketAdminNotification: { subject: '[{appName} Support] New Ticket from {userName}', body: 'A new support ticket has been created.\n\nUser: {userName} ({userEmail})\nSubject: {ticketSubject}\nCategory: {ticketCategory}\n\nMessage: {ticketMessage}\n\nView ticket here: {ticketLink}'},
+    supportTicketReply: { subject: 'Re: Your Support Ticket #{ticketId}', body: 'Hi {userName},\n\nA reply has been added to your support ticket.\n\n{replyMessage}\n\nView the full conversation here: {ticketLink}\n\nThanks,\nThe {appName} Team'}
 };
 
 const DEFAULT_EMAIL_SETTINGS = {
     sendingMethod: 'firebase' as 'firebase' | 'custom' | 'gmail',
     fromEmail: 'noreply@yourapp.com',
+    supportEmail: 'support@yourapp.com',
     smtpSettings: {
       host: '',
       port: 587,
@@ -1265,6 +1268,9 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             about.team = DEFAULT_ABOUT_SETTINGS.team;
         }
 
+        const emailTemplates = { ...DEFAULT_EMAIL_TEMPLATES, ...(data.emailTemplates || {})};
+        const emailSettings = { ...DEFAULT_EMAIL_SETTINGS, ...(data.emailSettings || {})};
+
         return {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
@@ -1281,8 +1287,8 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             notFoundPage: { ...DEFAULT_NOT_FOUND_PAGE_SETTINGS, ...(data.notFoundPage || {}) },
             stats: data.stats || { users: 0, groups: 0, expenses: 0 },
             maintenanceMode: { ...DEFAULT_MAINTENANCE_MODE_SETTINGS, ...(data.maintenanceMode || {}) },
-            emailSettings: { ...DEFAULT_EMAIL_SETTINGS, ...(data.emailSettings || {})},
-            emailTemplates: { ...DEFAULT_EMAIL_TEMPLATES, ...(data.emailTemplates || {})},
+            emailSettings,
+            emailTemplates,
         };
     } else {
         const defaultSettings: SiteSettings = {

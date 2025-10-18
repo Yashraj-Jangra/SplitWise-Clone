@@ -4,6 +4,7 @@ import { firebaseAdmin } from '@/lib/firebase-admin';
 import { getSiteSettings } from '@/lib/mock-data';
 import nodemailer from 'nodemailer';
 import { getFullName } from '@/lib/utils';
+import { getAuth } from 'firebase-admin/auth';
 
 export async function POST(request: Request) {
     try {
@@ -26,17 +27,20 @@ export async function POST(request: Request) {
             userName = getFullName(userData.firstName, userData.lastName);
         }
 
-        const link = await firebaseAdmin.auth().generatePasswordResetLink(email);
-
         const { emailTemplates, emailSettings, appName } = siteSettings;
+
+        // If custom SMTP is not configured, use Firebase's built-in email sender
+        if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail')) {
+            await getAuth(firebaseAdmin).generatePasswordResetLink(email);
+            return NextResponse.json({ success: true, message: 'Password reset email sent successfully via Firebase.' });
+        }
+        
+        // If using custom SMTP
+        const link = await getAuth(firebaseAdmin).generatePasswordResetLink(email);
         const template = emailTemplates?.forgotPassword;
 
-        if (!template || !emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail')) {
-            // This path is for when custom email is not set up.
-            // We just generate the link and return success, letting Firebase handle the email.
-            // This avoids an error if SMTP isn't configured.
-             await firebaseAdmin.auth().generatePasswordResetLink(email);
-             return NextResponse.json({ success: true, message: 'Password reset email sent successfully via Firebase.' });
+        if (!template) {
+             return NextResponse.json({ error: 'Forgot password email template is not configured.' }, { status: 500 });
         }
         
         let subject = template.subject.replace(/{appName}/g, appName).replace(/{userName}/g, userName);
