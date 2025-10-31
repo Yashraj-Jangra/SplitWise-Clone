@@ -16,7 +16,8 @@ import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, isValid } fro
 import type { DateRange } from 'react-day-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { cn } from '@/lib/utils';
 
 
 interface GroupAnalysisChartsProps {
@@ -267,12 +268,14 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                         <CardTitle>Total Share by Member</CardTitle>
                         <CardDescription>Each member's total share of expenses.</CardDescription>
                     </div>
-                     <Tabs value={memberChartView} onValueChange={(v) => setMemberChartView(v as 'bar' | 'pie')} className="w-full sm:w-auto">
-                        <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-                            <TabsTrigger value="bar">Bar</TabsTrigger>
-                            <TabsTrigger value="pie">Pie</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
+                     <ToggleGroup type="single" value={memberChartView} onValueChange={(v) => { if (v) setMemberChartView(v as 'bar' | 'pie')}} size="sm">
+                        <ToggleGroupItem value="bar" aria-label="Toggle bar chart">
+                            <Icons.Analysis className="h-4 w-4" />
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="pie" aria-label="Toggle pie chart">
+                            <Icons.PieChart className="h-4 w-4" />
+                        </ToggleGroupItem>
+                    </ToggleGroup>
                 </div>
             </CardHeader>
           <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
@@ -339,12 +342,14 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                         <CardTitle>Spending by Category</CardTitle>
                         <CardDescription>Breakdown of spending for the selected period.</CardDescription>
                     </div>
-                    <Tabs value={categoryChartView} onValueChange={(v) => setCategoryChartView(v as 'bar' | 'pie')} className="w-full sm:w-auto">
-                        <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-                            <TabsTrigger value="pie">Pie</TabsTrigger>
-                            <TabsTrigger value="bar">Bar</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
+                    <ToggleGroup type="single" value={categoryChartView} onValueChange={(v) => { if (v) setCategoryChartView(v as 'bar' | 'pie')}} size="sm">
+                         <ToggleGroupItem value="bar" aria-label="Toggle bar chart">
+                            <Icons.Analysis className="h-4 w-4" />
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="pie" aria-label="Toggle pie chart">
+                            <Icons.PieChart className="h-4 w-4" />
+                        </ToggleGroupItem>
+                    </ToggleGroup>
                 </div>
             </CardHeader>
             <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
@@ -394,3 +399,5 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     </div>
   );
 }
+
+    
