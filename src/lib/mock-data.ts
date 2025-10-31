@@ -477,13 +477,24 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
 
 export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
     const user = auth.currentUser;
-    if (!user) return []; // Cannot fetch without a logged-in user for security rule compliance.
+    if (!user) return [];
 
-    const q = query(
-        collection(db, 'expenses'), 
-        where('groupId', '==', groupId), 
-        where('groupMemberIds', 'array-contains', user.uid)
-    );
+    const profile = await getUserProfile(user.uid);
+    const isAdmin = profile?.role === 'admin';
+
+    let q;
+    if (isAdmin) {
+        // Admins can see all expenses in any group
+        q = query(collection(db, 'expenses'), where('groupId', '==', groupId));
+    } else {
+        // Regular users can only see expenses in groups they are members of
+        q = query(
+            collection(db, 'expenses'), 
+            where('groupId', '==', groupId), 
+            where('groupMemberIds', 'array-contains', user.uid)
+        );
+    }
+    
     const querySnapshot = await getDocs(q);
 
     const expenses: Expense[] = await Promise.all(
