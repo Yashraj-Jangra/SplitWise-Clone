@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import type { Expense, UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Line, LineChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
+import { Line, LineChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell, Pie, PieChart } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { getFullName } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -16,6 +16,7 @@ import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, isValid } fro
 import type { DateRange } from 'react-day-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 interface GroupAnalysisChartsProps {
@@ -58,6 +59,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   const [date, setDate] = useState<DateRange | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [memberChartCategory, setMemberChartCategory] = useState<string>('all');
+  const [categoryChartView, setCategoryChartView] = useState<'bar' | 'pie'>('bar');
   
   useEffect(() => {
     setDate({ from: minDate, to: maxDate });
@@ -308,22 +310,61 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
         
         <Card>
             <CardHeader>
-                <CardTitle>Spending by Category</CardTitle>
-                <CardDescription>Breakdown of spending for the selected period.</CardDescription>
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                    <div>
+                        <CardTitle>Spending by Category</CardTitle>
+                        <CardDescription>Breakdown of spending for the selected period.</CardDescription>
+                    </div>
+                    <Tabs value={categoryChartView} onValueChange={(v) => setCategoryChartView(v as 'bar' | 'pie')} className="w-full sm:w-auto">
+                        <TabsList className="grid w-full grid-cols-2 sm:w-auto">
+                            <TabsTrigger value="bar">Bar</TabsTrigger>
+                            <TabsTrigger value="pie">Pie</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
             </CardHeader>
             <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
+              {categoryChartView === 'bar' ? (
                 <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
-                <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 20}}>
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
-                    <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                    <Bar dataKey="total" radius={4}>
-                        {expensesByCategory.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
-                        ))}
-                    </Bar>
-                </BarChart>
+                    <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 20}}>
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <Bar dataKey="total" radius={4}>
+                            {expensesByCategory.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
+                            ))}
+                        </Bar>
+                    </BarChart>
                 </ChartContainer>
+              ) : (
+                <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
+                    <PieChart accessibilityLayer>
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <Pie
+                            data={expensesByCategory}
+                            dataKey="total"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={isMobile ? 60 : 80}
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            labelLine={false}
+                            className="text-xs"
+                        >
+                            {expensesByCategory.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Legend
+                          verticalAlign="bottom"
+                          height={40}
+                          iconSize={10}
+                          formatter={(value, entry, index) => <span className="text-xs text-muted-foreground">{value}</span>}
+                        />
+                    </PieChart>
+                </ChartContainer>
+              )}
             </CardContent>
         </Card>
       </div>
