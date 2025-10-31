@@ -313,9 +313,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                             cx="50%"
                             cy="50%"
                             outerRadius={isMobile ? 60 : 80}
-                            labelLine={false}
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            className="text-xs"
+                            innerRadius={isMobile ? 30 : 40}
+                            paddingAngle={2}
                         >
                             {totalShareByMember.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={MEMBER_CHART_COLORS[index % MEMBER_CHART_COLORS.length]} />
@@ -373,9 +372,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                             cx="50%"
                             cy="50%"
                             outerRadius={isMobile ? 60 : 80}
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            labelLine={false}
-                            className="text-xs"
+                            innerRadius={isMobile ? 30 : 40}
+                            paddingAngle={2}
                         >
                             {expensesByCategory.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
