@@ -58,8 +58,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   
   const [date, setDate] = useState<DateRange | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [memberChartCategory, setMemberChartCategory] = useState<string>('all');
-  const [categoryChartView, setCategoryChartView] = useState<'bar' | 'pie'>('bar');
+  const [memberChartView, setMemberChartView] = useState<'bar' | 'pie'>('bar');
+  const [categoryChartView, setCategoryChartView] = useState<'bar' | 'pie'>('pie');
   
   useEffect(() => {
     setDate({ from: minDate, to: maxDate });
@@ -117,7 +117,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     const memberChartExpenses = validExpenses.filter(expense => {
       const expenseDate = new Date(expense.date);
       const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= endOfDay(date.to!);
-      const isInCategory = memberChartCategory === 'all' || (expense.category || 'Other') === memberChartCategory;
+      const isInCategory = selectedCategory === 'all' || (expense.category || 'Other') === selectedCategory;
       return isInDateRange && isInCategory;
     });
 
@@ -135,7 +135,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     });
 
     return Object.values(data).filter(d => d.total > 0).sort((a,b) => b.total - a.total);
-  }, [validExpenses, members, date, memberChartCategory]);
+  }, [validExpenses, members, date, selectedCategory]);
 
   const expensesByCategory = useMemo(() => {
     const data = filteredExpenses.reduce((acc, expense) => {
@@ -267,44 +267,69 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                         <CardTitle>Total Share by Member</CardTitle>
                         <CardDescription>Each member's total share of expenses.</CardDescription>
                     </div>
-                    <Select value={memberChartCategory} onValueChange={setMemberChartCategory}>
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {uniqueCategories.map(cat => (
-                                <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                     <Tabs value={memberChartView} onValueChange={(v) => setMemberChartView(v as 'bar' | 'pie')} className="w-full sm:w-auto">
+                        <TabsList className="grid w-full grid-cols-2 sm:w-auto">
+                            <TabsTrigger value="bar">Bar</TabsTrigger>
+                            <TabsTrigger value="pie">Pie</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
             </CardHeader>
           <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
-            <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
-              <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: 0, right: 20}}>
-                <XAxis type="number" hide />
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={5}
-                  width={isMobile ? 70 : 80}
-                  className="text-xs"
-                  stroke="hsl(var(--muted-foreground))"
-                  tickFormatter={(value) => isMobile && value.length > 8 ? `${value.substring(0, 8)}...` : value}
-                />
-                <Tooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                 <Bar dataKey="total" radius={4}>
-                    {totalShareByMember.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={MEMBER_CHART_COLORS[index % MEMBER_CHART_COLORS.length]} />
-                    ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
+             {memberChartView === 'bar' ? (
+                <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
+                <BarChart data={totalShareByMember} layout="vertical" accessibilityLayer margin={{left: 0, right: 20}}>
+                    <XAxis type="number" hide />
+                    <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={5}
+                    width={isMobile ? 70 : 80}
+                    className="text-xs"
+                    stroke="hsl(var(--muted-foreground))"
+                    tickFormatter={(value) => isMobile && value.length > 8 ? `${value.substring(0, 8)}...` : value}
+                    />
+                    <Tooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="dot" />}
+                    />
+                    <Bar dataKey="total" radius={4}>
+                        {totalShareByMember.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={MEMBER_CHART_COLORS[index % MEMBER_CHART_COLORS.length]} />
+                        ))}
+                    </Bar>
+                </BarChart>
+                </ChartContainer>
+             ) : (
+                <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
+                    <PieChart accessibilityLayer>
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <Pie
+                            data={totalShareByMember}
+                            dataKey="total"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={isMobile ? 60 : 80}
+                            labelLine={false}
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            className="text-xs"
+                        >
+                            {totalShareByMember.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={MEMBER_CHART_COLORS[index % MEMBER_CHART_COLORS.length]} />
+                            ))}
+                        </Pie>
+                         <Legend
+                          verticalAlign="bottom"
+                          height={40}
+                          iconSize={10}
+                          formatter={(value, entry, index) => <span className="text-xs text-muted-foreground">{value}</span>}
+                        />
+                    </PieChart>
+                </ChartContainer>
+             )}
           </CardContent>
         </Card>
         
@@ -317,8 +342,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     </div>
                     <Tabs value={categoryChartView} onValueChange={(v) => setCategoryChartView(v as 'bar' | 'pie')} className="w-full sm:w-auto">
                         <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-                            <TabsTrigger value="bar">Bar</TabsTrigger>
                             <TabsTrigger value="pie">Pie</TabsTrigger>
+                            <TabsTrigger value="bar">Bar</TabsTrigger>
                         </TabsList>
                     </Tabs>
                 </div>
