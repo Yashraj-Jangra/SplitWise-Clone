@@ -1,0 +1,114 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply text-[90%];
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  :root {
+    --background: 0 0% 10%; /* #1A1A1A */
+    --foreground: 0 0% 98%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 180 100% 40%; /* #00C4CC */
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 0 100% 71%; /* #FF6B6B */
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 100% 71%;
+    --destructive-foreground: 0 0% 10%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 180 100% 40%;
+    --radius: 0.3rem; /* Edgy corners */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 45 90% 50%;
+    --chart-7: 200 80% 55%;
+    --chart-8: 300 50% 50%;
+    --chart-9: 80 60% 45%;
+    --chart-10: 0 70% 60%;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 180 100% 40%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 0 100% 71%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 100% 71%;
+    --destructive-foreground: 0 0% 10%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 180 100% 40%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 45 90% 50%;
+    --chart-7: 200 80% 55%;
+    --chart-8: 300 50% 50%;
+    --chart-9: 80 60% 45%;
+    --chart-10: 0 70% 60%;
+  }
+
+  /* Custom Scrollbar Styles */
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--secondary)) hsl(var(--background));
+  }
+  
+  body::-webkit-scrollbar {
+    width: 12px;
+  }
+  
+  body::-webkit-scrollbar-track {
+    background-color: hsl(var(--background));
+  }
+  
+  body::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--secondary));
+    border-radius: 10px;
+    border: 3px solid hsl(var(--background));
+  }
+
+  body::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary));
+  }
+}
+
+@layer utilities {
+  .glass-pane {
+    @apply bg-card/50 backdrop-blur-sm border-border/50;
+  }
+}
