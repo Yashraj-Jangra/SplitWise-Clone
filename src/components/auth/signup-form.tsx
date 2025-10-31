@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -8,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FirebaseError } from 'firebase/app';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -17,6 +16,7 @@ import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import type { SiteSettings } from "@/types";
+import AppLoading from "@/app/(app)/loading";
 
 const signupSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
@@ -39,8 +39,15 @@ interface SignupFormProps {
 export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { signup, loginWithGoogle } = useAuth();
+  const { userProfile, loading, signup, loginWithGoogle } = useAuth();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    // If auth is not loading and a user is logged in, redirect to dashboard.
+    if (!loading && userProfile) {
+      router.replace('/dashboard');
+    }
+  }, [userProfile, loading, router]);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -111,6 +118,11 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
     }
   }
 
+  // Show a loading state while we check for an active session.
+  if (loading || userProfile) {
+    return <AppLoading />;
+  }
+
   return (
     <div className="w-full">
       <div className="text-center md:text-left mb-8">
@@ -131,7 +143,7 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
                     <FormItem>
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
-                            <Input placeholder={authPageSettings?.signupFirstNamePlaceholder || "John"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
+                            <Input placeholder={authPageSettings?.signupFirstNamePlaceholder || "Bartholomew"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -144,7 +156,7 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
                     <FormItem>
                         <FormLabel>Last Name (Optional)</FormLabel>
                         <FormControl>
-                            <Input placeholder={authPageSettings?.signupLastNamePlaceholder || "Doe"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
+                            <Input placeholder={authPageSettings?.signupLastNamePlaceholder || "Cubbins"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

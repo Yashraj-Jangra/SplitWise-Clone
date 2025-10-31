@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -7,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -17,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { FirebaseError } from "firebase/app";
 import type { SiteSettings } from "@/types";
+import AppLoading from "@/app/(app)/loading";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -33,8 +33,15 @@ interface LoginFormProps {
 export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { login, loginWithGoogle } = useAuth();
+  const { userProfile, loading, login, loginWithGoogle } = useAuth();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    // If auth is not loading and a user is logged in, redirect to dashboard.
+    if (!loading && userProfile) {
+      router.replace('/dashboard');
+    }
+  }, [userProfile, loading, router]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -97,6 +104,11 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
     } finally {
       setIsGoogleLoading(false);
     }
+  }
+
+  // Show a loading state while we check for an active session.
+  if (loading || userProfile) {
+    return <AppLoading />;
   }
 
   return (
