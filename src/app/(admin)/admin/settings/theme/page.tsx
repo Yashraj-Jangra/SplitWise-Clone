@@ -64,14 +64,13 @@ type ThemeFormValues = z.infer<typeof themeSchema>;
 
 const createInitialThemeData = (name: string, templateTheme: Theme): Theme => {
   const newId = name.toLowerCase().replace(/\s+/g, '-');
-  const copiedTheme = JSON.parse(JSON.stringify(templateTheme));
+  const copiedTheme: Theme = JSON.parse(JSON.stringify(templateTheme));
 
-  return {
-    ...copiedTheme,
-    id: newId,
-    name,
-    isCustom: true,
-  };
+  copiedTheme.id = newId;
+  copiedTheme.name = name;
+  copiedTheme.isCustom = true;
+  
+  return copiedTheme;
 };
 
 // --- Main Component ---
@@ -246,8 +245,14 @@ export default function AdminThemeSettingsPage() {
             </CardContent>
              <CardFooter className="border-t pt-6">
                 <Button onClick={handleSaveChanges} disabled={isSaving || siteSettingsLoading} size="lg">
-                    {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
-                    Save All Theme Settings
+                    {isSaving ? (
+                        <>
+                            <Icons.AppLogo className="animate-spin mr-2" />
+                            Saving...
+                        </>
+                    ) : (
+                        'Save All Theme Settings'
+                    )}
                 </Button>
             </CardFooter>
         </Card>
@@ -471,5 +476,7 @@ const RadiusEditor = ({ label, value, onChange, preview }: { label: string, valu
     </div>
 );
 
+
+    
 
     
