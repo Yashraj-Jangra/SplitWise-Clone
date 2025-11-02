@@ -50,10 +50,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState('default-dark');
   const [allThemes, setAllThemes] = useState<Theme[]>(BASE_THEMES);
 
-  // Combine base themes and custom themes from settings
+  // Combine base themes and custom themes from settings, ensuring no duplicates.
   useEffect(() => {
     if (!settingsLoading && settings.customThemes) {
-      setAllThemes([...BASE_THEMES, ...settings.customThemes]);
+        const themeMap = new Map<string, Theme>();
+        
+        // Add base themes first
+        BASE_THEMES.forEach(theme => themeMap.set(theme.id, theme));
+        
+        // Overwrite with custom themes if IDs match, or add new ones
+        settings.customThemes.forEach(theme => themeMap.set(theme.id, theme));
+
+        setAllThemes(Array.from(themeMap.values()));
+    } else if (!settingsLoading) {
+        setAllThemes(BASE_THEMES);
     }
   }, [settings, settingsLoading]);
 
