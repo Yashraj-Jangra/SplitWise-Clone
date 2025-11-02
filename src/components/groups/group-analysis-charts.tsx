@@ -76,23 +76,29 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     return ['all', ...Array.from(allCategories)];
   }, [validExpenses]);
 
-  const filteredExpenses = useMemo(() => {
+  const dateFilteredExpenses = useMemo(() => {
     if (!date?.from || !isValid(date.from) || !date.to || !isValid(date.to)) return [];
-
     return validExpenses.filter(expense => {
       const expenseDate = new Date(expense.date);
-      const isInCategory = selectedCategory === 'all' || (expense.category || 'Other') === selectedCategory;
       const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= endOfDay(date.to!);
-      return isInCategory && isInDateRange;
+      return isInDateRange;
     });
-  }, [validExpenses, date, selectedCategory]);
+  }, [validExpenses, date]);
+
+  const dailyChartFilteredExpenses = useMemo(() => {
+    if (selectedCategory === 'all') {
+      return dateFilteredExpenses;
+    }
+    return dateFilteredExpenses.filter(expense => (expense.category || 'Other') === selectedCategory);
+  }, [dateFilteredExpenses, selectedCategory]);
+
 
   const userSpendingOverTime = useMemo(() => {
     if (!date?.from || !date?.to || !isValid(date.from) || !isValid(date.to) || date.from > date.to) {
         return [];
     }
 
-    const spendingByDateAndUser = filteredExpenses.reduce((acc, expense) => {
+    const spendingByDateAndUser = dailyChartFilteredExpenses.reduce((acc, expense) => {
         const day = format(new Date(expense.date), 'yyyy-MM-dd');
         if (!acc[day]) acc[day] = {};
         
@@ -115,24 +121,15 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
         });
         return entry;
     });
-  }, [filteredExpenses, members, date]);
+  }, [dailyChartFilteredExpenses, members, date]);
 
   const totalShareByMember = useMemo(() => {
-    if (!date?.from || !isValid(date.from) || !date.to || !isValid(date.to)) return [];
-
-    const memberChartExpenses = validExpenses.filter(expense => {
-      const expenseDate = new Date(expense.date);
-      const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= endOfDay(date.to!);
-      const isInCategory = selectedCategory === 'all' || (expense.category || 'Other') === selectedCategory;
-      return isInDateRange && isInCategory;
-    });
-
     const data = members.reduce((acc, member) => {
       acc[member.uid] = { name: getFullName(member.firstName, member.lastName), total: 0 };
       return acc;
     }, {} as Record<string, { name: string; total: number }>);
 
-    memberChartExpenses.forEach(expense => {
+    dateFilteredExpenses.forEach(expense => {
       expense.participants.forEach(participant => {
         if (data[participant.user.uid]) {
           data[participant.user.uid].total += participant.amountOwed;
@@ -141,10 +138,10 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     });
 
     return Object.values(data).filter(d => d.total > 0).sort((a,b) => b.total - a.total);
-  }, [validExpenses, members, date, selectedCategory]);
+  }, [dateFilteredExpenses, members]);
 
   const expensesByCategory = useMemo(() => {
-    const data = filteredExpenses.reduce((acc, expense) => {
+    const data = dateFilteredExpenses.reduce((acc, expense) => {
       const category = expense.category || 'Other';
       acc[category] = (acc[category] || 0) + expense.amount;
       return acc;
@@ -153,7 +150,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     return Object.entries(data)
       .map(([name, total]) => ({ name, total }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredExpenses]);
+  }, [dateFilteredExpenses]);
 
   const userChartConfig = useMemo(() => {
     return members.reduce((acc, member, index) => {
@@ -199,8 +196,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     <div className="space-y-6">
        <Card>
         <CardHeader>
-          <CardTitle>Global Filters</CardTitle>
-          <CardDescription>Refine the charts below by date and category.</CardDescription>
+          <CardTitle>Timeline Filter</CardTitle>
+          <CardDescription>Refine the charts below by a date range.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
             <Popover>
@@ -231,23 +228,27 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     />
                 </PopoverContent>
             </Popover>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full sm:w-[220px]">
-                    <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                    {uniqueCategories.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Daily Expense Share</CardTitle>
-          <CardDescription>Comparing each member's share of expenses per day. Affected by global filters.</CardDescription>
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                <div>
+                    <CardTitle>Daily Expense Share</CardTitle>
+                    <CardDescription>Comparing each member's share of expenses per day.</CardDescription>
+                </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full sm:w-[220px]">
+                        <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {uniqueCategories.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
         </CardHeader>
         <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
           <ChartContainer config={userChartConfig} className="h-[250px] md:h-[350px] w-full">
@@ -281,7 +282,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                     <div>
                         <CardTitle>Total Share by Member</CardTitle>
-                        <CardDescription>Each member's total share of expenses.</CardDescription>
+                        <CardDescription>Each member's total share of expenses in the selected period.</CardDescription>
                     </div>
                      <ToggleGroup type="single" value={memberChartView} onValueChange={(v) => { if (v) setMemberChartView(v as 'bar' | 'pie')}} size="sm">
                         <ToggleGroupItem value="bar" aria-label="Toggle bar chart">
@@ -311,7 +312,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     />
                     <Tooltip
                     cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
+                    content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`} />}
                     />
                     <Bar dataKey="total" radius={4}>
                         {totalShareByMember.map((entry, index) => (
@@ -323,7 +324,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
              ) : (
                 <ChartContainer config={userChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`} />} />
                         <Pie
                             data={totalShareByMember}
                             dataKey="total"
@@ -373,7 +374,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 20}}>
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`}/>} />
                         <Bar dataKey="total" radius={4}>
                             {expensesByCategory.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
@@ -384,7 +385,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
               ) : (
                 <ChartContainer config={categoryChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`} />} />
                         <Pie
                             data={expensesByCategory}
                             dataKey="total"
