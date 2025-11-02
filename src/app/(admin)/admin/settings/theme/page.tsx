@@ -62,12 +62,17 @@ const themeSchema = z.object({
 });
 type ThemeFormValues = z.infer<typeof themeSchema>;
 
-const createInitialThemeData = (name: string, templateTheme: Theme): Theme => ({
-  id: name.toLowerCase().replace(/\s+/g, '-'),
-  name,
-  isCustom: true,
-  ...templateTheme, // Copy all color and radii properties
-});
+const createInitialThemeData = (name: string, templateTheme: Theme): Theme => {
+  const newId = name.toLowerCase().replace(/\s+/g, '-');
+  const copiedTheme = JSON.parse(JSON.stringify(templateTheme));
+
+  return {
+    ...copiedTheme,
+    id: newId,
+    name,
+    isCustom: true,
+  };
+};
 
 // --- Main Component ---
 
@@ -102,7 +107,7 @@ export default function AdminThemeSettingsPage() {
   };
 
   const handleUpdateTheme = (updatedTheme: Theme) => {
-    const updatedCustomThemes = (siteSettings.customThemes || []).map(t => t.id === updatedTheme.id ? updatedTheme : t);
+    const updatedCustomThemes = (siteSettings.customThemes || []).map(t => t.id === themeToEdit?.id ? updatedTheme : t);
     updateLocalSettings({ customThemes: updatedCustomThemes });
   };
   
@@ -198,11 +203,11 @@ export default function AdminThemeSettingsPage() {
                         </Card>
                     ))}
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                      <DialogTrigger asChild>
+                        <DialogTrigger asChild>
                            <Button variant="outline" className="h-full min-h-[200px] border-dashed text-lg">
                                 <Icons.Add className="mr-2" /> Create New Theme
                             </Button>
-                      </DialogTrigger>
+                        </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>Create New Theme</DialogTitle>
@@ -287,13 +292,13 @@ interface EditThemeDialogProps {
 
 function ThemePreview({ theme }: { theme: Theme }) {
     const dynamicStyles = {
-        '--background': theme.background, '--foreground': theme.foreground, '--card': theme.card, '--card-foreground': theme.cardForeground, '--popover': theme.popover, '--popover-foreground': theme.popoverForeground, '--primary': theme.primary, '--primary-foreground': theme.primaryForeground, '--secondary': theme.secondary, '--secondary-foreground': theme.secondaryForeground, '--muted': theme.muted, '--muted-foreground': theme.mutedForeground, '--accent': theme.accent, '--accent-foreground': theme.accentForeground, '--destructive': theme.destructive, '--destructive-foreground': theme.destructiveForeground, '--border': theme.border, '--input': theme.input, '--ring': theme.ring, '--radius': `${theme.radius}rem`, '--radius-card': `${theme.radiusCard}rem`, '--radius-button': `${theme.radiusButton}rem`, '--radius-input': `${theme.radiusInput}rem`, '--radius-dialog': `${theme.radiusDialog}rem`
+        '--background': `hsl(${theme.background})`, '--foreground': `hsl(${theme.foreground})`, '--card': `hsl(${theme.card})`, '--card-foreground': `hsl(${theme.cardForeground})`, '--popover': `hsl(${theme.popover})`, '--popover-foreground': `hsl(${theme.popoverForeground})`, '--primary': `hsl(${theme.primary})`, '--primary-foreground': `hsl(${theme.primaryForeground})`, '--secondary': `hsl(${theme.secondary})`, '--secondary-foreground': `hsl(${theme.secondaryForeground})`, '--muted': `hsl(${theme.muted})`, '--muted-foreground': `hsl(${theme.mutedForeground})`, '--accent': `hsl(${theme.accent})`, '--accent-foreground': `hsl(${theme.accentForeground})`, '--destructive': `hsl(${theme.destructive})`, '--destructive-foreground': `hsl(${theme.destructiveForeground})`, '--border': `hsl(${theme.border})`, '--input': `hsl(${theme.input})`, '--ring': `hsl(${theme.ring})`, '--radius': `${theme.radius}rem`, '--radius-card': `${theme.radiusCard}rem`, '--radius-button': `${theme.radiusButton}rem`, '--radius-input': `${theme.radiusInput}rem`, '--radius-dialog': `${theme.radiusDialog}rem`
     } as React.CSSProperties;
 
     return (
-        <div style={dynamicStyles} className="p-4 rounded-md border" >
+        <div style={dynamicStyles} className="p-4 rounded-md border bg-background text-foreground" >
             <div className="space-y-4">
-                <Card className="w-full">
+                <Card>
                     <CardHeader>
                         <CardTitle className="text-lg">Card Preview</CardTitle>
                         <CardDescription>This is a sample card.</CardDescription>
@@ -316,8 +321,17 @@ function ThemePreview({ theme }: { theme: Theme }) {
     )
 }
 
+const editThemeSchema = z.object({
+  name: z.string().min(1, 'Theme name is required'),
+});
+
 function EditThemeDialog({ open, onOpenChange, theme, onThemeUpdate }: EditThemeDialogProps) {
     const [editedTheme, setEditedTheme] = useState<Theme>(theme);
+    
+    const form = useForm({
+        resolver: zodResolver(editThemeSchema),
+        defaultValues: { name: theme.name }
+    })
     
     const handleColorChange = (varName: keyof ThemeColors, value: string) => {
         setEditedTheme(prev => ({...prev, [varName]: value}));
@@ -328,7 +342,9 @@ function EditThemeDialog({ open, onOpenChange, theme, onThemeUpdate }: EditTheme
     };
     
     const handleSave = () => {
-        onThemeUpdate(editedTheme);
+        const newName = form.getValues('name');
+        const newId = newName.toLowerCase().replace(/\s+/g, '-');
+        onThemeUpdate({...editedTheme, name: newName, id: newId });
         onOpenChange(false);
     };
 
@@ -342,13 +358,32 @@ function EditThemeDialog({ open, onOpenChange, theme, onThemeUpdate }: EditTheme
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto p-1">
                     {/* Controls Column */}
                     <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Colors Column */}
                         <div className="space-y-4">
-                            <Accordion type="multiple" className="w-full space-y-4">
+                            <Form {...form}>
+                                <form className="space-y-4">
+                                     <FormField control={form.control} name="name" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Theme Name</FormLabel>
+                                            <FormControl><Input {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </form>
+                            </Form>
+
+                            <Accordion type="multiple" className="w-full space-y-4" defaultValue={['general']}>
                                 <AccordionItem value="general" className="border-b-0"><AccordionTrigger>General</AccordionTrigger>
                                     <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <ColorEditor label="Background" color={editedTheme.background} onChange={(c) => handleColorChange('background', c)} />
                                         <ColorEditor label="Foreground" color={editedTheme.foreground} onChange={(c) => handleColorChange('foreground', c)} />
+                                    </AccordionContent>
+                                </AccordionItem>
+                                <AccordionItem value="card" className="border-b-0"><AccordionTrigger>Card</AccordionTrigger>
+                                    <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <ColorEditor label="Card" color={editedTheme.card} onChange={(c) => handleColorChange('card', c)} />
+                                        <ColorEditor label="Card FG" color={editedTheme.cardForeground} onChange={(c) => handleColorChange('cardForeground', c)} />
+                                        <ColorEditor label="Popover" color={editedTheme.popover} onChange={(c) => handleColorChange('popover', c)} />
+                                        <ColorEditor label="Popover FG" color={editedTheme.popoverForeground} onChange={(c) => handleColorChange('popoverForeground', c)} />
                                     </AccordionContent>
                                 </AccordionItem>
                                 <AccordionItem value="primary" className="border-b-0"><AccordionTrigger>Primary</AccordionTrigger>
@@ -375,15 +410,7 @@ function EditThemeDialog({ open, onOpenChange, theme, onThemeUpdate }: EditTheme
                                         <ColorEditor label="Destructive FG" color={editedTheme.destructiveForeground} onChange={(c) => handleColorChange('destructiveForeground', c)} />
                                     </AccordionContent>
                                 </AccordionItem>
-                                <AccordionItem value="card" className="border-b-0"><AccordionTrigger>Card / Popover</AccordionTrigger>
-                                    <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                        <ColorEditor label="Card" color={editedTheme.card} onChange={(c) => handleColorChange('card', c)} />
-                                        <ColorEditor label="Card FG" color={editedTheme.cardForeground} onChange={(c) => handleColorChange('cardForeground', c)} />
-                                        <ColorEditor label="Popover" color={editedTheme.popover} onChange={(c) => handleColorChange('popover', c)} />
-                                        <ColorEditor label="Popover FG" color={editedTheme.popoverForeground} onChange={(c) => handleColorChange('popoverForeground', c)} />
-                                    </AccordionContent>
-                                </AccordionItem>
-                                <AccordionItem value="other" className="border-b-0"><AccordionTrigger>Other</AccordionTrigger>
+                                <AccordionItem value="other" className="border-b-0"><AccordionTrigger>Other Colors</AccordionTrigger>
                                     <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <ColorEditor label="Muted" color={editedTheme.muted} onChange={(c) => handleColorChange('muted', c)} />
                                         <ColorEditor label="Muted FG" color={editedTheme.mutedForeground} onChange={(c) => handleColorChange('mutedForeground', c)} />
@@ -398,9 +425,9 @@ function EditThemeDialog({ open, onOpenChange, theme, onThemeUpdate }: EditTheme
                         <div className="space-y-6">
                             <h3 className="text-lg font-semibold">Border Radius</h3>
                             <RadiusEditor label="Global Radius" value={editedTheme.radius} onChange={(v) => handleRadiusChange('radius', v)} />
-                            <RadiusEditor label="Card Radius" value={editedTheme.radiusCard} onChange={(v) => handleRadiusChange('radiusCard', v)} />
-                            <RadiusEditor label="Button Radius" value={editedTheme.radiusButton} onChange={(v) => handleRadiusChange('radiusButton', v)} />
-                            <RadiusEditor label="Input Radius" value={editedTheme.radiusInput} onChange={(v) => handleRadiusChange('radiusInput', v)} />
+                            <RadiusEditor label="Card Radius" value={editedTheme.radiusCard} onChange={(v) => handleRadiusChange('radiusCard', v)} preview={<Card className="w-full h-10" />} />
+                            <RadiusEditor label="Button Radius" value={editedTheme.radiusButton} onChange={(v) => handleRadiusChange('radiusButton', v)} preview={<Button className="w-full" />} />
+                            <RadiusEditor label="Input Radius" value={editedTheme.radiusInput} onChange={(v) => handleRadiusChange('radiusInput', v)} preview={<Input className="w-full" />} />
                             <RadiusEditor label="Dialog Radius" value={editedTheme.radiusDialog} onChange={(v) => handleRadiusChange('radiusDialog', v)} />
                         </div>
                     </div>
@@ -433,12 +460,13 @@ const ColorEditor = ({ label, color, onChange }: { label: string, color: string,
     </div>
 );
 
-const RadiusEditor = ({ label, value, onChange }: { label: string, value: number, onChange: (newValue: number) => void }) => (
+const RadiusEditor = ({ label, value, onChange, preview }: { label: string, value: number, onChange: (newValue: number) => void, preview?: React.ReactNode }) => (
     <div className="space-y-4">
         <div className="flex items-center justify-between">
             <Label>{label}</Label>
             <span className="text-sm text-muted-foreground font-mono">{value.toFixed(2)}rem</span>
         </div>
+        {preview && <div className="p-2" style={{'--radius-card': `${value}rem`, '--radius-button': `${value}rem`, '--radius-input': `${value}rem`} as React.CSSProperties}>{preview}</div>}
         <Slider value={[value]} onValueChange={([v]) => onChange(v)} max={2} step={0.05} />
     </div>
 );
