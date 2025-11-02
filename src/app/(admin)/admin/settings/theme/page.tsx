@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
@@ -13,32 +13,103 @@ import { ALL_THEMES } from '@/themes';
 import { cn } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
+
+type ThemeColor = { h: number, s: number, l: number };
+
+function ColorEditor({ label, color, onChange }: { label: string, color: ThemeColor, onChange: (newColor: ThemeColor) => void }) {
+    return (
+        <div className="space-y-4 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+                <Label className="font-semibold">{label}</Label>
+                <div 
+                    className="h-8 w-8 rounded-full border-2"
+                    style={{ backgroundColor: `hsl(${color.h}, ${color.s}%, ${color.l}%)`}}
+                />
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                    <Label htmlFor={`${label}-h`}>Hue</Label>
+                    <span>{color.h}</span>
+                </div>
+                <Slider id={`${label}-h`} value={[color.h]} onValueChange={([h]) => onChange({ ...color, h })} max={360} step={1} />
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                    <Label htmlFor={`${label}-s`}>Saturation</Label>
+                    <span>{color.s}%</span>
+                </div>
+                <Slider id={`${label}-s`} value={[color.s]} onValueChange={([s]) => onChange({ ...color, s })} max={100} step={1} />
+            </div>
+             <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                    <Label htmlFor={`${label}-l`}>Lightness</Label>
+                    <span>{color.l}%</span>
+                </div>
+                <Slider id={`${label}-l`} value={[color.l]} onValueChange={([l]) => onChange({ ...color, l })} max={100} step={1} />
+            </div>
+        </div>
+    )
+}
+
+function parseHsl(hslString: string): ThemeColor {
+    const [h, s, l] = hslString.split(' ').map(parseFloat);
+    return { h, s, l };
+}
 
 export default function AdminThemeSettingsPage() {
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const { theme: currentTheme, setTheme } = useTheme();
-  const [selectedThemeId, setSelectedThemeId] = useState(siteSettings.activeTheme || 'default');
-
+  const [selectedThemeId, setSelectedThemeId] = useState('default');
+  
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   
-  const [liveThemeVars, setLiveThemeVars] = useState<Record<string, string>>({});
+  const [livePrimary, setLivePrimary] = useState<ThemeColor>({h: 0, s: 0, l: 0});
+  const [liveBackground, setLiveBackground] = useState<ThemeColor>({h: 0, s: 0, l: 0});
+  const [liveForeground, setLiveForeground] = useState<ThemeColor>({h: 0, s: 0, l: 0});
+  const [liveRadius, setLiveRadius] = useState(0.5);
+
+  const getCssVariable = useCallback((varName: string) => {
+    if (typeof window === 'undefined') return '';
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  }, []);
+
+  const initializeLiveTheme = useCallback(() => {
+    setLivePrimary(parseHsl(getCssVariable('--primary')));
+    setLiveBackground(parseHsl(getCssVariable('--background')));
+    setLiveForeground(parseHsl(getCssVariable('--foreground')));
+    setLiveRadius(parseFloat(getCssVariable('--radius') || '0.5'));
+  }, [getCssVariable]);
 
   useEffect(() => {
     setSelectedThemeId(siteSettings.activeTheme || 'default');
   }, [siteSettings.activeTheme]);
+
+  useEffect(() => {
+    // When the theme changes (from picker or load), re-initialize the live editor
+    initializeLiveTheme();
+  }, [currentTheme, initializeLiveTheme]);
 
   const handlePreview = (themeId: string) => {
     setTheme(themeId);
     setSelectedThemeId(themeId);
   };
   
-  const handleLiveVarChange = (varName: string, value: string) => {
-    setLiveThemeVars(prev => ({...prev, [varName]: value}));
-    document.documentElement.style.setProperty(varName, value);
-  }
+  const handleLiveColorChange = useCallback((varName: string, color: ThemeColor) => {
+    const hslString = `${color.h} ${color.s}% ${color.l}%`;
+    document.documentElement.style.setProperty(varName, hslString);
+
+    if (varName === '--primary') setLivePrimary(color);
+    if (varName === '--background') setLiveBackground(color);
+    if (varName === '--foreground') setLiveForeground(color);
+  }, []);
+
+  const handleRadiusChange = useCallback((value: number) => {
+    setLiveRadius(value);
+    document.documentElement.style.setProperty('--radius', `${value}rem`);
+  }, []);
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
@@ -118,30 +189,17 @@ export default function AdminThemeSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="bg-input">Background</Label>
-                        <Input id="bg-input" placeholder="e.g., 240 6% 10%" onChange={(e) => handleLiveVarChange('--background', e.target.value)} />
+                    <ColorEditor label="Primary" color={livePrimary} onChange={(c) => handleLiveColorChange('--primary', c)} />
+                    <ColorEditor label="Background" color={liveBackground} onChange={(c) => handleLiveColorChange('--background', c)} />
+                    <ColorEditor label="Foreground" color={liveForeground} onChange={(c) => handleLiveColorChange('--foreground', c)} />
+                 </div>
+                 <Separator />
+                 <div className="space-y-4">
+                     <div className="flex items-center justify-between">
+                        <Label htmlFor="radius-slider" className="font-semibold">Border Radius</Label>
+                        <span className="text-sm text-muted-foreground font-mono">{liveRadius.toFixed(2)}rem</span>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="fg-input">Foreground</Label>
-                        <Input id="fg-input" placeholder="e.g., 240 5% 85%" onChange={(e) => handleLiveVarChange('--foreground', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="card-input">Card Background</Label>
-                        <Input id="card-input" placeholder="e.g., 240 5% 15%" onChange={(e) => handleLiveVarChange('--card', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="primary-input">Primary Color</Label>
-                        <Input id="primary-input" placeholder="e.g., 255 85% 65%" onChange={(e) => handleLiveVarChange('--primary', e.target.value)} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="accent-input">Accent Color</Label>
-                        <Input id="accent-input" placeholder="e.g., 190 85% 60%" onChange={(e) => handleLiveVarChange('--accent', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="radius-input">Border Radius</Label>
-                        <Input id="radius-input" placeholder="e.g., 0.8rem" onChange={(e) => handleLiveVarChange('--radius', e.target.value)} />
-                    </div>
+                    <Slider id="radius-slider" value={[liveRadius]} onValueChange={([v]) => handleRadiusChange(v)} max={2} step={0.05} />
                  </div>
             </CardContent>
         </Card>
