@@ -28,16 +28,16 @@ interface GroupAnalysisChartsProps {
 }
 
 const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
-  "hsl(var(--chart-9))",
-  "hsl(var(--chart-10))",
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(var(--chart-6))',
+  'hsl(var(--chart-7))',
+  'hsl(var(--chart-8))',
+  'hsl(var(--chart-9))',
+  'hsl(var(--chart-10))',
 ];
 
 const MEMBER_CHART_COLORS = CHART_COLORS;
@@ -293,7 +293,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                         <ToggleGroupItem value="weekly">Weeks</ToggleGroupItem>
                         <ToggleGroupItem value="monthly">Months</ToggleGroupItem>
                     </ToggleGroup>
-                    <Select value={lineType} onValueChange={(v) => setLineType(v as any)}>
+                    <Select value={lineType} onValueChange={(v) => setLineType(v as any)} disabled={timeChartView === 'bar'}>
                         <SelectTrigger className="w-[120px] h-9 text-xs">
                             <SelectValue placeholder="Line Style" />
                         </SelectTrigger>
