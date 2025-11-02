@@ -10,6 +10,8 @@ import { Paintbrush, Copy } from 'lucide-react';
 import { useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+// --- Color Conversion Utilities ---
+
 function hslStringToHsla(hslString: string): { h: number; s: number; l: number; a: number } {
   const parts = hslString.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/i);
   if (!parts) return { h: 0, s: 0, l: 100, a: 1 };
@@ -50,6 +52,22 @@ function rgbaToHsla(r: number, g: number, b: number, a: number): { h: number; s:
     h /= 6;
   }
   return { h: h * 360, s: s * 100, l: l * 100, a };
+}
+
+function hslToHsv(h: number, s: number, l: number): { h: number; s: number; v: number } {
+    s /= 100;
+    l /= 100;
+    const v = l + s * Math.min(l, 1 - l);
+    const newS = v === 0 ? 0 : 2 * (1 - l / v);
+    return { h, s: newS * 100, v: v * 100 };
+}
+
+function hsvToHsl(h: number, s: number, v: number): { h: number; s: number; l: number } {
+    s /= 100;
+    v /= 100;
+    const l = v * (1 - s / 2);
+    const newS = l === 0 || l === 1 ? 0 : (v - l) / Math.min(l, 1 - l);
+    return { h, s: newS * 100, l: l * 100 };
 }
 
 function componentToHex(c: number): string {
@@ -187,6 +205,7 @@ const PickerPanel = ({ color, setColor }: { color: string; setColor: (color: str
 
 const SaturationValuePicker = ({ hsla, setColor, color }: { hsla: { h: number; s: number; l: number; a: number }; setColor: (color: string) => void; color: string; }) => {
   const pickerRef = React.useRef<HTMLDivElement>(null);
+  const hsv = useMemo(() => hslToHsv(hsla.h, hsla.s, hsla.l), [hsla]);
 
   const handleColorSelect = (e: React.MouseEvent<HTMLDivElement> | MouseEvent) => {
     if (!pickerRef.current) return;
@@ -194,14 +213,11 @@ const SaturationValuePicker = ({ hsla, setColor, color }: { hsla: { h: number; s
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
 
-    const s = (x / rect.width) * 100;
-    const l = 100 - (y / rect.height) * 50; // Lightness goes from 100 to 50
+    const newS = (x / rect.width) * 100;
+    const newV = 100 - (y / rect.height) * 100;
+    const newHsl = hsvToHsl(hsv.h, newS, newV);
     
-    // A better calculation for mapping saturation and lightness on a square
-    let newS = (x / rect.width) * 100;
-    let newL = 100 - (y / rect.height) * 100;
-
-    setColor(`hsl(${hsla.h}, ${newS}%, ${newL}%)`);
+    setColor(`hsl(${newHsl.h}, ${newHsl.s}%, ${newHsl.l}%)`);
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -216,16 +232,15 @@ const SaturationValuePicker = ({ hsla, setColor, color }: { hsla: { h: number; s
     document.addEventListener('mouseup', onMouseUp);
   };
   
-  // Position the cursor based on saturation and lightness
-  const xPos = hsla.s;
-  const yPos = 100 - hsla.l;
+  const xPos = hsv.s;
+  const yPos = 100 - hsv.v;
 
   return (
     <div
       ref={pickerRef}
       onMouseDown={handleMouseDown}
       className="w-56 h-56 rounded-md cursor-crosshair relative"
-      style={{ backgroundColor: `hsl(${hsla.h}, 100%, 50%)` }}
+      style={{ backgroundColor: `hsl(${hsv.h}, 100%, 50%)` }}
     >
       <div className="absolute inset-0 rounded-md" style={{ background: 'linear-gradient(to right, white, transparent)' }} />
       <div className="absolute inset-0 rounded-md" style={{ background: 'linear-gradient(to top, black, transparent)' }} />
