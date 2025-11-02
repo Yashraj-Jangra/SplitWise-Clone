@@ -19,40 +19,32 @@ import { ColorPicker } from '@/components/ui/color-picker';
 
 type ThemeColor = { h: number, s: number, l: number };
 
-function ColorEditor({ label, color, onChange }: { label: string, color: ThemeColor, onChange: (newColor: ThemeColor) => void }) {
-    const hslString = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
+function ColorEditor({ label, color, onChange }: { label: string, color: string, onChange: (newColor: string) => void }) {
     return (
         <div className="space-y-4 rounded-lg border p-4">
             <div className="flex items-center justify-between">
                 <Label className="font-semibold">{label}</Label>
                 <div 
                     className="h-8 w-8 rounded-full border-2"
-                    style={{ backgroundColor: hslString }}
+                    style={{ backgroundColor: color }}
                 />
             </div>
              <ColorPicker
-                color={hslString}
-                setColor={(newColor) => {
-                    // This is a simple parser. A more robust one would be needed for a real app.
-                    if (typeof newColor === 'string' && newColor.startsWith('hsl')) {
-                         const parts = newColor.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
-                         if (parts) {
-                            onChange({ h: parseFloat(parts[1]), s: parseFloat(parts[2]), l: parseFloat(parts[3]) });
-                         }
-                    }
-                }}
+                color={color}
+                setColor={onChange}
             />
         </div>
     )
 }
 
-function parseHsl(hslString: string): ThemeColor {
-    if (!hslString) return { h: 0, s: 0, l: 0 };
+
+function parseHslString(hslString: string): string {
+    if (!hslString) return 'hsl(0, 0%, 0%)';
     const parts = hslString.match(/([\d.]+)/g);
-    if (!parts || parts.length < 3) return { h: 0, s: 0, l: 0 };
-    const [h, s, l] = parts.map(parseFloat);
-    return { h, s, l };
+    if (!parts || parts.length < 3) return 'hsl(0, 0%, 0%)';
+    return `hsl(${parts[0]}, ${parts[1]}%, ${parts[2]}%)`;
 }
+
 
 export default function AdminThemeSettingsPage() {
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
@@ -62,9 +54,9 @@ export default function AdminThemeSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   
-  const [livePrimary, setLivePrimary] = useState<ThemeColor>({h: 0, s: 0, l: 0});
-  const [liveBackground, setLiveBackground] = useState<ThemeColor>({h: 0, s: 0, l: 0});
-  const [liveForeground, setLiveForeground] = useState<ThemeColor>({h: 0, s: 0, l: 0});
+  const [livePrimary, setLivePrimary] = useState('hsl(0, 0%, 0%)');
+  const [liveBackground, setLiveBackground] = useState('hsl(0, 0%, 0%)');
+  const [liveForeground, setLiveForeground] = useState('hsl(0, 0%, 0%)');
   const [liveRadius, setLiveRadius] = useState(0.5);
 
   const getCssVariable = useCallback((varName: string) => {
@@ -73,10 +65,11 @@ export default function AdminThemeSettingsPage() {
   }, []);
 
   const initializeLiveTheme = useCallback(() => {
-    setLivePrimary(parseHsl(getCssVariable('--primary')));
-    setLiveBackground(parseHsl(getCssVariable('--background')));
-    setLiveForeground(parseHsl(getCssVariable('--foreground')));
-    setLiveRadius(parseFloat(getCssVariable('--radius') || '0.5'));
+    setLivePrimary(parseHslString(getCssVariable('--primary')));
+    setLiveBackground(parseHslString(getCssVariable('--background')));
+    setLiveForeground(parseHslString(getCssVariable('--foreground')));
+    const radiusVar = getCssVariable('--radius');
+    setLiveRadius(radiusVar ? parseFloat(radiusVar) : 0.5);
   }, [getCssVariable]);
 
   useEffect(() => {
@@ -87,7 +80,11 @@ export default function AdminThemeSettingsPage() {
 
   useEffect(() => {
     // When the theme changes (from picker or load), re-initialize the live editor
-    initializeLiveTheme();
+    // Use a small delay to allow CSS variables to update in the DOM
+    const timer = setTimeout(() => {
+        initializeLiveTheme();
+    }, 50);
+    return () => clearTimeout(timer);
   }, [currentTheme, initializeLiveTheme]);
 
   const handlePreview = (themeId: string) => {
@@ -95,13 +92,17 @@ export default function AdminThemeSettingsPage() {
     setSelectedThemeId(themeId);
   };
   
-  const handleLiveColorChange = useCallback((varName: string, color: ThemeColor) => {
-    const hslString = `${color.h} ${color.s}% ${color.l}%`;
-    document.documentElement.style.setProperty(varName, hslString);
+  const handleLiveColorChange = useCallback((varName: string, newColor: string) => {
+    const parts = newColor.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+    if(parts) {
+      const [, h, s, l] = parts;
+      const hslString = `${h} ${s}% ${l}%`;
+      document.documentElement.style.setProperty(varName, hslString);
+    }
 
-    if (varName === '--primary') setLivePrimary(color);
-    if (varName === '--background') setLiveBackground(color);
-    if (varName === '--foreground') setLiveForeground(color);
+    if (varName === '--primary') setLivePrimary(newColor);
+    if (varName === '--background') setLiveBackground(newColor);
+    if (varName === '--foreground') setLiveForeground(newColor);
   }, []);
 
   const handleRadiusChange = useCallback((value: number) => {
