@@ -135,52 +135,54 @@ function Splitter() {
                 <Button type="button" variant="link" size="sm" onClick={() => toggleAll(false)} className="p-1 h-auto text-destructive hover:text-destructive">Deselect All</Button>
             </div>
         </div>
-        <div className="space-y-2 pr-2 flex-1">
-          {getValues('participants').map((item: any, index: number) => {
-             return (
-                <div key={item.userId} className={cn("flex items-center gap-x-4 gap-y-2 p-2 rounded-md transition-colors", watch(`participants.${index}.selected`) ? 'bg-muted/50' : 'opacity-60 hover:bg-muted/30')}>
-                  <FormField
-                    control={control}
-                    name={`participants.${index}.selected`}
-                    render={({ field }) => (
-                      <FormItem className="flex items-center">
-                        <FormControl>
-                            <Button type="button" variant="ghost" className="h-10 w-10 p-0 rounded-full" onClick={() => field.onChange(!field.value)}>
-                                <Avatar className="h-10 w-10">
-                                    <AvatarImage src={item.avatarUrl} alt={item.name} />
-                                    <AvatarFallback>{getInitials(item.name)}</AvatarFallback>
-                                </Avatar>
-                            </Button>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm leading-none whitespace-nowrap truncate">{item.name}</p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 w-32">
-                      {watch(`participants.${index}.selected`) && (
-                      <>
-                          {watchSplitType === "unequally" && (
-                          <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => ( <FormControl><div className="relative"><span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="h-8 w-full text-right pl-6"/></div></FormControl> )} />
-                          )}
-                          {watchSplitType === "by_shares" && (
-                          <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => ( <FormControl><div className="relative"><span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">shares</span><Input type="number" step="1" placeholder="1" {...field} value={field.value ?? ''} className="h-8 w-full text-left pr-14"/></div></FormControl> )} />
-                          )}
-                          {watchSplitType === "by_percentage" && (
-                          <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => ( <FormControl><div className="relative"><span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="h-8 w-full text-right pr-6"/></div></FormControl> )} />
-                          )}
-                           {watchSplitType === "equally" && (
-                               <p className="text-sm text-right text-muted-foreground w-full">
+        <ScrollArea className="flex-1 pr-2">
+            <div className="space-y-2">
+            {getValues('participants').map((item: any, index: number) => {
+                return (
+                    <div key={item.userId} className={cn("flex items-center gap-x-4 gap-y-2 p-2 rounded-md transition-colors", watch(`participants.${index}.selected`) ? 'bg-muted/50' : 'opacity-60 hover:bg-muted/30')}>
+                    <FormField
+                        control={control}
+                        name={`participants.${index}.selected`}
+                        render={({ field }) => (
+                        <FormItem className="flex items-center">
+                            <FormControl>
+                                <Button type="button" variant="ghost" className="h-10 w-10 p-0 rounded-full" onClick={() => field.onChange(!field.value)}>
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarImage src={item.avatarUrl} alt={item.name} />
+                                        <AvatarFallback>{getInitials(item.name)}</AvatarFallback>
+                                    </Avatar>
+                                </Button>
+                            </FormControl>
+                        </FormItem>
+                        )}
+                    />
+                    <div className="flex-1">
+                        <p className="font-medium text-sm leading-none whitespace-nowrap truncate">{item.name}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 w-32">
+                        {watch(`participants.${index}.selected`) && (
+                        <>
+                            {watchSplitType === "unequally" && (
+                            <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => ( <FormControl><div className="relative"><span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="h-8 w-full text-right pl-6"/></div></FormControl> )} />
+                            )}
+                            {watchSplitType === "by_shares" && (
+                            <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => ( <FormControl><div className="relative"><span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">shares</span><Input type="number" step="1" placeholder="1" {...field} value={field.value ?? ''} className="h-8 w-full text-left pr-14"/></div></FormControl> )} />
+                            )}
+                            {watchSplitType === "by_percentage" && (
+                            <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => ( <FormControl><div className="relative"><span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="h-8 w-full text-right pr-6"/></div></FormControl> )} />
+                            )}
+                            {watchSplitType === "equally" && (
+                                <p className="text-sm text-right text-muted-foreground w-full">
                                     {CURRENCY_SYMBOL}{(watch(`participants.${index}.amountOwed`) || 0).toFixed(2)}
                                 </p>
-                           )}
-                      </>
-                      )}
-                  </div>
-                </div>
-            )})}
-          </div>
+                            )}
+                        </>
+                        )}
+                    </div>
+                    </div>
+                )})}
+            </div>
+        </ScrollArea>
         <div className="text-right text-xs mt-auto pr-2 font-medium">
           {runningTotal.type === 'amount' && ( <p className={cn(Math.abs(runningTotal.sum - (Number(watchAmount) || 0)) > 0.01 ? 'text-destructive' : 'text-primary')}> Total: {CURRENCY_SYMBOL}{(Number(runningTotal.sum) || 0).toFixed(2)} / {CURRENCY_SYMBOL}{(Number(watchAmount) || 0).toFixed(2)} </p> )}
           {runningTotal.type === 'percentage' && ( <p className={cn(Math.abs(runningTotal.sum - 100) > 0.01 ? 'text-destructive' : 'text-primary')}> Total: {(Number(runningTotal.sum) || 0).toFixed(2)}% / 100% </p> )}
