@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Icons } from '@/components/icons';
+import { Icons, IconName } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { updateSiteSettings } from '@/lib/mock-data';
 import { useSiteSettings } from '@/contexts/site-settings-context';
@@ -195,11 +195,46 @@ export default function AdminThemeSettingsPage() {
                              </CardFooter>
                         </Card>
                     ))}
-                     <DialogTrigger asChild>
-                        <Button variant="outline" className="h-full min-h-[200px] border-dashed text-lg" onClick={() => setIsCreateDialogOpen(true)}>
-                            <Icons.Add className="mr-2" /> Create New Theme
-                        </Button>
-                    </DialogTrigger>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="h-full min-h-[200px] border-dashed text-lg">
+                                <Icons.Add className="mr-2" /> Create New Theme
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Create New Theme</DialogTitle>
+                                <DialogDescription>Give your new theme a name and choose a template to start from.</DialogDescription>
+                            </DialogHeader>
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(handleCreateTheme)} className="space-y-4">
+                                    <FormField control={form.control} name="name" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Theme Name</FormLabel>
+                                            <FormControl><Input placeholder="e.g., Midnight Blue" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="templateThemeId" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Copy Styles From</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {allThemes.map(theme => <SelectItem key={theme.id} value={theme.id}>{theme.name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <DialogFooter>
+                                        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                                        <Button type="submit">Create Theme</Button>
+                                    </DialogFooter>
+                                </form>
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
                  </div>
             </CardContent>
              <CardFooter className="border-t pt-6">
@@ -209,43 +244,6 @@ export default function AdminThemeSettingsPage() {
                 </Button>
             </CardFooter>
         </Card>
-        
-        {/* Create Theme Dialog */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Create New Theme</DialogTitle>
-                    <DialogDescription>Give your new theme a name and choose a template to start from.</DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleCreateTheme)} className="space-y-4">
-                        <FormField control={form.control} name="name" render={({ field }) => (
-                             <FormItem>
-                                <FormLabel>Theme Name</FormLabel>
-                                <FormControl><Input placeholder="e.g., Midnight Blue" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={form.control} name="templateThemeId" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Copy Styles From</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {allThemes.map(theme => <SelectItem key={theme.id} value={theme.id}>{theme.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-                            <Button type="submit">Create Theme</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
         
         {/* Edit Theme Dialog */}
         {themeToEdit && (
