@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -45,6 +44,7 @@ const adminNavItems: NavItem[] = [
     icon: "Settings",
     subItems: [
       { title: 'General', href: '/admin/settings' },
+      { title: 'Theme', href: '/admin/settings/theme' },
       { title: 'Landing Page', href: '/admin/settings/landing' },
       { title: 'Auth Page', href: '/admin/settings/auth' },
       { title: 'Content Pages', href: '/admin/settings/pages' },
@@ -81,7 +81,7 @@ function AdminHeader() {
 
 function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () => void }) {
     const pathname = usePathname();
-    const defaultAccordionValue = items.find(item => item.subItems?.some(subItem => pathname === subItem.href || pathname.startsWith(subItem.href)))?.href;
+    const defaultAccordionValue = items.find(item => item.subItems?.some(subItem => pathname.startsWith(subItem.href)))?.href;
 
     return (
         <Accordion type="single" collapsible className="w-full" defaultValue={defaultAccordionValue}>

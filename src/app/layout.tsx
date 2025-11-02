@@ -6,6 +6,7 @@ import './globals.css';
 import { getSiteSettings } from '@/lib/mock-data';
 import { SiteSettingsProvider } from '@/contexts/site-settings-context';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { ThemeProvider } from '@/contexts/theme-context';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
@@ -24,20 +25,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased min-h-screen flex flex-col bg-background" suppressHydrationWarning>
+      <body>
         <SiteSettingsProvider>
-          <AuthProvider>
-            <FirebaseErrorListener />
-            {children}
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <FirebaseErrorListener />
+              {children}
+            </AuthProvider>
+          </ThemeProvider>
+          <Toaster />
         </SiteSettingsProvider>
-        <Toaster />
       </body>
     </html>
   );

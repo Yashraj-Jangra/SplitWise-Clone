@@ -1,5 +1,4 @@
 
-
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -223,12 +222,19 @@ export interface EmailTemplate {
   body: string;
 }
 
+export interface Theme {
+  name: string;
+  id: string;
+  previewColor: string;
+}
+
 export interface SiteSettings {
   appName: string;
   logoUrl?: string;
   faviconUrl?: string;
   coverImages: string[];
   landingImages: string[];
+  activeTheme?: string;
   expenseCategories: Record<string, string[]>;
   countryCodes: CountryCode[];
   landingPage?: {
