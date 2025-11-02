@@ -67,6 +67,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   const [memberChartView, setMemberChartView] = useState<'bar' | 'pie'>('bar');
   const [categoryChartView, setCategoryChartView] = useState<'bar' | 'pie'>('pie');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [lineType, setLineType] = useState<"linear" | "monotone" | "step">("linear");
   
   useEffect(() => {
     setDate({ from: minDate, to: maxDate });
@@ -258,8 +259,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
         <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
-                    <CardTitle>Daily Expense Share</CardTitle>
-                    <CardDescription>Comparing each member's share of expenses per day.</CardDescription>
+                    <CardTitle>Expense Share Over Time</CardTitle>
+                    <CardDescription>Comparing each member's share of expenses.</CardDescription>
                 </div>
                  <div className="flex items-center gap-2 flex-wrap">
                     <ToggleGroup type="single" value={frequency} onValueChange={(v) => { if (v) setFrequency(v as any)}} size="sm">
@@ -267,6 +268,16 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                         <ToggleGroupItem value="weekly">Weeks</ToggleGroupItem>
                         <ToggleGroupItem value="monthly">Months</ToggleGroupItem>
                     </ToggleGroup>
+                    <Select value={lineType} onValueChange={(v) => setLineType(v as any)}>
+                        <SelectTrigger className="w-[120px] h-9 text-xs">
+                            <SelectValue placeholder="Line Style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="linear">Linear</SelectItem>
+                            <SelectItem value="monotone">Smooth</SelectItem>
+                            <SelectItem value="step">Stepped</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
                             <SelectValue placeholder="Select category" />
@@ -294,7 +305,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     <Line
                         key={member.uid}
                         dataKey={member.uid}
-                        type="linear"
+                        type={lineType}
                         stroke={`var(--color-${member.uid})`}
                         strokeWidth={2}
                         dot={false}
