@@ -27,6 +27,7 @@ import {
 function ColorEditor({ label, color, onChange, varName, onMount }: { label: string, color: string, onChange: (newColor: string) => void, varName: string, onMount: (val: string) => void }) {
     
     useEffect(() => {
+        if (typeof window === 'undefined') return;
         const cssVar = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
         const hslString = parseHslString(cssVar);
         onMount(hslString);
@@ -77,7 +78,12 @@ export default function AdminThemeSettingsPage() {
   const [liveAccentFg, setLiveAccentFg] = useState('hsl(0, 0%, 0%)');
   const [liveDestructive, setLiveDestructive] = useState('hsl(0, 0%, 0%)');
   const [liveDestructiveFg, setLiveDestructiveFg] = useState('hsl(0, 0%, 0%)');
+  
   const [liveRadius, setLiveRadius] = useState(0.5);
+  const [liveRadiusCard, setLiveRadiusCard] = useState(0.5);
+  const [liveRadiusButton, setLiveRadiusButton] = useState(0.5);
+  const [liveRadiusInput, setLiveRadiusInput] = useState(0.5);
+
 
   const getCssVariable = useCallback((varName: string) => {
     if (typeof window === 'undefined') return '';
@@ -100,6 +106,13 @@ export default function AdminThemeSettingsPage() {
 
     const radiusVar = getCssVariable('--radius');
     setLiveRadius(radiusVar ? parseFloat(radiusVar) : 0.5);
+    const radiusCardVar = getCssVariable('--radius-card');
+    setLiveRadiusCard(radiusCardVar ? parseFloat(radiusCardVar) : 0.75);
+    const radiusButtonVar = getCssVariable('--radius-button');
+    setLiveRadiusButton(radiusButtonVar ? parseFloat(radiusButtonVar) : 0.5);
+    const radiusInputVar = getCssVariable('--radius-input');
+    setLiveRadiusInput(radiusInputVar ? parseFloat(radiusInputVar) : 0.5);
+
   }, [getCssVariable]);
 
   useEffect(() => {
@@ -121,6 +134,7 @@ export default function AdminThemeSettingsPage() {
   };
   
   const handleLiveColorChange = useCallback((varName: string, newColor: string) => {
+    if (typeof window === 'undefined') return;
     const parts = newColor.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
     if(parts) {
       const [, h, s, l] = parts;
@@ -148,9 +162,10 @@ export default function AdminThemeSettingsPage() {
     }
   }, []);
 
-  const handleRadiusChange = useCallback((value: number) => {
-    setLiveRadius(value);
-    document.documentElement.style.setProperty('--radius', `${value}rem`);
+  const handleRadiusChange = useCallback((value: number, varName: string, setter: React.Dispatch<React.SetStateAction<number>>) => {
+    if (typeof window === 'undefined') return;
+    setter(value);
+    document.documentElement.style.setProperty(varName, `${value}rem`);
   }, []);
 
   const handleSaveChanges = async () => {
@@ -275,16 +290,43 @@ export default function AdminThemeSettingsPage() {
                     </AccordionItem>
                 </Accordion>
                  
-                 <Separator />
-                 <div className="space-y-4">
-                     <div className="flex items-center justify-between">
-                        <Label htmlFor="radius-slider" className="font-semibold">Border Radius</Label>
-                        <span className="text-sm text-muted-foreground font-mono">{liveRadius.toFixed(2)}rem</span>
+                <Separator />
+                
+                <h3 className="text-lg font-medium">Border Radius</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="radius-slider" className="font-semibold">Global Radius</Label>
+                            <span className="text-sm text-muted-foreground font-mono">{liveRadius.toFixed(2)}rem</span>
+                        </div>
+                        <Slider id="radius-slider" value={[liveRadius]} onValueChange={([v]) => handleRadiusChange(v, '--radius', setLiveRadius)} max={2} step={0.05} />
                     </div>
-                    <Slider id="radius-slider" value={[liveRadius]} onValueChange={([v]) => handleRadiusChange(v)} max={2} step={0.05} />
-                 </div>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="radius-card-slider" className="font-semibold">Card Radius</Label>
+                            <span className="text-sm text-muted-foreground font-mono">{liveRadiusCard.toFixed(2)}rem</span>
+                        </div>
+                        <Slider id="radius-card-slider" value={[liveRadiusCard]} onValueChange={([v]) => handleRadiusChange(v, '--radius-card', setLiveRadiusCard)} max={2} step={0.05} />
+                    </div>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="radius-button-slider" className="font-semibold">Button Radius</Label>
+                            <span className="text-sm text-muted-foreground font-mono">{liveRadiusButton.toFixed(2)}rem</span>
+                        </div>
+                        <Slider id="radius-button-slider" value={[liveRadiusButton]} onValueChange={([v]) => handleRadiusChange(v, '--radius-button', setLiveRadiusButton)} max={2} step={0.05} />
+                    </div>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="radius-input-slider" className="font-semibold">Input Radius</Label>
+                            <span className="text-sm text-muted-foreground font-mono">{liveRadiusInput.toFixed(2)}rem</span>
+                        </div>
+                        <Slider id="radius-input-slider" value={[liveRadiusInput]} onValueChange={([v]) => handleRadiusChange(v, '--radius-input', setLiveRadiusInput)} max={2} step={0.05} />
+                    </div>
+                </div>
             </CardContent>
         </Card>
     </div>
   );
 }
+
+    
