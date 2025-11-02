@@ -30,6 +30,8 @@ import { useToast } from "@/hooks/use-toast";
 import { updateUser, isUsernameTaken } from "@/lib/mock-data";
 import { getFullName, getInitials } from "@/lib/utils";
 import { useSiteSettings } from "@/contexts/site-settings-context";
+import { useTheme } from "@/contexts/theme-context";
+import { Check } from "lucide-react";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -61,6 +63,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 export default function SettingsPage() {
   const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword } = useAuth();
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
+  const { theme: currentTheme, setTheme, allThemes } = useTheme();
   const { toast } = useToast();
   const router = useRouter();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -192,6 +195,8 @@ export default function SettingsPage() {
       setIsGoogleLoading(false);
     }
   };
+  
+  const selectableThemes = allThemes.filter(t => siteSettings.userSelectableThemeIds?.includes(t.id));
 
 
   if (loading || !userProfile || siteSettingsLoading) {
@@ -326,6 +331,41 @@ export default function SettingsPage() {
           </Card>
         </form>
       </Form>
+      
+      <Separator />
+
+      <Card>
+          <CardHeader>
+              <CardTitle className="flex items-center">
+                  <Icons.PieChart className="h-5 w-5 mr-2 text-primary" />
+                  Appearance
+              </CardTitle>
+              <CardDescription>Choose your preferred theme for the application.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {selectableThemes.map(theme => (
+                      <div key={theme.id} className="space-y-2 cursor-pointer" onClick={() => setTheme(theme.id)}>
+                          <div className={cn(
+                              "aspect-video rounded-md border-2 p-2 flex items-center justify-center transition-all",
+                              currentTheme === theme.id ? 'border-primary ring-2 ring-primary' : 'border-muted hover:border-primary/50'
+                          )}>
+                              <div className="flex gap-1">
+                                  <div className="h-8 w-4 rounded-sm" style={{ backgroundColor: `hsl(${theme.primary})` }} />
+                                  <div className="h-8 w-4 rounded-sm" style={{ backgroundColor: `hsl(${theme.secondary})` }} />
+                                  <div className="h-8 w-4 rounded-sm" style={{ backgroundColor: `hsl(${theme.accent})` }} />
+                              </div>
+                          </div>
+                          <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                               {currentTheme === theme.id && <Check className="h-4 w-4 text-primary" />}
+                              <span>{theme.name}</span>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </CardContent>
+      </Card>
+
 
       <Separator />
 
@@ -440,7 +480,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
-
-    
