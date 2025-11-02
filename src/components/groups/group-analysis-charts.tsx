@@ -27,16 +27,16 @@ interface GroupAnalysisChartsProps {
 }
 
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(var(--chart-6))',
-  'hsl(var(--chart-7))',
-  'hsl(var(--chart-8))',
-  'hsl(var(--chart-9))',
-  'hsl(var(--chart-10))',
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
+  "hsl(var(--chart-9))",
+  "hsl(var(--chart-10))",
 ];
 
 const MEMBER_CHART_COLORS = CHART_COLORS;
@@ -61,7 +61,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   const [date, setDate] = useState<DateRange | undefined>();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [memberChartView, setMemberChartView] = useState<'bar' | 'pie'>('bar');
-  const [categoryChartView, setCategoryChartView] = useState<'bar' | 'pie'>('pie');
+  const [categoryChartView, setCategoryChartView] = useState<'pie' | 'bar'>('pie');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [lineType, setLineType] = useState<"linear" | "monotone" | "step">("linear");
   const [timeChartView, setTimeChartView] = useState<'line' | 'bar'>('line');
@@ -144,33 +144,43 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
 
   }, [dailyChartFilteredExpenses, members, date, frequency]);
 
-  const totalShareByMember = useMemo(() => {
+  const { totalShareByMember, totalMemberShareAmount } = useMemo(() => {
     const data = members.reduce((acc, member) => {
       acc[member.uid] = { name: getFullName(member.firstName, member.lastName), total: 0 };
       return acc;
     }, {} as Record<string, { name: string; total: number }>);
+    let totalAmount = 0;
 
     dateFilteredExpenses.forEach(expense => {
       expense.participants.forEach(participant => {
         if (data[participant.user.uid]) {
           data[participant.user.uid].total += participant.amountOwed;
+          totalAmount += participant.amountOwed;
         }
       });
     });
 
-    return Object.values(data).filter(d => d.total > 0).sort((a,b) => b.total - a.total);
+    return {
+        totalShareByMember: Object.values(data).filter(d => d.total > 0).sort((a,b) => b.total - a.total),
+        totalMemberShareAmount: totalAmount
+    }
   }, [dateFilteredExpenses, members]);
 
-  const expensesByCategory = useMemo(() => {
+  const { expensesByCategory, totalCategoryAmount } = useMemo(() => {
+    let totalAmount = 0;
     const data = dateFilteredExpenses.reduce((acc, expense) => {
       const category = expense.category || 'Other';
       acc[category] = (acc[category] || 0) + expense.amount;
+      totalAmount += expense.amount;
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(data)
-      .map(([name, total]) => ({ name, total }))
-      .sort((a, b) => b.total - a.total);
+    return {
+        expensesByCategory: Object.entries(data)
+            .map(([name, total]) => ({ name, total }))
+            .sort((a, b) => b.total - a.total),
+        totalCategoryAmount: totalAmount
+    };
   }, [dateFilteredExpenses]);
 
   const userChartConfig = useMemo(() => {
@@ -212,6 +222,17 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     </Card>
      )
   }
+  
+  const customTooltipFormatter = (value: number, name: string, props: any, totalAmount: number) => {
+    const percentage = totalAmount > 0 ? (value / totalAmount) * 100 : 0;
+    return (
+        <div className="flex flex-col">
+            <span>{CURRENCY_SYMBOL}{Number(value).toFixed(2)}</span>
+            <span className="text-muted-foreground text-xs">{percentage.toFixed(1)}% of total</span>
+        </div>
+    );
+  };
+
 
   return (
     <div className="space-y-6">
@@ -376,8 +397,8 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     tickFormatter={(value) => isMobile && value.length > 8 ? `${value.substring(0, 8)}...` : value}
                     />
                     <Tooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`} />}
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalMemberShareAmount)} />}
                     />
                     <Bar dataKey="total" radius={4}>
                         {totalShareByMember.map((entry, index) => (
@@ -389,7 +410,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
              ) : (
                 <ChartContainer config={userChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`} />} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalMemberShareAmount)} />} />
                         <Pie
                             data={totalShareByMember}
                             dataKey="total"
@@ -439,7 +460,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 20}}>
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`}/>} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalCategoryAmount)}/>} />
                         <Bar dataKey="total" radius={4}>
                             {expensesByCategory.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
@@ -450,7 +471,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
               ) : (
                 <ChartContainer config={categoryChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value) => `${CURRENCY_SYMBOL}${Number(value).toFixed(2)}`} />} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalCategoryAmount)} />} />
                         <Pie
                             data={expensesByCategory}
                             dataKey="total"
