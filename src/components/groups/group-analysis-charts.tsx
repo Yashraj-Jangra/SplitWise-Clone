@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -226,8 +227,9 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   const customTooltipFormatter = (value: number, name: string, props: any, totalAmount: number) => {
     const percentage = totalAmount > 0 ? (value / totalAmount) * 100 : 0;
     return (
-        <div className="flex flex-col">
-            <span>{CURRENCY_SYMBOL}{Number(value).toFixed(2)}</span>
+        <div className="flex flex-col gap-0.5">
+            <span className="font-semibold">{name}</span>
+            <span className="text-foreground">{CURRENCY_SYMBOL}{Number(value).toFixed(2)}</span>
             <span className="text-muted-foreground text-xs">{percentage.toFixed(1)}% of total</span>
         </div>
     );
