@@ -3,341 +3,395 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { updateSiteSettings } from '@/lib/mock-data';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { useTheme } from '@/contexts/theme-context';
-import { ALL_THEMES } from '@/themes';
+import { BASE_THEMES } from '@/themes';
 import { cn } from '@/lib/utils';
-import { CheckCircle2 } from 'lucide-react';
+import { Check, CheckCircle2, Edit, Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Separator } from '@/components/ui/separator';
 import { ColorPicker } from '@/components/ui/color-picker';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import type { Theme, ThemeColors, ThemeRadii } from '@/types';
+import { Switch } from '@/components/ui/switch';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
-function ColorEditor({ label, color, onChange, varName, onMount }: { label: string, color: string, onChange: (newColor: string) => void, varName: string, onMount: (val: string) => void }) {
-    
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const cssVar = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-        const hslString = parseHslString(cssVar);
-        onMount(hslString);
-    }, [varName, onMount]);
+// --- Helper Functions and Components ---
 
-    return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <Label className="font-semibold">{label}</Label>
-                <div 
-                    className="h-8 w-8 rounded-full border-2"
-                    style={{ backgroundColor: color }}
-                />
-            </div>
-             <ColorPicker
-                color={color}
-                setColor={onChange}
-            />
-        </div>
-    )
-}
-
-function parseHslString(hslString: string): string {
+function getCssVariable(varName: string): string {
+    if (typeof window === 'undefined') return 'hsl(0, 0%, 0%)';
+    const hslString = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
     if (!hslString) return 'hsl(0, 0%, 0%)';
     const parts = hslString.match(/([\d.]+)/g);
     if (!parts || parts.length < 3) return 'hsl(0, 0%, 0%)';
     return `hsl(${parts[0]}, ${parts[1]}%, ${parts[2]}%)`;
 }
 
+function getCssVariableAsNumber(varName: string): number {
+    if (typeof window === 'undefined') return 0.5;
+    const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    return val ? parseFloat(val) : 0.5;
+}
+
+const themeSchema = z.object({
+  name: z.string().min(1, 'Theme name is required'),
+  templateThemeId: z.string()
+});
+type ThemeFormValues = z.infer<typeof themeSchema>;
+
+const createInitialThemeData = (name: string, templateTheme: Theme): Theme => ({
+  id: name.toLowerCase().replace(/\s+/g, '-'),
+  name,
+  isCustom: true,
+  ...templateTheme, // Copy all color and radii properties
+});
+
+// --- Main Component ---
 
 export default function AdminThemeSettingsPage() {
-  const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
-  const { theme: currentTheme, setTheme } = useTheme();
-  const [selectedThemeId, setSelectedThemeId] = useState('default');
+  const { settings: siteSettings, loading: siteSettingsLoading, updateLocalSettings } = useSiteSettings();
+  const { allThemes } = useTheme();
   
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [themeToEdit, setThemeToEdit] = useState<Theme | null>(null);
+  const [themeToDelete, setThemeToDelete] = useState<Theme | null>(null);
   
-  const [livePrimary, setLivePrimary] = useState('hsl(0, 0%, 0%)');
-  const [livePrimaryFg, setLivePrimaryFg] = useState('hsl(0, 0%, 0%)');
-  const [liveBackground, setLiveBackground] = useState('hsl(0, 0%, 0%)');
-  const [liveForeground, setLiveForeground] = useState('hsl(0, 0%, 0%)');
-  const [liveCard, setLiveCard] = useState('hsl(0, 0%, 0%)');
-  const [liveCardFg, setLiveCardFg] = useState('hsl(0, 0%, 0%)');
-  const [liveSecondary, setLiveSecondary] = useState('hsl(0, 0%, 0%)');
-  const [liveSecondaryFg, setLiveSecondaryFg] = useState('hsl(0, 0%, 0%)');
-  const [liveAccent, setLiveAccent] = useState('hsl(0, 0%, 0%)');
-  const [liveAccentFg, setLiveAccentFg] = useState('hsl(0, 0%, 0%)');
-  const [liveDestructive, setLiveDestructive] = useState('hsl(0, 0%, 0%)');
-  const [liveDestructiveFg, setLiveDestructiveFg] = useState('hsl(0, 0%, 0%)');
-  
-  const [liveRadius, setLiveRadius] = useState(0.5);
-  const [liveRadiusCard, setLiveRadiusCard] = useState(0.5);
-  const [liveRadiusButton, setLiveRadiusButton] = useState(0.5);
-  const [liveRadiusInput, setLiveRadiusInput] = useState(0.5);
+  const form = useForm<ThemeFormValues>({
+    resolver: zodResolver(themeSchema),
+    defaultValues: { name: '', templateThemeId: 'default-dark' },
+  });
 
-
-  const getCssVariable = useCallback((varName: string) => {
-    if (typeof window === 'undefined') return '';
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  }, []);
-
-  const initializeLiveTheme = useCallback(() => {
-    setLivePrimary(parseHslString(getCssVariable('--primary')));
-    setLivePrimaryFg(parseHslString(getCssVariable('--primary-foreground')));
-    setLiveBackground(parseHslString(getCssVariable('--background')));
-    setLiveForeground(parseHslString(getCssVariable('--foreground')));
-    setLiveCard(parseHslString(getCssVariable('--card')));
-    setLiveCardFg(parseHslString(getCssVariable('--card-foreground')));
-    setLiveSecondary(parseHslString(getCssVariable('--secondary')));
-    setLiveSecondaryFg(parseHslString(getCssVariable('--secondary-foreground')));
-    setLiveAccent(parseHslString(getCssVariable('--accent')));
-    setLiveAccentFg(parseHslString(getCssVariable('--accent-foreground')));
-    setLiveDestructive(parseHslString(getCssVariable('--destructive')));
-    setLiveDestructiveFg(parseHslString(getCssVariable('--destructive-foreground')));
-
-    const radiusVar = getCssVariable('--radius');
-    setLiveRadius(radiusVar ? parseFloat(radiusVar) : 0.5);
-    const radiusCardVar = getCssVariable('--radius-card');
-    setLiveRadiusCard(radiusCardVar ? parseFloat(radiusCardVar) : 0.75);
-    const radiusButtonVar = getCssVariable('--radius-button');
-    setLiveRadiusButton(radiusButtonVar ? parseFloat(radiusButtonVar) : 0.5);
-    const radiusInputVar = getCssVariable('--radius-input');
-    setLiveRadiusInput(radiusInputVar ? parseFloat(radiusInputVar) : 0.5);
-
-  }, [getCssVariable]);
-
-  useEffect(() => {
-    if (siteSettings.activeTheme) {
-        setSelectedThemeId(siteSettings.activeTheme);
+  const handleCreateTheme = (values: ThemeFormValues) => {
+    const templateTheme = allThemes.find(t => t.id === values.templateThemeId);
+    if (!templateTheme) {
+        toast({ title: 'Template theme not found', variant: 'destructive' });
+        return;
     }
-  }, [siteSettings.activeTheme]);
+    const newTheme = createInitialThemeData(values.name, templateTheme);
+    const updatedCustomThemes = [...(siteSettings.customThemes || []), newTheme];
+    updateLocalSettings({ customThemes: updatedCustomThemes });
+    setIsCreateDialogOpen(false);
+    form.reset();
+  };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-        initializeLiveTheme();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [currentTheme, initializeLiveTheme]);
-
-  const handlePreview = (themeId: string) => {
-    setTheme(themeId);
-    setSelectedThemeId(themeId);
+  const handleUpdateTheme = (updatedTheme: Theme) => {
+    const updatedCustomThemes = (siteSettings.customThemes || []).map(t => t.id === updatedTheme.id ? updatedTheme : t);
+    updateLocalSettings({ customThemes: updatedCustomThemes });
   };
   
-  const handleLiveColorChange = useCallback((varName: string, newColor: string) => {
-    if (typeof window === 'undefined') return;
-    const parts = newColor.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
-    if(parts) {
-      const [, h, s, l] = parts;
-      const hslString = `${h} ${s}% ${l}%`;
-      document.documentElement.style.setProperty(varName, hslString);
-    }
-
-    const stateSetters: Record<string, React.Dispatch<React.SetStateAction<string>>> = {
-        '--primary': setLivePrimary,
-        '--primary-foreground': setLivePrimaryFg,
-        '--background': setLiveBackground,
-        '--foreground': setLiveForeground,
-        '--card': setLiveCard,
-        '--card-foreground': setLiveCardFg,
-        '--secondary': setLiveSecondary,
-        '--secondary-foreground': setLiveSecondaryFg,
-        '--accent': setLiveAccent,
-        '--accent-foreground': setLiveAccentFg,
-        '--destructive': setLiveDestructive,
-        '--destructive-foreground': setLiveDestructiveFg,
-    };
-
-    if(stateSetters[varName]) {
-        stateSetters[varName](newColor);
-    }
-  }, []);
-
-  const handleRadiusChange = useCallback((value: number, varName: string, setter: React.Dispatch<React.SetStateAction<number>>) => {
-    if (typeof window === 'undefined') return;
-    setter(value);
-    document.documentElement.style.setProperty(varName, `${value}rem`);
-  }, []);
+  const handleDeleteTheme = () => {
+    if (!themeToDelete) return;
+    const updatedCustomThemes = (siteSettings.customThemes || []).filter(t => t.id !== themeToDelete.id);
+    updateLocalSettings({ customThemes: updatedCustomThemes });
+    setThemeToDelete(null);
+    toast({ title: 'Theme Deleted', description: `Theme "${themeToDelete.name}" has been deleted.` });
+  };
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      await updateSiteSettings({ activeTheme: selectedThemeId });
+      await updateSiteSettings({
+        customThemes: siteSettings.customThemes,
+        defaultThemeId: siteSettings.defaultThemeId,
+        userSelectableThemeIds: siteSettings.userSelectableThemeIds
+      });
       toast({
-        title: 'Theme Saved',
-        description: 'The new theme has been applied across the site.',
+        title: 'Theme Settings Saved',
+        description: 'Your theme configurations have been updated.',
       });
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: 'Could not save the new theme setting.',
-      });
+      toast({ variant: 'destructive', title: 'Save Failed' });
     } finally {
       setIsSaving(false);
     }
+  };
+  
+  const handleSetDefault = (themeId: string) => {
+      updateLocalSettings({ defaultThemeId: themeId });
+  }
+  
+  const handleToggleUserSelectable = (themeId: string, checked: boolean) => {
+      const currentSelectable = siteSettings.userSelectableThemeIds || [];
+      const newSelectable = checked
+          ? [...currentSelectable, themeId]
+          : currentSelectable.filter(id => id !== themeId);
+      updateLocalSettings({ userSelectableThemeIds: newSelectable });
   };
 
   return (
     <div className="space-y-6">
         <Card>
             <CardHeader>
-                <CardTitle>Appearance & Theme</CardTitle>
-                <CardDescription>Select a base theme for the entire application.</CardDescription>
+                <CardTitle>Theme Management</CardTitle>
+                <CardDescription>Create, customize, and manage themes for your application.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {ALL_THEMES.map((theme) => (
-                        <div key={theme.id} onClick={() => handlePreview(theme.id)} className="cursor-pointer">
-                            <div
-                                className={cn(
-                                'relative rounded-lg border-2 p-4 transition-all',
-                                selectedThemeId === theme.id ? 'border-primary shadow-lg' : 'border-border hover:border-primary/50'
-                                )}
-                            >
-                                {selectedThemeId === theme.id && (
-                                    <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                    </div>
-                                )}
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                        className="h-8 w-8 rounded-full"
-                                        style={{ backgroundColor: theme.previewColor }}
-                                        />
-                                        <h3 className="text-lg font-semibold">{theme.name}</h3>
-                                    </div>
-                                    <div className="flex gap-2 pt-2">
-                                        <div className="h-5 w-1/3 rounded-sm bg-primary" />
-                                        <div className="h-5 w-1/3 rounded-sm bg-secondary" />
-                                        <div className="h-5 w-1/3 rounded-sm bg-destructive" />
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {allThemes.map((theme) => (
+                        <Card key={theme.id} className={cn("flex flex-col", siteSettings.defaultThemeId === theme.id && "border-primary ring-2 ring-primary")}>
+                            <CardHeader>
+                                <div className="flex justify-between items-start">
+                                    <CardTitle className="text-lg">{theme.name}</CardTitle>
+                                    <div className="flex items-center gap-2">
+                                        {theme.isCustom && (
+                                            <>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setThemeToEdit(theme); setIsEditDialogOpen(true); }}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setThemeToDelete(theme)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
+                                {!theme.isCustom && <CardDescription>Base Theme</CardDescription>}
+                            </CardHeader>
+                             <CardContent className="flex-1 space-y-4">
+                                <div className="flex gap-2 pt-2">
+                                    <div className="h-8 w-1/3 rounded-sm" style={{backgroundColor: theme.primary}}/>
+                                    <div className="h-8 w-1/3 rounded-sm" style={{backgroundColor: theme.secondary}}/>
+                                    <div className="h-8 w-1/3 rounded-sm" style={{backgroundColor: theme.accent}}/>
+                                </div>
+                             </CardContent>
+                             <CardFooter className="flex-col items-start gap-4">
+                                <Button onClick={() => handleSetDefault(theme.id)} variant={siteSettings.defaultThemeId === theme.id ? "default" : "secondary"} size="sm" className="w-full">
+                                    {siteSettings.defaultThemeId === theme.id && <Check className="mr-2 h-4 w-4" />}
+                                    {siteSettings.defaultThemeId === theme.id ? 'Default Theme' : 'Set as Default'}
+                                </Button>
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id={`selectable-${theme.id}`}
+                                        checked={siteSettings.userSelectableThemeIds?.includes(theme.id)}
+                                        onCheckedChange={(checked) => handleToggleUserSelectable(theme.id, checked)}
+                                    />
+                                    <Label htmlFor={`selectable-${theme.id}`} className="text-sm">Allow users to select</Label>
+                                </div>
+                             </CardFooter>
+                        </Card>
                     ))}
-                </div>
+                     <DialogTrigger asChild>
+                        <Button variant="outline" className="h-full min-h-[200px] border-dashed text-lg" onClick={() => setIsCreateDialogOpen(true)}>
+                            <Icons.Add className="mr-2" /> Create New Theme
+                        </Button>
+                    </DialogTrigger>
+                 </div>
             </CardContent>
-             <CardContent>
-                <div className="flex justify-end">
-                    <Button onClick={handleSaveChanges} disabled={isSaving || siteSettingsLoading} size="lg">
-                        {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
-                        Save Theme
-                    </Button>
-                </div>
-            </CardContent>
+             <CardFooter className="border-t pt-6">
+                <Button onClick={handleSaveChanges} disabled={isSaving || siteSettingsLoading} size="lg">
+                    {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
+                    Save All Theme Settings
+                </Button>
+            </CardFooter>
         </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle>Live Theme Customizer</CardTitle>
-                <CardDescription>
-                    Customize the live theme variables. Changes here are temporary and will reset on page reload.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                 <Accordion type="multiple" className="w-full space-y-4">
-                    <AccordionItem value="general" className="border-b-0">
-                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">General</AccordionTrigger>
-                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
-                           <ColorEditor label="Background" varName="--background" color={liveBackground} onChange={(c) => handleLiveColorChange('--background', c)} onMount={setLiveBackground} />
-                           <ColorEditor label="Foreground" varName="--foreground" color={liveForeground} onChange={(c) => handleLiveColorChange('--foreground', c)} onMount={setLiveForeground} />
-                        </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="primary" className="border-b-0">
-                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Primary Colors</AccordionTrigger>
-                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
-                           <ColorEditor label="Primary" varName="--primary" color={livePrimary} onChange={(c) => handleLiveColorChange('--primary', c)} onMount={setLivePrimary} />
-                           <ColorEditor label="Primary Foreground" varName="--primary-foreground" color={livePrimaryFg} onChange={(c) => handleLiveColorChange('--primary-foreground', c)} onMount={setLivePrimaryFg} />
-                        </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="card" className="border-b-0">
-                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Card Colors</AccordionTrigger>
-                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
-                           <ColorEditor label="Card" varName="--card" color={liveCard} onChange={(c) => handleLiveColorChange('--card', c)} onMount={setLiveCard} />
-                           <ColorEditor label="Card Foreground" varName="--card-foreground" color={liveCardFg} onChange={(c) => handleLiveColorChange('--card-foreground', c)} onMount={setLiveCardFg} />
-                        </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="secondary" className="border-b-0">
-                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Secondary Colors</AccordionTrigger>
-                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
-                           <ColorEditor label="Secondary" varName="--secondary" color={liveSecondary} onChange={(c) => handleLiveColorChange('--secondary', c)} onMount={setLiveSecondary} />
-                           <ColorEditor label="Secondary Foreground" varName="--secondary-foreground" color={liveSecondaryFg} onChange={(c) => handleLiveColorChange('--secondary-foreground', c)} onMount={setLiveSecondaryFg} />
-                        </AccordionContent>
-                    </AccordionItem>
-                     <AccordionItem value="accent" className="border-b-0">
-                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Accent Colors</AccordionTrigger>
-                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
-                           <ColorEditor label="Accent" varName="--accent" color={liveAccent} onChange={(c) => handleLiveColorChange('--accent', c)} onMount={setLiveAccent} />
-                           <ColorEditor label="Accent Foreground" varName="--accent-foreground" color={liveAccentFg} onChange={(c) => handleLiveColorChange('--accent-foreground', c)} onMount={setLiveAccentFg} />
-                        </AccordionContent>
-                    </AccordionItem>
-                      <AccordionItem value="destructive" className="border-b-0">
-                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Destructive Colors</AccordionTrigger>
-                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
-                           <ColorEditor label="Destructive" varName="--destructive" color={liveDestructive} onChange={(c) => handleLiveColorChange('--destructive', c)} onMount={setLiveDestructive} />
-                           <ColorEditor label="Destructive Foreground" varName="--destructive-foreground" color={liveDestructiveFg} onChange={(c) => handleLiveColorChange('--destructive-foreground', c)} onMount={setLiveDestructiveFg} />
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-                 
-                <Separator />
-                
-                <h3 className="text-lg font-medium">Border Radius</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12">
-                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="radius-card-slider" className="font-semibold">Card Radius</Label>
-                            <span className="text-sm text-muted-foreground font-mono">{liveRadiusCard.toFixed(2)}rem</span>
-                        </div>
-                        <Slider id="radius-card-slider" value={[liveRadiusCard]} onValueChange={([v]) => handleRadiusChange(v, '--radius-card', setLiveRadiusCard)} max={2} step={0.05} />
-                        <Card className="p-4 w-40 h-24 mx-auto"><CardTitle className="text-sm">Card Preview</CardTitle></Card>
-                    </div>
-                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="radius-button-slider" className="font-semibold">Button Radius</Label>
-                            <span className="text-sm text-muted-foreground font-mono">{liveRadiusButton.toFixed(2)}rem</span>
-                        </div>
-                        <Slider id="radius-button-slider" value={[liveRadiusButton]} onValueChange={([v]) => handleRadiusChange(v, '--radius-button', setLiveRadiusButton)} max={2} step={0.05} />
-                        <div className="flex justify-center items-center h-24">
-                            <Button>Button Preview</Button>
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="radius-input-slider" className="font-semibold">Input Radius</Label>
-                            <span className="text-sm text-muted-foreground font-mono">{liveRadiusInput.toFixed(2)}rem</span>
-                        </div>
-                        <Slider id="radius-input-slider" value={[liveRadiusInput]} onValueChange={([v]) => handleRadiusChange(v, '--radius-input', setLiveRadiusInput)} max={2} step={0.05} />
-                         <div className="flex justify-center items-center h-24 px-4">
-                           <Input placeholder="Input Preview" />
-                        </div>
-                    </div>
-                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="radius-slider" className="font-semibold">Global Radius</Label>
-                            <span className="text-sm text-muted-foreground font-mono">{liveRadius.toFixed(2)}rem</span>
-                        </div>
-                        <Slider id="radius-slider" value={[liveRadius]} onValueChange={([v]) => handleRadiusChange(v, '--radius', setLiveRadius)} max={2} step={0.05} />
-                        <div className="flex justify-center items-center h-24">
-                           <div className="w-24 h-16 bg-muted border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground" style={{ borderRadius: `var(--radius)`}}>
-                             Global
-                           </div>
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+        
+        {/* Create Theme Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Create New Theme</DialogTitle>
+                    <DialogDescription>Give your new theme a name and choose a template to start from.</DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleCreateTheme)} className="space-y-4">
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                             <FormItem>
+                                <FormLabel>Theme Name</FormLabel>
+                                <FormControl><Input placeholder="e.g., Midnight Blue" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="templateThemeId" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Copy Styles From</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {allThemes.map(theme => <SelectItem key={theme.id} value={theme.id}>{theme.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                         <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit">Create Theme</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+        
+        {/* Edit Theme Dialog */}
+        {themeToEdit && (
+            <EditThemeDialog 
+                key={themeToEdit.id}
+                open={isEditDialogOpen} 
+                onOpenChange={setIsEditDialogOpen} 
+                theme={themeToEdit} 
+                onThemeUpdate={handleUpdateTheme}
+            />
+        )}
+        
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!themeToDelete} onOpenChange={(open) => !open && setThemeToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete "{themeToDelete?.name}"?</AlertDialogTitle>
+                    <AlertDialogDescription>Are you sure you want to delete this theme? This action cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteTheme} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
+
+
+// --- Edit Theme Dialog Component ---
+
+interface EditThemeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  theme: Theme;
+  onThemeUpdate: (updatedTheme: Theme) => void;
+}
+
+function EditThemeDialog({ open, onOpenChange, theme, onThemeUpdate }: EditThemeDialogProps) {
+    const [editedTheme, setEditedTheme] = useState<Theme>(theme);
+    
+    const handleColorChange = (varName: keyof ThemeColors, value: string) => {
+        setEditedTheme(prev => ({...prev, [varName]: value}));
+    };
+
+    const handleRadiusChange = (varName: keyof ThemeRadii, value: number) => {
+        setEditedTheme(prev => ({...prev, [varName]: value}));
+    };
+    
+    const handleSave = () => {
+        onThemeUpdate(editedTheme);
+        onOpenChange(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-4xl">
+                 <DialogHeader>
+                    <DialogTitle>Editing "{theme.name}"</DialogTitle>
+                    <DialogDescription>Customize the colors and radii for this theme.</DialogDescription>
+                </DialogHeader>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto p-1">
+                    {/* Colors Column */}
+                    <div className="space-y-4">
+                        <Accordion type="multiple" className="w-full space-y-4">
+                            <AccordionItem value="general" className="border-b-0"><AccordionTrigger>General</AccordionTrigger>
+                                <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ColorEditor label="Background" color={editedTheme.background} onChange={(c) => handleColorChange('background', c)} />
+                                    <ColorEditor label="Foreground" color={editedTheme.foreground} onChange={(c) => handleColorChange('foreground', c)} />
+                                </AccordionContent>
+                            </AccordionItem>
+                             <AccordionItem value="primary" className="border-b-0"><AccordionTrigger>Primary</AccordionTrigger>
+                                <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ColorEditor label="Primary" color={editedTheme.primary} onChange={(c) => handleColorChange('primary', c)} />
+                                    <ColorEditor label="Primary FG" color={editedTheme.primaryForeground} onChange={(c) => handleColorChange('primaryForeground', c)} />
+                                </AccordionContent>
+                            </AccordionItem>
+                             <AccordionItem value="secondary" className="border-b-0"><AccordionTrigger>Secondary</AccordionTrigger>
+                                <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ColorEditor label="Secondary" color={editedTheme.secondary} onChange={(c) => handleColorChange('secondary', c)} />
+                                    <ColorEditor label="Secondary FG" color={editedTheme.secondaryForeground} onChange={(c) => handleColorChange('secondaryForeground', c)} />
+                                </AccordionContent>
+                            </AccordionItem>
+                             <AccordionItem value="accent" className="border-b-0"><AccordionTrigger>Accent</AccordionTrigger>
+                                <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ColorEditor label="Accent" color={editedTheme.accent} onChange={(c) => handleColorChange('accent', c)} />
+                                    <ColorEditor label="Accent FG" color={editedTheme.accentForeground} onChange={(c) => handleColorChange('accentForeground', c)} />
+                                </AccordionContent>
+                            </AccordionItem>
+                            <AccordionItem value="destructive" className="border-b-0"><AccordionTrigger>Destructive</AccordionTrigger>
+                                <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ColorEditor label="Destructive" color={editedTheme.destructive} onChange={(c) => handleColorChange('destructive', c)} />
+                                    <ColorEditor label="Destructive FG" color={editedTheme.destructiveForeground} onChange={(c) => handleColorChange('destructiveForeground', c)} />
+                                </AccordionContent>
+                            </AccordionItem>
+                             <AccordionItem value="card" className="border-b-0"><AccordionTrigger>Card / Popover</AccordionTrigger>
+                                <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ColorEditor label="Card" color={editedTheme.card} onChange={(c) => handleColorChange('card', c)} />
+                                    <ColorEditor label="Card FG" color={editedTheme.cardForeground} onChange={(c) => handleColorChange('cardForeground', c)} />
+                                     <ColorEditor label="Popover" color={editedTheme.popover} onChange={(c) => handleColorChange('popover', c)} />
+                                    <ColorEditor label="Popover FG" color={editedTheme.popoverForeground} onChange={(c) => handleColorChange('popoverForeground', c)} />
+                                </AccordionContent>
+                            </AccordionItem>
+                             <AccordionItem value="other" className="border-b-0"><AccordionTrigger>Other</AccordionTrigger>
+                                <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <ColorEditor label="Muted" color={editedTheme.muted} onChange={(c) => handleColorChange('muted', c)} />
+                                    <ColorEditor label="Muted FG" color={editedTheme.mutedForeground} onChange={(c) => handleColorChange('mutedForeground', c)} />
+                                     <ColorEditor label="Border" color={editedTheme.border} onChange={(c) => handleColorChange('border', c)} />
+                                    <ColorEditor label="Input" color={editedTheme.input} onChange={(c) => handleColorChange('input', c)} />
+                                    <ColorEditor label="Ring" color={editedTheme.ring} onChange={(c) => handleColorChange('ring', c)} />
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+                    </div>
+                    {/* Radii Column */}
+                    <div className="space-y-6">
+                         <RadiusEditor label="Global Radius" value={editedTheme.radius} onChange={(v) => handleRadiusChange('radius', v)} />
+                         <RadiusEditor label="Card Radius" value={editedTheme.radiusCard} onChange={(v) => handleRadiusChange('radiusCard', v)} />
+                         <RadiusEditor label="Button Radius" value={editedTheme.radiusButton} onChange={(v) => handleRadiusChange('radiusButton', v)} />
+                         <RadiusEditor label="Input Radius" value={editedTheme.radiusInput} onChange={(v) => handleRadiusChange('radiusInput', v)} />
+                         <RadiusEditor label="Dialog Radius" value={editedTheme.radiusDialog} onChange={(v) => handleRadiusChange('radiusDialog', v)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={handleSave}>Save Changes</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+const ColorEditor = ({ label, color, onChange }: { label: string, color: string, onChange: (newColor: string) => void }) => (
+    <div className="space-y-2">
+        <Label>{label}</Label>
+        <ColorPicker color={color} setColor={onChange} />
+    </div>
+);
+
+const RadiusEditor = ({ label, value, onChange }: { label: string, value: number, onChange: (newValue: number) => void }) => (
+    <div className="space-y-4">
+        <div className="flex items-center justify-between">
+            <Label>{label}</Label>
+            <span className="text-sm text-muted-foreground font-mono">{value.toFixed(2)}rem</span>
+        </div>
+        <Slider value={[value]} onValueChange={([v]) => onChange(v)} max={2} step={0.05} />
+    </div>
+);

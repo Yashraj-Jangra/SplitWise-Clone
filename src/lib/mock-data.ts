@@ -42,12 +42,13 @@ import type {
   SupportTicket,
   SupportTicketDocument,
   SupportTicketMessage,
+  Theme,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
 import { format } from 'date-fns';
 import { defaultExpenseCategories } from './expense-categories';
-import { ALL_THEMES } from '@/themes';
+import { BASE_THEMES } from '@/themes';
 
 // --- User Functions ---
 
@@ -1314,9 +1315,11 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             faviconUrl: data.faviconUrl || '',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
+            customThemes: data.customThemes || [],
+            defaultThemeId: data.defaultThemeId || 'default-dark',
+            userSelectableThemeIds: data.userSelectableThemeIds || ['default-dark', 'default-light'],
             expenseCategories: data.expenseCategories || defaultExpenseCategories,
             countryCodes: data.countryCodes?.length > 0 ? data.countryCodes : DEFAULT_COUNTRY_CODES,
-            activeTheme: data.activeTheme || 'default',
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
             about,
@@ -1335,7 +1338,9 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             faviconUrl: '',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
-            activeTheme: 'default',
+            customThemes: [],
+            defaultThemeId: 'default-dark',
+            userSelectableThemeIds: ['default-dark', 'default-light'],
             expenseCategories: defaultExpenseCategories,
             countryCodes: DEFAULT_COUNTRY_CODES,
             landingPage: DEFAULT_LANDING_PAGE_SETTINGS,

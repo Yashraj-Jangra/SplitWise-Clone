@@ -222,11 +222,42 @@ export interface EmailTemplate {
   body: string;
 }
 
-export interface Theme {
-  name: string;
-  id: string;
-  previewColor: string;
+export interface ThemeColors {
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  popover: string;
+  popoverForeground: string;
+  primary: string;
+  primaryForeground: string;
+  secondary: string;
+  secondaryForeground: string;
+  muted: string;
+  mutedForeground: string;
+  accent: string;
+  accentForeground: string;
+  destructive: string;
+  destructiveForeground: string;
+  border: string;
+  input: string;
+  ring: string;
 }
+
+export interface ThemeRadii {
+  radius: number;
+  radiusCard: number;
+  radiusButton: number;
+  radiusInput: number;
+  radiusDialog: number;
+}
+
+export interface Theme extends ThemeColors, ThemeRadii {
+  id: string;
+  name: string;
+  isCustom?: boolean;
+}
+
 
 export interface SiteSettings {
   appName: string;
@@ -234,7 +265,9 @@ export interface SiteSettings {
   faviconUrl?: string;
   coverImages: string[];
   landingImages: string[];
-  activeTheme?: string;
+  defaultThemeId?: string; // ID of the default theme for all users
+  userSelectableThemeIds?: string[]; // IDs of themes users can choose from
+  customThemes?: Theme[]; // Array of user-created themes
   expenseCategories: Record<string, string[]>;
   countryCodes: CountryCode[];
   landingPage?: {

@@ -4,27 +4,26 @@
 @tailwind utilities;
 
 @layer base {
-  :root,
-  .theme-default {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+  :root, .theme-default-light {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 180 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 100% 71%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 180 100% 40%;
     --radius: 0.5rem;
     --radius-card: 0.75rem;
     --radius-button: 0.5rem;
@@ -37,65 +36,39 @@
     --chart-5: 340 75% 55%;
   }
 
-  .theme-quantum {
-    --background: 240 6% 10%;
-    --foreground: 240 5% 85%;
-    --card: 240 5% 15%;
-    --card-foreground: 240 5% 95%;
-    --popover: 240 6% 10%;
-    --popover-foreground: 240 5% 95%;
-    --primary: 255 85% 65%;
-    --primary-foreground: 255 85% 98%;
-    --secondary: 240 5% 25%;
-    --secondary-foreground: 240 5% 98%;
-    --muted: 240 5% 25%;
-    --muted-foreground: 240 5% 55%;
-    --accent: 190 85% 60%;
-    --accent-foreground: 240 5% 98%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5% 20%;
-    --input: 240 5% 22%;
-    --ring: 255 85% 65%;
-    --radius: 0.8rem;
-    --radius-card: 1rem;
-    --radius-button: 0.8rem;
-    --radius-input: 0.8rem;
-    --radius-dialog: 1.25rem;
-    --chart-1: 255 85% 65%;
-    --chart-2: 190 85% 60%;
-    --chart-3: 0 72% 51%;
-    --chart-4: 30 80% 55%;
-    --chart-5: 220 70% 50%;
-  }
-
-  .theme-amoled {
-    --background: 0 0% 0%;
+  .dark, .theme-default-dark {
+    --background: 0 0% 10%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 7%;
+    --card: 0 0% 13%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3%;
+    --popover: 0 0% 13%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 15%;
+    --primary: 180 100% 40%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
+    --muted: 0 0% 18%;
     --muted-foreground: 0 0% 63%;
-    --accent: 0 0% 25%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 0% 83%;
-    --radius: 0.8rem;
-    --radius-card: 1.25rem;
-    --radius-button: 0.8rem;
-    --radius-input: 0.8rem;
-    --radius-dialog: 1.5rem;
+    --accent: 0 100% 71%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 100% 71%;
+    --destructive-foreground: 0 0% 10%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 180 100% 40%;
+    --radius: 0.5rem;
+    --radius-card: 0.75rem;
+    --radius-button: 0.5rem;
+    --radius-input: 0.5rem;
+    --radius-dialog: 1rem;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
+
 
 @layer base {
   html {
@@ -141,5 +114,3 @@
     @apply bg-card/50 backdrop-blur-sm border-border/50;
   }
 }
-
-    
