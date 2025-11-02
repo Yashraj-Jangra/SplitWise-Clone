@@ -26,26 +26,21 @@ interface GroupAnalysisChartsProps {
   members: UserProfile[];
 }
 
-const MEMBER_CHART_COLORS = [
+const CHART_COLORS = [
   'hsl(var(--chart-1))',
   'hsl(var(--chart-2))',
   'hsl(var(--chart-3))',
   'hsl(var(--chart-4))',
   'hsl(var(--chart-5))',
+  'hsl(var(--chart-6))',
+  'hsl(var(--chart-7))',
+  'hsl(var(--chart-8))',
+  'hsl(var(--chart-9))',
+  'hsl(var(--chart-10))',
 ];
 
-const CATEGORY_CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(220 70% 50%)',
-  'hsl(160 60% 45%)',
-  'hsl(30 80% 55%)',
-  'hsl(280 65% 60%)',
-  'hsl(340 75% 55%)',
-];
+const MEMBER_CHART_COLORS = CHART_COLORS;
+const CATEGORY_CHART_COLORS = CHART_COLORS;
 
 export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsProps) {
   const isMobile = useIsMobile();
