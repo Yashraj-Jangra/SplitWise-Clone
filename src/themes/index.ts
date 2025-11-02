@@ -7,10 +7,10 @@ export const ALL_THEMES = [
     previewColor: 'hsl(180 100% 40%)',
   },
   {
-    id: 'sapphire',
-    name: 'Sapphire',
-    className: 'theme-sapphire',
-    previewColor: 'hsl(210 100% 60%)',
+    id: 'quantum',
+    name: 'Quantum',
+    className: 'theme-quantum',
+    previewColor: 'hsl(255 85% 65%)',
   },
   {
     id: 'amoled',
