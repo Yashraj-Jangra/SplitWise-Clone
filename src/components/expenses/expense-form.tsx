@@ -135,7 +135,7 @@ function Splitter() {
                 <Button type="button" variant="link" size="sm" onClick={() => toggleAll(false)} className="p-1 h-auto text-destructive hover:text-destructive">Deselect All</Button>
             </div>
         </div>
-        <div className="space-y-2 pr-2 h-full">
+        <div className="space-y-2 pr-2 flex-1">
           {getValues('participants').map((item: any, index: number) => {
              return (
                 <div key={item.userId} className={cn("flex items-center gap-x-4 gap-y-2 p-2 rounded-md transition-colors", watch(`participants.${index}.selected`) ? 'bg-muted/50' : 'opacity-60 hover:bg-muted/30')}>
@@ -424,10 +424,10 @@ export function ExpenseForm({ group }: { group: Group }) {
                         </TabsList>
                     </div>
                     <ScrollArea className="px-4 py-2 flex-1 md:h-[220px]">
-                        <TabsContent value="equally"><Splitter /></TabsContent>
-                        <TabsContent value="unequally"><Splitter /></TabsContent>
-                        <TabsContent value="by_shares"><Splitter /></TabsContent>
-                        <TabsContent value="by_percentage"><Splitter /></TabsContent>
+                        <TabsContent value="equally" className="mt-0"><Splitter /></TabsContent>
+                        <TabsContent value="unequally" className="mt-0"><Splitter /></TabsContent>
+                        <TabsContent value="by_shares" className="mt-0"><Splitter /></TabsContent>
+                        <TabsContent value="by_percentage" className="mt-0"><Splitter /></TabsContent>
                     </ScrollArea>
                 </Tabs>
              </CardContent>
