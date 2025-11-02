@@ -12,4 +12,10 @@ export const ALL_THEMES = [
     className: 'theme-sapphire',
     previewColor: 'hsl(210 100% 60%)',
   },
+  {
+    id: 'amoled',
+    name: 'Amoled Dark',
+    className: 'theme-amoled',
+    previewColor: 'hsl(0 0% 90%)',
+  },
 ];
