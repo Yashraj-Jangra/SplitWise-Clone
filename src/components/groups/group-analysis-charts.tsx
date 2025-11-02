@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
+import { Separator } from '../ui/separator';
 
 
 interface GroupAnalysisChartsProps {
@@ -264,10 +265,11 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     <CardDescription>Comparing each member's share of expenses.</CardDescription>
                 </div>
                  <div className="flex items-center gap-2 flex-wrap">
-                    <ToggleGroup type="single" value={timeChartView} onValueChange={(v) => { if (v) setTimeChartView(v as any)}}>
-                        <ToggleGroupItem value="line">Line</ToggleGroupItem>
-                        <ToggleGroupItem value="bar">Bar</ToggleGroupItem>
+                    <ToggleGroup type="single" value={timeChartView} onValueChange={(v) => { if (v) setTimeChartView(v as any)}} size="sm">
+                        <ToggleGroupItem value="line" aria-label="Line chart"><Icons.LineChart className="h-4 w-4" /></ToggleGroupItem>
+                        <ToggleGroupItem value="bar" aria-label="Bar chart"><Icons.Analysis className="h-4 w-4" /></ToggleGroupItem>
                     </ToggleGroup>
+                    <Separator orientation="vertical" className="h-6" />
                     <ToggleGroup type="single" value={frequency} onValueChange={(v) => { if (v) setFrequency(v as any)}} size="sm">
                         <ToggleGroupItem value="daily">Days</ToggleGroupItem>
                         <ToggleGroupItem value="weekly">Weeks</ToggleGroupItem>
