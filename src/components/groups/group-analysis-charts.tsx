@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import type { Expense, UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Line, LineChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell, Pie, PieChart } from 'recharts';
+import { Line, LineChart, Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell, Pie, PieChart, Area, AreaChart } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { getFullName } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -68,6 +68,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   const [categoryChartView, setCategoryChartView] = useState<'bar' | 'pie'>('pie');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [lineType, setLineType] = useState<"linear" | "monotone" | "step">("linear");
+  const [timeChartView, setTimeChartView] = useState<'line' | 'bar'>('line');
   
   useEffect(() => {
     setDate({ from: minDate, to: maxDate });
@@ -221,7 +222,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
        <Card>
         <CardHeader>
           <CardTitle>Timeline Filter</CardTitle>
-          <CardDescription>Refine the date range for the charts below.</CardDescription>
+          <CardDescription>Refine the date range for all charts below.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
             <Popover>
@@ -263,6 +264,10 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     <CardDescription>Comparing each member's share of expenses.</CardDescription>
                 </div>
                  <div className="flex items-center gap-2 flex-wrap">
+                    <ToggleGroup type="single" value={timeChartView} onValueChange={(v) => { if (v) setTimeChartView(v as any)}}>
+                        <ToggleGroupItem value="line">Line</ToggleGroupItem>
+                        <ToggleGroupItem value="bar">Bar</ToggleGroupItem>
+                    </ToggleGroup>
                     <ToggleGroup type="single" value={frequency} onValueChange={(v) => { if (v) setFrequency(v as any)}} size="sm">
                         <ToggleGroupItem value="daily">Days</ToggleGroupItem>
                         <ToggleGroupItem value="weekly">Weeks</ToggleGroupItem>
@@ -293,26 +298,48 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
         </CardHeader>
         <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
           <ChartContainer config={userChartConfig} className="h-[250px] md:h-[350px] w-full">
-            <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: -10, right: 20 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`} className="text-xs" />
-                <Tooltip
-                    content={<ChartTooltipContent indicator="dot" nameKey="name"/>}
-                />
-                <Legend />
-                {members.map(member => (
-                    <Line
-                        key={member.uid}
-                        dataKey={member.uid}
-                        type={lineType}
-                        stroke={`var(--color-${member.uid})`}
-                        strokeWidth={2}
-                        dot={false}
-                        name={getFullName(member.firstName, member.lastName)}
+            {timeChartView === 'line' ? (
+                <LineChart data={userSpendingOverTime} accessibilityLayer margin={{ left: -10, right: 20 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`} className="text-xs" />
+                    <Tooltip
+                        content={<ChartTooltipContent indicator="dot" nameKey="name"/>}
                     />
-                ))}
-            </LineChart>
+                    <Legend />
+                    {members.map(member => (
+                        <Line
+                            key={member.uid}
+                            dataKey={member.uid}
+                            type={lineType}
+                            stroke={`var(--color-${member.uid})`}
+                            strokeWidth={2}
+                            dot={false}
+                            name={getFullName(member.firstName, member.lastName)}
+                        />
+                    ))}
+                </LineChart>
+            ) : (
+                 <BarChart data={userSpendingOverTime} accessibilityLayer margin={{ left: -10, right: 20 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`} className="text-xs" />
+                    <Tooltip
+                        content={<ChartTooltipContent indicator="dot" nameKey="name"/>}
+                    />
+                    <Legend />
+                    {members.map(member => (
+                        <Bar
+                            key={member.uid}
+                            dataKey={member.uid}
+                            stackId="a"
+                            fill={`var(--color-${member.uid})`}
+                            name={getFullName(member.firstName, member.lastName)}
+                            radius={[4, 4, 0, 0]}
+                        />
+                    ))}
+                </BarChart>
+            )}
           </ChartContainer>
         </CardContent>
       </Card>
