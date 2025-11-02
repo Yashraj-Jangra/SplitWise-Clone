@@ -12,7 +12,7 @@ import { Icons } from '../icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, isValid } from 'date-fns';
+import { format, subDays, eachDayOfInterval, startOfDay, endOfDay, isValid, startOfWeek, startOfMonth } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -66,6 +66,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [memberChartView, setMemberChartView] = useState<'bar' | 'pie'>('bar');
   const [categoryChartView, setCategoryChartView] = useState<'bar' | 'pie'>('pie');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   
   useEffect(() => {
     setDate({ from: minDate, to: maxDate });
@@ -77,10 +78,11 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
   }, [validExpenses]);
 
   const dateFilteredExpenses = useMemo(() => {
-    if (!date?.from || !isValid(date.from) || !date.to || !isValid(date.to)) return [];
+    if (!date?.from || !isValid(date.from)) return [];
+    const toDate = date.to && isValid(date.to) ? date.to : date.from;
     return validExpenses.filter(expense => {
       const expenseDate = new Date(expense.date);
-      const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= endOfDay(date.to!);
+      const isInDateRange = expenseDate >= startOfDay(date.from!) && expenseDate <= endOfDay(toDate);
       return isInDateRange;
     });
   }, [validExpenses, date]);
@@ -97,31 +99,52 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     if (!date?.from || !date?.to || !isValid(date.from) || !isValid(date.to) || date.from > date.to) {
         return [];
     }
+    
+    const getGroupKey = (d: Date) => {
+        if (frequency === 'weekly') {
+            return format(startOfWeek(d), 'yyyy-MM-dd');
+        }
+        if (frequency === 'monthly') {
+            return format(startOfMonth(d), 'yyyy-MM');
+        }
+        return format(d, 'yyyy-MM-dd');
+    };
 
     const spendingByDateAndUser = dailyChartFilteredExpenses.reduce((acc, expense) => {
-        const day = format(new Date(expense.date), 'yyyy-MM-dd');
-        if (!acc[day]) acc[day] = {};
+        const groupKey = getGroupKey(new Date(expense.date));
+        if (!acc[groupKey]) acc[groupKey] = {};
         
         expense.participants.forEach(participant => {
-            acc[day][participant.user.uid] = (acc[day][participant.user.uid] || 0) + participant.amountOwed;
+            acc[groupKey][participant.user.uid] = (acc[groupKey][participant.user.uid] || 0) + participant.amountOwed;
         });
 
         return acc;
     }, {} as Record<string, Record<string, number>>);
+    
+    const formatLabel = (key: string) => {
+        const d = new Date(key);
+         if (frequency === 'weekly') {
+            return format(d, 'MMM d');
+        }
+        if (frequency === 'monthly') {
+            return format(d, 'MMM yyyy');
+        }
+        return format(d, 'MMM d');
+    }
 
-    const intervalDays = eachDayOfInterval({ start: date.from, end: date.to });
+    const sortedKeys = Object.keys(spendingByDateAndUser).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
 
-    return intervalDays.map(d => {
-        const dayKey = format(d, 'yyyy-MM-dd');
+    return sortedKeys.map(key => {
         const entry: { [key: string]: string | number } = {
-            date: format(d, 'MMM d'),
+            date: formatLabel(key),
         };
         members.forEach(member => {
-            entry[member.uid] = spendingByDateAndUser[dayKey]?.[member.uid] || 0;
+            entry[member.uid] = spendingByDateAndUser[key]?.[member.uid] || 0;
         });
         return entry;
     });
-  }, [dailyChartFilteredExpenses, members, date]);
+
+  }, [dailyChartFilteredExpenses, members, date, frequency]);
 
   const totalShareByMember = useMemo(() => {
     const data = members.reduce((acc, member) => {
@@ -197,7 +220,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
        <Card>
         <CardHeader>
           <CardTitle>Timeline Filter</CardTitle>
-          <CardDescription>Refine the charts below by a date range.</CardDescription>
+          <CardDescription>Refine the date range for the charts below.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
             <Popover>
@@ -233,21 +256,28 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
 
       <Card>
         <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
                     <CardTitle>Daily Expense Share</CardTitle>
                     <CardDescription>Comparing each member's share of expenses per day.</CardDescription>
                 </div>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full sm:w-[220px]">
-                        <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {uniqueCategories.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                 <div className="flex items-center gap-2 flex-wrap">
+                    <ToggleGroup type="single" value={frequency} onValueChange={(v) => { if (v) setFrequency(v as any)}} size="sm">
+                        <ToggleGroupItem value="daily">Days</ToggleGroupItem>
+                        <ToggleGroupItem value="weekly">Weeks</ToggleGroupItem>
+                        <ToggleGroupItem value="monthly">Months</ToggleGroupItem>
+                    </ToggleGroup>
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {uniqueCategories.map(cat => (
+                                <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
         </CardHeader>
         <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
