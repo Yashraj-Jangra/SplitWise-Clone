@@ -15,46 +15,42 @@ import { CheckCircle2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
+import { ColorPicker } from '@/components/ui/color-picker';
 
 type ThemeColor = { h: number, s: number, l: number };
 
 function ColorEditor({ label, color, onChange }: { label: string, color: ThemeColor, onChange: (newColor: ThemeColor) => void }) {
+    const hslString = `hsl(${color.h}, ${color.s}%, ${color.l}%)`;
     return (
         <div className="space-y-4 rounded-lg border p-4">
             <div className="flex items-center justify-between">
                 <Label className="font-semibold">{label}</Label>
                 <div 
                     className="h-8 w-8 rounded-full border-2"
-                    style={{ backgroundColor: `hsl(${color.h}, ${color.s}%, ${color.l}%)`}}
+                    style={{ backgroundColor: hslString }}
                 />
             </div>
-            <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                    <Label htmlFor={`${label}-h`}>Hue</Label>
-                    <span>{color.h}</span>
-                </div>
-                <Slider id={`${label}-h`} value={[color.h]} onValueChange={([h]) => onChange({ ...color, h })} max={360} step={1} />
-            </div>
-            <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                    <Label htmlFor={`${label}-s`}>Saturation</Label>
-                    <span>{color.s}%</span>
-                </div>
-                <Slider id={`${label}-s`} value={[color.s]} onValueChange={([s]) => onChange({ ...color, s })} max={100} step={1} />
-            </div>
-             <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                    <Label htmlFor={`${label}-l`}>Lightness</Label>
-                    <span>{color.l}%</span>
-                </div>
-                <Slider id={`${label}-l`} value={[color.l]} onValueChange={([l]) => onChange({ ...color, l })} max={100} step={1} />
-            </div>
+             <ColorPicker
+                color={hslString}
+                setColor={(newColor) => {
+                    // This is a simple parser. A more robust one would be needed for a real app.
+                    if (typeof newColor === 'string' && newColor.startsWith('hsl')) {
+                         const parts = newColor.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+                         if (parts) {
+                            onChange({ h: parseFloat(parts[1]), s: parseFloat(parts[2]), l: parseFloat(parts[3]) });
+                         }
+                    }
+                }}
+            />
         </div>
     )
 }
 
 function parseHsl(hslString: string): ThemeColor {
-    const [h, s, l] = hslString.split(' ').map(parseFloat);
+    if (!hslString) return { h: 0, s: 0, l: 0 };
+    const parts = hslString.match(/([\d.]+)/g);
+    if (!parts || parts.length < 3) return { h: 0, s: 0, l: 0 };
+    const [h, s, l] = parts.map(parseFloat);
     return { h, s, l };
 }
 
@@ -84,7 +80,9 @@ export default function AdminThemeSettingsPage() {
   }, [getCssVariable]);
 
   useEffect(() => {
-    setSelectedThemeId(siteSettings.activeTheme || 'default');
+    if (siteSettings.activeTheme) {
+        setSelectedThemeId(siteSettings.activeTheme);
+    }
   }, [siteSettings.activeTheme]);
 
   useEffect(() => {
