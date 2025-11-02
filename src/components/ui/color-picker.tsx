@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -161,7 +162,7 @@ const PickerPanel = ({ color, setColor }: { color: string; setColor: (color: str
   return (
     <div className="grid grid-cols-[280px_auto] gap-6 font-sans">
         <div className="flex flex-col gap-4">
-            <div className="w-full h-24 rounded-md border border-zinc-700" style={{ backgroundColor: color }} />
+            <div className="w-full h-24 rounded-lg border border-zinc-700" style={{ backgroundColor: color }} />
             <div className="space-y-3">
                 <div className="flex items-center gap-2">
                     <label className="text-xs font-semibold text-zinc-400 w-12">HEX</label>
@@ -239,11 +240,11 @@ const SaturationValuePicker = ({ hsla, setColor, color }: { hsla: { h: number; s
     <div
       ref={pickerRef}
       onMouseDown={handleMouseDown}
-      className="w-56 h-56 rounded-md cursor-crosshair relative"
+      className="w-56 h-56 rounded-lg cursor-crosshair relative"
       style={{ backgroundColor: `hsl(${hsv.h}, 100%, 50%)` }}
     >
-      <div className="absolute inset-0 rounded-md" style={{ background: 'linear-gradient(to right, white, transparent)' }} />
-      <div className="absolute inset-0 rounded-md" style={{ background: 'linear-gradient(to top, black, transparent)' }} />
+      <div className="absolute inset-0 rounded-lg" style={{ background: 'linear-gradient(to right, white, transparent)' }} />
+      <div className="absolute inset-0 rounded-lg" style={{ background: 'linear-gradient(to top, black, transparent)' }} />
       <div
         className="absolute h-4 w-4 rounded-full border-2 border-white shadow-md"
         style={{
@@ -301,3 +302,5 @@ const HueSlider = ({ hsla, setColor }: { hsla: { h: number; s: number; l: number
     </div>
   );
 };
+
+    
