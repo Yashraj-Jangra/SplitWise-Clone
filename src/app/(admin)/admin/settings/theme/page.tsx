@@ -16,12 +16,24 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { ColorPicker } from '@/components/ui/color-picker';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
-type ThemeColor = { h: number, s: number, l: number };
 
-function ColorEditor({ label, color, onChange }: { label: string, color: string, onChange: (newColor: string) => void }) {
+function ColorEditor({ label, color, onChange, varName, onMount }: { label: string, color: string, onChange: (newColor: string) => void, varName: string, onMount: (val: string) => void }) {
+    
+    useEffect(() => {
+        const cssVar = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        const hslString = parseHslString(cssVar);
+        onMount(hslString);
+    }, [varName, onMount]);
+
     return (
-        <div className="space-y-4 rounded-lg border p-4">
+        <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <Label className="font-semibold">{label}</Label>
                 <div 
@@ -36,7 +48,6 @@ function ColorEditor({ label, color, onChange }: { label: string, color: string,
         </div>
     )
 }
-
 
 function parseHslString(hslString: string): string {
     if (!hslString) return 'hsl(0, 0%, 0%)';
@@ -55,8 +66,17 @@ export default function AdminThemeSettingsPage() {
   const { toast } = useToast();
   
   const [livePrimary, setLivePrimary] = useState('hsl(0, 0%, 0%)');
+  const [livePrimaryFg, setLivePrimaryFg] = useState('hsl(0, 0%, 0%)');
   const [liveBackground, setLiveBackground] = useState('hsl(0, 0%, 0%)');
   const [liveForeground, setLiveForeground] = useState('hsl(0, 0%, 0%)');
+  const [liveCard, setLiveCard] = useState('hsl(0, 0%, 0%)');
+  const [liveCardFg, setLiveCardFg] = useState('hsl(0, 0%, 0%)');
+  const [liveSecondary, setLiveSecondary] = useState('hsl(0, 0%, 0%)');
+  const [liveSecondaryFg, setLiveSecondaryFg] = useState('hsl(0, 0%, 0%)');
+  const [liveAccent, setLiveAccent] = useState('hsl(0, 0%, 0%)');
+  const [liveAccentFg, setLiveAccentFg] = useState('hsl(0, 0%, 0%)');
+  const [liveDestructive, setLiveDestructive] = useState('hsl(0, 0%, 0%)');
+  const [liveDestructiveFg, setLiveDestructiveFg] = useState('hsl(0, 0%, 0%)');
   const [liveRadius, setLiveRadius] = useState(0.5);
 
   const getCssVariable = useCallback((varName: string) => {
@@ -66,8 +86,18 @@ export default function AdminThemeSettingsPage() {
 
   const initializeLiveTheme = useCallback(() => {
     setLivePrimary(parseHslString(getCssVariable('--primary')));
+    setLivePrimaryFg(parseHslString(getCssVariable('--primary-foreground')));
     setLiveBackground(parseHslString(getCssVariable('--background')));
     setLiveForeground(parseHslString(getCssVariable('--foreground')));
+    setLiveCard(parseHslString(getCssVariable('--card')));
+    setLiveCardFg(parseHslString(getCssVariable('--card-foreground')));
+    setLiveSecondary(parseHslString(getCssVariable('--secondary')));
+    setLiveSecondaryFg(parseHslString(getCssVariable('--secondary-foreground')));
+    setLiveAccent(parseHslString(getCssVariable('--accent')));
+    setLiveAccentFg(parseHslString(getCssVariable('--accent-foreground')));
+    setLiveDestructive(parseHslString(getCssVariable('--destructive')));
+    setLiveDestructiveFg(parseHslString(getCssVariable('--destructive-foreground')));
+
     const radiusVar = getCssVariable('--radius');
     setLiveRadius(radiusVar ? parseFloat(radiusVar) : 0.5);
   }, [getCssVariable]);
@@ -79,11 +109,9 @@ export default function AdminThemeSettingsPage() {
   }, [siteSettings.activeTheme]);
 
   useEffect(() => {
-    // When the theme changes (from picker or load), re-initialize the live editor
-    // Use a small delay to allow CSS variables to update in the DOM
     const timer = setTimeout(() => {
         initializeLiveTheme();
-    }, 50);
+    }, 100);
     return () => clearTimeout(timer);
   }, [currentTheme, initializeLiveTheme]);
 
@@ -100,9 +128,24 @@ export default function AdminThemeSettingsPage() {
       document.documentElement.style.setProperty(varName, hslString);
     }
 
-    if (varName === '--primary') setLivePrimary(newColor);
-    if (varName === '--background') setLiveBackground(newColor);
-    if (varName === '--foreground') setLiveForeground(newColor);
+    const stateSetters: Record<string, React.Dispatch<React.SetStateAction<string>>> = {
+        '--primary': setLivePrimary,
+        '--primary-foreground': setLivePrimaryFg,
+        '--background': setLiveBackground,
+        '--foreground': setLiveForeground,
+        '--card': setLiveCard,
+        '--card-foreground': setLiveCardFg,
+        '--secondary': setLiveSecondary,
+        '--secondary-foreground': setLiveSecondaryFg,
+        '--accent': setLiveAccent,
+        '--accent-foreground': setLiveAccentFg,
+        '--destructive': setLiveDestructive,
+        '--destructive-foreground': setLiveDestructiveFg,
+    };
+
+    if(stateSetters[varName]) {
+        stateSetters[varName](newColor);
+    }
   }, []);
 
   const handleRadiusChange = useCallback((value: number) => {
@@ -183,15 +226,55 @@ export default function AdminThemeSettingsPage() {
             <CardHeader>
                 <CardTitle>Live Theme Customizer</CardTitle>
                 <CardDescription>
-                    Customize the live theme variables. Changes here are temporary and will reset on page reload unless you update your theme file.
+                    Customize the live theme variables. Changes here are temporary and will reset on page reload.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <ColorEditor label="Primary" color={livePrimary} onChange={(c) => handleLiveColorChange('--primary', c)} />
-                    <ColorEditor label="Background" color={liveBackground} onChange={(c) => handleLiveColorChange('--background', c)} />
-                    <ColorEditor label="Foreground" color={liveForeground} onChange={(c) => handleLiveColorChange('--foreground', c)} />
-                 </div>
+                 <Accordion type="multiple" className="w-full space-y-4">
+                    <AccordionItem value="general" className="border-b-0">
+                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">General</AccordionTrigger>
+                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
+                           <ColorEditor label="Background" varName="--background" color={liveBackground} onChange={(c) => handleLiveColorChange('--background', c)} onMount={setLiveBackground} />
+                           <ColorEditor label="Foreground" varName="--foreground" color={liveForeground} onChange={(c) => handleLiveColorChange('--foreground', c)} onMount={setLiveForeground} />
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="primary" className="border-b-0">
+                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Primary Colors</AccordionTrigger>
+                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
+                           <ColorEditor label="Primary" varName="--primary" color={livePrimary} onChange={(c) => handleLiveColorChange('--primary', c)} onMount={setLivePrimary} />
+                           <ColorEditor label="Primary Foreground" varName="--primary-foreground" color={livePrimaryFg} onChange={(c) => handleLiveColorChange('--primary-foreground', c)} onMount={setLivePrimaryFg} />
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="card" className="border-b-0">
+                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Card Colors</AccordionTrigger>
+                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
+                           <ColorEditor label="Card" varName="--card" color={liveCard} onChange={(c) => handleLiveColorChange('--card', c)} onMount={setLiveCard} />
+                           <ColorEditor label="Card Foreground" varName="--card-foreground" color={liveCardFg} onChange={(c) => handleLiveColorChange('--card-foreground', c)} onMount={setLiveCardFg} />
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="secondary" className="border-b-0">
+                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Secondary Colors</AccordionTrigger>
+                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
+                           <ColorEditor label="Secondary" varName="--secondary" color={liveSecondary} onChange={(c) => handleLiveColorChange('--secondary', c)} onMount={setLiveSecondary} />
+                           <ColorEditor label="Secondary Foreground" varName="--secondary-foreground" color={liveSecondaryFg} onChange={(c) => handleLiveColorChange('--secondary-foreground', c)} onMount={setLiveSecondaryFg} />
+                        </AccordionContent>
+                    </AccordionItem>
+                     <AccordionItem value="accent" className="border-b-0">
+                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Accent Colors</AccordionTrigger>
+                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
+                           <ColorEditor label="Accent" varName="--accent" color={liveAccent} onChange={(c) => handleLiveColorChange('--accent', c)} onMount={setLiveAccent} />
+                           <ColorEditor label="Accent Foreground" varName="--accent-foreground" color={liveAccentFg} onChange={(c) => handleLiveColorChange('--accent-foreground', c)} onMount={setLiveAccentFg} />
+                        </AccordionContent>
+                    </AccordionItem>
+                      <AccordionItem value="destructive" className="border-b-0">
+                        <AccordionTrigger className="text-lg font-medium p-4 bg-muted/30 rounded-lg hover:bg-muted/50 [&[data-state=open]]:rounded-b-none">Destructive Colors</AccordionTrigger>
+                        <AccordionContent className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 border border-t-0 rounded-b-lg">
+                           <ColorEditor label="Destructive" varName="--destructive" color={liveDestructive} onChange={(c) => handleLiveColorChange('--destructive', c)} onMount={setLiveDestructive} />
+                           <ColorEditor label="Destructive Foreground" varName="--destructive-foreground" color={liveDestructiveFg} onChange={(c) => handleLiveColorChange('--destructive-foreground', c)} onMount={setLiveDestructiveFg} />
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+                 
                  <Separator />
                  <div className="space-y-4">
                      <div className="flex items-center justify-between">
