@@ -34,11 +34,16 @@ const MEMBER_CHART_COLORS = [
 ];
 
 const CATEGORY_CHART_COLORS = [
-  'hsl(var(--chart-6))',
-  'hsl(var(--chart-7))',
-  'hsl(var(--chart-8))',
-  'hsl(var(--chart-9))',
-  'hsl(var(--chart-10))',
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(220 70% 50%)',
+  'hsl(160 60% 45%)',
+  'hsl(30 80% 55%)',
+  'hsl(280 65% 60%)',
+  'hsl(340 75% 55%)',
 ];
 
 export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsProps) {
@@ -159,6 +164,16 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
         return acc;
     }, {} as ChartConfig);
   }, [members]);
+
+  const categoryChartConfig = useMemo(() => {
+    return expensesByCategory.reduce((acc, category, index) => {
+        acc[category.name] = {
+            label: category.name,
+            color: CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]
+        };
+        return acc;
+    }, {} as ChartConfig);
+  }, [expensesByCategory]);
 
   const barChartConfig = {
     total: { label: 'Total Share', color: 'hsl(var(--chart-1))' },
@@ -306,7 +321,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                 </BarChart>
                 </ChartContainer>
              ) : (
-                <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
+                <ChartContainer config={userChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
                         <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                         <Pie
@@ -354,7 +369,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
             </CardHeader>
             <CardContent className="px-0 pt-4 sm:p-6 sm:pt-4">
               {categoryChartView === 'bar' ? (
-                <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
+                <ChartContainer config={categoryChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 20}}>
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
@@ -367,7 +382,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     </BarChart>
                 </ChartContainer>
               ) : (
-                <ChartContainer config={barChartConfig} className="h-[220px] md:h-[250px] w-full">
+                <ChartContainer config={categoryChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
                         <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                         <Pie
@@ -399,5 +414,3 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
     </div>
   );
 }
-
-    
