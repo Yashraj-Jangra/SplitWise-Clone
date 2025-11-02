@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Paintbrush, Copy } from 'lucide-react';
 import { useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -179,14 +178,14 @@ const PickerPanel = ({ color, setColor }: { color: string; setColor: (color: str
         </div>
 
         <div className="flex gap-4">
-            <SaturationValuePicker hsla={hsla} setColor={setColor} />
+            <SaturationValuePicker hsla={hsla} setColor={setColor} color={color} />
             <HueSlider hsla={hsla} setColor={setColor} />
         </div>
     </div>
   );
 };
 
-const SaturationValuePicker = ({ hsla, setColor }: { hsla: { h: number; s: number; l: number; a: number }; setColor: (color: string) => void; }) => {
+const SaturationValuePicker = ({ hsla, setColor, color }: { hsla: { h: number; s: number; l: number; a: number }; setColor: (color: string) => void; color: string; }) => {
   const pickerRef = React.useRef<HTMLDivElement>(null);
 
   const handleColorSelect = (e: React.MouseEvent<HTMLDivElement> | MouseEvent) => {
