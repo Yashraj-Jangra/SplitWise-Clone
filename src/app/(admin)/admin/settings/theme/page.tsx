@@ -22,6 +22,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Input } from '@/components/ui/input';
 
 
 function ColorEditor({ label, color, onChange, varName, onMount }: { label: string, color: string, onChange: (newColor: string) => void, varName: string, onMount: (val: string) => void }) {
@@ -293,27 +294,24 @@ export default function AdminThemeSettingsPage() {
                 <Separator />
                 
                 <h3 className="text-lg font-medium">Border Radius</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="radius-slider" className="font-semibold">Global Radius</Label>
-                            <span className="text-sm text-muted-foreground font-mono">{liveRadius.toFixed(2)}rem</span>
-                        </div>
-                        <Slider id="radius-slider" value={[liveRadius]} onValueChange={([v]) => handleRadiusChange(v, '--radius', setLiveRadius)} max={2} step={0.05} />
-                    </div>
-                    <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12">
+                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <Label htmlFor="radius-card-slider" className="font-semibold">Card Radius</Label>
                             <span className="text-sm text-muted-foreground font-mono">{liveRadiusCard.toFixed(2)}rem</span>
                         </div>
                         <Slider id="radius-card-slider" value={[liveRadiusCard]} onValueChange={([v]) => handleRadiusChange(v, '--radius-card', setLiveRadiusCard)} max={2} step={0.05} />
+                        <Card className="p-4 w-40 h-24 mx-auto"><CardTitle className="text-sm">Card Preview</CardTitle></Card>
                     </div>
-                    <div className="space-y-4">
+                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <Label htmlFor="radius-button-slider" className="font-semibold">Button Radius</Label>
                             <span className="text-sm text-muted-foreground font-mono">{liveRadiusButton.toFixed(2)}rem</span>
                         </div>
                         <Slider id="radius-button-slider" value={[liveRadiusButton]} onValueChange={([v]) => handleRadiusChange(v, '--radius-button', setLiveRadiusButton)} max={2} step={0.05} />
+                        <div className="flex justify-center items-center h-24">
+                            <Button>Button Preview</Button>
+                        </div>
                     </div>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -321,6 +319,21 @@ export default function AdminThemeSettingsPage() {
                             <span className="text-sm text-muted-foreground font-mono">{liveRadiusInput.toFixed(2)}rem</span>
                         </div>
                         <Slider id="radius-input-slider" value={[liveRadiusInput]} onValueChange={([v]) => handleRadiusChange(v, '--radius-input', setLiveRadiusInput)} max={2} step={0.05} />
+                         <div className="flex justify-center items-center h-24 px-4">
+                           <Input placeholder="Input Preview" />
+                        </div>
+                    </div>
+                     <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="radius-slider" className="font-semibold">Global Radius</Label>
+                            <span className="text-sm text-muted-foreground font-mono">{liveRadius.toFixed(2)}rem</span>
+                        </div>
+                        <Slider id="radius-slider" value={[liveRadius]} onValueChange={([v]) => handleRadiusChange(v, '--radius', setLiveRadius)} max={2} step={0.05} />
+                        <div className="flex justify-center items-center h-24">
+                           <div className="w-24 h-16 bg-muted border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground" style={{ borderRadius: `var(--radius)`}}>
+                             Global
+                           </div>
+                        </div>
                     </div>
                 </div>
             </CardContent>
@@ -328,5 +341,3 @@ export default function AdminThemeSettingsPage() {
     </div>
   );
 }
-
-    
