@@ -71,8 +71,8 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
 
         allTransactions.forEach(t => {
             const transactionDate = startOfDay(t.date);
+            const dateStr = format(transactionDate, 'yyyy-MM-dd');
             if (transactionDate >= startDate && transactionDate <= endDate) {
-                const dateStr = format(transactionDate, 'yyyy-MM-dd');
                 dailyNetChanges.set(dateStr, (dailyNetChanges.get(dateStr) || 0) + t.amount);
             }
         });
@@ -104,7 +104,6 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     
     const isNegative = netBalance < 0;
     const finalColor = isNegative ? '#ef4444' : '#22c55e';
-    
     const range = maxBalance - minBalance;
     const offset = range > 0 ? (maxBalance / range) * 100 : 50;
 
@@ -125,13 +124,17 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                             data={chartData} 
                             margin={{ top: 5, right: 0, left: 0, bottom: 0 }}
                         >
-                             <defs>
-                                <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset={`${100 - offset}%`} stopColor="#22c55e" stopOpacity={0.4} />
-                                    <stop offset={`${100 - offset}%`} stopColor="#ef4444" stopOpacity={0.4} />
+                            <defs>
+                                <linearGradient id="fillGreen" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                                 </linearGradient>
-                             </defs>
-                             <Tooltip
+                                <linearGradient id="fillRed" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0}/>
+                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                </linearGradient>
+                            </defs>
+                            <Tooltip
                                 cursor={false}
                                 content={
                                 <ChartTooltipContent
@@ -141,7 +144,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                         const isTooltipNegative = numericValue < 0;
                                         return (
                                             <div className="flex flex-col">
-                                                <span className={cn("font-bold", isTooltipNegative ? "text-red-500" : `text-green-500`)}>
+                                                <span className={cn("font-bold", isTooltipNegative ? "text-red-500" : "text-green-500")}>
                                                     {numericValue >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(numericValue).toFixed(2)}
                                                 </span>
                                             </div>
@@ -150,16 +153,26 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 />
                                 }
                             />
-                             <YAxis domain={[minBalance, maxBalance]} hide={true} />
-                             <XAxis dataKey="date" hide={true} />
-                             <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                            <YAxis domain={[minBalance, maxBalance]} hide={true} />
+                            <XAxis dataKey="date" hide={true} />
+                            <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                             <Area
                                 type="monotone"
                                 dataKey="balance"
-                                stroke={finalColor}
                                 strokeWidth={2}
-                                fill="url(#splitColor)"
-                                fillOpacity={1}
+                                stroke="#22c55e"
+                                fill="url(#fillGreen)"
+                                connectNulls
+                                stackId="1"
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="balance"
+                                strokeWidth={2}
+                                stroke="#ef4444"
+                                fill="url(#fillRed)"
+                                connectNulls
+                                stackId="2"
                             />
                         </AreaChart>
                     </ChartContainer>
@@ -168,4 +181,3 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         </Card>
     );
 }
-
