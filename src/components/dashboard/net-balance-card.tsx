@@ -75,7 +75,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         return <Skeleton className="h-[180px] w-full" />;
     }
     
-    chartConfig.balance.color = netBalance >= 0 ? 'hsl(var(--chart-2))' : 'hsl(var(--accent))';
+    chartConfig.balance.color = netBalance >= 0 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))';
 
     return (
         <Card className="h-full flex flex-col">
@@ -95,7 +95,14 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 content={
                                 <ChartTooltipContent
                                     indicator="dot"
-                                    formatter={(value) => `${netBalance >= 0 ? '+' : '-'}${CURRENCY_SYMBOL}${Math.abs(Number(value)).toFixed(2)}`}
+                                    formatter={(value, name, props) => (
+                                        <div className="flex flex-col">
+                                            <span>{props.payload.date}</span>
+                                            <span className="font-bold" style={{ color: chartConfig.balance.color }}>
+                                                {netBalance >= 0 ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(Number(value)).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    )}
                                 />
                                 }
                             />
