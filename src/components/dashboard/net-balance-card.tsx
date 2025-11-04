@@ -9,8 +9,15 @@ import type { Expense } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
+
+const chartConfig = {
+  balance: {
+    label: "Balance",
+  },
+} satisfies ChartConfig;
+
 
 export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -67,6 +74,8 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     if (loading) {
         return <Skeleton className="h-[180px] w-full" />;
     }
+    
+    chartConfig.balance.color = netBalance >= 0 ? 'hsl(var(--chart-2))' : 'hsl(var(--accent))';
 
     return (
         <Card className="h-full flex flex-col">
@@ -79,9 +88,10 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                     {netBalance >= 0 ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
                 </div>
                 <div className="h-[60px] -ml-6 -mr-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                    <ChartContainer config={chartConfig} className="w-full h-full">
+                        <AreaChart accessibilityLayer data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                              <Tooltip
+                                cursor={false}
                                 content={
                                 <ChartTooltipContent
                                     indicator="dot"
@@ -93,11 +103,12 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 type="monotone"
                                 dataKey="balance"
                                 strokeWidth={2}
-                                stroke={netBalance >= 0 ? 'hsl(var(--chart-2))' : 'hsl(var(--accent))'}
-                                fill={netBalance >= 0 ? 'hsla(var(--chart-2), 0.2)' : 'hsla(var(--accent), 0.2)'}
+                                stroke="var(--color-balance)"
+                                fill="var(--color-balance)"
+                                fillOpacity={0.2}
                             />
                         </AreaChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                 </div>
             </CardContent>
         </Card>
