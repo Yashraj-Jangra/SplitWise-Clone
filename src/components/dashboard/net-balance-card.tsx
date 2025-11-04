@@ -195,3 +195,4 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         </Card>
     );
 }
+
