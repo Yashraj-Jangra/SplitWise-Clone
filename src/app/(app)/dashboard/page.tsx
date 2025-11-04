@@ -2,41 +2,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { RecentActivityList } from "@/components/dashboard/recent-activity-list";
-import { BalanceOverviewSummary } from "@/components/dashboard/balance-overview-summary";
-import { Icons } from "@/components/icons";
-import { getGroupsByUserId } from "@/lib/mock-data";
 import { useAuth } from '@/contexts/auth-context';
-import type { Group } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
-import { DashboardAddExpenseButton } from '@/components/expenses/dashboard-add-expense-button';
-import { SpendingBreakdown } from '@/components/dashboard/spending-breakdown';
-
+import { NetBalanceCard } from '@/components/dashboard/net-balance-card';
+import { ObligationsCard } from '@/components/dashboard/obligations-card';
+import { DynamicSpendingChart } from '@/components/dashboard/dynamic-spending-chart';
+import { PredictiveInsights } from '@/components/dashboard/predictive-insights';
 
 function DashboardSkeleton() {
     return (
-        <div className="space-y-8">
-            <div className="flex justify-between items-center">
-                <div>
-                    <Skeleton className="h-8 w-48 mb-2" />
-                    <Skeleton className="h-4 w-64" />
-                </div>
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-4 w-1/2" />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-3">
-                     <Skeleton className="h-36 rounded-xl" />
-                </div>
-                <div className="lg:col-span-2">
-                     <Skeleton className="h-96 rounded-xl" />
-                </div>
-                <div className="space-y-6">
-                    <Skeleton className="h-24 rounded-xl" />
-                    <Skeleton className="h-64 rounded-xl" />
-                </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Skeleton className="h-[180px] w-full" />
+                <Skeleton className="h-[180px] w-full" />
+                <Skeleton className="h-[180px] w-full lg:col-span-2" />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-3">
+                <Skeleton className="h-80 w-full lg:col-span-2" />
+                <Skeleton className="h-80 w-full" />
             </div>
         </div>
     );
@@ -44,70 +31,42 @@ function DashboardSkeleton() {
 
 export default function DashboardPage() {
   const { userProfile, loading } = useAuth();
-  const { toast } = useToast();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(true);
+  const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
-    async function getDashboardData(userId: string) {
-      setGroupsLoading(true);
-      try {
-        const userGroups = await getGroupsByUserId(userId);
-        setGroups(userGroups);
-      } catch (error: any) {
-        console.error("Failed to fetch dashboard groups:", error);
-        toast({
-          variant: "destructive",
-          title: "Error fetching data",
-          description: "Could not load your groups.",
-        });
-      } finally {
-        setGroupsLoading(false);
-      }
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      setGreeting('Good morning');
+    } else if (hour < 18) {
+      setGreeting('Good afternoon');
+    } else {
+      setGreeting('Good evening');
     }
+  }, []);
 
-    if (userProfile?.uid) {
-      getDashboardData(userProfile.uid);
-    }
-  }, [userProfile, toast]);
-
-  if (loading || !userProfile || groupsLoading) {
+  if (loading || !userProfile) {
     return <DashboardSkeleton />;
   }
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground tracking-tighter animate-in fade-in slide-in-from-bottom-2 duration-500">Dashboard</h1>
-        <p className="text-lg text-muted-foreground">Welcome back, {userProfile.firstName}!</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Net Balance */}
-        <div className="lg:col-span-3">
-            <BalanceOverviewSummary currentUserId={userProfile.uid} />
+        <div>
+            <h1 className="text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {greeting}, {userProfile.firstName}!
+            </h1>
+            <p className="text-muted-foreground">Here's what's happening with your finances today.</p>
         </div>
 
-        {/* Spending Breakdown Chart */}
-        <div className="lg:col-span-2">
-            <SpendingBreakdown />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-1"><NetBalanceCard currentUserId={userProfile.uid} /></div>
+            <div className="sm:col-span-1"><ObligationsCard currentUserId={userProfile.uid} type="owed" /></div>
+            <div className="sm:col-span-2"><ObligationsCard currentUserId={userProfile.uid} type="owes" /></div>
         </div>
 
-        {/* Side column for Quick Actions & Activity */}
-        <div className="space-y-8">
-            <Card className="glass-pane">
-                <CardHeader>
-                    <CardTitle className="text-lg">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-3">
-                    <CreateGroupDialog buttonVariant="secondary" />
-                    <DashboardAddExpenseButton groups={groups} />
-                </CardContent>
-            </Card>
-            <RecentActivityList />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2"><DynamicSpendingChart /></div>
+            <div className="lg:col-span-1"><PredictiveInsights /></div>
         </div>
-      </div>
     </div>
   );
 }
