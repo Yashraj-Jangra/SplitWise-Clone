@@ -100,7 +100,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     }
     
     const isNegative = netBalance < 0;
-    chartConfig.balance.color = isNegative ? 'hsl(var(--destructive))' : 'hsl(var(--chart-2))';
+    chartConfig.balance.color = isNegative ? '#ef4444' : 'hsl(var(--chart-2))';
     
     return (
         <Card className="h-full flex flex-col">
@@ -109,7 +109,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                 <CardDescription>Your overall financial position</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-                <div className={cn("text-3xl font-bold mb-2", isNegative ? "text-destructive" : "text-green-500")}>
+                <div className={cn("text-3xl font-bold mb-2", isNegative ? "text-red-500" : "text-green-500")}>
                     {netBalance >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
                 </div>
                 <div className="h-[60px] -ml-6 -mr-2">
