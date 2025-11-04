@@ -124,14 +124,17 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 content={
                                 <ChartTooltipContent
                                     indicator="dot"
-                                    formatter={(value, name, props) => (
-                                        <div className="flex flex-col">
-                                            <span>{props.payload.date}</span>
-                                            <span className={cn("font-bold", `text-[color:var(--color-balance)]`)}>
-                                                {Number(value) >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(Number(value)).toFixed(2)}
-                                            </span>
-                                        </div>
-                                    )}
+                                    formatter={(value) => {
+                                        const numericValue = Number(value);
+                                        const isTooltipNegative = numericValue < 0;
+                                        return (
+                                            <div className="flex flex-col">
+                                                <span className={cn("font-bold", isTooltipNegative ? "text-red-500" : `text-[color:var(--color-balance)]`)}>
+                                                    {numericValue >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(numericValue).toFixed(2)}
+                                                </span>
+                                            </div>
+                                        )
+                                    }}
                                 />
                                 }
                             />
@@ -152,4 +155,3 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         </Card>
     );
 }
-
