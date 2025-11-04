@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 const chartConfig = {
   balance: {
     label: "Balance",
+    color: 'hsl(var(--chart-2))'
   },
 } satisfies ChartConfig;
 
@@ -100,7 +101,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     }
     
     const isNegative = netBalance < 0;
-    chartConfig.balance.color = isNegative ? '#ef4444' : 'hsl(var(--chart-2))';
+    const color = isNegative ? '#ef4444' : 'hsl(var(--chart-2))';
     
     return (
         <Card className="h-full flex flex-col">
@@ -143,8 +144,8 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 type="monotone"
                                 dataKey="balance"
                                 strokeWidth={2}
-                                stroke="var(--color-balance)"
-                                fill="var(--color-balance)"
+                                stroke={color}
+                                fill={color}
                                 fillOpacity={0.2}
                                 allowDataOverflow={true}
                             />
