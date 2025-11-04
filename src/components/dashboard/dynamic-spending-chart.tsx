@@ -13,6 +13,7 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/u
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
@@ -128,44 +129,48 @@ export function DynamicSpendingChart() {
                             <p className="text-xs text-primary">{activePercentage}%</p>
                         </>
                     ) : (
-                        <>
-                            <p className="text-sm text-muted-foreground">Total Spent</p>
-                            <p className="text-2xl font-bold">{CURRENCY_SYMBOL}{totalAmount.toFixed(0)}</p>
-                        </>
+                       <div className="text-muted-foreground text-sm">Hover for details</div>
                     )}
                 </div>
                 </ChartContainer>
             </div>
-            <ScrollArea className="w-full sm:w-1/2 h-[250px] pr-4">
-              <div className="space-y-2">
-                {expensesByCategory.map((category) => {
-                  const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;
-                  return (
-                    <div
-                      key={category.name}
-                      onMouseEnter={() => setActiveCategory(category.name)}
-                      onMouseLeave={() => setActiveCategory(null)}
-                      className={cn(
-                        "flex items-center justify-between p-2 rounded-md transition-colors",
-                        activeCategory === category.name && "bg-muted"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: chartConfig[category.name]?.color }}
-                        />
-                        <span className="text-sm text-muted-foreground">{category.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">{CURRENCY_SYMBOL}{category.total.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</p>
-                      </div>
+            <div className="w-full sm:w-1/2 h-full flex flex-col">
+                <div className="flex flex-col items-center pb-2">
+                    <p className="text-sm text-muted-foreground">Total Spent</p>
+                    <p className="text-2xl font-bold">{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+                </div>
+                <Separator className="my-2" />
+                <ScrollArea className="flex-1 pr-4 -mr-4">
+                    <div className="space-y-2">
+                        {expensesByCategory.map((category) => {
+                        const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;
+                        return (
+                            <div
+                            key={category.name}
+                            onMouseEnter={() => setActiveCategory(category.name)}
+                            onMouseLeave={() => setActiveCategory(null)}
+                            className={cn(
+                                "flex items-center justify-between p-2 rounded-md transition-colors",
+                                activeCategory === category.name && "bg-muted"
+                            )}
+                            >
+                            <div className="flex items-center gap-2">
+                                <span
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: chartConfig[category.name]?.color }}
+                                />
+                                <span className="text-sm text-muted-foreground">{category.name}</span>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm font-semibold">{CURRENCY_SYMBOL}{category.total.toFixed(2)}</p>
+                                <p className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</p>
+                            </div>
+                            </div>
+                        )
+                        })}
                     </div>
-                  )
-                })}
-              </div>
-            </ScrollArea>
+                </ScrollArea>
+            </div>
           </>
         )}
       </CardContent>
