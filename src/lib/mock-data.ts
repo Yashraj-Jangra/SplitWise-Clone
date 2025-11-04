@@ -1312,7 +1312,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         return {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
-            faviconUrl: data.faviconUrl || '',
+            faviconUrl: data.faviconUrl || '/favicon.svg',
             coverImages: data.coverImages?.length > 0 ? data.coverImages : FALLBACK_GROUP_COVER_IMAGES,
             landingImages: data.landingImages?.length > 0 ? data.landingImages : FALLBACK_LANDING_IMAGES,
             customThemes: data.customThemes || [],
@@ -1335,7 +1335,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         const defaultSettings: SiteSettings = {
             appName: DEFAULT_APP_NAME,
             logoUrl: '',
-            faviconUrl: '',
+            faviconUrl: '/favicon.svg',
             coverImages: FALLBACK_GROUP_COVER_IMAGES,
             landingImages: FALLBACK_LANDING_IMAGES,
             customThemes: [],
