@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getExpensesByUserId, getSettlementsByUserId } from '@/lib/mock-data';
 import type { Expense, Settlement } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis, XAxis, ReferenceLine } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 const chartConfig = {
   balance: {
     label: "Balance",
-    color: 'hsl(var(--chart-2))'
   },
 } satisfies ChartConfig;
 
@@ -38,7 +37,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         loadData();
     }, [currentUserId]);
 
-    const { netBalance, chartData } = useMemo(() => {
+    const { netBalance, chartData, minBalance, maxBalance } = useMemo(() => {
         const allTransactions: ({ type: 'expense' | 'settlement', date: Date, amount: number })[] = [];
 
         expenses.forEach(expense => {
@@ -64,7 +63,6 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         
         const overallNetBalance = allTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-        // Chart data for last 30 days
         const endDate = new Date();
         const startDate = subDays(endDate, 29);
         const dateInterval = eachDayOfInterval({ start: startDate, end: endDate });
@@ -80,19 +78,23 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         });
         
         let cumulativeBalance = 0;
+        let min = 0, max = 0;
         const historicalChartData = dateInterval.map(date => {
             const dateStr = format(date, 'yyyy-MM-dd');
             cumulativeBalance += dailyNetChanges.get(dateStr) || 0;
+            if (cumulativeBalance < min) min = cumulativeBalance;
+            if (cumulativeBalance > max) max = cumulativeBalance;
             return {
                 date: format(date, 'MMM d'),
                 balance: cumulativeBalance,
             };
         });
 
-
         return {
             netBalance: overallNetBalance,
             chartData: historicalChartData,
+            minBalance: min,
+            maxBalance: max,
         };
     }, [expenses, settlements, currentUserId]);
 
@@ -101,8 +103,11 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     }
     
     const isNegative = netBalance < 0;
-    const color = isNegative ? '#ef4444' : 'hsl(var(--chart-2))';
+    const finalColor = isNegative ? '#ef4444' : '#22c55e';
     
+    const range = maxBalance - minBalance;
+    const offset = range > 0 ? (maxBalance / range) * 100 : 50;
+
     return (
         <Card className="h-full flex flex-col">
             <CardHeader>
@@ -120,6 +125,12 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                             data={chartData} 
                             margin={{ top: 5, right: 0, left: 0, bottom: 0 }}
                         >
+                             <defs>
+                                <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset={`${100 - offset}%`} stopColor="#22c55e" stopOpacity={0.4} />
+                                    <stop offset={`${100 - offset}%`} stopColor="#ef4444" stopOpacity={0.4} />
+                                </linearGradient>
+                             </defs>
                              <Tooltip
                                 cursor={false}
                                 content={
@@ -130,7 +141,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                         const isTooltipNegative = numericValue < 0;
                                         return (
                                             <div className="flex flex-col">
-                                                <span className={cn("font-bold", isTooltipNegative ? "text-red-500" : `text-[color:var(--color-balance)]`)}>
+                                                <span className={cn("font-bold", isTooltipNegative ? "text-red-500" : `text-green-500`)}>
                                                     {numericValue >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(numericValue).toFixed(2)}
                                                 </span>
                                             </div>
@@ -139,15 +150,16 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 />
                                 }
                             />
-                             <YAxis domain={['auto', 'auto']} hide={true} reversed={isNegative} />
+                             <YAxis domain={[minBalance, maxBalance]} hide={true} />
+                             <XAxis dataKey="date" hide={true} />
+                             <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                             <Area
                                 type="monotone"
                                 dataKey="balance"
+                                stroke={finalColor}
                                 strokeWidth={2}
-                                stroke={color}
-                                fill={color}
-                                fillOpacity={0.2}
-                                allowDataOverflow={true}
+                                fill="url(#splitColor)"
+                                fillOpacity={1}
                             />
                         </AreaChart>
                     </ChartContainer>
@@ -156,3 +168,4 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         </Card>
     );
 }
+
