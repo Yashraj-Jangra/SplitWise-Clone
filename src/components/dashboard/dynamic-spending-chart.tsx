@@ -88,7 +88,8 @@ export function DynamicSpendingChart() {
         <CardTitle>Dynamic Spending: Last 30 Days</CardTitle>
         <CardDescription>Your spending breakdown by category.</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4">
+      <Separator />
+      <CardContent className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
         {expensesByCategory.length === 0 ? (
           <div className="text-center text-muted-foreground w-full">
             <p>No spending data in the last 30 days.</p>
@@ -135,11 +136,6 @@ export function DynamicSpendingChart() {
                 </ChartContainer>
             </div>
             <div className="w-full sm:w-1/2 h-full flex flex-col">
-                <div className="flex flex-col items-center pb-2">
-                    <p className="text-sm text-muted-foreground">Total Spent</p>
-                    <p className="text-2xl font-bold">{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
-                </div>
-                <Separator className="my-2" />
                 <ScrollArea className="flex-1 pr-4 -mr-4">
                     <div className="space-y-2">
                         {expensesByCategory.map((category) => {
@@ -170,6 +166,11 @@ export function DynamicSpendingChart() {
                         })}
                     </div>
                 </ScrollArea>
+                <Separator className="my-2" />
+                <div className="flex flex-col items-center pt-2">
+                    <p className="text-sm text-muted-foreground">Total Spent</p>
+                    <p className="text-2xl font-bold">{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+                </div>
             </div>
           </>
         )}
