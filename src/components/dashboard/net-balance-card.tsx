@@ -8,7 +8,7 @@ import { getExpensesByUserId } from '@/lib/mock-data';
 import type { Expense } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
-import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
 
@@ -99,13 +99,14 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                         <div className="flex flex-col">
                                             <span>{props.payload.date}</span>
                                             <span className="font-bold" style={{ color: chartConfig.balance.color }}>
-                                                {netBalance >= 0 ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(Number(value)).toFixed(2)}
+                                                {Number(value) >= 0 ? '+' : '-'}{CURRENCY_SYMBOL}{Math.abs(Number(value)).toFixed(2)}
                                             </span>
                                         </div>
                                     )}
                                 />
                                 }
                             />
+                             <YAxis domain={['auto', 'auto']} hide={true} />
                             <Area
                                 type="monotone"
                                 dataKey="balance"
@@ -113,6 +114,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 stroke="var(--color-balance)"
                                 fill="var(--color-balance)"
                                 fillOpacity={0.2}
+                                allowDataOverflow={true}
                             />
                         </AreaChart>
                     </ChartContainer>
