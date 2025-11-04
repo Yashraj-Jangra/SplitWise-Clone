@@ -13,7 +13,7 @@ import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/u
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Separator } from '../ui/separator';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
@@ -84,7 +84,7 @@ export function DynamicSpendingChart() {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader>
+      <CardHeader className="text-center">
         <CardTitle>Dynamic Spending: Last 30 Days</CardTitle>
         <CardDescription>Your spending breakdown by category.</CardDescription>
       </CardHeader>
@@ -96,7 +96,7 @@ export function DynamicSpendingChart() {
           </div>
         ) : (
           <>
-            <div className="w-full sm:w-1/2 flex-shrink-0">
+            <div className="w-full sm:w-1/2 flex-shrink-0 relative">
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <ResponsiveContainer>
                     <PieChart>
@@ -122,7 +122,8 @@ export function DynamicSpendingChart() {
                     </Pie>
                     </PieChart>
                 </ResponsiveContainer>
-                <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                </ChartContainer>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                     {activeData ? (
                         <>
                             <p className="text-sm text-muted-foreground">{activeData.name}</p>
@@ -133,7 +134,6 @@ export function DynamicSpendingChart() {
                        <div className="text-muted-foreground text-sm">Hover for details</div>
                     )}
                 </div>
-                </ChartContainer>
             </div>
             <div className="w-full sm:w-1/2 h-full flex flex-col">
                 <ScrollArea className="flex-1 pr-4 -mr-4">
