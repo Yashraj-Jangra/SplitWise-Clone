@@ -8,7 +8,7 @@ import type { Expense } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
-import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip } from 'recharts';
+import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip, Sector } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -21,11 +21,40 @@ const CHART_COLORS = [
   'hsl(var(--chart-7))', 'hsl(var(--chart-8))', 'hsl(var(--chart-9))', 'hsl(var(--chart-10))'
 ];
 
+const AnimatedActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius - 2}
+        outerRadius={outerRadius + 2}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        style={{
+            transition: 'all 0.3s ease-in-out',
+            transformOrigin: 'center center',
+            transform: 'scale(1.05)',
+        }}
+      />
+    </g>
+  );
+};
+
+
 export function DynamicSpendingChart() {
   const { userProfile, loading: authLoading } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  
+  // State for animation
+  const [isHovered, setIsHovered] = useState(false);
+  const [animationIndex, setAnimationIndex] = useState(0);
+  const [rotationAngle, setRotationAngle] = useState(0);
 
   useEffect(() => {
     async function loadExpenses() {
@@ -64,6 +93,18 @@ export function DynamicSpendingChart() {
     return { expensesByCategory: sortedData, totalAmount: total };
   }, [expenses]);
   
+  // Animation logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (!isHovered && expensesByCategory.length > 0) {
+      interval = setInterval(() => {
+        setAnimationIndex(prevIndex => (prevIndex + 1) % expensesByCategory.length);
+        setRotationAngle(prevAngle => prevAngle - 360 / expensesByCategory.length);
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [isHovered, expensesByCategory.length]);
+
   const chartConfig = useMemo(() => {
     return expensesByCategory.reduce((acc, category, index) => {
         acc[category.name] = {
@@ -73,8 +114,13 @@ export function DynamicSpendingChart() {
         return acc;
     }, {} as ChartConfig);
   }, [expensesByCategory]);
-
-  const activeData = activeCategory ? expensesByCategory.find(c => c.name === activeCategory) : null;
+  
+  const currentActiveIndex = isHovered ? -1 : animationIndex;
+  
+  const activeData = activeCategory 
+    ? expensesByCategory.find(c => c.name === activeCategory) 
+    : isHovered ? null : expensesByCategory[animationIndex];
+    
   const activePercentage = activeData && totalAmount > 0 ? (activeData.total / totalAmount * 100).toFixed(1) : null;
 
 
@@ -83,7 +129,11 @@ export function DynamicSpendingChart() {
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card 
+        className="h-full flex flex-col"
+        onMouseEnter={() => { setIsHovered(true); setActiveCategory(null); }}
+        onMouseLeave={() => { setIsHovered(false); setAnimationIndex(0); }}
+    >
       <CardHeader className="text-center">
         <CardTitle>Dynamic Spending: Last 30 Days</CardTitle>
         <CardDescription>Your spending breakdown by category.</CardDescription>
@@ -99,7 +149,7 @@ export function DynamicSpendingChart() {
             <div className="w-full sm:w-1/2 flex-shrink-0 relative">
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <ResponsiveContainer>
-                    <PieChart>
+                    <PieChart style={{ transition: 'transform 1s ease-in-out', transform: `rotate(${rotationAngle}deg)`}}>
                     <Tooltip
                         cursor={false}
                         content={<ChartTooltipContent hideLabel hideIndicator />}
@@ -115,6 +165,8 @@ export function DynamicSpendingChart() {
                         paddingAngle={2}
                         onMouseEnter={(_, index) => setActiveCategory(expensesByCategory[index].name)}
                         onMouseLeave={() => setActiveCategory(null)}
+                        activeIndex={currentActiveIndex}
+                        activeShape={AnimatedActiveShape}
                     >
                         {expensesByCategory.map((entry) => (
                         <Cell key={`cell-${entry.name}`} fill={chartConfig[entry.name]?.color} />
@@ -138,8 +190,9 @@ export function DynamicSpendingChart() {
             <div className="w-full sm:w-1/2 h-full flex flex-col">
                 <ScrollArea className="flex-1 pr-4 -mr-4">
                     <div className="space-y-2">
-                        {expensesByCategory.map((category) => {
+                        {expensesByCategory.map((category, index) => {
                         const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;
+                        const isAnimating = !isHovered && index === animationIndex;
                         return (
                             <div
                             key={category.name}
@@ -147,7 +200,8 @@ export function DynamicSpendingChart() {
                             onMouseLeave={() => setActiveCategory(null)}
                             className={cn(
                                 "flex items-center justify-between p-2 rounded-md transition-colors",
-                                activeCategory === category.name && "bg-muted"
+                                activeCategory === category.name && "bg-muted",
+                                isAnimating && "bg-muted scale-[1.03] shadow-md"
                             )}
                             >
                             <div className="flex items-center gap-2">
