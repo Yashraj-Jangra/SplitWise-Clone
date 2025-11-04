@@ -79,14 +79,27 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         
         let cumulativeBalance = 0;
         let min = 0, max = 0;
-        const historicalChartData = dateInterval.map(date => {
+        
+        const historicalChartData = dateInterval.map((date, index) => {
             const dateStr = format(date, 'yyyy-MM-dd');
+            const prevBalance = cumulativeBalance;
             cumulativeBalance += dailyNetChanges.get(dateStr) || 0;
+
             if (cumulativeBalance < min) min = cumulativeBalance;
             if (cumulativeBalance > max) max = cumulativeBalance;
+
+            let status: 'up' | 'down' | 'neutral' = 'neutral';
+            if (index > 0) {
+              if (cumulativeBalance > prevBalance) status = 'up';
+              else if (cumulativeBalance < prevBalance) status = 'down';
+            }
+
             return {
                 date: format(date, 'MMM d'),
                 balance: cumulativeBalance,
+                up: status === 'up' ? cumulativeBalance : null,
+                down: status === 'down' ? cumulativeBalance : null,
+                status: status,
             };
         });
 
@@ -103,9 +116,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     }
     
     const isNegative = netBalance < 0;
-    const finalColor = isNegative ? '#ef4444' : '#22c55e';
-    const range = maxBalance - minBalance;
-    const offset = range > 0 ? (maxBalance / range) * 100 : 50;
+    const finalColor = isNegative ? 'text-red-500' : 'text-green-500';
 
     return (
         <Card className="h-full flex flex-col">
@@ -114,7 +125,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                 <CardDescription>Your overall financial position</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-                <div className={cn("text-3xl font-bold mb-2", isNegative ? "text-red-500" : "text-green-500")}>
+                <div className={cn("text-3xl font-bold mb-2", finalColor)}>
                     {netBalance >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
                 </div>
                 <div className="h-[60px] -ml-6 -mr-2">
@@ -130,8 +141,8 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                     <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                                 </linearGradient>
                                 <linearGradient id="fillRed" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0}/>
-                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
                             <Tooltip
@@ -139,12 +150,17 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 content={
                                 <ChartTooltipContent
                                     indicator="dot"
-                                    formatter={(value) => {
+                                    formatter={(value, name, item) => {
                                         const numericValue = Number(value);
-                                        const isTooltipNegative = numericValue < 0;
+                                        const itemStatus = item.payload?.status;
+                                        
+                                        let colorClass = "text-foreground";
+                                        if (itemStatus === 'up') colorClass = "text-green-500";
+                                        if (itemStatus === 'down') colorClass = "text-red-500";
+                                        
                                         return (
                                             <div className="flex flex-col">
-                                                <span className={cn("font-bold", isTooltipNegative ? "text-red-500" : "text-green-500")}>
+                                                <span className={cn("font-bold", colorClass)}>
                                                     {numericValue >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(numericValue).toFixed(2)}
                                                 </span>
                                             </div>
@@ -158,21 +174,19 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                             <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                             <Area
                                 type="monotone"
-                                dataKey="balance"
+                                dataKey="up"
                                 strokeWidth={2}
                                 stroke="#22c55e"
                                 fill="url(#fillGreen)"
                                 connectNulls
-                                stackId="1"
                             />
                             <Area
                                 type="monotone"
-                                dataKey="balance"
+                                dataKey="down"
                                 strokeWidth={2}
                                 stroke="#ef4444"
                                 fill="url(#fillRed)"
                                 connectNulls
-                                stackId="2"
                             />
                         </AreaChart>
                     </ChartContainer>
