@@ -25,19 +25,17 @@ const AnimatedActiveShape = (props: any) => {
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
 
   return (
-    <g>
+    <g style={{ filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3))' }}>
       <Sector
         cx={cx}
         cy={cy}
-        innerRadius={innerRadius - 2}
-        outerRadius={outerRadius + 2}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 4} 
         startAngle={startAngle}
         endAngle={endAngle}
         fill={fill}
         style={{
             transition: 'all 0.3s ease-in-out',
-            transformOrigin: 'center center',
-            transform: 'scale(1.05)',
         }}
       />
     </g>
@@ -54,7 +52,6 @@ export function DynamicSpendingChart() {
   // State for animation
   const [isHovered, setIsHovered] = useState(false);
   const [animationIndex, setAnimationIndex] = useState(0);
-  const [rotationAngle, setRotationAngle] = useState(0);
 
   useEffect(() => {
     async function loadExpenses() {
@@ -99,7 +96,6 @@ export function DynamicSpendingChart() {
     if (!isHovered && expensesByCategory.length > 0) {
       interval = setInterval(() => {
         setAnimationIndex(prevIndex => (prevIndex + 1) % expensesByCategory.length);
-        setRotationAngle(prevAngle => prevAngle - 360 / expensesByCategory.length);
       }, 3000);
     }
     return () => clearInterval(interval);
@@ -132,7 +128,7 @@ export function DynamicSpendingChart() {
     <Card 
         className="h-full flex flex-col"
         onMouseEnter={() => { setIsHovered(true); setActiveCategory(null); }}
-        onMouseLeave={() => { setIsHovered(false); setAnimationIndex(0); }}
+        onMouseLeave={() => { setIsHovered(false); }}
     >
       <CardHeader className="text-center">
         <CardTitle>Dynamic Spending: Last 30 Days</CardTitle>
@@ -149,7 +145,7 @@ export function DynamicSpendingChart() {
             <div className="w-full sm:w-1/2 flex-shrink-0 relative">
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <ResponsiveContainer>
-                    <PieChart style={{ transition: 'transform 1s ease-in-out', transform: `rotate(${rotationAngle}deg)`}}>
+                    <PieChart>
                     <Tooltip
                         cursor={false}
                         content={<ChartTooltipContent hideLabel hideIndicator />}
@@ -199,7 +195,7 @@ export function DynamicSpendingChart() {
                             onMouseEnter={() => setActiveCategory(category.name)}
                             onMouseLeave={() => setActiveCategory(null)}
                             className={cn(
-                                "flex items-center justify-between p-2 rounded-md transition-colors",
+                                "flex items-center justify-between p-2 rounded-md transition-all duration-300",
                                 activeCategory === category.name && "bg-muted",
                                 isAnimating && "bg-muted scale-[1.03] shadow-md"
                             )}
