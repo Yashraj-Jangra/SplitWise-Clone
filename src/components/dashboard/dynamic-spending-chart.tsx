@@ -142,8 +142,6 @@ export function DynamicSpendingChart() {
   return (
     <Card 
         className="h-full flex flex-col"
-        onMouseEnter={() => { setIsHovered(true); setActiveCategory(null); }}
-        onMouseLeave={() => { setIsHovered(false); }}
     >
       <CardHeader className="flex flex-row items-start justify-between pb-4">
         <div>
@@ -160,7 +158,11 @@ export function DynamicSpendingChart() {
           </div>
       </CardHeader>
       <Separator />
-      <CardContent className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+      <CardContent 
+        className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4 pt-6"
+        onMouseEnter={() => { setIsHovered(true); setActiveCategory(null); }}
+        onMouseLeave={() => { setIsHovered(false); }}
+      >
         {expensesByCategory.length === 0 ? (
           <div className="text-center text-muted-foreground w-full">
             <p>No spending data in the last 30 days.</p>
