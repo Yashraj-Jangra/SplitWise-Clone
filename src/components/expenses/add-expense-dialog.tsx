@@ -129,6 +129,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         });
         setOpen(false);
         if (onExpenseAdded) onExpenseAdded();
+        window.dispatchEvent(new CustomEvent('data-changed'));
     } catch (error) {
         toast({ title: "Error", description: "Failed to add expense.", variant: "destructive" });
     }

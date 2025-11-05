@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
 
@@ -21,11 +21,11 @@ const chartConfig = {
   },
   positive: {
     label: "Positive",
-    color: "#22c55e",
+    color: "hsl(var(--chart-2))",
   },
   negative: {
     label: "Negative",
-    color: "#ef4444",
+    color: "hsl(var(--chart-5))",
   },
 } satisfies ChartConfig;
 
@@ -34,19 +34,31 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     const [settlements, setSettlements] = useState<Settlement[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        async function loadData() {
-            setLoading(true);
-            const [userExpenses, userSettlements] = await Promise.all([
-                getExpensesByUserId(currentUserId),
-                getSettlementsByUserId(currentUserId),
-            ]);
-            setExpenses(userExpenses);
-            setSettlements(userSettlements);
-            setLoading(false);
-        }
-        loadData();
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        const [userExpenses, userSettlements] = await Promise.all([
+            getExpensesByUserId(currentUserId),
+            getSettlementsByUserId(currentUserId),
+        ]);
+        setExpenses(userExpenses);
+        setSettlements(userSettlements);
+        setLoading(false);
     }, [currentUserId]);
+
+    useEffect(() => {
+        loadData();
+        
+        const handleDataChange = () => {
+            console.log("data-changed event received, refetching balance data...");
+            loadData();
+        };
+
+        window.addEventListener('data-changed', handleDataChange);
+
+        return () => {
+            window.removeEventListener('data-changed', handleDataChange);
+        };
+    }, [loadData]);
 
     const { netBalance, chartData, domain, yAxisOffset } = useMemo(() => {
         const allTransactions: ({ date: Date, amount: number })[] = [];
@@ -82,7 +94,6 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
             }
         });
         
-        // Find the balance right before the 30-day window starts
         const balanceBeforeWindow = allTransactions
             .filter(t => t.date < startDate)
             .reduce((sum, t) => sum + t.amount, 0);
@@ -120,7 +131,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     }
     
     const isNegative = netBalance < 0;
-    const finalColor = isNegative ? chartConfig.negative.color : chartConfig.positive.color;
+    const finalColor = isNegative ? '#ef4444' : chartConfig.positive.color;
 
     return (
         <Card className="h-full flex flex-col">
@@ -145,8 +156,8 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 <stop offset="95%" stopColor={chartConfig.positive.color} stopOpacity={0.1}/>
                                 </linearGradient>
                                 <linearGradient id="fillNegative" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={chartConfig.negative.color} stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor={chartConfig.negative.color} stopOpacity={0.1}/>
+                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
                                 </linearGradient>
 
                                 <clipPath id="clip-above">
@@ -165,7 +176,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                     indicator="dot"
                                     formatter={(value) => {
                                         const numericValue = Number(value);
-                                        const color = numericValue < 0 ? chartConfig.negative.color : chartConfig.positive.color;
+                                        const color = numericValue < 0 ? '#ef4444' : chartConfig.positive.color;
                                         return (
                                             <div className="font-bold" style={{ color: color }}>
                                                 {numericValue >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(numericValue).toFixed(2)}
@@ -187,7 +198,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                             <Area
                                 dataKey="balance"
                                 type="monotone"
-                                stroke={chartConfig.negative.color}
+                                stroke="#ef4444"
                                 fill="url(#fillNegative)"
                                 strokeWidth={2}
                                 clipPath="url(#clip-below)"

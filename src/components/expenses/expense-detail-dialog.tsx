@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -116,6 +115,7 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
             } else {
                 router.refresh();
             }
+            window.dispatchEvent(new CustomEvent('data-changed'));
         } catch (error) {
             toast({
                 variant: "destructive",

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -168,6 +167,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         if (onActionComplete) {
             onActionComplete();
         }
+        window.dispatchEvent(new CustomEvent('data-changed'));
     } catch(error) {
         toast({ title: "Error", description: "Failed to update expense", variant: "destructive"})
     }

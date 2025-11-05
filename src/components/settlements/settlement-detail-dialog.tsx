@@ -60,6 +60,7 @@ export function SettlementDetailDialog({ open, onOpenChange, settlement, group, 
             setIsDeleteDialogOpen(false);
             onOpenChange(false);
             if (onActionComplete) onActionComplete();
+            window.dispatchEvent(new CustomEvent('data-changed'));
         } catch (error) {
             toast({
                 variant: "destructive",

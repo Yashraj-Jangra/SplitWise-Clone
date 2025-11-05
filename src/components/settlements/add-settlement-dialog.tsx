@@ -103,6 +103,7 @@ export function AddSettlementDialog({ group, onSettlementAdded, initialSettlemen
         setOpen(false);
         onSettlementAdded();
         router.refresh();
+        window.dispatchEvent(new CustomEvent('data-changed'));
     } catch (error) {
         toast({ title: "Error", description: "Failed to record settlement.", variant: "destructive" });
     }

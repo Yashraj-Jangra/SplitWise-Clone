@@ -110,6 +110,7 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
         toast({ title: "Settlement Updated", description: "The settlement has been successfully updated." });
         onOpenChange(false);
         if (onActionComplete) onActionComplete();
+        window.dispatchEvent(new CustomEvent('data-changed'));
     } catch (error) {
         toast({ title: "Error", description: "Failed to update settlement.", variant: "destructive" });
     }
