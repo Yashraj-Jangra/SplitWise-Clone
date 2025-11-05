@@ -49,7 +49,6 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         loadData();
         
         const handleDataChange = () => {
-            console.log("data-changed event received, refetching balance data...");
             loadData();
         };
 
@@ -59,10 +58,10 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
             window.removeEventListener('data-changed', handleDataChange);
         };
     }, [loadData]);
-
-    const { netBalance, chartData, domain, yAxisOffset } = useMemo(() => {
-        const allTransactions: ({ date: Date, amount: number })[] = [];
-
+    
+    const { netBalance, chartData, domain, gradientOffset } = useMemo(() => {
+        // 1. Consolidate all transactions into a single array
+        const allTransactions: { date: Date, amount: number }[] = [];
         expenses.forEach(expense => {
             const userPaid = expense.payers.find(p => p.user.uid === currentUserId)?.amount || 0;
             const userOwed = expense.participants.find(p => p.user.uid === currentUserId)?.amountOwed || 0;
@@ -71,7 +70,6 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
               allTransactions.push({ date: new Date(expense.date), amount: userNet });
             }
         });
-
         settlements.forEach(settlement => {
             if (settlement.paidBy.uid === currentUserId) {
                 allTransactions.push({ date: new Date(settlement.date), amount: settlement.amount });
@@ -80,12 +78,15 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
             }
         });
         
+        // 2. Calculate final net balance
         const overallNetBalance = allTransactions.reduce((sum, t) => sum + t.amount, 0);
-        
+
+        // 3. Prepare data for the chart (last 30 days)
         const endDate = new Date();
         const startDate = subDays(endDate, 29);
         const dateInterval = eachDayOfInterval({ start: startDate, end: endDate });
         
+        // Group transactions by day
         const dailyNetChanges = new Map<string, number>();
         allTransactions.forEach(t => {
             if (t.date >= startDate && t.date <= endDate) {
@@ -94,44 +95,51 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
             }
         });
         
+        // Calculate the balance from *before* the 30-day window starts
         const balanceBeforeWindow = allTransactions
             .filter(t => t.date < startDate)
             .reduce((sum, t) => sum + t.amount, 0);
             
         let cumulativeBalance = balanceBeforeWindow;
-        let min = balanceBeforeWindow, max = balanceBeforeWindow;
+        let minBalance = cumulativeBalance, maxBalance = cumulativeBalance;
         
+        // Create the final chart data array
         const historicalChartData = dateInterval.map(date => {
             const dateStr = format(date, 'yyyy-MM-dd');
             cumulativeBalance += dailyNetChanges.get(dateStr) || 0;
-            if (cumulativeBalance < min) min = cumulativeBalance;
-            if (cumulativeBalance > max) max = cumulativeBalance;
+            if (cumulativeBalance < minBalance) minBalance = cumulativeBalance;
+            if (cumulativeBalance > maxBalance) maxBalance = cumulativeBalance;
             return {
                 date: format(date, 'MMM d'),
                 balance: cumulativeBalance,
             };
         });
 
-        const padding = Math.max(Math.abs(min), Math.abs(max)) * 0.1 || 10;
-        const finalDomain: [number, number] = [min - padding, max + padding];
+        // 4. Calculate Chart Domain and Gradient Offset
+        const padding = Math.max(Math.abs(minBalance), Math.abs(maxBalance)) * 0.1 || 10;
+        const finalDomain: [number, number] = [minBalance - padding, maxBalance + padding];
         
-        const offset = (max / (max - min)) * 100;
-        const yAxisOffset = isNaN(offset) || !isFinite(offset) ? 50 : offset;
+        let offset = 0;
+        if (finalDomain[1] > finalDomain[0]) {
+            offset = finalDomain[1] / (finalDomain[1] - finalDomain[0]);
+        }
+        offset = Math.max(0, Math.min(1, offset)); // Clamp between 0 and 1
 
         return {
             netBalance: overallNetBalance,
             chartData: historicalChartData,
             domain: finalDomain,
-            yAxisOffset: yAxisOffset,
+            gradientOffset: offset,
         };
     }, [expenses, settlements, currentUserId]);
+
 
     if (loading) {
         return <Skeleton className="h-[180px] w-full" />;
     }
     
     const isNegative = netBalance < 0;
-    const finalColor = isNegative ? '#ef4444' : chartConfig.positive.color;
+    const finalColor = isNegative ? 'text-red-500' : 'text-green-500';
 
     return (
         <Card className="h-full flex flex-col">
@@ -140,7 +148,7 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                 <CardDescription>Your overall financial position</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-                <div className={cn("text-3xl font-bold mb-2")} style={{color: finalColor}}>
+                <div className={cn("text-3xl font-bold mb-2", finalColor)}>
                     {netBalance >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
                 </div>
                 <div className="h-[60px] -ml-6 -mr-2">
@@ -151,21 +159,10 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                             margin={{ top: 5, right: 0, left: 0, bottom: 0 }}
                         >
                              <defs>
-                                <linearGradient id="fillPositive" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={chartConfig.positive.color} stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor={chartConfig.positive.color} stopOpacity={0.1}/>
+                                <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset={gradientOffset} stopColor={chartConfig.positive.color} stopOpacity={0.4} />
+                                    <stop offset={gradientOffset} stopColor={chartConfig.negative.color} stopOpacity={0.4} />
                                 </linearGradient>
-                                <linearGradient id="fillNegative" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
-                                </linearGradient>
-
-                                <clipPath id="clip-above">
-                                    <rect x="0" y="0" width="100%" height={yAxisOffset + "%"} />
-                                </clipPath>
-                                <clipPath id="clip-below">
-                                    <rect x="0" y={yAxisOffset + "%"} width="100%" height={(100 - yAxisOffset) + "%"} />
-                                </clipPath>
                             </defs>
                             <XAxis dataKey="date" hide={true} />
                             <YAxis domain={domain} hide={true} />
@@ -187,21 +184,12 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 }
                             />
                             <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                             <Area
-                                dataKey="balance"
-                                type="monotone"
-                                stroke={chartConfig.positive.color}
-                                fill="url(#fillPositive)"
-                                strokeWidth={2}
-                                clipPath="url(#clip-above)"
-                            />
                             <Area
                                 dataKey="balance"
                                 type="monotone"
-                                stroke="#ef4444"
-                                fill="url(#fillNegative)"
+                                stroke="url(#splitColor)"
+                                fill="url(#splitColor)"
                                 strokeWidth={2}
-                                clipPath="url(#clip-below)"
                             />
                         </AreaChart>
                     </ChartContainer>
