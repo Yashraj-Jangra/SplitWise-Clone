@@ -19,13 +19,13 @@ const chartConfig = {
   balance: {
     label: "Balance",
   },
-  up: {
-    label: "Up",
-    color: "#22c55e",
+  positive: {
+    label: "Positive",
+    color: "hsl(var(--chart-2))", // Greenish
   },
-  down: {
-    label: "Down",
-    color: "#ef4444",
+  negative: {
+    label: "Negative",
+    color: "hsl(var(--chart-1))", // Reddish/bluish depending on theme
   },
 } satisfies ChartConfig;
 
@@ -48,25 +48,20 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         loadData();
     }, [currentUserId]);
 
-    const { netBalance, chartData, minBalance, maxBalance } = useMemo(() => {
+    const { netBalance, chartData, domain } = useMemo(() => {
         const allTransactions: ({ date: Date, amount: number })[] = [];
 
         expenses.forEach(expense => {
             const userPaid = expense.payers.find(p => p.user.uid === currentUserId)?.amount || 0;
             const userOwed = expense.participants.find(p => p.user.uid === currentUserId)?.amountOwed || 0;
-            const net = userPaid - userOwed;
-            if (Math.abs(net) > 0.001) {
-                allTransactions.push({ date: new Date(expense.date), amount: net });
-            }
+            allTransactions.push({ date: new Date(expense.date), amount: userPaid - userOwed });
         });
 
         settlements.forEach(settlement => {
-            let amount = 0;
-            if (settlement.paidBy.uid === currentUserId) amount = settlement.amount;
-            else if (settlement.paidTo.uid === currentUserId) amount = -settlement.amount;
-            
-            if (Math.abs(amount) > 0.001) {
-                allTransactions.push({ date: new Date(settlement.date), amount: amount });
+            if (settlement.paidBy.uid === currentUserId) {
+                allTransactions.push({ date: new Date(settlement.date), amount: settlement.amount });
+            } else if (settlement.paidTo.uid === currentUserId) {
+                allTransactions.push({ date: new Date(settlement.date), amount: -settlement.amount });
             }
         });
         
@@ -77,11 +72,10 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         const dateInterval = eachDayOfInterval({ start: startDate, end: endDate });
         
         const dailyNetChanges = new Map<string, number>();
-
         allTransactions.forEach(t => {
             const transactionDate = startOfDay(t.date);
-            const dateStr = format(transactionDate, 'yyyy-MM-dd');
             if (transactionDate >= startDate && transactionDate <= endDate) {
+                const dateStr = format(transactionDate, 'yyyy-MM-dd');
                 dailyNetChanges.set(dateStr, (dailyNetChanges.get(dateStr) || 0) + t.amount);
             }
         });
@@ -89,37 +83,23 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         let cumulativeBalance = 0;
         let min = 0, max = 0;
         
-        const historicalChartData = dateInterval.map((date, index) => {
+        const historicalChartData = dateInterval.map(date => {
             const dateStr = format(date, 'yyyy-MM-dd');
-            const prevBalance = cumulativeBalance;
             cumulativeBalance += dailyNetChanges.get(dateStr) || 0;
-
             if (cumulativeBalance < min) min = cumulativeBalance;
             if (cumulativeBalance > max) max = cumulativeBalance;
-
-            let status: 'up' | 'down' | 'neutral' = 'neutral';
-            if (index > 0) {
-              if (cumulativeBalance > prevBalance) status = 'up';
-              else if (cumulativeBalance < prevBalance) status = 'down';
-            }
-
             return {
                 date: format(date, 'MMM d'),
                 balance: cumulativeBalance,
-                up: status === 'up' ? cumulativeBalance : null,
-                down: status === 'down' ? cumulativeBalance : null,
-                status: status,
             };
         });
 
-        // Ensure the domain includes 0, and has some padding
-        const domainPadding = Math.max(Math.abs(min), Math.abs(max)) * 0.1 || 10;
-
+        const padding = Math.max(Math.abs(min), Math.abs(max)) * 0.1 || 10;
+        
         return {
             netBalance: overallNetBalance,
             chartData: historicalChartData,
-            minBalance: min - domainPadding,
-            maxBalance: max + domainPadding,
+            domain: [min - padding, max + padding],
         };
     }, [expenses, settlements, currentUserId]);
 
@@ -149,34 +129,34 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                         >
                             <defs>
                                 <linearGradient id="fillGreen" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={chartConfig.up.color} stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor={chartConfig.up.color} stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                                 </linearGradient>
                                 <linearGradient id="fillRed" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={chartConfig.down.color} stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor={chartConfig.down.color} stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                                 </linearGradient>
+
+                                <clipPath id="clip-above">
+                                    <rect x="0" y="0" width="100%" height="50%" />
+                                </clipPath>
+                                <clipPath id="clip-below">
+                                    <rect x="0" y="50%" width="100%" height="50%" />
+                                </clipPath>
                             </defs>
-                            <YAxis domain={[minBalance, maxBalance]} hide={true} reversed={isNegative} />
                             <XAxis dataKey="date" hide={true} />
+                            <YAxis domain={domain} hide={true} />
                              <Tooltip
                                 cursor={false}
                                 content={
                                 <ChartTooltipContent
                                     indicator="dot"
-                                    formatter={(value, name, item) => {
+                                    formatter={(value) => {
                                         const numericValue = Number(value);
-                                        const itemStatus = item.payload?.status;
-                                        
-                                        let colorClass = "text-foreground";
-                                        if (itemStatus === 'up') colorClass = "text-green-500";
-                                        if (itemStatus === 'down') colorClass = "text-red-500";
-                                        
+                                        const colorClass = numericValue < 0 ? "text-red-500" : "text-green-500";
                                         return (
-                                            <div className="flex flex-col">
-                                                <span className={cn("font-bold", colorClass)}>
-                                                    {numericValue >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(numericValue).toFixed(2)}
-                                                </span>
+                                            <div className={cn("font-bold", colorClass)}>
+                                                {numericValue >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(numericValue).toFixed(2)}
                                             </div>
                                         )
                                     }}
@@ -185,22 +165,20 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                             />
                             <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                             <Area
-                                dataKey="up"
+                                dataKey="balance"
                                 type="monotone"
-                                stroke={chartConfig.up.color}
+                                stroke="#22c55e"
                                 fill="url(#fillGreen)"
                                 strokeWidth={2}
-                                connectNulls
-                                allowDataOverflow
+                                clipPath="url(#clip-above)"
                             />
                             <Area
-                                dataKey="down"
+                                dataKey="balance"
                                 type="monotone"
-                                stroke={chartConfig.down.color}
+                                stroke="#ef4444"
                                 fill="url(#fillRed)"
                                 strokeWidth={2}
-                                connectNulls
-                                allowDataOverflow
+                                clipPath="url(#clip-below)"
                             />
                         </AreaChart>
                     </ChartContainer>
@@ -209,4 +187,3 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         </Card>
     );
 }
-
