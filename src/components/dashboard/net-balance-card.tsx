@@ -2,19 +2,30 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
+
+import type { Expense, Settlement } from '@/types';
+import { getExpensesByUserId, getSettlementsByUserId } from '@/lib/mock-data';
+
+import { cn } from '@/lib/utils';
+import { CURRENCY_SYMBOL } from '@/lib/constants';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getExpensesByUserId, getSettlementsByUserId } from '@/lib/mock-data';
-import type { Expense, Settlement } from '@/types';
-import { CURRENCY_SYMBOL } from '@/lib/constants';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis, XAxis, ReferenceLine } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 const chartConfig = {
   balance: {
     label: "Balance",
+  },
+  up: {
+    label: "Up",
+    color: "#22c55e",
+  },
+  down: {
+    label: "Down",
+    color: "#ef4444",
   },
 } satisfies ChartConfig;
 
@@ -38,31 +49,29 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
     }, [currentUserId]);
 
     const { netBalance, chartData, minBalance, maxBalance } = useMemo(() => {
-        const allTransactions: ({ type: 'expense' | 'settlement', date: Date, amount: number })[] = [];
+        const allTransactions: ({ date: Date, amount: number })[] = [];
 
         expenses.forEach(expense => {
             const userPaid = expense.payers.find(p => p.user.uid === currentUserId)?.amount || 0;
             const userOwed = expense.participants.find(p => p.user.uid === currentUserId)?.amountOwed || 0;
             const net = userPaid - userOwed;
             if (Math.abs(net) > 0.001) {
-                allTransactions.push({ type: 'expense', date: new Date(expense.date), amount: net });
+                allTransactions.push({ date: new Date(expense.date), amount: net });
             }
         });
 
         settlements.forEach(settlement => {
             let amount = 0;
-            if (settlement.paidBy.uid === currentUserId) {
-                amount = settlement.amount;
-            } else if (settlement.paidTo.uid === currentUserId) {
-                amount = -settlement.amount;
-            }
+            if (settlement.paidBy.uid === currentUserId) amount = settlement.amount;
+            else if (settlement.paidTo.uid === currentUserId) amount = -settlement.amount;
+            
             if (Math.abs(amount) > 0.001) {
-                allTransactions.push({ type: 'settlement', date: new Date(settlement.date), amount: amount });
+                allTransactions.push({ date: new Date(settlement.date), amount: amount });
             }
         });
         
         const overallNetBalance = allTransactions.reduce((sum, t) => sum + t.amount, 0);
-
+        
         const endDate = new Date();
         const startDate = subDays(endDate, 29);
         const dateInterval = eachDayOfInterval({ start: startDate, end: endDate });
@@ -103,11 +112,14 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
             };
         });
 
+        // Ensure the domain includes 0, and has some padding
+        const domainPadding = Math.max(Math.abs(min), Math.abs(max)) * 0.1 || 10;
+
         return {
             netBalance: overallNetBalance,
             chartData: historicalChartData,
-            minBalance: min,
-            maxBalance: max,
+            minBalance: min - domainPadding,
+            maxBalance: max + domainPadding,
         };
     }, [expenses, settlements, currentUserId]);
 
@@ -137,15 +149,17 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                         >
                             <defs>
                                 <linearGradient id="fillGreen" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor={chartConfig.up.color} stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor={chartConfig.up.color} stopOpacity={0}/>
                                 </linearGradient>
                                 <linearGradient id="fillRed" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor={chartConfig.down.color} stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor={chartConfig.down.color} stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
-                            <Tooltip
+                            <YAxis domain={[minBalance, maxBalance]} hide={true} reversed={isNegative} />
+                            <XAxis dataKey="date" hide={true} />
+                             <Tooltip
                                 cursor={false}
                                 content={
                                 <ChartTooltipContent
@@ -169,24 +183,24 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
                                 />
                                 }
                             />
-                            <YAxis domain={[minBalance, maxBalance]} hide={true} />
-                            <XAxis dataKey="date" hide={true} />
                             <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                             <Area
-                                type="monotone"
                                 dataKey="up"
-                                strokeWidth={2}
-                                stroke="#22c55e"
+                                type="monotone"
+                                stroke={chartConfig.up.color}
                                 fill="url(#fillGreen)"
+                                strokeWidth={2}
                                 connectNulls
+                                allowDataOverflow
                             />
                             <Area
-                                type="monotone"
                                 dataKey="down"
-                                strokeWidth={2}
-                                stroke="#ef4444"
+                                type="monotone"
+                                stroke={chartConfig.down.color}
                                 fill="url(#fillRed)"
+                                strokeWidth={2}
                                 connectNulls
+                                allowDataOverflow
                             />
                         </AreaChart>
                     </ChartContainer>
