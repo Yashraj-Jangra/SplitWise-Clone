@@ -145,18 +145,20 @@ export function DynamicSpendingChart() {
         onMouseEnter={() => { setIsHovered(true); setActiveCategory(null); }}
         onMouseLeave={() => { setIsHovered(false); }}
     >
-      <CardHeader className="text-center pb-2">
-        <CardTitle>Dynamic Spending: Last 30 Days</CardTitle>
-        <CardDescription>Your spending breakdown by category.</CardDescription>
-      </CardHeader>
-      <div className="flex items-center justify-center space-x-2 pb-4">
-          <Label htmlFor="animation-switch" className="text-xs text-muted-foreground">Auto-Cycle</Label>
-          <Switch
-            id="animation-switch"
-            checked={isAnimationEnabled}
-            onCheckedChange={handleAnimationToggle}
-          />
+      <CardHeader className="flex flex-row items-start justify-between pb-4">
+        <div>
+          <CardTitle>Dynamic Spending: Last 30 Days</CardTitle>
+          <CardDescription>Your spending breakdown by category.</CardDescription>
         </div>
+        <div className="flex items-center space-x-2">
+            <Label htmlFor="animation-switch" className="text-xs text-muted-foreground">Auto-Cycle</Label>
+            <Switch
+              id="animation-switch"
+              checked={isAnimationEnabled}
+              onCheckedChange={handleAnimationToggle}
+            />
+          </div>
+      </CardHeader>
       <Separator />
       <CardContent className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
         {expensesByCategory.length === 0 ? (
