@@ -14,6 +14,8 @@ import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '../ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
@@ -49,9 +51,22 @@ export function DynamicSpendingChart() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   
-  // State for animation
+  // State for animation control
   const [isHovered, setIsHovered] = useState(false);
   const [animationIndex, setAnimationIndex] = useState(0);
+  const [isAnimationEnabled, setIsAnimationEnabled] = useState(false);
+
+  // Load animation preference from localStorage
+  useEffect(() => {
+    const storedPreference = localStorage.getItem('spendingChartAnimationEnabled');
+    setIsAnimationEnabled(storedPreference === 'true');
+  }, []);
+
+  const handleAnimationToggle = (enabled: boolean) => {
+    setIsAnimationEnabled(enabled);
+    localStorage.setItem('spendingChartAnimationEnabled', String(enabled));
+  };
+
 
   useEffect(() => {
     async function loadExpenses() {
@@ -90,16 +105,16 @@ export function DynamicSpendingChart() {
     return { expensesByCategory: sortedData, totalAmount: total };
   }, [expenses]);
   
-  // Animation logic
+  // Animation logic, respects the user's preference
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (!isHovered && expensesByCategory.length > 0) {
+    if (!isHovered && isAnimationEnabled && expensesByCategory.length > 0) {
       interval = setInterval(() => {
         setAnimationIndex(prevIndex => (prevIndex + 1) % expensesByCategory.length);
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [isHovered, expensesByCategory.length]);
+  }, [isHovered, isAnimationEnabled, expensesByCategory.length]);
 
   const chartConfig = useMemo(() => {
     return expensesByCategory.reduce((acc, category, index) => {
@@ -111,11 +126,11 @@ export function DynamicSpendingChart() {
     }, {} as ChartConfig);
   }, [expensesByCategory]);
   
-  const currentActiveIndex = isHovered ? -1 : animationIndex;
+  const currentActiveIndex = isHovered || !isAnimationEnabled ? -1 : animationIndex;
   
   const activeData = activeCategory 
     ? expensesByCategory.find(c => c.name === activeCategory) 
-    : isHovered ? null : expensesByCategory[animationIndex];
+    : isHovered ? null : (isAnimationEnabled ? expensesByCategory[animationIndex] : null);
     
   const activePercentage = activeData && totalAmount > 0 ? (activeData.total / totalAmount * 100).toFixed(1) : null;
 
@@ -130,10 +145,18 @@ export function DynamicSpendingChart() {
         onMouseEnter={() => { setIsHovered(true); setActiveCategory(null); }}
         onMouseLeave={() => { setIsHovered(false); }}
     >
-      <CardHeader className="text-center">
+      <CardHeader className="text-center pb-2">
         <CardTitle>Dynamic Spending: Last 30 Days</CardTitle>
         <CardDescription>Your spending breakdown by category.</CardDescription>
       </CardHeader>
+      <div className="flex items-center justify-center space-x-2 pb-4">
+          <Label htmlFor="animation-switch" className="text-xs text-muted-foreground">Auto-Cycle</Label>
+          <Switch
+            id="animation-switch"
+            checked={isAnimationEnabled}
+            onCheckedChange={handleAnimationToggle}
+          />
+        </div>
       <Separator />
       <CardContent className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
         {expensesByCategory.length === 0 ? (
@@ -188,7 +211,7 @@ export function DynamicSpendingChart() {
                     <div className="space-y-2">
                         {expensesByCategory.map((category, index) => {
                         const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;
-                        const isAnimating = !isHovered && index === animationIndex;
+                        const isAnimating = isAnimationEnabled && !isHovered && index === animationIndex;
                         return (
                             <div
                             key={category.name}
