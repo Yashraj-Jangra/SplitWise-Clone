@@ -18,6 +18,7 @@ import { useSiteSettings } from "@/contexts/site-settings-context";
 import { Skeleton } from "../ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { SearchDialog } from "./search-dialog";
 
 
 const mainNavItems: NavItem[] = [
@@ -182,8 +183,7 @@ function Header() {
             </SheetContent>
         </Sheet>
         <div className="relative flex-1">
-            <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search..." className="w-full md:w-1/2 lg:w-1/3 pl-9 bg-muted/50 focus:bg-card" />
+            <SearchDialog />
         </div>
         <UserNav />
       </header>
