@@ -128,7 +128,7 @@ export function SearchDialog() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-full md:w-1/2 lg:w-1/3 flex items-center gap-2 p-2 text-sm text-muted-foreground bg-muted/50 rounded-md hover:bg-muted transition-colors"
+        className="w-full md:w-1/2 lg:w-1/3 flex items-center gap-2 p-2 text-sm text-muted-foreground border border-input rounded-md hover:bg-muted transition-colors"
       >
         <Icons.Search className="h-4 w-4" />
         Search...
@@ -142,7 +142,7 @@ export function SearchDialog() {
           <div className="flex items-center gap-2 border-b p-3">
             <Icons.Search className="h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Type to search for groups, expenses, users..."
+              placeholder="Search for groups, expenses, users..."
               className="border-0 h-auto p-0 text-base focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
               value={query}
               onChange={e => setQuery(e.target.value)}
@@ -154,6 +154,13 @@ export function SearchDialog() {
                 <div className="text-center py-4 text-muted-foreground">
                   <Icons.AppLogo className="mx-auto h-8 w-8 animate-spin" />
                   <p>Indexing data...</p>
+                </div>
+              )}
+               {!loading && !query && (
+                 <div className="text-center py-8 text-muted-foreground">
+                    <Icons.Search className="mx-auto h-12 w-12" />
+                    <p className="mt-2 font-semibold">Start typing to search</p>
+                    <p className="text-sm">Find anything in your workspace instantly.</p>
                 </div>
               )}
               {!loading && query && searchResults.length === 0 && (
@@ -198,7 +205,7 @@ export function SearchDialog() {
                                     const { data: user } = result;
                                     const link = userProfile?.role === 'admin' ? `/admin/users/${user.uid}/edit` : '#';
                                     return (
-                                         <div key={user.uid} onClick={() => handleSelect(link)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                                         <div key={user.uid} onClick={() => link !== '#' && handleSelect(link)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
                                             <Avatar className="h-8 w-8"><AvatarImage src={user.avatarUrl}/><AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback></Avatar>
                                             <div>
                                                 <p className="font-medium text-sm">{getFullName(user.firstName, user.lastName)}</p>
