@@ -154,15 +154,15 @@ export function SearchDialog() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-2xl p-0 gap-0">
+        <DialogContent className="sm:max-w-xl p-0 gap-0">
           <DialogHeader className="sr-only">
-             <DialogTitle>Global Search</DialogTitle>
+            <DialogTitle>Global Search</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center gap-2 border-b p-3">
+          <div className="flex items-center border-b px-4">
             <Icons.Search className="h-5 w-5 text-muted-foreground" />
             <Input
               placeholder="Search for groups, expenses, users..."
-              className="border-0 h-auto p-0 text-base focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+              className="border-0 h-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
