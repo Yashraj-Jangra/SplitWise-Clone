@@ -14,7 +14,8 @@ import { Icons } from '@/components/icons';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))', 'hsl(var(--chart-5))'
+  'hsl(var(--chart-4))', 'hsl(var(--chart-5))', 'hsl(var(--chart-6))',
+  'hsl(var(--chart-7))', 'hsl(var(--chart-8))', 'hsl(var(--chart-9))', 'hsl(var(--chart-10))'
 ];
 
 export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
@@ -35,8 +36,16 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
       return { chartData: [], chartConfig: {} };
     }
 
+    const categoryTotals = filteredExpenses.reduce((acc, expense) => {
+        const category = expense.category || 'Other';
+        acc[category] = (acc[category] || 0) + expense.amount;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const sortedCategories = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a]);
+
     const categories = selectedCategory === 'all'
-      ? [...new Set(filteredExpenses.map(e => e.category || 'Other'))]
+      ? sortedCategories
       : [selectedCategory];
     
     const config: ChartConfig = categories.reduce((acc, category, index) => {
@@ -185,4 +194,3 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
     </Card>
   );
 }
-
