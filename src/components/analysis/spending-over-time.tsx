@@ -18,6 +18,11 @@ const CHART_COLORS = [
   'hsl(var(--chart-7))', 'hsl(var(--chart-8))', 'hsl(var(--chart-9))', 'hsl(var(--chart-10))'
 ];
 
+// Helper function to create a valid CSS identifier from a string
+const sanitizeForCss = (name: string) => {
+  return name.replace(/[^a-zA-Z0-9]/g, '-');
+};
+
 export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
   const [chartView, setChartView] = useState<'line' | 'bar'>('line');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -49,7 +54,8 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
       : [selectedCategory];
     
     const config: ChartConfig = categories.reduce((acc, category, index) => {
-        acc[category] = {
+        const sanitizedKey = sanitizeForCss(category);
+        acc[sanitizedKey] = {
             label: category,
             color: CHART_COLORS[index % CHART_COLORS.length]
         };
@@ -67,7 +73,7 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
     });
 
     const dates = Object.keys(expensesByDate).map(d => new Date(d));
-    if (dates.length === 0) { // Handle case where filtered expenses might be empty
+    if (dates.length === 0) {
         return { chartData: [], chartConfig: config };
     }
     const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
@@ -81,7 +87,8 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
         date: format(date, 'MMM d'),
       };
       categories.forEach(category => {
-        dailyData[category] = expensesByDate[dateKey]?.[category] || 0;
+        const sanitizedKey = sanitizeForCss(category);
+        dailyData[sanitizedKey] = expensesByDate[dateKey]?.[category] || 0;
       });
       return dailyData;
     });
@@ -142,12 +149,13 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
                     />
                     <Tooltip content={<ChartTooltipContent indicator="dot" />} />
                     <Legend />
-                    {Object.keys(chartConfig).map((category) => (
+                    {Object.keys(chartConfig).map((key) => (
                         <Line
-                            key={category}
-                            dataKey={category}
+                            key={key}
+                            dataKey={key}
+                            name={chartConfig[key].label}
                             type="monotone"
-                            stroke={`var(--color-${category})`}
+                            stroke={`var(--color-${key})`}
                             strokeWidth={2}
                             dot={false}
                         />
@@ -178,13 +186,13 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
                     />
                     <Tooltip content={<ChartTooltipContent indicator="dot" />} />
                     <Legend />
-                     {Object.keys(chartConfig).map((category) => (
+                     {Object.keys(chartConfig).map((key) => (
                         <Bar
-                            key={category}
-                            dataKey={category}
+                            key={key}
+                            dataKey={key}
                             stackId="a"
-                            fill={`var(--color-${category})`}
-                            name={category}
+                            fill={`var(--color-${key})`}
+                            name={chartConfig[key].label}
                         />
                     ))}
                  </BarChart>
