@@ -124,7 +124,7 @@ export async function updateUser(userId: string, data: Partial<UserProfile>): Pr
 
 // --- Hydration / Joining Functions ---
 
-async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
+export async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
     if (uids.length === 0) return [];
     
     const uniqueUids = [...new Set(uids)];

@@ -13,9 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, UserProfile } from '@/types';
-import { getAllGroups, getAllExpenses, getAllUsers } from '@/lib/mock-data';
+import { getAllGroups, getAllExpenses, hydrateUsers } from '@/lib/mock-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getFullName, getInitials } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -52,15 +51,27 @@ export function SearchDialog() {
   const loadAllData = useCallback(async () => {
     if (!userProfile?.uid) return;
     setLoading(true);
-    const [groups, expenses, users] = await Promise.all([
-      getAllGroups(),
-      getAllExpenses(),
-      getAllUsers(),
-    ]);
+
+    const userGroups = await getAllGroups();
+    const filteredGroups = userGroups.filter(g => g.memberIds.includes(userProfile.uid));
+    
+    const allExpenses = await getAllExpenses();
+    const filteredExpenses = allExpenses.filter(e => e.groupMemberIds.includes(userProfile.uid));
+
+    const mutualMemberIds = new Set<string>();
+    filteredGroups.forEach(group => {
+        group.memberIds.forEach(id => mutualMemberIds.add(id));
+    });
+    
+    // Remove current user from the list of users to display
+    mutualMemberIds.delete(userProfile.uid);
+
+    const mutualUsers = await hydrateUsers(Array.from(mutualMemberIds));
+
     setAllData({
-      groups: groups.filter(g => g.memberIds.includes(userProfile.uid)),
-      expenses: expenses.filter(e => e.groupMemberIds.includes(userProfile.uid)),
-      users,
+      groups: filteredGroups,
+      expenses: filteredExpenses,
+      users: mutualUsers,
     });
     setLoading(false);
   }, [userProfile?.uid]);
