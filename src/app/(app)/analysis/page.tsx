@@ -11,6 +11,7 @@ import { SpendingBreakdown } from '@/components/analysis/spending-breakdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QuickInsights } from '@/components/analysis/quick-insights';
 import { BudgetPerformance } from '@/components/analysis/budget-performance';
+import { SpendingOverTime } from '@/components/analysis/spending-over-time';
 
 function DashboardSkeleton() {
     return (
@@ -88,6 +89,8 @@ export default function AnalysisPage() {
             onRangeChange={setDateRange}
             allExpenses={allExpenses}
         />
+
+        <SpendingOverTime expenses={filteredExpenses} />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
