@@ -154,7 +154,7 @@ export function SearchDialog() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-xl p-0 gap-0">
+        <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>Global Search</DialogTitle>
           </DialogHeader>
@@ -162,13 +162,13 @@ export function SearchDialog() {
             <Icons.Search className="h-5 w-5 text-muted-foreground" />
             <Input
               placeholder="Search for groups, expenses, users..."
-              className="border-0 h-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+              className="border-0 h-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:shadow-none bg-transparent pl-3"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
           </div>
           <ScrollArea className="h-96">
-            <div className="p-4">
+            <div className="p-2">
               {loading && (
                 <div className="text-center py-4 text-muted-foreground">
                   <Icons.AppLogo className="mx-auto h-8 w-8 animate-spin" />
@@ -190,7 +190,7 @@ export function SearchDialog() {
                 </div>
               )}
               
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
                 {Object.entries(groupedResults).map(([type, results]) => (
                     <div key={type}>
                         <h3 className="text-xs font-semibold uppercase text-muted-foreground mb-2 px-2">{type}</h3>
