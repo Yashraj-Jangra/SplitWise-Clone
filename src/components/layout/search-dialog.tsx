@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
@@ -139,6 +141,9 @@ export function SearchDialog() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl p-0 gap-0">
+          <DialogHeader className="sr-only">
+             <DialogTitle>Global Search</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center gap-2 border-b p-3">
             <Icons.Search className="h-5 w-5 text-muted-foreground" />
             <Input
