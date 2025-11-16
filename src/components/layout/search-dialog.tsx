@@ -80,6 +80,9 @@ export function SearchDialog() {
     if (open && !allData) {
       loadAllData();
     }
+    if (!open) {
+      setQuery('');
+    }
   }, [open, allData, loadAllData]);
 
   const searchResults = useMemo(() => {
