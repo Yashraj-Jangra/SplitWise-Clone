@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -205,7 +206,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                     <div className="p-4">{FormContent}</div>
                 </ScrollArea>
                 <SheetFooter className="p-4 bg-background/50 border-t">
-                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting} className="w-full" size="lg">
+                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading} className="w-full" size="lg">
                         {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
                     </Button>
                 </SheetFooter>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -118,7 +119,6 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       splitType: values.splitType,
       participants: finalParticipants,
       category: values.category,
-      createdAt: new Date(),
     };
     
     try {

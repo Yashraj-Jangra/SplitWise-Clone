@@ -307,7 +307,7 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
 
 // --- Expense Functions ---
 
-export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory'> & { date: Date }, actorId: string): Promise<string> {
+export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory' | 'createdAt'> & { date: Date }, actorId: string): Promise<string> {
     const groupDocRef = doc(db, 'groups', expenseData.groupId);
     const groupSnap = await getDoc(groupDocRef);
 
@@ -332,6 +332,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
         groupCreatorId: groupData.createdById,
         expenseCreatorId: actorId,
         date: Timestamp.fromDate(expenseData.date),
+        createdAt: Timestamp.now(),
     });
 
     const currentTotal = groupSnap.data().totalExpenses || 0;
@@ -342,7 +343,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName);
     const description = `${actorName} added expense "${expenseData.description}" for ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}.`;
-    await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id });
+    await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id, date: expenseData.date });
 
 
     return docRef.id;
@@ -450,6 +451,7 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
     await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
         expenseId,
         changes,
+        date: expenseData.date,
     });
 }
 
@@ -483,7 +485,7 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
         deletedExpenseData.payerIds = deletedExpenseData.payers.map((p: ExpensePayer) => p.user.uid);
     }
     
-    await logHistoryEvent(groupId, 'expense_deleted', actorId, description, { ...deletedExpenseData, expenseId: expenseId });
+    await logHistoryEvent(groupId, 'expense_deleted', actorId, description, { ...deletedExpenseData, expenseId: expenseId, date: (deletedExpenseData.date as Timestamp)?.toDate() });
 }
 
 
@@ -679,7 +681,7 @@ export async function addSettlement(settlementData: Omit<SettlementDocument, 'da
     const paidToName = getFullName(paidTo?.firstName, paidTo?.lastName);
 
     const description = `${actorName} recorded a settlement: ${paidByName} paid ${paidToName} ${CURRENCY_SYMBOL}${settlementData.amount.toFixed(2)}.`;
-    await logHistoryEvent(settlementData.groupId, 'settlement_created', actorId, description, { settlementId: docRef.id });
+    await logHistoryEvent(settlementData.groupId, 'settlement_created', actorId, description, { settlementId: docRef.id, date: settlementData.date });
 
     return docRef.id;
 }
@@ -840,7 +842,7 @@ export async function updateSettlement(settlementId: string, data: Partial<Settl
     }
     
     const description = `${actorName} updated a settlement.`;
-    await logHistoryEvent(oldData.groupId, 'settlement_updated', actorId, description, { settlementId, changes });
+    await logHistoryEvent(oldData.groupId, 'settlement_updated', actorId, description, { settlementId, changes, date: data.date || oldData.date.toDate() });
 }
 
 export async function deleteSettlement(settlementId: string, groupId: string, actorId:string): Promise<void> {
@@ -860,7 +862,7 @@ export async function deleteSettlement(settlementId: string, groupId: string, ac
     const paidByName = getFullName(paidBy?.firstName, paidBy?.lastName);
     const paidToName = getFullName(paidTo?.firstName, paidTo?.lastName);
     const description = `${actorName} deleted a settlement of ${CURRENCY_SYMBOL}${deletedSettlementData.amount.toFixed(2)} from ${paidByName} to ${paidToName}.`;
-    await logHistoryEvent(groupId, 'settlement_deleted', actorId, description, { ...deletedSettlementData, settlementId: settlementId });
+    await logHistoryEvent(groupId, 'settlement_deleted', actorId, description, { ...deletedSettlementData, settlementId: settlementId, date: (deletedSettlementData.date as Timestamp)?.toDate() });
 }
 
 
@@ -1065,6 +1067,7 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
             newExpenseId: newExpenseId,
             originalExpenseId: originalExpenseId,
             expenseId: originalExpenseId, // Also add this for simpler querying on the original expense
+            date: expenseToRestore.date,
         });
 
         return newExpenseId;
@@ -1115,6 +1118,7 @@ export async function restoreSettlement(historyEventId: string, actorId: string)
             newSettlementId: newSettlementId,
             originalSettlementId: originalSettlementId,
             settlementId: originalSettlementId, // Also add this for simpler querying on the original settlement
+            date: settlementToRestore.date,
         });
 
         return newSettlementId;
