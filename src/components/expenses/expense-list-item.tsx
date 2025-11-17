@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -9,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { format, formatDistanceToNow } from "date-fns";
 import { getFullName, getInitials, cn } from '@/lib/utils';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Icons } from '@/components/icons';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
@@ -25,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { deleteExpense, getHistoryForExpense } from '@/lib/mock-data';
+import { deleteExpense } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { ScrollArea } from '../ui/scroll-area';
@@ -46,11 +44,13 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showAllHistory, setShowAllHistory] = useState(false);
 
     const expenseHistory = useMemo(() => {
         return groupHistory.filter(e => e.data?.expenseId === expense.id && e.eventType.includes('updated')).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [groupHistory, expense.id]);
 
+    const visibleHistory = showAllHistory ? expenseHistory : expenseHistory.slice(0, 1);
     const lastUpdatedEvent = expenseHistory.length > 0 ? expenseHistory[0] : null;
 
     const handleDelete = async () => {
@@ -109,7 +109,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">Paid By & Split For</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">Financial Split</h3>
                         <div className="space-y-3">
                             {expense.participants.map(p => {
                                 const payerInfo = expense.payers.find(payer => payer.user.uid === p.user.uid);
@@ -123,7 +123,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
                                             <span className="font-medium">{getFullName(p.user.firstName, p.user.lastName)}</span>
                                         </div>
                                         <div className="text-right">
-                                            {payerInfo && <p className="text-xs text-muted-foreground">paid {CURRENCY_SYMBOL}{payerInfo.amount.toFixed(2)}</p>}
+                                            {payerInfo && <p className="text-xs text-green-500">paid {CURRENCY_SYMBOL}{payerInfo.amount.toFixed(2)}</p>}
                                             <p className="text-sm font-medium text-foreground">owes {CURRENCY_SYMBOL}{p.amountOwed.toFixed(2)}</p>
                                         </div>
                                     </div>
@@ -132,33 +132,55 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
                         </div>
                     </div>
                     
-                    <div>
-                        {expense.notes && (
-                            <div className="mb-4">
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
-                                <p className="text-sm text-foreground bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{expense.notes}</p>
-                            </div>
-                        )}
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">History</h3>
-                        {expenseHistory.length > 0 ? (
-                             <ScrollArea className="h-40 rounded-md border bg-background/50 p-2">
-                                <div className="space-y-3 text-xs">
-                                {expenseHistory.map(event => (
-                                    <div key={event.id} className="flex gap-2">
-                                        <Icons.History className="h-3 w-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                                        <div className="flex-1">
-                                            <p className="leading-tight">{event.description}</p>
-                                            <p className="text-muted-foreground">{formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}</p>
+                    <div className="space-y-4">
+                        <div className="p-4 border rounded-lg bg-background/30 text-center">
+                            <p className="text-sm text-muted-foreground">Future Widget Placeholder</p>
+                        </div>
+                        <div>
+                            {expense.notes && (
+                                <div className="mb-4">
+                                    <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
+                                    <p className="text-sm text-foreground bg-background/30 p-3 rounded-md whitespace-pre-wrap">{expense.notes}</p>
+                                </div>
+                            )}
+                            <h3 className="text-sm font-semibold text-muted-foreground mb-2">History</h3>
+                            {expenseHistory.length > 0 ? (
+                                <div className="space-y-2">
+                                {visibleHistory.map(event => (
+                                    <div key={event.id} className="border p-3 rounded-md bg-background/30">
+                                        <p className="text-xs text-muted-foreground mb-2">
+                                            {getFullName(event.actor.firstName, event.actor.lastName)} updated on {format(new Date(event.timestamp), "MMM d, yyyy 'at' h:mm a")}
+                                        </p>
+                                        <div className="space-y-2">
+                                            {event.data?.changes?.map((change: any, index: number) => (
+                                                <div key={index} className="text-xs">
+                                                    <span className="font-semibold text-foreground">{change.field}:</span>
+                                                    {change.to ? (
+                                                        <div className="text-muted-foreground flex items-center gap-2">
+                                                            <span className="text-red-500 line-through">{change.from}</span>
+                                                            <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
+                                                            <span className="text-green-500">{change.to}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-muted-foreground">{change.from}</div>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ))}
+                                {expenseHistory.length > 1 && (
+                                    <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setShowAllHistory(!showAllHistory)}>
+                                        {showAllHistory ? 'Show less' : `Show ${expenseHistory.length - 1} more update(s)`}
+                                    </Button>
+                                )}
                                 </div>
-                            </ScrollArea>
-                        ) : (
-                            <div className="p-4 border rounded-lg bg-background/50 text-center text-sm text-muted-foreground">
-                                <p>No updates recorded for this expense.</p>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="p-4 border rounded-lg bg-background/30 text-center text-sm text-muted-foreground">
+                                    <p>No updates recorded for this expense.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
