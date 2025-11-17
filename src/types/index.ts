@@ -122,12 +122,13 @@ export interface ExpenseParticipant extends Omit<ExpenseParticipantDocument, 'us
     user: UserProfile;
 }
 
-export interface Expense extends Omit<ExpenseDocument, 'payers' | 'participants' | 'date' | 'createdAt'> {
+export interface Expense extends Omit<ExpenseDocument, 'payers' | 'participants' | 'date' | 'createdAt' | 'expenseCreatorId'> {
     id: string;
     payers: ExpensePayer[];
     participants: ExpenseParticipant[];
     date: string; // ISO string for client
     createdAt: string; // ISO string for client
+    expenseCreator: UserProfile;
 }
 
 export interface Settlement extends Omit<SettlementDocument, 'paidById' | 'paidToId' | 'date'> {
@@ -368,4 +369,9 @@ export interface SiteSettings {
     message: string;
     imageUrl: string;
   };
+}
+
+export interface ExpenseCategory {
+    icon: IconName;
+    keywords: string[];
 }

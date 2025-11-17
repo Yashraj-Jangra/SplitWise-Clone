@@ -45,6 +45,7 @@ import type {
   SupportTicketMessage,
   Theme,
   ExpenseCategory,
+  MasterCategory,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -504,6 +505,7 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
         querySnapshot.docs.map(async (docSnap) => {
             const expenseData = docSnap.data() as ExpenseDocument;
             const userIds = [
+                expenseData.expenseCreatorId,
                 ...(expenseData.payers || []).map(p => p.userId), 
                 ...(expenseData.participants || []).map(p => p.userId)
             ];
@@ -521,13 +523,17 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
                 return user ? { ...p, user } : null;
             }).filter((p): p is ExpenseParticipant => p !== null);
 
+            const expenseCreator = userMap.get(expenseData.expenseCreatorId);
+            if (!expenseCreator) return null; // Should not happen
+
             return {
                 ...expenseData,
                 id: docSnap.id,
                 date: (expenseData.date as Timestamp).toDate().toISOString(),
                 createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
                 payers,
-                participants
+                participants,
+                expenseCreator,
             }
         })
     );
@@ -559,6 +565,7 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
   const expenses: Expense[] = await Promise.all(
     Array.from(expenseMap.entries()).map(async ([id, expenseData]) => {
         const userIds = [
+            expenseData.expenseCreatorId,
             ...(expenseData.payers || []).map(p => p.userId), 
             ...(expenseData.participants || []).map(p => p.userId)
         ];
@@ -575,6 +582,9 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
             const user = userMap.get(p.userId);
             return user ? { ...p, user } : null;
         }).filter((p): p is ExpenseParticipant => p !== null);
+        
+        const expenseCreator = userMap.get(expenseData.expenseCreatorId);
+        if (!expenseCreator) return null;
 
         return {
             ...expenseData,
@@ -582,7 +592,8 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
             date: (expenseData.date as Timestamp).toDate().toISOString(),
             createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
             payers,
-            participants
+            participants,
+            expenseCreator,
         }
     })
   );
@@ -597,6 +608,7 @@ export async function getAllExpenses(): Promise<Expense[]> {
   const expenseDocs = expenseSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpenseDocument & {id: string}));
   
   expenseDocs.forEach(expense => {
+    allUserIds.add(expense.expenseCreatorId);
     (expense.payers || []).forEach(p => allUserIds.add(p.userId));
     (expense.participants || []).forEach(p => allUserIds.add(p.userId));
   });
@@ -615,13 +627,17 @@ export async function getAllExpenses(): Promise<Expense[]> {
           return user ? { ...p, user } : null;
       }).filter((p): p is ExpenseParticipant => p !== null);
 
+      const expenseCreator = userMap.get(expenseData.expenseCreatorId);
+      if (!expenseCreator) return null;
+
       return {
           ...expenseData,
           id: expenseData.id,
           date: (expenseData.date as Timestamp).toDate().toISOString(),
           createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
           payers,
-          participants
+          participants,
+          expenseCreator,
       }
   }).filter((e): e is Expense => e !== null);
   
@@ -1311,19 +1327,6 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         delete (emailSettings as any).fromEmail;
         delete (emailSettings as any).supportEmail;
 
-        // Upgrade expense categories to new format if necessary
-        const upgradedCategories: Record<string, ExpenseCategory> = {};
-        const savedCategories = data.expenseCategories || defaultExpenseCategories;
-        for (const key in savedCategories) {
-            const value = savedCategories[key];
-            if (Array.isArray(value)) { // Old format: string[]
-                upgradedCategories[key] = { icon: 'Wallet', keywords: value };
-            } else { // New format: ExpenseCategory
-                upgradedCategories[key] = value;
-            }
-        }
-
-
         return {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
@@ -1333,7 +1336,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             customThemes: data.customThemes || [],
             defaultThemeId: data.defaultThemeId || 'default-dark',
             userSelectableThemeIds: data.userSelectableThemeIds || ['default-dark', 'default-light'],
-            expenseCategories: upgradedCategories,
+            expenseCategories: data.expenseCategories || defaultExpenseCategories,
             countryCodes: data.countryCodes?.length > 0 ? data.countryCodes : DEFAULT_COUNTRY_CODES,
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
