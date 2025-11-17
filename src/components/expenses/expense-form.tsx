@@ -200,7 +200,6 @@ function Splitter() {
 export function ExpenseForm({ group }: { group: Group }) {
   const form = useFormContext();
   const { settings } = useSiteSettings();
-  const categoryList = Object.keys(settings.expenseCategories || {});
 
   const { control, watch, setValue, getValues } = form;
 
@@ -224,7 +223,7 @@ export function ExpenseForm({ group }: { group: Group }) {
 
   useEffect(() => {
     if (watchDescription) {
-        const suggestedCategory = classifyExpense(watchDescription, settings.expenseCategories);
+        const { sub: suggestedCategory } = classifyExpense(watchDescription, settings.expenseCategories);
         setValue("category", suggestedCategory, { shouldValidate: true });
     }
   }, [watchDescription, setValue, settings.expenseCategories]);
@@ -321,37 +320,42 @@ export function ExpenseForm({ group }: { group: Group }) {
       </div>
 
        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <FormField control={control} name="category" render={({ field }) => (
+            <FormField
+              control={control}
+              name="category"
+              render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                                <SelectValue>
+                  <FormLabel>Category</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
+                        <React.Fragment key={masterCat}>
+                          <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
+                          {Object.keys(details.subCategories).map(subCat => {
+                            const subDetails = details.subCategories[subCat];
+                            const Icon = Icons[subDetails.icon] || Icons.Wallet;
+                            return (
+                                <SelectItem key={subCat} value={subCat}>
                                     <div className="flex items-center gap-2">
-                                        <IconComponent name={settings.expenseCategories[field.value]?.icon || 'Wallet'} className="h-4 w-4" />
-                                        <span>{field.value}</span>
+                                        <Icon className="h-4 w-4" />
+                                        <span>{subCat}</span>
                                     </div>
-                                </SelectValue>
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {categoryList.map((cat) => {
-                                const Icon = Icons[settings.expenseCategories[cat]?.icon || 'Wallet'];
-                                return (
-                                    <SelectItem key={cat} value={cat}>
-                                        <div className="flex items-center gap-2">
-                                            <Icon className="h-4 w-4" />
-                                            <span>{cat}</span>
-                                        </div>
-                                    </SelectItem>
-                                );
-                            })}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
+                                </SelectItem>
+                            )
+                          })}
+                        </React.Fragment>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
                 </FormItem>
-            )} />
+              )}
+            />
       </div>
         <FormField
             control={control}
@@ -457,8 +461,3 @@ export function ExpenseForm({ group }: { group: Group }) {
     </div>
   )
 }
-
-const IconComponent = ({ name, className }: { name: IconName, className?: string }) => {
-    const Icon = Icons[name] || Icons.Wallet;
-    return <Icon className={className} />;
-};
