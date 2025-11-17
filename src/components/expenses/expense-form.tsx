@@ -336,7 +336,7 @@ export function ExpenseForm({ group }: { group: Group }) {
                       {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
                         <React.Fragment key={masterCat}>
                           <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
-                          {Object.keys(details.subCategories).map(subCat => {
+                          {details.subCategories && Object.keys(details.subCategories).map(subCat => {
                             const subDetails = details.subCategories[subCat];
                             const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
                             return (
