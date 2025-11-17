@@ -130,7 +130,8 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         if (onExpenseAdded) onExpenseAdded();
         window.dispatchEvent(new CustomEvent('data-changed'));
     } catch (error) {
-        toast({ title: "Error", description: "Failed to add expense.", variant: "destructive" });
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({ title: "Error Adding Expense", description: errorMessage, variant: "destructive" });
     }
   }
 

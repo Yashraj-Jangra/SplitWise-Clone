@@ -141,7 +141,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     const totalAmount = Number(values.amount);
 
-    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt' > & { date: Date, createdAt: string } = {
+    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt' > & { date: Date; createdAt: string } = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
@@ -169,7 +169,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
         window.dispatchEvent(new CustomEvent('data-changed'));
     } catch(error) {
-        toast({ title: "Error", description: "Failed to update expense", variant: "destructive"})
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({ title: "Error Updating Expense", description: errorMessage, variant: "destructive"})
     }
   }
   

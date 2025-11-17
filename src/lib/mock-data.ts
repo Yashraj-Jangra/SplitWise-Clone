@@ -52,6 +52,8 @@ import { CURRENCY_SYMBOL } from './constants';
 import { format } from 'date-fns';
 import { defaultExpenseCategories, getMasterCategory } from './expense-categories';
 import { BASE_THEMES } from '@/themes';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 // --- User Functions ---
 
@@ -323,7 +325,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
     const siteSettings = await getSiteSettings();
     const masterCategory = getMasterCategory(expenseData.category || 'Other', siteSettings.expenseCategories);
 
-    const docRef = await addDoc(collection(db, 'expenses'), {
+    const newExpenseData = {
         ...expenseData,
         participantIds,
         payerIds,
@@ -333,20 +335,34 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
         expenseCreatorId: actorId,
         date: Timestamp.fromDate(expenseData.date),
         createdAt: Timestamp.now(),
-    });
-
-    const currentTotal = groupSnap.data().totalExpenses || 0;
-    await updateDoc(groupDocRef, {
-        totalExpenses: currentTotal + expenseData.amount
-    });
+    };
     
-    const actor = await getUserProfile(actorId);
-    const actorName = getFullName(actor?.firstName, actor?.lastName);
-    const description = `${actorName} added expense "${expenseData.description}" for ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}.`;
-    await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id, date: expenseData.date });
+    const expensesCollectionRef = collection(db, 'expenses');
+    
+    try {
+        const docRef = await addDoc(expensesCollectionRef, newExpenseData);
+        
+        const currentTotal = groupSnap.data().totalExpenses || 0;
+        await updateDoc(groupDocRef, {
+            totalExpenses: currentTotal + expenseData.amount
+        });
+        
+        const actor = await getUserProfile(actorId);
+        const actorName = getFullName(actor?.firstName, actor?.lastName);
+        const description = `${actorName} added expense "${expenseData.description}" for ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}.`;
+        await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id, date: expenseData.date });
 
-
-    return docRef.id;
+        return docRef.id;
+    } catch (serverError) {
+         const permissionError = new FirestorePermissionError({
+            path: expensesCollectionRef.path,
+            operation: 'create',
+            requestResourceData: newExpenseData,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+        // Re-throw original error to be caught by UI
+        throw serverError;
+    }
 }
 
 
@@ -380,79 +396,91 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
         createdAt: oldData?.createdAt ? oldData.createdAt : Timestamp.fromMillis(Date.parse(expenseData.createdAt)),
     };
     
-    await updateDoc(expenseDocRef, dataToUpdate);
+    try {
+        await updateDoc(expenseDocRef, dataToUpdate);
 
-    const currentTotal = groupSnap.data().totalExpenses || 0;
-    const newTotal = currentTotal - oldAmount + expenseData.amount;
-    await updateDoc(groupDocRef, {
-        totalExpenses: newTotal
-    });
+        const currentTotal = groupSnap.data().totalExpenses || 0;
+        const newTotal = currentTotal - oldAmount + expenseData.amount;
+        await updateDoc(groupDocRef, {
+            totalExpenses: newTotal
+        });
 
-    const actor = await getUserProfile(actorId);
-    const actorName = getFullName(actor?.firstName, actor?.lastName);
-    
-    const changes: { field: string; from: any; to: any }[] = [];
-    const changeSummaries: string[] = [];
+        // ... history logging ...
+        const actor = await getUserProfile(actorId);
+        const actorName = getFullName(actor?.firstName, actor?.lastName);
+        
+        const changes: { field: string; from: any; to: any }[] = [];
+        const changeSummaries: string[] = [];
 
-    if (oldData) {
-        const oldDate = (oldData.date as Timestamp).toDate();
+        if (oldData) {
+            const oldDate = (oldData.date as Timestamp).toDate();
 
-        if (oldData.description !== expenseData.description) {
-            changes.push({ field: 'Description', from: `"${oldData.description}"`, to: `"${expenseData.description}"` });
-            changeSummaries.push('description');
-        }
-        if (oldData.amount !== expenseData.amount) {
-            changes.push({ field: 'Amount', from: `${CURRENCY_SYMBOL}${oldData.amount.toFixed(2)}`, to: `${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}` });
-            changeSummaries.push('amount');
-        }
-        if (oldDate.toISOString().split('T')[0] !== expenseData.date.toISOString().split('T')[0]) {
-            changes.push({ field: 'Date', from: format(oldDate, 'PPP'), to: format(expenseData.date, 'PPP') });
-            changeSummaries.push('date');
-        }
-        if ((oldData.category || 'Other') !== (expenseData.category || 'Other')) {
-            changes.push({ field: 'Category', from: `"${oldData.category || 'Other'}"`, to: `"${expenseData.category || 'Other'}"` });
-            changeSummaries.push('category');
-        }
-        if (oldData.splitType !== expenseData.splitType) {
-             changes.push({ field: 'Split Method', from: `"${oldData.splitType}"`, to: `"${expenseData.splitType}"` });
-             changeSummaries.push('split method');
-        }
-        if (oldData.notes !== expenseData.notes) {
-          changes.push({ field: 'Notes', from: `"${oldData.notes || ''}"`, to: `"${expenseData.notes || ''}"` });
-          changeSummaries.push('notes');
+            if (oldData.description !== expenseData.description) {
+                changes.push({ field: 'Description', from: `"${oldData.description}"`, to: `"${expenseData.description}"` });
+                changeSummaries.push('description');
+            }
+            if (oldData.amount !== expenseData.amount) {
+                changes.push({ field: 'Amount', from: `${CURRENCY_SYMBOL}${oldData.amount.toFixed(2)}`, to: `${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}` });
+                changeSummaries.push('amount');
+            }
+            if (oldDate.toISOString().split('T')[0] !== expenseData.date.toISOString().split('T')[0]) {
+                changes.push({ field: 'Date', from: format(oldDate, 'PPP'), to: format(expenseData.date, 'PPP') });
+                changeSummaries.push('date');
+            }
+            if ((oldData.category || 'Other') !== (expenseData.category || 'Other')) {
+                changes.push({ field: 'Category', from: `"${oldData.category || 'Other'}"`, to: `"${expenseData.category || 'Other'}"` });
+                changeSummaries.push('category');
+            }
+            if (oldData.splitType !== expenseData.splitType) {
+                 changes.push({ field: 'Split Method', from: `"${oldData.splitType}"`, to: `"${expenseData.splitType}"` });
+                 changeSummaries.push('split method');
+            }
+            if (oldData.notes !== expenseData.notes) {
+              changes.push({ field: 'Notes', from: `"${oldData.notes || ''}"`, to: `"${expenseData.notes || ''}"` });
+              changeSummaries.push('notes');
+            }
+
+            const oldPayersStr = JSON.stringify(oldData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
+            const newPayersStr = JSON.stringify(expenseData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
+            if (oldPayersStr !== newPayersStr) {
+                changes.push({ field: 'Payers', from: 'List of payers was updated.', to: '' });
+                changeSummaries.push('payers');
+            }
+            
+            const oldParticipantsStr = JSON.stringify(oldData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
+            const newParticipantsStr = JSON.stringify(expenseData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
+            if (oldParticipantsStr !== newParticipantsStr) {
+                changes.push({ field: 'Split', from: 'Participant split was updated.', to: '' });
+                changeSummaries.push('participant split');
+            }
         }
 
-        const oldPayersStr = JSON.stringify(oldData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
-        const newPayersStr = JSON.stringify(expenseData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
-        if (oldPayersStr !== newPayersStr) {
-            changes.push({ field: 'Payers', from: 'List of payers was updated.', to: '' });
-            changeSummaries.push('payers');
+        let description: string;
+        if (changeSummaries.length > 0) {
+            const uniqueSummaries = [...new Set(changeSummaries)];
+            const summaryText = uniqueSummaries.length > 2
+                ? `${uniqueSummaries.slice(0, 2).join(', ')} and other details`
+                : uniqueSummaries.join(' and ');
+            description = `${actorName} updated the ${summaryText} for expense "${oldData?.description}".`;
+        } else {
+            description = `${actorName} re-saved expense "${oldData?.description}" with no changes.`;
         }
         
-        const oldParticipantsStr = JSON.stringify(oldData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
-        const newParticipantsStr = JSON.stringify(expenseData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
-        if (oldParticipantsStr !== newParticipantsStr) {
-            changes.push({ field: 'Split', from: 'Participant split was updated.', to: '' });
-            changeSummaries.push('participant split');
-        }
-    }
+        await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
+            expenseId,
+            changes,
+            date: expenseData.date,
+        });
 
-    let description: string;
-    if (changeSummaries.length > 0) {
-        const uniqueSummaries = [...new Set(changeSummaries)];
-        const summaryText = uniqueSummaries.length > 2
-            ? `${uniqueSummaries.slice(0, 2).join(', ')} and other details`
-            : uniqueSummaries.join(' and ');
-        description = `${actorName} updated the ${summaryText} for expense "${oldData?.description}".`;
-    } else {
-        description = `${actorName} re-saved expense "${oldData?.description}" with no changes.`;
+    } catch (serverError) {
+        const permissionError = new FirestorePermissionError({
+            path: expenseDocRef.path,
+            operation: 'update',
+            requestResourceData: dataToUpdate,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+        throw serverError;
     }
-    
-    await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
-        expenseId,
-        changes,
-        date: expenseData.date,
-    });
 }
 
 export async function deleteExpense(expenseId: string, groupId: string, amount: number, actorId: string): Promise<void> {
