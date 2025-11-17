@@ -196,7 +196,7 @@ export default function AdminCategorySettingsPage() {
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="space-y-4 pt-4">
-                                     {Object.entries(masterDetails.subCategories).map(([subCat, subDetails]) => {
+                                     {Object.entries(masterDetails.subCategories || {}).map(([subCat, subDetails]) => {
                                         const IconComponent = Icons[subDetails.icon] || Icons.Wallet;
                                         return (
                                             <div key={subCat} className="p-3 border rounded-lg space-y-3 bg-muted/30">
@@ -338,3 +338,5 @@ export default function AdminCategorySettingsPage() {
 
   return renderContent();
 }
+
+    
