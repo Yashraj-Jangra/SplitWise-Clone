@@ -185,16 +185,16 @@ export default function AdminCategorySettingsPage() {
                     <Accordion type="multiple" className="w-full space-y-4">
                         {Object.entries(settings.expenseCategories).map(([masterCat, masterDetails]) => (
                             <AccordionItem value={masterCat} key={masterCat} className="border rounded-lg px-4">
-                                <AccordionTrigger>
-                                    <div className="flex justify-between items-center w-full">
+                                <div className="flex items-center">
+                                    <AccordionTrigger className="flex-1">
                                         <h3 className="text-xl font-semibold">{masterCat}</h3>
-                                        {!['Uncategorized'].includes(masterCat) && (
-                                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setMasterCategoryToDelete(masterCat) }} className="h-8 w-8 hover:bg-destructive/10 text-destructive">
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                </AccordionTrigger>
+                                    </AccordionTrigger>
+                                    {!['Uncategorized'].includes(masterCat) && (
+                                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setMasterCategoryToDelete(masterCat) }} className="h-8 w-8 ml-2 hover:bg-destructive/10 text-destructive">
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
                                 <AccordionContent className="space-y-4 pt-4">
                                      {Object.entries(masterDetails.subCategories || {}).map(([subCat, subDetails]) => {
                                         const IconComponent = Icons[subDetails.icon] || Icons.Wallet;
