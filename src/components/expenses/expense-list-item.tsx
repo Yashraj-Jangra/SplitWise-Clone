@@ -2,12 +2,12 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Expense, Group, HistoryEvent } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { getFullName, getInitials, cn } from '@/lib/utils';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Icons } from '@/components/icons';
@@ -25,9 +25,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { deleteExpense } from '@/lib/mock-data';
+import { deleteExpense, getHistoryForExpense } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';
+import { ScrollArea } from '../ui/scroll-area';
+import { Skeleton } from '../ui/skeleton';
 
 
 interface ExpenseListItemProps {
@@ -38,12 +40,18 @@ interface ExpenseListItemProps {
   onActionComplete?: () => void;
 }
 
-function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete }: Omit<ExpenseListItemProps, 'groupHistory'>) {
+function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete, groupHistory }: Omit<ExpenseListItemProps, ''>) {
     const { toast } = useToast();
     const router = useRouter();
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    const expenseHistory = useMemo(() => {
+        return groupHistory.filter(e => e.data?.expenseId === expense.id && e.eventType.includes('updated')).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [groupHistory, expense.id]);
+
+    const lastUpdatedEvent = expenseHistory.length > 0 ? expenseHistory[0] : null;
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -81,6 +89,11 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete 
                         <p className="text-muted-foreground text-sm">
                             Added by {getFullName(expense.expenseCreator.firstName, expense.expenseCreator.lastName)} on {format(new Date(expense.date), "MMMM d, yyyy")}
                         </p>
+                         {lastUpdatedEvent && (
+                            <p className="text-muted-foreground text-xs mt-0.5">
+                                Last updated {formatDistanceToNow(new Date(lastUpdatedEvent.timestamp), { addSuffix: true })} by {getFullName(lastUpdatedEvent.actor.firstName, lastUpdatedEvent.actor.lastName)}
+                            </p>
+                         )}
                     </div>
                      <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
@@ -111,7 +124,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete 
                                         </div>
                                         <div className="text-right">
                                             {payerInfo && <p className="text-xs text-muted-foreground">paid {CURRENCY_SYMBOL}{payerInfo.amount.toFixed(2)}</p>}
-                                            <p className="text-sm font-medium text-destructive">owes {CURRENCY_SYMBOL}{p.amountOwed.toFixed(2)}</p>
+                                            <p className="text-sm font-medium text-foreground">owes {CURRENCY_SYMBOL}{p.amountOwed.toFixed(2)}</p>
                                         </div>
                                     </div>
                                 )
@@ -126,10 +139,26 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete 
                                 <p className="text-sm text-foreground bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{expense.notes}</p>
                             </div>
                         )}
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">Comments</h3>
-                        <div className="p-4 border rounded-lg bg-background/50 text-center text-sm text-muted-foreground">
-                            <p>Commenting feature coming soon.</p>
-                        </div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">History</h3>
+                        {expenseHistory.length > 0 ? (
+                             <ScrollArea className="h-40 rounded-md border bg-background/50 p-2">
+                                <div className="space-y-3 text-xs">
+                                {expenseHistory.map(event => (
+                                    <div key={event.id} className="flex gap-2">
+                                        <Icons.History className="h-3 w-3 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                                        <div className="flex-1">
+                                            <p className="leading-tight">{event.description}</p>
+                                            <p className="text-muted-foreground">{formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        ) : (
+                            <div className="p-4 border rounded-lg bg-background/50 text-center text-sm text-muted-foreground">
+                                <p>No updates recorded for this expense.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -167,7 +196,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete 
 }
 
 
-export function ExpenseListItem({ expense, currentUserId, group, onActionComplete }: Omit<ExpenseListItemProps, 'groupHistory'>) {
+export function ExpenseListItem({ expense, currentUserId, group, onActionComplete, groupHistory }: ExpenseListItemProps) {
   const { settings } = useSiteSettings();
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
@@ -215,9 +244,8 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
             </div>
         </AccordionTrigger>
         <AccordionContent>
-            <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} onActionComplete={onActionComplete} />
+            <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} onActionComplete={onActionComplete} groupHistory={groupHistory} />
         </AccordionContent>
     </AccordionItem>
   );
 }
-

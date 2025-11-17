@@ -50,7 +50,7 @@ import type {
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
 import { format } from 'date-fns';
-import { defaultExpenseCategories } from './expense-categories';
+import { defaultExpenseCategories, getMasterCategory } from './expense-categories';
 import { BASE_THEMES } from '@/themes';
 
 // --- User Functions ---
@@ -307,7 +307,7 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
 
 // --- Expense Functions ---
 
-export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId'> & { date: Date }, actorId: string): Promise<string> {
+export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory'> & { date: Date }, actorId: string): Promise<string> {
     const groupDocRef = doc(db, 'groups', expenseData.groupId);
     const groupSnap = await getDoc(groupDocRef);
 
@@ -318,10 +318,16 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
     
     const participantIds = expenseData.participants.map(p => p.userId);
     const payerIds = expenseData.payers.map(p => p.userId);
+    
+    // Get master category
+    const siteSettings = await getSiteSettings();
+    const masterCategory = getMasterCategory(expenseData.category || 'Other', siteSettings.expenseCategories);
+
     const docRef = await addDoc(collection(db, 'expenses'), {
         ...expenseData,
         participantIds,
         payerIds,
+        masterCategory,
         groupMemberIds: groupData.memberIds,
         groupCreatorId: groupData.createdById,
         expenseCreatorId: actorId,
@@ -343,7 +349,7 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
 }
 
 
-export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt'> & { date: Date; createdAt: string }, actorId: string): Promise<void> {
+export async function updateExpense(expenseId: string, oldAmount: number, expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt' | 'masterCategory'> & { date: Date; createdAt: string }, actorId: string): Promise<void> {
     const expenseDocRef = doc(db, 'expenses', expenseId);
     const expenseSnap = await getDoc(expenseDocRef);
     const oldData = expenseSnap.exists() ? expenseSnap.data() as ExpenseDocument : null;
@@ -358,10 +364,14 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
     const participantIds = expenseData.participants.map(p => p.userId);
     const payerIds = expenseData.payers.map(p => p.userId);
     
+    const siteSettings = await getSiteSettings();
+    const masterCategory = getMasterCategory(expenseData.category || 'Other', siteSettings.expenseCategories);
+    
     const dataToUpdate: any = {
         ...expenseData,
         participantIds,
         payerIds,
+        masterCategory,
         groupMemberIds: groupData.memberIds,
         groupCreatorId: groupData.createdById, 
         expenseCreatorId: oldData?.expenseCreatorId || actorId, 
@@ -440,8 +450,6 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
     await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
         expenseId,
         changes,
-        before: oldData,
-        after: { ...expenseData, date: Timestamp.fromDate(expenseData.date) }
     });
 }
 
