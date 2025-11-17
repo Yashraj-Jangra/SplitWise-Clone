@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -16,6 +15,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import { Accordion } from '@/components/ui/accordion';
 import { Icons, type IconName } from '@/components/icons';
 import {
   getGroupById,
@@ -55,6 +55,7 @@ export default function GroupDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('expenses');
   const [targetExpenseId, setTargetExpenseId] = useState<string | null>(null);
+  const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
 
   const loadGroupData = useCallback(async () => {
     if (!groupId) return;
@@ -114,32 +115,15 @@ export default function GroupDetailPage() {
 
 
   useEffect(() => {
-    // Handles scrolling to and highlighting an expense when navigated from history
     if (activeTab === 'expenses' && targetExpenseId) {
+      setActiveAccordionItem(`exp-${targetExpenseId}`);
       const timer = setTimeout(() => {
-        const element = document.getElementById(`expense-${targetExpenseId}`);
+        const element = document.getElementById(`exp-${targetExpenseId}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-          const highlightClass = 'bg-primary/20';
-          
-          // Blink effect
-          const blink = (count: number) => {
-            if (count === 0) return;
-            
-            element.classList.add(highlightClass);
-            setTimeout(() => {
-              element.classList.remove(highlightClass);
-              if(count > 1) {
-                setTimeout(() => blink(count - 1), 300); // Wait before next blink
-              }
-            }, 300); // Duration of blink
-          };
-          
-          blink(2); // Blink twice
         }
         setTargetExpenseId(null);
-      }, 100); // Delay to ensure element is in DOM
+      }, 100);
 
       return () => clearTimeout(timer);
     }
@@ -197,34 +181,34 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="p-0">
               {activityItems.length > 0 ? (
-                <div className="divide-y divide-border/50">
-                  {activityItems.map((item) => {
-                    if (item.type === 'expense') {
-                        const expense = item.data as Expense;
-                        return (
-                           <ExpenseListItem
-                              key={item.id}
-                              expense={expense}
-                              currentUserId={userProfile.uid}
-                              group={group}
-                              onActionComplete={loadGroupData}
-                              groupHistory={groupHistory}
-                            />
-                        )
-                    } else {
-                        const settlement = item.data as Settlement;
-                        return (
-                             <SettlementListItem
-                                key={item.id}
-                                settlement={settlement}
-                                currentUserId={userProfile.uid}
-                                group={group}
-                                onActionComplete={loadGroupData}
-                            />
-                        )
-                    }
-                  })}
-                </div>
+                <Accordion type="single" collapsible className="w-full" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
+                    {activityItems.map((item) => {
+                        if (item.type === 'expense') {
+                            const expense = item.data as Expense;
+                            return (
+                               <ExpenseListItem
+                                  key={item.id}
+                                  expense={expense}
+                                  currentUserId={userProfile.uid}
+                                  group={group}
+                                  onActionComplete={loadGroupData}
+                                  groupHistory={groupHistory}
+                                />
+                            )
+                        } else {
+                            const settlement = item.data as Settlement;
+                            return (
+                                 <SettlementListItem
+                                    key={item.id}
+                                    settlement={settlement}
+                                    currentUserId={userProfile.uid}
+                                    group={group}
+                                    onActionComplete={loadGroupData}
+                                />
+                            )
+                        }
+                    })}
+                 </Accordion>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.History className="h-12 w-12 mx-auto mb-2" />
@@ -251,7 +235,7 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="p-0">
               {settlements.length > 0 ? (
-                <div className="divide-y divide-border/50">
+                <Accordion type="single" collapsible className="w-full">
                   {settlements.map((settlement) => (
                     <SettlementListItem
                       key={settlement.id}
@@ -261,7 +245,7 @@ export default function GroupDetailPage() {
                       onActionComplete={loadGroupData}
                     />
                   ))}
-                </div>
+                </Accordion>
               ) : (
                 <div className="text-center p-8 text-muted-foreground">
                   <Icons.Settle className="h-12 w-12 mx-auto mb-2" />
