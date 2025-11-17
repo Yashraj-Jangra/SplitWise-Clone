@@ -133,55 +133,60 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
                     </div>
                     
                     <div className="space-y-4">
-                        <div className="p-4 border rounded-lg bg-background/30 text-center">
-                            <p className="text-sm text-muted-foreground">Future Widget Placeholder</p>
+                        <div className="p-4 border-2 border-dashed rounded-lg bg-background/30 text-center flex flex-col items-center justify-center min-h-[120px]">
+                           <Icons.AppLogo className="h-8 w-8 text-primary/50 mb-2" />
+                           <p className="text-sm font-semibold text-muted-foreground">Widget Coming Soon</p>
+                           <p className="text-xs text-muted-foreground/80">A new insight will appear here.</p>
                         </div>
-                        <div>
-                            {expense.notes && (
-                                <div className="mb-4">
-                                    <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
-                                    <p className="text-sm text-foreground bg-background/30 p-3 rounded-md whitespace-pre-wrap">{expense.notes}</p>
-                                </div>
-                            )}
-                            <h3 className="text-sm font-semibold text-muted-foreground mb-2">History</h3>
-                            {expenseHistory.length > 0 ? (
-                                <div className="space-y-2">
-                                {visibleHistory.map(event => (
-                                    <div key={event.id} className="border p-3 rounded-md bg-background/30">
-                                        <p className="text-xs text-muted-foreground mb-2">
-                                            {getFullName(event.actor.firstName, event.actor.lastName)} updated on {format(new Date(event.timestamp), "MMM d, yyyy 'at' h:mm a")}
-                                        </p>
-                                        <div className="space-y-2">
-                                            {event.data?.changes?.map((change: any, index: number) => (
-                                                <div key={index} className="text-xs">
-                                                    <span className="font-semibold text-foreground">{change.field}:</span>
-                                                    {change.to ? (
-                                                        <div className="text-muted-foreground flex items-center gap-2">
-                                                            <span className="text-red-500 line-through">{change.from}</span>
-                                                            <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
-                                                            <span className="text-green-500">{change.to}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-muted-foreground">{change.from}</div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                                {expenseHistory.length > 1 && (
-                                    <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setShowAllHistory(!showAllHistory)}>
-                                        {showAllHistory ? 'Show less' : `Show ${expenseHistory.length - 1} more update(s)`}
-                                    </Button>
-                                )}
-                                </div>
-                            ) : (
-                                <div className="p-4 border rounded-lg bg-background/30 text-center text-sm text-muted-foreground">
-                                    <p>No updates recorded for this expense.</p>
-                                </div>
-                            )}
-                        </div>
+                        {expense.notes && (
+                            <div>
+                                <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
+                                <p className="text-sm text-foreground bg-background/30 p-3 rounded-md whitespace-pre-wrap">{expense.notes}</p>
+                            </div>
+                        )}
                     </div>
+                </div>
+
+                <Separator />
+                
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground">History</h3>
+                    {expenseHistory.length > 0 ? (
+                        <div className="space-y-2">
+                        {visibleHistory.map(event => (
+                            <div key={event.id} className="border p-3 rounded-md bg-background/30">
+                                <p className="text-xs text-muted-foreground mb-2">
+                                    {getFullName(event.actor.firstName, event.actor.lastName)} updated on {format(new Date(event.timestamp), "MMM d, yyyy 'at' h:mm a")}
+                                </p>
+                                <div className="space-y-2">
+                                    {event.data?.changes?.map((change: any, index: number) => (
+                                        <div key={index} className="text-xs">
+                                            <span className="font-semibold text-foreground">{change.field}:</span>
+                                            {change.to ? (
+                                                <div className="text-muted-foreground flex items-center gap-2">
+                                                    <span className="text-red-500 line-through">{change.from}</span>
+                                                    <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
+                                                    <span className="text-green-500">{change.to}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="text-muted-foreground">{change.from}</div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                        {expenseHistory.length > 1 && (
+                            <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setShowAllHistory(!showAllHistory)}>
+                                {showAllHistory ? 'Show less' : `Show ${expenseHistory.length - 1} more update(s)`}
+                            </Button>
+                        )}
+                        </div>
+                    ) : (
+                        <div className="p-4 border rounded-lg bg-background/30 text-center text-sm text-muted-foreground">
+                            <p>No updates recorded for this expense.</p>
+                        </div>
+                    )}
                 </div>
 
             </div>
