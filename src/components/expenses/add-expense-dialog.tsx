@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -109,15 +108,15 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
 
     const totalAmount = Number(values.amount);
     
-    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'createdAt'> & {date: Date} = {
+    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory' | 'createdAt'> & {date: Date} = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
-      notes: values.notes,
-      payers: payers,
       date: values.date,
+      notes: values.notes || "",
+      payers: payers,
+      participants: finalParticipants.map(({userId, amountOwed, share}) => ({userId, amountOwed, share})),
       splitType: values.splitType,
-      participants: finalParticipants,
       category: values.category,
     };
     

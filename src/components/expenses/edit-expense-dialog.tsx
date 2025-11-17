@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -142,15 +141,15 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     const totalAmount = Number(values.amount);
 
-    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt'> & { date: Date, createdAt: string } = {
+    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt' > & { date: Date, createdAt: string } = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
-      notes: values.notes,
-      payers: payers,
       date: values.date,
+      notes: values.notes || "",
+      payers: payers,
+      participants: finalParticipants.map(({userId, amountOwed, share}) => ({userId, amountOwed, share})),
       splitType: values.splitType,
-      participants: finalParticipants,
       category: values.category,
       expenseCreatorId: expense.expenseCreatorId,
       groupCreatorId: expense.groupCreatorId,
