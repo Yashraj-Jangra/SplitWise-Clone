@@ -123,6 +123,12 @@ export default function AdminCategorySettingsPage() {
   const handleAddSubCategory = (master: string) => {
     if (!settings || !newSubCategory[master]?.trim()) return;
     const subName = newSubCategory[master].trim();
+    
+    // Ensure subCategories object exists
+    if (!settings.expenseCategories[master].subCategories) {
+        settings.expenseCategories[master].subCategories = {};
+    }
+
     if (settings.expenseCategories[master].subCategories[subName]) {
         toast({ variant: 'destructive', title: 'Sub-category exists' });
         return;
