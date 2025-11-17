@@ -1,7 +1,7 @@
 
-
 "use client";
 
+import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import * as z from "zod";
@@ -338,7 +338,7 @@ export function ExpenseForm({ group }: { group: Group }) {
                           <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
                           {Object.keys(details.subCategories).map(subCat => {
                             const subDetails = details.subCategories[subCat];
-                            const Icon = Icons[subDetails.icon] || Icons.Wallet;
+                            const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
                             return (
                                 <SelectItem key={subCat} value={subCat}>
                                     <div className="flex items-center gap-2">
