@@ -220,3 +220,4 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
     </AccordionItem>
   );
 }
+
