@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -11,6 +12,8 @@ import { Icons } from '@/components/icons';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
+import { useSiteSettings } from '@/contexts/site-settings-context';
+import { getMasterCategory } from '@/lib/expense-categories';
 
 interface SpendingBreakdownProps {
   currentExpenses: Expense[];
@@ -60,17 +63,18 @@ const ActiveShape = (props: any) => {
 
 export function SpendingBreakdown({ currentExpenses, previousExpenses }: SpendingBreakdownProps) {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
+  const { settings: siteSettings } = useSiteSettings();
 
-  const { expensesByCategory, totalAmount, previousExpensesByCategory } = useMemo(() => {
+  const { expensesByMasterCategory, totalAmount, previousExpensesByMasterCategory } = useMemo(() => {
     const currentCategoryData = currentExpenses.reduce((acc, expense) => {
-      const category = expense.category || 'Other';
-      acc[category] = (acc[category] || 0) + expense.amount;
+      const masterCategory = expense.masterCategory || getMasterCategory(expense.category || 'Other', siteSettings.expenseCategories) || 'Uncategorized';
+      acc[masterCategory] = (acc[masterCategory] || 0) + expense.amount;
       return acc;
     }, {} as Record<string, number>);
     
     const previousCategoryData = previousExpenses.reduce((acc, expense) => {
-      const category = expense.category || 'Other';
-      acc[category] = (acc[category] || 0) + expense.amount;
+      const masterCategory = expense.masterCategory || getMasterCategory(expense.category || 'Other', siteSettings.expenseCategories) || 'Uncategorized';
+      acc[masterCategory] = (acc[masterCategory] || 0) + expense.amount;
       return acc;
     }, {} as Record<string, number>);
 
@@ -80,8 +84,8 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
     
     const total = sortedData.reduce((sum, item) => sum + item.total, 0);
 
-    return { expensesByCategory: sortedData, totalAmount: total, previousExpensesByCategory: previousCategoryData };
-  }, [currentExpenses, previousExpenses]);
+    return { expensesByMasterCategory: sortedData, totalAmount: total, previousExpensesByMasterCategory: previousCategoryData };
+  }, [currentExpenses, previousExpenses, siteSettings.expenseCategories]);
   
   const onPieEnter = (_: any, index: number) => {
     setActiveIndex(index);
@@ -91,17 +95,17 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
   }
 
   const chartConfig = useMemo(() => {
-    return expensesByCategory.reduce((acc, category, index) => {
+    return expensesByMasterCategory.reduce((acc, category, index) => {
       acc[category.name] = {
         label: category.name,
         color: CHART_COLORS[index % CHART_COLORS.length],
       };
       return acc;
     }, {} as ChartConfig);
-  }, [expensesByCategory]);
+  }, [expensesByMasterCategory]);
   
   const getTrend = (categoryName: string, currentAmount: number) => {
-    const previousAmount = previousExpensesByCategory[categoryName] || 0;
+    const previousAmount = previousExpensesByMasterCategory[categoryName] || 0;
     if (previousAmount === 0) {
         return currentAmount > 0 ? { icon: Icons.TrendingUp, color: 'text-destructive', change: '+100%' } : null;
     }
@@ -120,7 +124,7 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
       </CardHeader>
       <Separator />
       <CardContent className="flex-1 flex flex-col md:flex-row items-center justify-center gap-4 pt-6">
-        {expensesByCategory.length === 0 ? (
+        {expensesByMasterCategory.length === 0 ? (
           <div className="text-center text-muted-foreground w-full">
             <p>No spending data for the selected period.</p>
           </div>
@@ -131,7 +135,7 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
                 <ResponsiveContainer>
                   <PieChart>
                     <Pie
-                        data={expensesByCategory}
+                        data={expensesByMasterCategory}
                         dataKey="total"
                         nameKey="name"
                         cx="50%"
@@ -144,7 +148,7 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
                         onMouseEnter={onPieEnter}
                         onMouseLeave={onPieLeave}
                     >
-                      {expensesByCategory.map((entry, index) => (
+                      {expensesByMasterCategory.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={chartConfig[entry.name]?.color} />
                       ))}
                     </Pie>
@@ -156,7 +160,7 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
             <div className="w-full md:w-1/2 h-full flex flex-col">
                 <ScrollArea className="flex-1 pr-4 -mr-4">
                     <div className="space-y-2">
-                        {expensesByCategory.map((category, index) => {
+                        {expensesByMasterCategory.map((category, index) => {
                             const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;
                             const trend = getTrend(category.name, category.total);
                             return (
@@ -197,4 +201,3 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
     </Card>
   );
 }
-

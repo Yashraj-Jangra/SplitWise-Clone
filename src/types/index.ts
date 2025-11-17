@@ -1,4 +1,5 @@
 
+
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
@@ -51,7 +52,8 @@ export interface ExpenseDocument {
   participants: ExpenseParticipantDocument[];
   participantIds: string[]; // For querying
   groupMemberIds: string[]; // For security rules
-  category?: string;
+  category?: string; // This will now be the sub-category name
+  masterCategory?: string; // Denormalized master category for easier querying/analytics
   notes?: string;
   receiptImageUrl?: string;
   expenseCreatorId: string;
@@ -258,11 +260,14 @@ export interface Theme extends ThemeColors, ThemeRadii {
   isCustom?: boolean;
 }
 
-export interface ExpenseCategory {
+export interface SubCategory {
     icon: IconName;
     keywords: string[];
 }
 
+export interface MasterCategory {
+    subCategories: Record<string, SubCategory>;
+}
 
 export interface SiteSettings {
   appName: string;
@@ -273,7 +278,7 @@ export interface SiteSettings {
   defaultThemeId?: string; // ID of the default theme for all users
   userSelectableThemeIds?: string[]; // IDs of themes users can choose from
   customThemes?: Theme[]; // Array of user-created themes
-  expenseCategories: Record<string, ExpenseCategory>;
+  expenseCategories: Record<string, MasterCategory>;
   countryCodes: CountryCode[];
   landingPage?: {
     headline: string;

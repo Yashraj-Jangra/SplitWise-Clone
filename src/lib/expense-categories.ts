@@ -1,88 +1,129 @@
 
 
-import type { ExpenseCategory } from '@/types';
+import type { MasterCategory, SubCategory } from '@/types';
 
-export const defaultExpenseCategories: Record<string, ExpenseCategory> = {
-  'Food & Dining': {
-    icon: 'Wallet',
-    keywords: ['food', 'restaurant', 'dinner', 'lunch', 'breakfast', 'cafe', 'pizza', 'swiggy', 'zomato', 'coffee', 'bar', 'pub'],
-  },
-  'Groceries': {
-    icon: 'Users',
-    keywords: ['grocery', 'market', 'vegetables', 'fruits', 'milk', 'eggs', 'supermarket', 'kirana'],
+export const defaultExpenseCategories: Record<string, MasterCategory> = {
+  'Food and Drink': {
+    subCategories: {
+      'Groceries': { icon: 'Users', keywords: ['grocery', 'market', 'supermarket', 'bigbasket', 'blinkit', 'instamart'] },
+      'Dining Out': { icon: 'Wallet', keywords: ['restaurant', 'cafe', 'bar', 'pub', 'dining', 'dinner', 'lunch', 'breakfast'] },
+      'Takeout': { icon: 'Home', keywords: ['takeout', 'swiggy', 'zomato', 'ubereats', 'food delivery'] },
+      'Coffee Shop': { icon: 'Wallet', keywords: ['coffee', 'starbucks', 'tea'] },
+    },
   },
   'Transportation': {
-    icon: 'Home',
-    keywords: ['transport', 'flight', 'train', 'bus', 'taxi', 'uber', 'ola', 'auto', 'fuel', 'petrol', 'diesel', 'metro'],
+    subCategories: {
+      'Bus/Train': { icon: 'Home', keywords: ['bus', 'train', 'metro', 'railway'] },
+      'Taxi': { icon: 'Home', keywords: ['taxi', 'uber', 'ola', 'cab', 'auto', 'rickshaw'] },
+      'Flights': { icon: 'Home', keywords: ['flight', 'airline', 'indigo', 'vistara', 'airways'] },
+      'Car': { icon: 'Home', keywords: ['car', 'fuel', 'petrol', 'diesel', 'parking', 'maintenance'] },
+    },
   },
   'Housing': {
-    icon: 'Home',
-    keywords: ['rent', 'mortgage', 'maintenance', 'furniture', 'repairs', 'housing'],
+    subCategories: {
+      'Rent': { icon: 'Home', keywords: ['rent'] },
+      'Mortgage': { icon: 'Home', keywords: ['mortgage', 'emi'] },
+      'Repairs': { icon: 'Settings', keywords: ['repair', 'maintenance', 'plumber', 'electrician'] },
+      'Furniture': { icon: 'Home', keywords: ['furniture', 'ikea', 'home decor'] },
+    },
   },
   'Utilities': {
-    icon: 'Settings',
-    keywords: ['bill', 'electricity', 'water', 'internet', 'gas', 'phone', 'recharge', 'utility'],
+    subCategories: {
+      'Electricity': { icon: 'Settings', keywords: ['electricity', 'power', 'bill'] },
+      'Water': { icon: 'Settings', keywords: ['water bill'] },
+      'Internet': { icon: 'Settings', keywords: ['internet', 'wifi', 'broadband', 'jiofiber', 'airtel'] },
+      'Phone': { icon: 'Settings', keywords: ['phone', 'mobile', 'recharge', 'postpaid', 'prepaid'] },
+    },
   },
   'Entertainment': {
-    icon: 'Wallet',
-    keywords: ['movie', 'concert', 'tickets', 'show', 'game', 'party', 'netflix', 'spotify', 'hotstar', 'cinema', 'event'],
+    subCategories: {
+      'Movies': { icon: 'Wallet', keywords: ['movie', 'cinema', 'pvr', 'inox', 'bookmyshow'] },
+      'Games': { icon: 'Wallet', keywords: ['game', 'gaming', 'steam', 'playstation', 'xbox'] },
+      'Music': { icon: 'Wallet', keywords: ['music', 'spotify', 'apple music', 'concert'] },
+      'TV/Streaming': { icon: 'Wallet', keywords: ['netflix', 'hotstar', 'amazon prime', 'hulu', 'streaming'] },
+      'Sports': { icon: 'Wallet', keywords: ['sports', 'tickets', 'match', 'ipl'] },
+    },
   },
   'Shopping': {
-    icon: 'Wallet',
-    keywords: ['clothes', 'electronics', 'mall', 'amazon', 'flipkart', 'shopping', 'apparel', 'gadgets'],
+    subCategories: {
+      'Clothing': { icon: 'Wallet', keywords: ['clothing', 'apparel', 'shirt', 'trousers', 'dress'] },
+      'Electronics': { icon: 'Wallet', keywords: ['electronics', 'gadget', 'phone', 'laptop', 'croma'] },
+      'Online': { icon: 'Wallet', keywords: ['amazon', 'flipkart', 'myntra', 'online shopping'] },
+    },
   },
-  'Health & Wellness': {
-    icon: 'Heart',
-    keywords: ['doctor', 'pharmacy', 'medicine', 'gym', 'hospital', 'wellness', 'fitness', 'healthcare'],
+  'Health and Wellness': {
+    subCategories: {
+      'Doctor': { icon: 'Heart', keywords: ['doctor', 'clinic', 'consultation'] },
+      'Pharmacy': { icon: 'Heart', keywords: ['pharmacy', 'medicine', 'apollo'] },
+      'Gym': { icon: 'Heart', keywords: ['gym', 'fitness', 'cultfit'] },
+    },
   },
   'Personal Care': {
-    icon: 'Wallet',
-    keywords: ['salon', 'haircut', 'cosmetics', 'toiletries', 'personal care'],
+    subCategories: {
+      'Salon/Barber': { icon: 'Wallet', keywords: ['salon', 'barber', 'haircut', 'spa'] },
+      'Cosmetics': { icon: 'Wallet', keywords: ['cosmetics', 'makeup', 'sephora', 'nykaa'] },
+    },
   },
   'Education': {
-    icon: 'Wallet',
-    keywords: ['school', 'college', 'university', 'books', 'stationery', 'course', 'fees', 'education'],
+    subCategories: {
+      'Tuition/Fees': { icon: 'Wallet', keywords: ['tuition', 'fees', 'school', 'college', 'university'] },
+      'Books/Supplies': { icon: 'Wallet', keywords: ['book', 'stationery'] },
+    },
   },
-  'Gifts & Donations': {
-    icon: 'Wallet',
-    keywords: ['gift', 'present', 'donation', 'charity', 'wedding', 'birthday'],
+  'Gifts and Donations': {
+    subCategories: {
+      'Gift': { icon: 'Wallet', keywords: ['gift', 'present', 'birthday', 'wedding'] },
+      'Donation': { icon: 'Wallet', keywords: ['donation', 'charity'] },
+    },
   },
   'Travel': {
-    icon: 'Wallet',
-    keywords: ['hotel', 'airbnb', 'travel', 'trip', 'vacation', 'holiday', 'tourism'],
+    subCategories: {
+      'Hotel': { icon: 'Wallet', keywords: ['hotel', 'motel', 'resort', 'stay'] },
+      'Bookings': { icon: 'Wallet', keywords: ['airbnb', 'booking.com', 'makemytrip'] },
+    },
   },
-  'Other': {
-    icon: 'Wallet',
-    keywords: [],
+  'Uncategorized': {
+    subCategories: {
+      'Other': { icon: 'Wallet', keywords: [] },
+    },
   },
 };
 
 /**
- * Classifies an expense description into a category based on keywords.
+ * Classifies an expense description into a sub-category.
  * @param description The expense description.
- * @param categories A map of categories to their keywords.
- * @returns The determined category, or 'Other' if no keywords match.
+ * @param categories A map of master categories to their sub-categories.
+ * @returns The determined sub-category name, or 'Other' if no keywords match.
  */
-export function classifyExpense(description: string, categories: Record<string, ExpenseCategory>): string {
+export function classifyExpense(description: string, categories: Record<string, MasterCategory>): { master: string; sub: string } {
   if (!description) {
-    return 'Other';
+    return { master: 'Uncategorized', sub: 'Other' };
   }
 
   const lowerCaseDescription = description.toLowerCase();
-  const categoryList = Object.keys(categories);
 
-  for (const category of categoryList) {
-    if (category === 'Other') continue;
-    
-    const keywords = categories[category]?.keywords || [];
-    for (const keyword of keywords) {
-      // Use word boundaries to avoid partial matches e.g. "rental" matching "rent"
-      const keywordRegex = new RegExp(`\\b${keyword}\\b`);
-      if (keywordRegex.test(lowerCaseDescription)) {
-        return category;
+  for (const masterCategoryName in categories) {
+    const masterCategory = categories[masterCategoryName];
+    for (const subCategoryName in masterCategory.subCategories) {
+      const subCategory = masterCategory.subCategories[subCategoryName];
+      const keywords = subCategory.keywords || [];
+      for (const keyword of keywords) {
+        const keywordRegex = new RegExp(`\\b${keyword}\\b`, 'i');
+        if (keywordRegex.test(lowerCaseDescription)) {
+          return { master: masterCategoryName, sub: subCategoryName };
+        }
       }
     }
   }
 
-  return 'Other';
+  return { master: 'Uncategorized', sub: 'Other' };
+}
+
+export function getMasterCategory(subCategoryName: string, categories: Record<string, MasterCategory>): string {
+    for (const masterCategoryName in categories) {
+        if (categories[masterCategoryName].subCategories[subCategoryName]) {
+            return masterCategoryName;
+        }
+    }
+    return 'Uncategorized';
 }
