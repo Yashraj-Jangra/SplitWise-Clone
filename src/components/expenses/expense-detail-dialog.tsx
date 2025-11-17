@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Icons } from "@/components/icons";
+import { Icons, IconName } from "@/components/icons";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,7 @@ import { Badge } from '@/components/ui/badge';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Skeleton } from '../ui/skeleton';
 import { Timestamp } from 'firebase/firestore';
+import { useSiteSettings } from '@/contexts/site-settings-context';
 
 
 interface ExpenseDetailDialogProps {
@@ -69,6 +71,7 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const { settings } = useSiteSettings();
 
     const expenseHistory = useMemo(() => {
         if (!groupHistory) return [];
@@ -134,6 +137,9 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
             onActionComplete();
         }
     }
+    
+    const categoryIconName = settings.expenseCategories[expense.category || 'Other']?.icon || 'Wallet';
+    const CategoryIcon = Icons[categoryIconName];
 
     return (
         <>
@@ -144,8 +150,12 @@ export function ExpenseDetailDialog({ open, onOpenChange, expense, currentUserId
                             <DialogTitle className="text-2xl font-headline">{expense.description}</DialogTitle>
                             <Badge variant="secondary" className="text-lg">{CURRENCY_SYMBOL}{expense.amount.toFixed(2)}</Badge>
                         </div>
-                        <DialogDescription>
-                            {format(new Date(expense.date), "eeee, MMMM d, yyyy")} • Category: {expense.category || 'N/A'}
+                        <DialogDescription className="flex items-center gap-4">
+                            <span>{format(new Date(expense.date), "eeee, MMMM d, yyyy")}</span>
+                             <span className="flex items-center gap-1.5 text-xs">
+                                <CategoryIcon className="h-4 w-4" />
+                                {expense.category || 'N/A'}
+                            </span>
                         </DialogDescription>
                     </DialogHeader>
                     

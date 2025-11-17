@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Icons } from "@/components/icons";
+import { Icons, IconName } from "@/components/icons";
 import type { Group } from "@/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -325,10 +325,29 @@ export function ExpenseForm({ group }: { group: Group }) {
                 <FormItem>
                     <FormLabel>Category</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        {categoryList.map((cat) => ( <SelectItem key={cat} value={cat}>{cat}</SelectItem> ))}
-                    </SelectContent>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue>
+                                    <div className="flex items-center gap-2">
+                                        <IconComponent name={settings.expenseCategories[field.value]?.icon || 'Wallet'} className="h-4 w-4" />
+                                        <span>{field.value}</span>
+                                    </div>
+                                </SelectValue>
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {categoryList.map((cat) => {
+                                const Icon = Icons[settings.expenseCategories[cat]?.icon || 'Wallet'];
+                                return (
+                                    <SelectItem key={cat} value={cat}>
+                                        <div className="flex items-center gap-2">
+                                            <Icon className="h-4 w-4" />
+                                            <span>{cat}</span>
+                                        </div>
+                                    </SelectItem>
+                                );
+                            })}
+                        </SelectContent>
                     </Select>
                     <FormMessage />
                 </FormItem>
@@ -438,3 +457,8 @@ export function ExpenseForm({ group }: { group: Group }) {
     </div>
   )
 }
+
+const IconComponent = ({ name, className }: { name: IconName, className?: string }) => {
+    const Icon = Icons[name] || Icons.Wallet;
+    return <Icon className={className} />;
+};

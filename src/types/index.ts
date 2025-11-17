@@ -258,6 +258,11 @@ export interface Theme extends ThemeColors, ThemeRadii {
   isCustom?: boolean;
 }
 
+export interface ExpenseCategory {
+    icon: IconName;
+    keywords: string[];
+}
+
 
 export interface SiteSettings {
   appName: string;
@@ -268,7 +273,7 @@ export interface SiteSettings {
   defaultThemeId?: string; // ID of the default theme for all users
   userSelectableThemeIds?: string[]; // IDs of themes users can choose from
   customThemes?: Theme[]; // Array of user-created themes
-  expenseCategories: Record<string, string[]>;
+  expenseCategories: Record<string, ExpenseCategory>;
   countryCodes: CountryCode[];
   landingPage?: {
     headline: string;

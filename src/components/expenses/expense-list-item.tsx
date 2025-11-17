@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from 'react';
@@ -9,6 +10,8 @@ import { format } from "date-fns";
 import { getFullName, getInitials } from '@/lib/utils';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ExpenseDetailDialog } from './expense-detail-dialog';
+import { Icons } from '@/components/icons';
+import { useSiteSettings } from '@/contexts/site-settings-context';
 
 interface ExpenseListItemProps {
   expense: Expense;
@@ -20,6 +23,7 @@ interface ExpenseListItemProps {
 
 export function ExpenseListItem({ expense, currentUserId, group, groupHistory, onActionComplete }: ExpenseListItemProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const { settings } = useSiteSettings();
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
   const isPayer = expense.payers.some(p => p.user.uid === currentUserId);
@@ -94,13 +98,18 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory, o
     }
   }
 
+  const categoryIconName = settings.expenseCategories[expense.category || 'Other']?.icon || 'Wallet';
+  const CategoryIcon = Icons[categoryIconName];
+
   return (
     <>
       <div id={`expense-${expense.id}`} onClick={() => setIsDetailOpen(true)} className="flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-muted/50 hover:scale-[1.01] hover:shadow-lg">
         <div className="flex items-center gap-4 flex-1">
-          <div className="text-center w-12 text-xs text-muted-foreground">
-             <div className="font-bold text-lg text-foreground">{format(new Date(expense.date), 'dd')}</div>
-             <div>{format(new Date(expense.date), 'MMM')}</div>
+          <div className="text-center w-12 flex-shrink-0">
+             <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-1">
+                <CategoryIcon className="h-5 w-5 text-muted-foreground" />
+             </div>
+             <p className="text-xs text-muted-foreground">{format(new Date(expense.date), 'MMM dd')}</p>
           </div>
           <div className="grid gap-0.5">
             <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>

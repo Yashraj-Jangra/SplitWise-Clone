@@ -1,4 +1,5 @@
 
+
 import {
   collection,
   doc,
@@ -43,6 +44,7 @@ import type {
   SupportTicketDocument,
   SupportTicketMessage,
   Theme,
+  ExpenseCategory,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -1309,6 +1311,19 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         delete (emailSettings as any).fromEmail;
         delete (emailSettings as any).supportEmail;
 
+        // Upgrade expense categories to new format if necessary
+        const upgradedCategories: Record<string, ExpenseCategory> = {};
+        const savedCategories = data.expenseCategories || defaultExpenseCategories;
+        for (const key in savedCategories) {
+            const value = savedCategories[key];
+            if (Array.isArray(value)) { // Old format: string[]
+                upgradedCategories[key] = { icon: 'Wallet', keywords: value };
+            } else { // New format: ExpenseCategory
+                upgradedCategories[key] = value;
+            }
+        }
+
+
         return {
             appName: data.appName || DEFAULT_APP_NAME,
             logoUrl: data.logoUrl || '',
@@ -1318,7 +1333,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             customThemes: data.customThemes || [],
             defaultThemeId: data.defaultThemeId || 'default-dark',
             userSelectableThemeIds: data.userSelectableThemeIds || ['default-dark', 'default-light'],
-            expenseCategories: data.expenseCategories || defaultExpenseCategories,
+            expenseCategories: upgradedCategories,
             countryCodes: data.countryCodes?.length > 0 ? data.countryCodes : DEFAULT_COUNTRY_CODES,
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },

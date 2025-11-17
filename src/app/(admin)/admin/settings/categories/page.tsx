@@ -5,12 +5,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Icons } from '@/components/icons';
+import { Icons, IconName } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
-import type { SiteSettings } from '@/types';
+import type { SiteSettings, ExpenseCategory } from '@/types';
 import { X } from 'lucide-react';
 import {
   AlertDialog,
@@ -24,6 +24,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function AdminCategorySettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -32,9 +39,12 @@ export default function AdminCategorySettingsPage() {
   const { toast } = useToast();
 
   const [newCategory, setNewCategory] = useState("");
-  const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [newKeyword, setNewKeyword] = useState<Record<string, string>>({});
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+
+  const iconNames = Object.keys(Icons).filter(
+    (key) => key !== 'AppLogo' && key !== 'Logo' && key !== 'Google' && key !== 'Github' && key !== 'Linkedin' && key !== 'NextJs' && key !== 'ReactLogo' && key !== 'FirebaseLogo' && key !== 'TailwindLogo' && key !== 'ShadcnLogo' && key !== 'FirebaseStudio' && key !== 'GenkitLogo'
+  ) as IconName[];
 
   useEffect(() => {
     async function fetchSettings() {
@@ -60,7 +70,6 @@ export default function AdminCategorySettingsPage() {
         title: 'Settings Saved',
         description: 'Expense category settings have been updated.',
       });
-      setEditingCategory(null);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -71,14 +80,23 @@ export default function AdminCategorySettingsPage() {
       setIsSaving(false);
     }
   };
+  
+  const handleCategoryDetailChange = (category: string, field: keyof ExpenseCategory, value: any) => {
+      if (!settings) return;
+      const updatedCategories = { ...settings.expenseCategories };
+      updatedCategories[category] = { ...updatedCategories[category], [field]: value };
+      setSettings({ ...settings, expenseCategories: updatedCategories });
+  };
 
   const handleAddCategory = () => {
     if (!settings || !newCategory.trim()) return;
-    if (settings.expenseCategories[newCategory.trim()]) {
+    const trimmedName = newCategory.trim();
+    if (settings.expenseCategories[trimmedName]) {
       toast({ variant: 'destructive', title: 'Category exists', description: 'This category name already exists.' });
       return;
     }
-    const updatedCategories = { ...settings.expenseCategories, [newCategory.trim()]: [] };
+    const newCategoryData: ExpenseCategory = { icon: 'Wallet', keywords: [] };
+    const updatedCategories = { ...settings.expenseCategories, [trimmedName]: newCategoryData };
     setSettings({ ...settings, expenseCategories: updatedCategories });
     setNewCategory("");
   };
@@ -100,12 +118,13 @@ export default function AdminCategorySettingsPage() {
   const handleAddKeyword = (category: string) => {
     if (!settings || !newKeyword[category]?.trim()) return;
     const keyword = newKeyword[category].trim().toLowerCase();
-    if (settings.expenseCategories[category].includes(keyword)) {
+    const currentKeywords = settings.expenseCategories[category].keywords || [];
+    if (currentKeywords.includes(keyword)) {
       toast({ variant: 'destructive', title: 'Keyword exists' });
       return;
     }
     const updatedCategories = { ...settings.expenseCategories };
-    updatedCategories[category] = [...updatedCategories[category], keyword];
+    updatedCategories[category].keywords = [...currentKeywords, keyword];
     setSettings({ ...settings, expenseCategories: updatedCategories });
     setNewKeyword({ ...newKeyword, [category]: "" });
   };
@@ -113,7 +132,7 @@ export default function AdminCategorySettingsPage() {
   const handleRemoveKeyword = (category: string, keyword: string) => {
     if (!settings) return;
     const updatedCategories = { ...settings.expenseCategories };
-    updatedCategories[category] = updatedCategories[category].filter(k => k !== keyword);
+    updatedCategories[category].keywords = (updatedCategories[category].keywords || []).filter(k => k !== keyword);
     setSettings({ ...settings, expenseCategories: updatedCategories });
   };
 
@@ -129,41 +148,72 @@ export default function AdminCategorySettingsPage() {
                     <CardDescription>Add, remove, and manage categories and their auto-detection keywords.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {Object.entries(settings.expenseCategories).map(([category, keywords]) => (
-                        <div key={category} className="p-4 border rounded-lg space-y-3">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">{category}</h3>
-                                {category !== 'Other' && (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCategoryToDelete(category)}>
-                                        <X className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground">Keywords</Label>
-                                <div className="flex flex-wrap gap-2">
-                                    {keywords.map(keyword => (
-                                        <Badge key={keyword} variant="secondary" className="text-base font-normal">
-                                            {keyword}
-                                            <button onClick={() => handleRemoveKeyword(category, keyword)} className="ml-2 rounded-full p-0.5 hover:bg-destructive/50">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </Badge>
-                                    ))}
-                                    {keywords.length === 0 && <p className="text-sm text-muted-foreground">No keywords yet.</p>}
+                    {Object.entries(settings.expenseCategories).map(([category, details]) => {
+                        const IconComponent = Icons[details.icon] || Icons.Wallet;
+                        return (
+                            <div key={category} className="p-4 border rounded-lg space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-4">
+                                        <Select
+                                            value={details.icon}
+                                            onValueChange={(value) => handleCategoryDetailChange(category, 'icon', value as IconName)}
+                                        >
+                                            <SelectTrigger className="w-24 h-10">
+                                                <SelectValue asChild>
+                                                    <div className="flex items-center gap-2">
+                                                        <IconComponent className="h-4 w-4" />
+                                                        <span>{details.icon}</span>
+                                                    </div>
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {iconNames.map(name => {
+                                                    const Icon = Icons[name];
+                                                    return (
+                                                        <SelectItem key={name} value={name}>
+                                                            <div className="flex items-center gap-2">
+                                                                <Icon className="h-4 w-4" />
+                                                                <span>{name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    )
+                                                })}
+                                            </SelectContent>
+                                        </Select>
+                                        <h3 className="text-lg font-semibold">{category}</h3>
+                                    </div>
+                                    {category !== 'Other' && (
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => setCategoryToDelete(category)}>
+                                            <X className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Keywords</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(details.keywords || []).map(keyword => (
+                                            <Badge key={keyword} variant="secondary" className="text-base font-normal">
+                                                {keyword}
+                                                <button onClick={() => handleRemoveKeyword(category, keyword)} className="ml-2 rounded-full p-0.5 hover:bg-destructive/50">
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                        {(details.keywords || []).length === 0 && <p className="text-sm text-muted-foreground">No keywords yet.</p>}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Add a keyword..."
+                                        value={newKeyword[category] || ""}
+                                        onChange={(e) => setNewKeyword({ ...newKeyword, [category]: e.target.value })}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword(category)}
+                                    />
+                                    <Button size="sm" onClick={() => handleAddKeyword(category)}>Add Keyword</Button>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="Add a keyword..."
-                                    value={newKeyword[category] || ""}
-                                    onChange={(e) => setNewKeyword({ ...newKeyword, [category]: e.target.value })}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword(category)}
-                                />
-                                <Button size="sm" onClick={() => handleAddKeyword(category)}>Add Keyword</Button>
-                            </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </CardContent>
                 <CardFooter>
                     <div className="flex gap-2 w-full">
