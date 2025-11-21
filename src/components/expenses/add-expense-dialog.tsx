@@ -13,10 +13,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, ExpenseDocument } from "@/types";
-import { addExpense } from "@/lib/mock-data";
+import { addExpense, getSiteSettings } from "@/lib/mock-data";
 import { useAuth } from "@/contexts/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { expenseSchema, ExpenseForm } from "./expense-form";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 type AddExpenseFormValues = z.infer<typeof expenseSchema>;
 
@@ -75,7 +76,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         category: "Other",
       });
     }
-  }, [userProfile, open, group.members, form]);
+  }, [userProfile, open, group.members]);
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;

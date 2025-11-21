@@ -109,7 +109,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             category: expense.category || 'Other',
         });
     }
-  }, [group, userProfile, open, expense, form]);
+  }, [group, userProfile, open, expense]);
 
   async function onSubmit(values: EditExpenseFormValues) {
     if (!userProfile || !group) return;
