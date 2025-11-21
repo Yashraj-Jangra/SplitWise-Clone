@@ -18,7 +18,7 @@ import type { Group } from "@/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { classifyExpense } from "@/lib/expense-categories";
+import { classifyExpense, getMasterCategory } from "@/lib/expense-categories";
 import { getFullName, getInitials } from "@/lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
@@ -421,7 +421,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
 
 
     const category = watch('category');
-    const categoryIconName = settings.expenseCategories[getMasterCategory(category, settings.expenseCategories)]?.subCategories[category]?.icon || 'Wallet';
+    const categoryIconName = (settings.expenseCategories[getMasterCategory(category, settings.expenseCategories)]?.subCategories[category]?.icon) || 'Wallet';
     const CategoryIcon = Icons[categoryIconName];
     
     return (
@@ -491,14 +491,18 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                                 {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
                                 <React.Fragment key={masterCat}>
                                     <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
-                                    {details && details.subCategories && Object.keys(details.subCategories).map(subCat => (
-                                        <SelectItem key={subCat} value={subCat}>
-                                            <div className="flex items-center gap-2">
-                                                <Icons[(details.subCategories[subCat]?.icon as IconName) || 'Wallet'] className="h-4 w-4" />
-                                                <span>{subCat}</span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
+                                    {details && details.subCategories && Object.keys(details.subCategories).map(subCat => {
+                                        const subDetails = details.subCategories[subCat];
+                                        const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
+                                        return (
+                                            <SelectItem key={subCat} value={subCat}>
+                                                <div className="flex items-center gap-2">
+                                                    <Icon className="h-4 w-4" />
+                                                    <span>{subCat}</span>
+                                                </div>
+                                            </SelectItem>
+                                        )
+                                    })}
                                 </React.Fragment>
                                 ))}
                             </SelectContent>
