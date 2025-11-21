@@ -8,15 +8,14 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, Expense, ExpenseDocument } from "@/types";
 import { getGroupById, updateExpense } from "@/lib/mock-data";
 import { useAuth } from "@/contexts/auth-context";
 import { getFullName } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ScrollArea } from "../ui/scroll-area";
 import { Skeleton } from "../ui/skeleton";
 import { expenseSchema, ExpenseForm } from "./expense-form";
 
@@ -147,13 +146,13 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       amount: totalAmount,
       date: values.date,
       notes: values.notes || "",
-      payers: payers,
+      payers,
       participants: finalParticipants.map(({userId, amountOwed, share}) => ({userId, amountOwed, share})),
       splitType: values.splitType,
       category: values.category,
       expenseCreatorId: expense.expenseCreatorId,
       groupCreatorId: expense.groupCreatorId,
-      createdAt: expense.createdAt, // Preserve original creation time
+      createdAt: expense.createdAt,
     };
 
     try {
@@ -173,43 +172,32 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         toast({ title: "Error Updating Expense", description: errorMessage, variant: "destructive"})
     }
   }
+
+  const SkeletonLoader = () => (
+     <div className="p-6">
+        <Skeleton className="h-full w-full" />
+     </div>
+  );
   
-  const FormContent = (
+  const FormProviderWrapper = ({children}: {children: React.ReactNode}) => (
     <FormProvider {...form}>
-      <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {isGroupLoading || !group ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-6 p-1">
-                <div className="space-y-6">
-                    <Skeleton className="h-40 w-full" />
-                    <Skeleton className="h-40 w-full" />
-                </div>
-                <Skeleton className="h-full w-full min-h-[300px]" />
-            </div>
-          ) : (
-             <ExpenseForm group={group}/>
-          )}
+      <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="h-full">
+        {children}
       </form>
     </FormProvider>
   );
 
-  const title = "Edit Expense";
-  const formId = "edit-expense-form";
+  const FormContent = isGroupLoading || !group 
+    ? <SkeletonLoader /> 
+    : <ExpenseForm group={group} closeDialog={() => onOpenChange(false)} isEditing isMobile={isMobile} />;
 
   if(isMobile) {
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="bottom" className="glass-pane h-[95vh] flex flex-col rounded-t-2xl border-border/20 p-0">
-                <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="text-center text-lg font-semibold">{title}</SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="flex-1">
-                    <div className="p-4">{FormContent}</div>
-                </ScrollArea>
-                <SheetFooter className="p-4 bg-background/50 border-t">
-                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading} className="w-full" size="lg">
-                        {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
-                    </Button>
-                </SheetFooter>
+            <SheetContent side="bottom" className="h-screen flex flex-col p-0 border-0 bg-background">
+                <FormProviderWrapper>
+                   {FormContent}
+                </FormProviderWrapper>
             </SheetContent>
         </Sheet>
     )
@@ -217,21 +205,10 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-pane sm:max-w-4xl flex flex-col max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 overflow-hidden -mx-6 px-1">
-            <ScrollArea className="h-full px-5 py-4">
-                {FormContent}
-            </ScrollArea>
-        </div>
-        <DialogFooter className="border-t pt-4 px-6 pb-6 -mx-6 -mb-6 bg-background/50 rounded-b-lg">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading} className="w-full sm:w-auto">
-                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-        </DialogFooter>
+      <DialogContent className="max-w-[900px] w-full p-0 gap-0 border-0 bg-transparent shadow-none">
+          <FormProviderWrapper>
+              {FormContent}
+          </FormProviderWrapper>
       </DialogContent>
     </Dialog>
   );

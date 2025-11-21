@@ -8,15 +8,14 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, ExpenseDocument } from "@/types";
 import { addExpense } from "@/lib/mock-data";
 import { useAuth } from "@/contexts/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ScrollArea } from "../ui/scroll-area";
 import { expenseSchema, ExpenseForm } from "./expense-form";
 
 type AddExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -108,20 +107,20 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
 
     const totalAmount = Number(values.amount);
     
-    const newExpense: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory' | 'createdAt'> & {date: Date} = {
+    const newExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory' | 'createdAt'> & { date: Date } = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
       date: values.date,
       notes: values.notes || "",
-      payers: payers,
+      payers,
       participants: finalParticipants.map(({userId, amountOwed, share}) => ({userId, amountOwed, share})),
       splitType: values.splitType,
       category: values.category,
     };
     
     try {
-        await addExpense(newExpense, userProfile.uid);
+        await addExpense(newExpenseData, userProfile.uid);
         toast({
         title: "Expense Added!",
         description: `"${values.description}" has been successfully added to ${group.name}.`,
@@ -139,6 +138,14 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
 
   const dialogTrigger = trigger || <Button><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>;
   const mobileTrigger = trigger || <Button className="w-full"><Icons.Add className="mr-2 h-4 w-4" /> Add Expense</Button>;
+  
+  const FormProviderWrapper = ({children}: {children: React.ReactNode}) => (
+    <FormProvider {...form}>
+      <form id="add-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="h-full">
+        {children}
+      </form>
+    </FormProvider>
+  );
 
   if(isMobile) {
     return (
@@ -146,22 +153,10 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
             <SheetTrigger asChild>
                 {mobileTrigger}
             </SheetTrigger>
-            <SheetContent side="bottom" className="glass-pane h-[95vh] flex flex-col rounded-t-2xl border-border/20 p-0">
-                <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="text-center text-lg font-semibold">New Expense</SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="flex-1">
-                    <FormProvider {...form}>
-                      <form id="add-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-4">
-                        <ExpenseForm group={group}/>
-                      </form>
-                    </FormProvider>
-                </ScrollArea>
-                <SheetFooter className="p-4 bg-background/50 border-t">
-                    <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting} className="w-full" size="lg">
-                        {form.formState.isSubmitting ? "Adding..." : "Add Expense"}
-                    </Button>
-                </SheetFooter>
+            <SheetContent side="bottom" className="h-screen flex flex-col p-0 border-0 bg-background">
+              <FormProviderWrapper>
+                  <ExpenseForm group={group} closeDialog={() => setOpen(false)} isMobile />
+              </FormProviderWrapper>
             </SheetContent>
         </Sheet>
     )
@@ -172,25 +167,10 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       <DialogTrigger asChild>
         {dialogTrigger}
       </DialogTrigger>
-      <DialogContent className="glass-pane sm:max-w-4xl flex flex-col max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-headline">New Expense in "{group.name}"</DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 overflow-hidden -mx-6 px-1">
-          <ScrollArea className="h-full px-5">
-              <FormProvider {...form}>
-                <form id="add-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <ExpenseForm group={group}/>
-                </form>
-              </FormProvider>
-          </ScrollArea>
-        </div>
-        <DialogFooter className="border-t pt-4 px-6 pb-6 -mx-6 -mb-6 bg-background/50 rounded-b-lg">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-            {form.formState.isSubmitting ? "Adding..." : "Add Expense"}
-          </Button>
-        </DialogFooter>
+      <DialogContent className="max-w-[900px] w-full p-0 gap-0 border-0 bg-transparent shadow-none">
+          <FormProviderWrapper>
+              <ExpenseForm group={group} closeDialog={() => setOpen(false)} />
+          </FormProviderWrapper>
       </DialogContent>
     </Dialog>
   );
