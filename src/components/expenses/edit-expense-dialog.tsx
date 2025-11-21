@@ -8,16 +8,17 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import type { Group, Expense, ExpenseDocument } from "@/types";
+import type { Group, Expense } from "@/types";
 import { getGroupById, updateExpense } from "@/lib/mock-data";
 import { useAuth } from "@/contexts/auth-context";
 import { getFullName } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Skeleton } from "../ui/skeleton";
 import { expenseSchema, ExpenseForm } from "./expense-form";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 type EditExpenseFormValues = z.infer<typeof expenseSchema>;
 
@@ -168,6 +169,14 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         window.dispatchEvent(new CustomEvent('data-changed'));
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        errorEmitter.emit('permission-error', {
+          message: errorMessage,
+          context: {
+              path: `expenses/${expense.id}`,
+              operation: 'update',
+              requestResourceData: updatedExpenseData,
+          },
+        });
         toast({ title: "Error Updating Expense", description: errorMessage, variant: "destructive"})
     }
   }
@@ -204,7 +213,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-full h-[580px] p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-2xl w-full h-[500px] p-0 gap-0 border-0 bg-transparent shadow-none">
+          <DialogTitle className="sr-only">Edit an expense</DialogTitle>
           <FormProviderWrapper>
               {FormContent}
           </FormProviderWrapper>

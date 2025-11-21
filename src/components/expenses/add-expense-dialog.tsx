@@ -8,7 +8,7 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -130,6 +130,14 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         window.dispatchEvent(new CustomEvent('data-changed'));
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        errorEmitter.emit('permission-error', {
+          message: errorMessage,
+          context: {
+              path: 'expenses',
+              operation: 'create',
+              requestResourceData: expenseData,
+          },
+        });
         toast({ title: "Error Adding Expense", description: errorMessage, variant: "destructive" });
     }
   }
@@ -155,7 +163,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
             </SheetTrigger>
             <SheetContent side="bottom" className="h-screen flex flex-col p-0 border-0 bg-background">
               <FormProviderWrapper>
-                  <ExpenseForm group={group} closeDialog={() => setOpen(false)} isMobile />
+                  <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
               </FormProviderWrapper>
             </SheetContent>
         </Sheet>
@@ -167,9 +175,10 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       <DialogTrigger asChild>
         {dialogTrigger}
       </DialogTrigger>
-      <DialogContent className="max-w-3xl w-full h-[580px] p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-2xl w-full h-[500px] p-0 gap-0 border-0 bg-transparent shadow-none">
+          <DialogTitle className="sr-only">Add an expense</DialogTitle>
           <FormProviderWrapper>
-              <ExpenseForm group={group} closeDialog={() => setOpen(false)} />
+              <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
           </FormProviderWrapper>
       </DialogContent>
     </Dialog>
