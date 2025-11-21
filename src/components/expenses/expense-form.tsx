@@ -422,56 +422,60 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
 
     const category = watch('category');
     const masterCategory = getMasterCategory(category, settings.expenseCategories);
-    const categoryDetails = settings.expenseCategories[masterCategory]?.subCategories[category];
+    
+    // Defensive coding: Ensure masterCategory and subCategory exist before access
+    const masterCategoryDetails = settings.expenseCategories[masterCategory];
+    const categoryDetails = masterCategoryDetails?.subCategories?.[category];
+    
     const categoryIconName = categoryDetails?.icon || 'Wallet';
     const CategoryIcon = Icons[categoryIconName];
     
     return (
-        <div className={cn("relative overflow-hidden w-full h-full", isMobile ? "flex flex-col" : "grid grid-cols-[1fr_auto]")}>
+        <div className={cn("relative overflow-hidden w-full h-full", isMobile ? "flex flex-col" : "sm:grid sm:grid-cols-[1fr_auto]")}>
             <motion.div 
-                className="bg-card rounded-l-lg flex flex-col p-6 h-full"
+                className="bg-card rounded-l-lg flex flex-col p-4 h-full"
                 animate={{ width: activePanel ? (isMobile ? '100%' : 'calc(100% - 350px)') : '100%' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             >
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold">{isEditing ? "Edit expense" : "Add an expense"}</h2>
+                    <h2 className="text-xl font-bold">{isEditing ? "Edit expense" : "Add an expense"}</h2>
                     {!isMobile && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDialog}><X className="h-5 w-5"/></Button>}
                 </div>
                 
                 <div className="flex items-center gap-4 mb-4">
                     <FormField control={control} name="participants" render={() => (
                          <div className="flex items-center flex-wrap gap-1">
-                             <span className="text-sm font-medium mr-1">With:</span>
+                             <span className="text-xs font-medium mr-1">With:</span>
                              {watchParticipants.filter((p:any) => p.selected && p.userId !== userProfile?.uid).map((p: any) => (
                                  <div key={p.userId} className="flex items-center gap-1 bg-muted text-muted-foreground text-xs font-medium px-2 py-1 rounded-full">
                                      <span>{p.name}</span>
                                  </div>
                              ))}
-                             <span className="text-sm font-medium bg-muted text-foreground px-2 py-1 rounded-full">You</span>
+                             <span className="text-xs font-medium bg-muted text-foreground px-2 py-1 rounded-full">You</span>
                          </div>
                     )}/>
                 </div>
                 
-                 <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 mb-4">
-                    <div className="p-3 bg-background rounded-md">
-                        <CategoryIcon className="h-8 w-8 text-primary" />
+                 <div className="flex items-start gap-4 p-3 rounded-lg bg-muted/50 mb-4">
+                    <div className="p-2 bg-background rounded-md">
+                        <CategoryIcon className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex-1">
                          <FormField control={control} name="description" render={({ field }) => (
-                            <Input placeholder="Enter a description" {...field} className="text-lg font-semibold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                            <Input placeholder="Enter a description" {...field} className="text-base font-semibold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"/>
                          )} />
                         <FormField control={control} name="amount" render={({ field }) => (
                              <div className="relative">
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-4xl font-bold text-muted-foreground">{CURRENCY_SYMBOL}</span>
-                                <input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-10 text-4xl font-bold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 w-full outline-none"/>
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                                <input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 text-2xl font-bold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 w-full outline-none"/>
                             </div>
                         )} />
                         {(errors.description || errors.amount) && <FormMessage className="mt-1">{(errors.description?.message || errors.amount?.message)?.toString()}</FormMessage>}
                     </div>
                  </div>
 
-                <div className="text-center text-lg">
-                    <p>Paid by <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
+                <div className="text-center text-base">
+                    <p>Paid by <Button variant="link" className="p-0 h-auto text-base font-bold underline" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and <Button variant="link" className="p-0 h-auto text-base font-bold underline" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
                     {netChangeSummary && <p className="text-muted-foreground text-xs mt-1">({netChangeSummary})</p>}
                 </div>
                 
@@ -515,6 +519,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                         </Select>
                     )}/>
                  </div>
+
 
                  <div className="flex-1"></div>
 
