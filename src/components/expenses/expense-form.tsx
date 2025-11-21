@@ -24,7 +24,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { Textarea } from "../ui/textarea";
 import { useAuth } from "@/contexts/auth-context";
@@ -111,7 +111,7 @@ const PayerPanel = ({ onClose }: { onClose: () => void }) => {
     
     const totalPaid = useMemo(() => {
         return watchMultiPayers?.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0) || 0;
-    }, [JSON.stringify(watchMultiPayers)]);
+    }, [watchMultiPayers]);
 
     const amountRemaining = (Number(watchAmount) || 0) - totalPaid;
 
@@ -221,7 +221,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
                     <TabsList className="grid w-full grid-cols-4 h-auto">
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="equally" className="py-2 flex-col gap-1 h-auto"><Icons.Users className="h-5 w-5"/><span className="text-xs">Equally</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split equally among selected members</p></TooltipContent></Tooltip></TooltipProvider>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="unequally" className="py-2 flex-col gap-1 h-auto"><Icons.Baseline className="h-5 w-5"/><span className="text-xs">Unequally</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Manually enter specific amounts for each person</p></TooltipContent></Tooltip></TooltipProvider>
-                        <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="by_shares" className="py-2 flex-col gap-1 h-auto"><Icons.Layers className="h-5 w-5"/><span className="text-xs">By Shares</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split by shares (e.g. 2 shares vs 1 share)</p></TooltipContent></Tooltip></TooltipProvider>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="by_shares" className="py-2 flex-col gap-1 h-auto"><Icons.Layers className="h-5 w-5"/><span className="text-xs">By Shares</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split by shares (e.g. 2 shares vs 1 share)</p></TooltipContent></TooltipProvider>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="by_percentage" className="py-2 flex-col gap-1 h-auto"><Icons.PieChart className="h-5 w-5"/><span className="text-xs">By %</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split by percentage</p></TooltipContent></Tooltip></TooltipProvider>
                     </TabsList>
                     
@@ -425,9 +425,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
 
     const category = watch('category');
     const masterCategory = getMasterCategory(category, settings.expenseCategories);
-    
-    const masterCategoryDetails = settings.expenseCategories[masterCategory];
-    const categoryDetails = masterCategoryDetails?.subCategories?.[category];
+    const categoryDetails = settings.expenseCategories[masterCategory]?.subCategories?.[category];
     
     const categoryIconName = categoryDetails?.icon || 'Wallet';
     const CategoryIcon = Icons[categoryIconName];
@@ -444,7 +442,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
             >
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold">{isEditing ? "Edit expense" : "Add an expense"}</h2>
-                    {!isMobile && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDialog}><X className="h-5 w-5"/></Button>}
+                    {!isMobile && !activePanel && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDialog}><X className="h-5 w-5"/></Button>}
                 </div>
 
                  <div className="flex items-start gap-4 p-3 rounded-lg bg-muted/50 mb-4">
@@ -533,3 +531,5 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
         </div>
     )
 }
+
+    
