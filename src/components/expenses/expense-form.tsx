@@ -421,7 +421,9 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
 
 
     const category = watch('category');
-    const categoryIconName = (settings.expenseCategories[getMasterCategory(category, settings.expenseCategories)]?.subCategories[category]?.icon) || 'Wallet';
+    const masterCategory = getMasterCategory(category, settings.expenseCategories);
+    const categoryDetails = settings.expenseCategories[masterCategory]?.subCategories[category];
+    const categoryIconName = categoryDetails?.icon || 'Wallet';
     const CategoryIcon = Icons[categoryIconName];
     
     return (
@@ -488,23 +490,26 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
-                                {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
-                                <React.Fragment key={masterCat}>
-                                    <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
-                                    {details && details.subCategories && Object.keys(details.subCategories).map(subCat => {
-                                        const subDetails = details.subCategories[subCat];
-                                        const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
-                                        return (
-                                            <SelectItem key={subCat} value={subCat}>
-                                                <div className="flex items-center gap-2">
-                                                    <Icon className="h-4 w-4" />
-                                                    <span>{subCat}</span>
-                                                </div>
-                                            </SelectItem>
-                                        )
-                                    })}
-                                </React.Fragment>
-                                ))}
+                                {Object.entries(settings.expenseCategories).map(([masterCat, details]) => {
+                                    if (!details || !details.subCategories) return null;
+                                    return (
+                                        <React.Fragment key={masterCat}>
+                                            <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
+                                            {Object.keys(details.subCategories).map(subCat => {
+                                                const subDetails = details.subCategories[subCat];
+                                                const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
+                                                return (
+                                                    <SelectItem key={subCat} value={subCat}>
+                                                        <div className="flex items-center gap-2">
+                                                            <Icon className="h-4 w-4" />
+                                                            <span>{subCat}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                )
+                                            })}
+                                        </React.Fragment>
+                                    )
+                                })}
                             </SelectContent>
                         </Select>
                     )}/>
@@ -512,7 +517,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                  </div>
                  <div className="mt-auto flex gap-2">
                     <Button type="button" variant="secondary" className="flex-1" onClick={closeDialog}>Cancel</Button>
-                    <Button type="submit" form="add-expense-form" disabled={isSubmitting} className="flex-1">
+                    <Button type="submit" form={isEditing ? "edit-expense-form" : "add-expense-form"} disabled={isSubmitting} className="flex-1">
                         {isSubmitting ? "Saving..." : "Save"}
                     </Button>
                  </div>

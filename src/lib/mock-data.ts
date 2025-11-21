@@ -1414,7 +1414,6 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         };
         await setDoc(docRef, {
             ...defaultSettings,
-            expenseCategories: defaultExpenseCategories,
         });
         return defaultSettings;
     }

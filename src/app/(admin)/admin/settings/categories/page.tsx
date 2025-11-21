@@ -124,16 +124,18 @@ export default function AdminCategorySettingsPage() {
     if (!settings || !newSubCategory[master]?.trim()) return;
     const subName = newSubCategory[master].trim();
     
-    // Ensure subCategories object exists
-    if (!settings.expenseCategories[master].subCategories) {
-        settings.expenseCategories[master].subCategories = {};
+    const updatedCategories = { ...settings.expenseCategories };
+    
+    // Ensure subCategories object exists before trying to add to it.
+    if (!updatedCategories[master].subCategories) {
+        updatedCategories[master].subCategories = {};
     }
 
-    if (settings.expenseCategories[master].subCategories[subName]) {
+    if (updatedCategories[master].subCategories[subName]) {
         toast({ variant: 'destructive', title: 'Sub-category exists' });
         return;
     }
-    const updatedCategories = { ...settings.expenseCategories };
+    
     updatedCategories[master].subCategories[subName] = { icon: 'Wallet', keywords: [] };
     setSettings({ ...settings, expenseCategories: updatedCategories });
     setNewSubCategory({ ...newSubCategory, [master]: "" });
@@ -189,7 +191,9 @@ export default function AdminCategorySettingsPage() {
                 </CardHeader>
                 <CardContent>
                     <Accordion type="multiple" className="w-full space-y-4">
-                        {Object.entries(settings.expenseCategories).map(([masterCat, masterDetails]) => (
+                        {Object.entries(settings.expenseCategories).map(([masterCat, masterDetails]) => {
+                            if (!masterDetails) return null;
+                            return (
                             <AccordionItem value={masterCat} key={masterCat} className="border rounded-lg px-4">
                                 <div className="flex items-center">
                                     <AccordionTrigger className="flex-1">
@@ -202,7 +206,7 @@ export default function AdminCategorySettingsPage() {
                                     )}
                                 </div>
                                 <AccordionContent className="space-y-4 pt-4">
-                                     {Object.entries(masterDetails.subCategories || {}).map(([subCat, subDetails]) => {
+                                     {masterDetails.subCategories && Object.entries(masterDetails.subCategories).map(([subCat, subDetails]) => {
                                         const IconComponent = Icons[subDetails.icon] || Icons.Wallet;
                                         return (
                                             <div key={subCat} className="p-3 border rounded-lg space-y-3 bg-muted/30">
@@ -283,7 +287,7 @@ export default function AdminCategorySettingsPage() {
                                     </div>
                                 </AccordionContent>
                             </AccordionItem>
-                        ))}
+                        )})}
                     </Accordion>
                 </CardContent>
                 <CardFooter className="flex-col items-start gap-4">
