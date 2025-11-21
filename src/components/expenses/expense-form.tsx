@@ -107,7 +107,7 @@ const PayerPanel = ({ onClose }: { onClose: () => void }) => {
     const watchPayerType = watch('payerType');
     const watchMultiPayers = watch("multiPayers");
     const watchAmount = watch("amount");
-    const groupMembers = getValues("participants"); // Assuming participants are all group members
+    const groupMembers = getValues("participants");
     
     const totalPaid = useMemo(() => {
         return watchMultiPayers?.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0) || 0;
@@ -322,7 +322,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
     useEffect(() => {
         if (watchDescription) {
             const { sub: suggestedCategory } = classifyExpense(watchDescription, settings.expenseCategories);
-            setValue("category", suggestedCategory, { shouldValidate: true });
+            if(suggestedCategory) setValue("category", suggestedCategory, { shouldValidate: true });
         }
     }, [watchDescription, setValue, settings.expenseCategories]);
 
@@ -427,19 +427,22 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
     const CategoryIcon = Icons[categoryIconName];
     
     return (
-        <div className={cn("relative overflow-hidden", isMobile ? "h-full flex flex-col" : "sm:grid sm:grid-cols-[450px_auto]")}>
-            {/* Main Dialog Content */}
-            <div className="bg-card rounded-l-lg flex flex-col p-6">
+        <div className={cn("relative overflow-hidden w-full h-full", isMobile ? "flex flex-col" : "grid grid-cols-[1fr_auto]")}>
+            <motion.div 
+                className="bg-card rounded-l-lg flex flex-col p-6 h-full"
+                animate={{ width: activePanel ? 'calc(100% - 350px)' : '100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            >
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-2xl font-bold">{isEditing ? "Edit expense" : "Add an expense"}</h2>
                     {!isMobile && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDialog}><X className="h-5 w-5"/></Button>}
                 </div>
                 
                 <div className="flex items-center gap-4 mb-4">
-                    <FormField control={control} name="participants" render={({ field }) => (
+                    <FormField control={control} name="participants" render={() => (
                          <div className="flex items-center flex-wrap gap-1">
                              <span className="text-sm font-medium mr-1">With:</span>
-                             {field.value.filter((p:any) => p.selected && p.userId !== userProfile?.uid).map((p: any) => (
+                             {watchParticipants.filter((p:any) => p.selected && p.userId !== userProfile?.uid).map((p: any) => (
                                  <div key={p.userId} className="flex items-center gap-1 bg-muted text-muted-foreground text-xs font-medium px-2 py-1 rounded-full">
                                      <span>{p.name}</span>
                                  </div>
@@ -474,7 +477,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                 
                 <div className="flex-1"></div>
 
-                 <div className="grid grid-cols-3 gap-2 my-4">
+                 <div className="grid grid-cols-2 gap-2 my-4">
                     <Popover>
                         <PopoverTrigger asChild>
                         <FormControl>
@@ -497,7 +500,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                                             <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
                                             {Object.keys(details.subCategories).map(subCat => {
                                                 const subDetails = details.subCategories[subCat];
-                                                const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
+                                                const Icon = subDetails?.icon ? Icons[subDetails.icon] : Icons.Wallet;
                                                 return (
                                                     <SelectItem key={subCat} value={subCat}>
                                                         <div className="flex items-center gap-2">
@@ -513,7 +516,6 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                             </SelectContent>
                         </Select>
                     )}/>
-                     <Button variant="outline"><Icons.Camera className="mr-2 h-4 w-4" /> Image</Button>
                  </div>
                  <div className="mt-auto flex gap-2">
                     <Button type="button" variant="secondary" className="flex-1" onClick={closeDialog}>Cancel</Button>
@@ -522,10 +524,10 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                     </Button>
                  </div>
 
-            </div>
+            </motion.div>
 
             {/* Side Panel Area */}
-            <div className={cn("relative overflow-hidden", isMobile ? "absolute inset-0 z-10" : "w-[350px]")}>
+            <div className={cn("absolute top-0 right-0 h-full w-full sm:w-[350px] pointer-events-none", activePanel && "pointer-events-auto")}>
                 <AnimatePresence>
                     {activePanel === 'payer' && <PayerPanel onClose={() => setActivePanel(null)} />}
                     {activePanel === 'split' && <SplitterPanel onClose={() => setActivePanel(null)} />}

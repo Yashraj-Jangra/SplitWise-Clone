@@ -107,20 +107,20 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
 
     const totalAmount = Number(values.amount);
     
-    const newExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory' | 'createdAt'> & { date: Date } = {
+    const expenseData = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
       date: values.date,
       notes: values.notes || "",
       payers,
-      participants: finalParticipants.map(({userId, amountOwed, share}) => ({userId, amountOwed, share})),
+      participants: finalParticipants,
       splitType: values.splitType,
       category: values.category,
     };
     
     try {
-        await addExpense(newExpenseData, userProfile.uid);
+        await addExpense(expenseData, userProfile.uid);
         toast({
         title: "Expense Added!",
         description: `"${values.description}" has been successfully added to ${group.name}.`,
@@ -167,7 +167,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       <DialogTrigger asChild>
         {dialogTrigger}
       </DialogTrigger>
-      <DialogContent className="max-w-[900px] w-full p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-4xl w-full h-[600px] p-0 gap-0 border-0 bg-transparent shadow-none">
           <FormProviderWrapper>
               <ExpenseForm group={group} closeDialog={() => setOpen(false)} />
           </FormProviderWrapper>

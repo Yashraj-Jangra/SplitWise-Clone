@@ -140,14 +140,14 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     const totalAmount = Number(values.amount);
 
-    const updatedExpenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt' > & { date: Date; createdAt: string } = {
+    const updatedExpenseData = {
       groupId: group.id,
       description: values.description,
       amount: totalAmount,
       date: values.date,
       notes: values.notes || "",
       payers,
-      participants: finalParticipants.map(({userId, amountOwed, share}) => ({userId, amountOwed, share})),
+      participants: finalParticipants,
       splitType: values.splitType,
       category: values.category,
       expenseCreatorId: expense.expenseCreatorId,
@@ -205,7 +205,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[900px] w-full p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-4xl w-full h-[600px] p-0 gap-0 border-0 bg-transparent shadow-none">
           <FormProviderWrapper>
               {FormContent}
           </FormProviderWrapper>
