@@ -167,7 +167,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       <DialogTrigger asChild>
         {dialogTrigger}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl w-full h-[600px] p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-3xl w-full h-[580px] p-0 gap-0 border-0 bg-transparent shadow-none">
           <FormProviderWrapper>
               <ExpenseForm group={group} closeDialog={() => setOpen(false)} />
           </FormProviderWrapper>

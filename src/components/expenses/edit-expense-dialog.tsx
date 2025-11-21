@@ -151,7 +151,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       splitType: values.splitType,
       category: values.category,
       expenseCreatorId: expense.expenseCreatorId,
-      groupCreatorId: expense.groupCreatorId,
       createdAt: expense.createdAt,
     };
 
@@ -205,7 +204,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[600px] p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-3xl w-full h-[580px] p-0 gap-0 border-0 bg-transparent shadow-none">
           <FormProviderWrapper>
               {FormContent}
           </FormProviderWrapper>

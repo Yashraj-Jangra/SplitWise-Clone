@@ -430,7 +430,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
         <div className={cn("relative overflow-hidden w-full h-full", isMobile ? "flex flex-col" : "grid grid-cols-[1fr_auto]")}>
             <motion.div 
                 className="bg-card rounded-l-lg flex flex-col p-6 h-full"
-                animate={{ width: activePanel ? 'calc(100% - 350px)' : '100%' }}
+                animate={{ width: activePanel ? (isMobile ? '100%' : 'calc(100% - 350px)') : '100%' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             >
                 <div className="flex items-center justify-between mb-4">
@@ -470,14 +470,12 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                     </div>
                  </div>
 
-                <div className="text-center text-sm">
-                    <p>Paid by <Button variant="link" className="p-0 h-auto" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and <Button variant="link" className="p-0 h-auto" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
-                    {netChangeSummary && <p className="text-muted-foreground text-xs">({netChangeSummary})</p>}
+                <div className="text-center text-lg">
+                    <p>Paid by <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
+                    {netChangeSummary && <p className="text-muted-foreground text-xs mt-1">({netChangeSummary})</p>}
                 </div>
                 
-                <div className="flex-1"></div>
-
-                 <div className="grid grid-cols-2 gap-2 my-4">
+                <div className="grid grid-cols-2 gap-4 my-4">
                     <Popover>
                         <PopoverTrigger asChild>
                         <FormControl>
@@ -517,6 +515,9 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                         </Select>
                     )}/>
                  </div>
+
+                 <div className="flex-1"></div>
+
                  <div className="mt-auto flex gap-2">
                     <Button type="button" variant="secondary" className="flex-1" onClick={closeDialog}>Cancel</Button>
                     <Button type="submit" form={isEditing ? "edit-expense-form" : "add-expense-form"} disabled={isSubmitting} className="flex-1">
