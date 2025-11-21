@@ -333,23 +333,26 @@ export function ExpenseForm({ group }: { group: Group }) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
-                        <React.Fragment key={masterCat}>
-                          <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
-                          {details.subCategories && Object.keys(details.subCategories).map(subCat => {
-                            const subDetails = details.subCategories[subCat];
-                            const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
-                            return (
-                                <SelectItem key={subCat} value={subCat}>
-                                    <div className="flex items-center gap-2">
-                                        <Icon className="h-4 w-4" />
-                                        <span>{subCat}</span>
-                                    </div>
-                                </SelectItem>
-                            )
-                          })}
-                        </React.Fragment>
-                      ))}
+                      {Object.entries(settings.expenseCategories).map(([masterCat, details]) => {
+                          if (!details) return null; // FIX: Ensure details object exists
+                          return (
+                            <React.Fragment key={masterCat}>
+                              <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
+                              {details.subCategories && Object.keys(details.subCategories).map(subCat => {
+                                const subDetails = details.subCategories[subCat];
+                                const Icon = Icons[subDetails.icon as IconName] || Icons.Wallet;
+                                return (
+                                    <SelectItem key={subCat} value={subCat}>
+                                        <div className="flex items-center gap-2">
+                                            <Icon className="h-4 w-4" />
+                                            <span>{subCat}</span>
+                                        </div>
+                                    </SelectItem>
+                                )
+                              })}
+                            </React.Fragment>
+                          )
+                      })}
                     </SelectContent>
                   </Select>
                   <FormMessage />
