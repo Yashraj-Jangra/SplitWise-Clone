@@ -104,15 +104,17 @@ export function classifyExpense(description: string, categories: Record<string, 
 
   for (const masterCategoryName in categories) {
     const masterCategory = categories[masterCategoryName];
-    for (const subCategoryName in masterCategory.subCategories) {
-      const subCategory = masterCategory.subCategories[subCategoryName];
-      const keywords = subCategory.keywords || [];
-      for (const keyword of keywords) {
-        const keywordRegex = new RegExp(`\\b${keyword}\\b`, 'i');
-        if (keywordRegex.test(lowerCaseDescription)) {
-          return { master: masterCategoryName, sub: subCategoryName };
+    if (masterCategory?.subCategories) {
+        for (const subCategoryName in masterCategory.subCategories) {
+          const subCategory = masterCategory.subCategories[subCategoryName];
+          const keywords = subCategory.keywords || [];
+          for (const keyword of keywords) {
+            const keywordRegex = new RegExp(`\\b${keyword}\\b`, 'i');
+            if (keywordRegex.test(lowerCaseDescription)) {
+              return { master: masterCategoryName, sub: subCategoryName };
+            }
+          }
         }
-      }
     }
   }
 
@@ -121,7 +123,8 @@ export function classifyExpense(description: string, categories: Record<string, 
 
 export function getMasterCategory(subCategoryName: string, categories: Record<string, MasterCategory>): string {
     for (const masterCategoryName in categories) {
-        if (categories[masterCategoryName].subCategories[subCategoryName]) {
+        const masterCategory = categories[masterCategoryName];
+        if (masterCategory && masterCategory.subCategories && masterCategory.subCategories[subCategoryName]) {
             return masterCategoryName;
         }
     }

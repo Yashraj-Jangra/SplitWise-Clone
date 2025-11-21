@@ -1412,7 +1412,10 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             emailSettings: DEFAULT_EMAIL_SETTINGS,
             emailTemplates: DEFAULT_EMAIL_TEMPLATES,
         };
-        await setDoc(docRef, defaultSettings);
+        await setDoc(docRef, {
+            ...defaultSettings,
+            expenseCategories: defaultExpenseCategories,
+        });
         return defaultSettings;
     }
 }
