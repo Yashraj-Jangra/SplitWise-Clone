@@ -90,54 +90,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
     }, [initialGroup, expense.groupId, open]);
     
-    const defaultValues = useMemo(() => {
-        if (!group || !userProfile) return {};
-        
-        const participantData = group.members.map((member) => {
-            const existingParticipant = expense.participants.find((p) => p.user.uid === member.uid);
-            return {
-                userId: member.uid,
-                name: getFullName(member.firstName, member.lastName),
-                avatarUrl: member.avatarUrl,
-                selected: !!existingParticipant,
-                amountOwed: existingParticipant?.amountOwed || 0,
-                shares: existingParticipant?.share || 1,
-                percentage: 0,
-            };
-        });
-
-        if (expense.splitType === 'by_percentage') {
-            const totalAmount = expense.amount;
-            if (totalAmount > 0) {
-                participantData.forEach((p) => {
-                    if (p.selected) {
-                        p.percentage = parseFloat(((p.amountOwed / totalAmount) * 100).toFixed(2));
-                    }
-                });
-            }
-        }
-        
-        return {
-            description: expense.description,
-            amount: expense.amount,
-            date: new Date(expense.date),
-            notes: expense.notes || '',
-            payerType: expense.payers.length > 1 ? 'multiple' as const : 'single' as const,
-            singlePayerId: expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
-            multiPayers: group.members.map((member) => ({
-                userId: member.uid,
-                name: getFullName(member.firstName, member.lastName),
-                amount: expense.payers.find((p) => p.user.uid === member.uid)?.amount || undefined,
-            })),
-            splitType: expense.splitType,
-            participants: participantData,
-            category: expense.category || 'Other',
-        }
-    }, [group, userProfile, expense]);
-
     const form = useForm<EditExpenseFormValues>({
         resolver: zodResolver(expenseSchema),
-        defaultValues,
     });
 
     const { watch, setValue, getValues } = form;
@@ -151,9 +105,48 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     
     useEffect(() => {
         if(open && group) {
-            form.reset(defaultValues);
+            const participantData = group.members.map((member) => {
+                const existingParticipant = expense.participants.find((p) => p.user.uid === member.uid);
+                return {
+                    userId: member.uid,
+                    name: getFullName(member.firstName, member.lastName),
+                    avatarUrl: member.avatarUrl,
+                    selected: !!existingParticipant,
+                    amountOwed: existingParticipant?.amountOwed || 0,
+                    shares: existingParticipant?.share || 1,
+                    percentage: 0,
+                };
+            });
+    
+            if (expense.splitType === 'by_percentage') {
+                const totalAmount = expense.amount;
+                if (totalAmount > 0) {
+                    participantData.forEach((p) => {
+                        if (p.selected) {
+                            p.percentage = parseFloat(((p.amountOwed / totalAmount) * 100).toFixed(2));
+                        }
+                    });
+                }
+            }
+
+            form.reset({
+                description: expense.description,
+                amount: expense.amount,
+                date: new Date(expense.date),
+                notes: expense.notes || '',
+                payerType: expense.payers.length > 1 ? 'multiple' as const : 'single' as const,
+                singlePayerId: expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
+                multiPayers: group.members.map((member) => ({
+                    userId: member.uid,
+                    name: getFullName(member.firstName, member.lastName),
+                    amount: expense.payers.find((p) => p.user.uid === member.uid)?.amount || undefined,
+                })),
+                splitType: expense.splitType,
+                participants: participantData,
+                category: expense.category || 'Other',
+            });
         }
-    }, [open, defaultValues, form, group]);
+    }, [open, group, expense, form]);
 
     useEffect(() => {
       if (!debouncedDescription) return;
@@ -209,7 +202,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
               }
           });
       }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 

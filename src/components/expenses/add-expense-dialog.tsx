@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -27,7 +28,6 @@ import { appEventEmitter } from '@/lib/event-emitter';
 import { useDebounce } from '@/hooks/use-debounce';
 import { classifyExpense } from '@/lib/expense-categories';
 import { useSiteSettings } from '@/contexts/site-settings-context';
-
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
@@ -80,57 +80,49 @@ export function AddExpenseDialog({
   const { settings } = useSiteSettings();
   const isMobile = useIsMobile();
 
-  const defaultValues = useMemo(() => {
-    if (!userProfile) return {};
-    return {
-      description: '',
-      amount: undefined,
-      date: new Date(),
-      notes: '',
-      payerType: 'single' as const,
-      singlePayerId: userProfile.uid,
-      multiPayers: group.members.map((member) => ({
-        userId: member.uid,
-        name: `${member.firstName} ${member.lastName || ''}`.trim(),
-        amount: undefined,
-      })),
-      splitType: 'equally' as const,
-      participants: group.members.map((member) => ({
-        userId: member.uid,
-        name: `${member.firstName} ${member.lastName || ''}`.trim(),
-        avatarUrl: member.avatarUrl,
-        selected: true,
-        amountOwed: 0,
-        shares: 1,
-        percentage: 0,
-      })),
-      category: 'Other',
-    };
-  }, [userProfile, group.members]);
-
   const form = useForm<AddExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
-    defaultValues,
   });
 
-  const { watch, setValue, getValues } = form;
+  const { watch, setValue, getValues, reset } = form;
 
   const watchDescription = watch('description');
   const debouncedDescription = useDebounce(watchDescription, 300);
   
-  // Dynamic calculation logic
   const watchAmount = watch('amount');
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
-  // Stringify deps to avoid infinite loops from object references
   const participantDeps = JSON.stringify(watchParticipants?.map((p: any) => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
 
 
   useEffect(() => {
-    if (open) {
-      form.reset(defaultValues as any);
+    if (open && userProfile) {
+      reset({
+        description: '',
+        amount: undefined,
+        date: new Date(),
+        notes: '',
+        payerType: 'single' as const,
+        singlePayerId: userProfile.uid,
+        multiPayers: group.members.map((member) => ({
+          userId: member.uid,
+          name: `${member.firstName} ${member.lastName || ''}`.trim(),
+          amount: undefined,
+        })),
+        splitType: 'equally' as const,
+        participants: group.members.map((member) => ({
+          userId: member.uid,
+          name: `${member.firstName} ${member.lastName || ''}`.trim(),
+          avatarUrl: member.avatarUrl,
+          selected: true,
+          amountOwed: 0,
+          shares: 1,
+          percentage: 0,
+        })),
+        category: 'Other',
+      });
     }
-  }, [open, form, defaultValues]);
+  }, [open, userProfile, group.members, reset]);
   
   useEffect(() => {
     if (!debouncedDescription) return;
@@ -186,7 +178,6 @@ export function AddExpenseDialog({
             }
         });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 
