@@ -33,7 +33,7 @@ interface ExpenseFormProps {
 }
 
 export function ExpenseForm({ group }: ExpenseFormProps) {
-  const { control, watch, getValues } = useFormContext();
+  const { control, watch } = useFormContext();
   const { settings } = useSiteSettings();
   
   const watchPayerType = watch('payerType');
@@ -135,15 +135,15 @@ export function ExpenseForm({ group }: ExpenseFormProps) {
           )} />
       ) : (
         <div className="space-y-2">
-          {getValues('multiPayers')?.map((_: any, index: number) => (
+          {watch('multiPayers')?.map((_: any, index: number) => (
             <FormField key={index} control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (
               <FormItem className="flex items-center gap-2 space-y-0">
-                <FormLabel className="font-normal w-1/2">{getValues(`multiPayers.${index}.name`)}</FormLabel>
+                <FormLabel className="font-normal w-1/2">{watch(`multiPayers.${index}.name`)}</FormLabel>
                 <div className="relative w-1/2"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)} className="pl-6"/></div>
               </FormItem>
             ))} />
           ))}
-          <FormMessage>{(getValues('formState.errors') as any)?.multiPayers?.message}</FormMessage>
+          <FormMessage>{(watch('formState.errors') as any)?.multiPayers?.message}</FormMessage>
         </div>
       )}
       
@@ -193,7 +193,7 @@ export function ExpenseForm({ group }: ExpenseFormProps) {
                 ))}
             </div>
         </ScrollArea>
-        <FormMessage>{(getValues('formState.errors') as any)?.participants?.message}</FormMessage>
+        <FormMessage>{(watch('formState.errors') as any)?.participants?.message}</FormMessage>
       </div>
 
        <FormField
