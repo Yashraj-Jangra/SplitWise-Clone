@@ -18,7 +18,7 @@ import { ExpenseForm, PayerView, SplitView } from './expense-form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '../ui/button';
 import { appEventEmitter } from '@/lib/event-emitter';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';

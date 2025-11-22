@@ -262,17 +262,17 @@ export function AddExpenseDialog({
     </FormProvider>
   );
 
-  const viewContent = useMemo(() => {
-    switch (view) {
-      case 'split':
-        return <SplitView setView={setView} />;
-      case 'payer':
-        return <PayerView setView={setView} group={group} />;
-      case 'main':
-      default:
-        return <ExpenseForm group={group} isEditing={false} setView={setView} />;
-    }
-  }, [view, group]);
+  const viewContent = (
+    <FormProviderWrapper>
+      {view === 'split' ? (
+        <SplitView setView={setView} />
+      ) : view === 'payer' ? (
+        <PayerView setView={setView} group={group} />
+      ) : (
+        <ExpenseForm group={group} isEditing={false} setView={setView} />
+      )}
+    </FormProviderWrapper>
+  );
   
 
   if (isMobile) {
