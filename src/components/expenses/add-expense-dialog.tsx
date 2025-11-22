@@ -78,7 +78,6 @@ export function AddExpenseDialog({
 
   const { watch, setValue, getValues, reset } = form;
   
-  const watchAmount = watch('amount');
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
   
@@ -119,7 +118,7 @@ export function AddExpenseDialog({
   }, [open, userProfile, group.members, reset]);
 
   useEffect(() => {
-    const totalAmount = Number(watchAmount) || 0;
+    const totalAmount = Number(getValues('amount')) || 0;
     const allParticipants = getValues('participants') || [];
     const selectedParticipants = allParticipants.filter((p: any) => p.selected);
     const numSelected = selectedParticipants.length;
@@ -163,7 +162,7 @@ export function AddExpenseDialog({
             }
         });
     }
-  }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
+  }, [watchSplitType, participantDeps, setValue, getValues]);
 
 
   async function onSubmit(values: AddExpenseFormValues) {

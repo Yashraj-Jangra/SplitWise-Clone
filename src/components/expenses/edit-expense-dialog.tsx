@@ -88,7 +88,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     const { watch, setValue, getValues } = form;
 
-    const watchAmount = watch('amount');
     const watchSplitType = watch('splitType');
     const watchParticipants = watch('participants');
     const participantDeps = useMemo(() => {
@@ -142,7 +141,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     }, [open, group, expense, form]);
 
     useEffect(() => {
-      const totalAmount = Number(watchAmount) || 0;
+      const totalAmount = Number(getValues('amount')) || 0;
       const allParticipants = getValues('participants') || [];
       const selectedParticipants = allParticipants.filter((p: any) => p.selected);
       const numSelected = selectedParticipants.length;
@@ -186,7 +185,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
               }
           });
       }
-    }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
+    }, [watchSplitType, participantDeps, setValue, getValues]);
 
 
     if (!userProfile) return null;
