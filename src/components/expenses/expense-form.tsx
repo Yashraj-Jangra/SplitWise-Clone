@@ -31,7 +31,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { useAuth } from '@/contexts/auth-context';
 import { Textarea } from '../ui/textarea';
-import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardDescription, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/card';
 import { X, CheckCircle2, Circle } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Badge } from '../ui/badge';
@@ -145,23 +145,22 @@ interface ExpenseFormProps {
 
 // --- Panel Components ---
 
-const Panel = ({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) => (
+const Panel = ({ children, onClose, title, description }: { children: React.ReactNode; onClose: () => void; title: string, description: string }) => (
   <motion.div
     initial={{ x: '100%' }}
     animate={{ x: 0 }}
     exit={{ x: '100%' }}
     transition={{ duration: 0.3, ease: 'easeInOut' }}
-    className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col"
+    className="absolute inset-0 bg-background flex flex-col"
   >
-    <div className="absolute top-2 right-2 z-10">
-      <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9">
-        <X className="h-5 w-5" />
-      </Button>
-    </div>
     <CardHeader className="pt-8">
         <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
     </CardHeader>
     {children}
+    <CardFooter className="p-4 border-t mt-auto">
+        <Button onClick={onClose} className="w-full">Done</Button>
+    </CardFooter>
   </motion.div>
 );
 
@@ -170,7 +169,7 @@ const PayerPanel = ({ group, onClose }: { group: Group, onClose: () => void }) =
     const payerType = watch('payerType');
 
     return (
-        <Panel onClose={onClose} title="Paid By">
+        <Panel onClose={onClose} title="Paid By" description="Select who paid for this expense.">
             <CardContent className="flex-1 flex flex-col gap-4">
                  <Tabs defaultValue="single" className="w-full" value={payerType} onValueChange={(v) => setValue('payerType', v as any, { shouldValidate: true })}>
                     <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="single">Single Person</TabsTrigger><TabsTrigger value="multiple">Multiple People</TabsTrigger></TabsList>
@@ -233,9 +232,6 @@ const PayerPanel = ({ group, onClose }: { group: Group, onClose: () => void }) =
                     </div>
                 </ScrollArea>
             </CardContent>
-             <div className="p-4 border-t mt-auto">
-                <Button onClick={onClose} className="w-full">Done</Button>
-            </div>
         </Panel>
     );
 };
@@ -254,7 +250,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
     ] as const;
 
     return (
-        <Panel onClose={onClose} title="Split Options">
+        <Panel onClose={onClose} title="Split Options" description="Choose how to divide the expense.">
             <CardContent className="flex-1 flex flex-col gap-4">
                  <div className="grid grid-cols-4 gap-2">
                     {splitOptions.map(opt => {
@@ -296,9 +292,6 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
                     </div>
                 </ScrollArea>
             </CardContent>
-            <div className="p-4 border-t mt-auto">
-                <Button onClick={onClose} className="w-full">Done</Button>
-            </div>
         </Panel>
     )
 }
@@ -420,7 +413,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
       >
         {/* Main Panel */}
         <div className="w-full flex flex-col h-full">
-          <div className="absolute top-2 right-2 z-10">
+           <div className="absolute top-2 right-2 z-10">
             {!activePanel && <Button variant="ghost" size="icon" onClick={closeDialog} className="h-9 w-9"><X className="h-5 w-5" /></Button>}
           </div>
           <CardHeader>
@@ -535,14 +528,14 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
               </div>
 
           </CardContent>
-          <div className="p-4 mt-auto flex gap-2 border-t">
+          <CardFooter className="p-4 mt-auto flex gap-2 border-t">
             <Button type="button" variant="secondary" className="flex-1" onClick={closeDialog}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting} className="flex-1">
               {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
-          </div>
+          </CardFooter>
         </div>
 
         {/* Side Panel Container */}
@@ -556,5 +549,3 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
     </div>
   );
 }
-
-    
