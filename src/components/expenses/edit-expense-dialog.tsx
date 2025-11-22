@@ -1,20 +1,19 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import type { Group, Expense } from '@/types';
 import { getGroupById, updateExpense } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
 import { getFullName } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '../ui/skeleton';
 import { ExpenseForm } from './expense-form';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -71,10 +70,9 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const { userProfile } = useAuth();
     const [group, setGroup] = useState<Group | null>(initialGroup || null);
     const [isGroupLoading, setIsGroupLoading] = useState(false);
+    const [view, setView] = useState<'main' | 'split' | 'payer'>('main');
     const { settings } = useSiteSettings();
-    const router = useRouter();
     const { toast } = useToast();
-    const isMobile = useIsMobile();
     
     useEffect(() => {
         if (!initialGroup && open) {
@@ -145,6 +143,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
                 participants: participantData,
                 category: expense.category || 'Other',
             });
+            setView('main');
         }
     }, [open, group, expense, form]);
 
@@ -320,59 +319,38 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     isGroupLoading || !group ? (
       <SkeletonLoader />
     ) : (
-      <ExpenseForm group={group} />
+      <ExpenseForm group={group} isEditing={true} view={view} setView={setView} />
     );
-
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="bottom"
-          className="h-full flex flex-col p-0 border-0 bg-background"
-        >
-          <FormProviderWrapper>
-             <SheetHeader className="p-4 border-b">
-                 <SheetTitle>Edit Expense</SheetTitle>
-                 <SheetDescription>
-                    Update the details for "{expense.description}".
-                 </SheetDescription>
-             </SheetHeader>
-            <div className="flex-1 overflow-y-auto p-4">
-               {FormContent}
-            </div>
-             <SheetFooter className="p-4 border-t mt-auto">
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button type="submit" form="edit-expense-form" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </SheetFooter>
-          </FormProviderWrapper>
-        </SheetContent>
-      </Sheet>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit Expense</DialogTitle>
-          <DialogDescription>
-            Update the details for "{expense.description}".
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
         <FormProviderWrapper>
-            <div className="max-h-[60vh] overflow-y-auto p-1 -mx-4 px-4">
-                {FormContent}
+           <div className="relative">
+                <AnimatePresence initial={false}>
+                    <motion.div
+                        key={view}
+                        initial={{ x: view === 'main' ? 0 : '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '-100%' }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="p-6"
+                    >
+                        {FormContent}
+                    </motion.div>
+                </AnimatePresence>
             </div>
-            <DialogFooter className="pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" form="edit-expense-form" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </DialogFooter>
+            {view === 'main' && (
+                <DialogFooter className="p-6 pt-2">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button type="submit" form="edit-expense-form" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                </DialogFooter>
+            )}
         </FormProviderWrapper>
       </DialogContent>
     </Dialog>
   );
 }
+

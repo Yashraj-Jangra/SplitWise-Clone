@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,24 +10,20 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetFooter, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import type { Group } from '@/types';
 import { addExpense } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { ExpenseForm } from './expense-form';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { useDebounce } from '@/hooks/use-debounce';
 import { classifyExpense } from '@/lib/expense-categories';
 import { useSiteSettings } from '@/contexts/site-settings-context';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
@@ -75,10 +71,10 @@ export function AddExpenseDialog({
   onExpenseAdded,
 }: AddExpenseDialogProps) {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<'main' | 'split' | 'payer'>('main');
   const { toast } = useToast();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
-  const isMobile = useIsMobile();
 
   const form = useForm<AddExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -121,6 +117,7 @@ export function AddExpenseDialog({
         })),
         category: 'Other',
       });
+      setView('main');
     }
   }, [open, userProfile, group.members, reset]);
   
@@ -275,57 +272,39 @@ export function AddExpenseDialog({
     </FormProvider>
   );
 
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>{dialogTrigger}</SheetTrigger>
-        <SheetContent
-          side="bottom"
-          className="h-full flex flex-col p-0 border-0 bg-background"
-        >
-          <FormProviderWrapper>
-            <SheetHeader className="p-4 border-b">
-              <SheetTitle>Add Expense</SheetTitle>
-              <SheetDescription>
-                Add a new expense to the group "{group.name}".
-              </SheetDescription>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto p-4">
-              <ExpenseForm group={group} />
-            </div>
-            <SheetFooter className="p-4 border-t mt-auto">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Expense'}
-              </Button>
-            </SheetFooter>
-          </FormProviderWrapper>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Expense</DialogTitle>
-          <DialogDescription>
-            Add a new expense to the group "{group.name}".
-          </DialogDescription>
-        </DialogHeader>
-        <FormProviderWrapper>
-            <div className="max-h-[60vh] overflow-y-auto p-1 -mx-4 px-4">
-                <ExpenseForm group={group} />
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+         <FormProviderWrapper>
+            <div className="relative">
+                <AnimatePresence initial={false}>
+                    <motion.div
+                        key={view}
+                        initial={{ x: view === 'main' ? 0 : '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '-100%' }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="p-6"
+                    >
+                        <ExpenseForm
+                            group={group}
+                            isEditing={false}
+                            view={view}
+                            setView={setView}
+                        />
+                    </motion.div>
+                </AnimatePresence>
             </div>
-            <DialogFooter className="pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Expense'}
-              </Button>
-            </DialogFooter>
-        </FormProviderWrapper>
+            {view === 'main' && (
+              <DialogFooter className="p-6 pt-2">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Saving...' : 'Save Expense'}
+                </Button>
+              </DialogFooter>
+            )}
+         </FormProviderWrapper>
       </DialogContent>
     </Dialog>
   );
