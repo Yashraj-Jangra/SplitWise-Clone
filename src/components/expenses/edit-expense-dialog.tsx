@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import type { Group, Expense } from '@/types';
 import { getGroupById, updateExpense } from '@/lib/mock-data';
@@ -20,8 +20,11 @@ import { ExpenseForm } from './expense-form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '../ui/button';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { useDebounce } from '@/hooks/use-debounce';
+import { classifyExpense } from '@/lib/expense-categories';
+import { useSiteSettings } from '@/contexts/site-settings-context';
 
-// Schema is now defined here
+
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
   amount: z.coerce.number().positive('Amount must be positive.'),
@@ -68,6 +71,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const { userProfile } = useAuth();
     const [group, setGroup] = useState<Group | null>(initialGroup || null);
     const [isGroupLoading, setIsGroupLoading] = useState(false);
+    const { settings } = useSiteSettings();
     const router = useRouter();
     const { toast } = useToast();
     const isMobile = useIsMobile();
@@ -135,12 +139,77 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         resolver: zodResolver(expenseSchema),
         defaultValues,
     });
+
+    const { watch, setValue, getValues } = form;
+
+    const watchDescription = watch('description');
+    const debouncedDescription = useDebounce(watchDescription, 300);
+    const watchAmount = watch('amount');
+    const watchSplitType = watch('splitType');
+    const watchParticipants = watch('participants');
+    const participantDeps = JSON.stringify(watchParticipants?.map((p: any) => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
     
     useEffect(() => {
         if(open && group) {
             form.reset(defaultValues);
         }
     }, [open, defaultValues, form, group]);
+
+    useEffect(() => {
+      if (!debouncedDescription) return;
+      const currentCategory = getValues('category');
+      const { sub: suggestedCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
+      if (suggestedCategory && suggestedCategory !== currentCategory) {
+          setValue('category', suggestedCategory, { shouldValidate: true });
+      }
+    }, [debouncedDescription, settings.expenseCategories, getValues, setValue]);
+
+    useEffect(() => {
+      const totalAmount = Number(watchAmount) || 0;
+      const allParticipants = getValues('participants') || [];
+      const selectedParticipants = allParticipants.filter((p: any) => p.selected);
+      const numSelected = selectedParticipants.length;
+
+      if (totalAmount <= 0 || numSelected === 0) {
+          allParticipants.forEach((_: any, index: number) => {
+              setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+          });
+          return;
+      }
+      
+      let amounts: number[] = [];
+
+      if (watchSplitType === 'equally') {
+          amounts = Array(numSelected).fill(totalAmount / numSelected);
+      } else if (watchSplitType === 'by_shares') {
+          const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.shares) || 1), 0);
+          if (totalShares > 0) {
+              amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
+          }
+      } else if (watchSplitType === 'by_percentage') {
+          amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
+      } else {
+          return;
+      }
+
+      if (amounts.length > 0) {
+          const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
+          let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
+          
+          for (let i = 0; i < Math.abs(remainder * 100); i++) {
+              roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
+          }
+
+          allParticipants.forEach((p: any, index: number) => {
+              const selectedIndex = selectedParticipants.findIndex((sp: any) => sp.userId === p.userId);
+              if (selectedIndex !== -1) {
+                  setValue(`participants.${index}.amountOwed`, roundedAmounts[selectedIndex], { shouldValidate: true });
+              } else {
+                  setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+              }
+          });
+      }
+    }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 
     if (!userProfile) return null;
@@ -248,7 +317,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   const FormProviderWrapper = ({ children }: { children: React.ReactNode }) => (
     <FormProvider {...form}>
-      <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="h-full">
+      <form id="edit-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="h-full flex flex-col">
         {children}
       </form>
     </FormProvider>
@@ -258,7 +327,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     isGroupLoading || !group ? (
       <SkeletonLoader />
     ) : (
-      <ExpenseForm group={group} isEditing />
+      <ExpenseForm group={group} />
     );
 
   if (isMobile) {
@@ -270,9 +339,12 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         >
           <FormProviderWrapper>
              <SheetHeader className="p-4 border-b">
-                 <DialogTitle>Edit Expense</DialogTitle>
+                 <SheetTitle>Edit Expense</SheetTitle>
+                 <SheetDescription>
+                    Update the details for "{expense.description}".
+                 </SheetDescription>
              </SheetHeader>
-            <div className="max-h-full overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4">
                {FormContent}
             </div>
              <SheetFooter className="p-4 border-t mt-auto">

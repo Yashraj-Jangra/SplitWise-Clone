@@ -2,17 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
-import * as z from 'zod';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useFormContext } from 'react-hook-form';
 import {
   FormControl,
   FormField,
@@ -24,103 +14,32 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Icons, IconName } from '@/components/icons';
+import { Icons } from '@/components/icons';
 import type { Group } from '@/types';
 import { cn, getFullName, getInitials } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
-import { classifyExpense, getMasterCategory } from '@/lib/expense-categories';
+import { getMasterCategory } from '@/lib/expense-categories';
 import { ScrollArea } from '../ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { Textarea } from '../ui/textarea';
-import { useDebounce } from '@/hooks/use-debounce';
-import { AnimatePresence, motion } from 'framer-motion';
-
-// The schema is now defined in the dialog components. This component is only for rendering.
-export const expenseSchema = z.any();
+import { Button } from '../ui/button';
 
 interface ExpenseFormProps {
   group: Group;
-  isEditing?: boolean;
 }
 
-export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
-  const { control, watch, setValue, getValues, formState: { errors } } =
-    useFormContext();
+export function ExpenseForm({ group }: ExpenseFormProps) {
+  const { control, watch, getValues } = useFormContext();
   const { settings } = useSiteSettings();
   
-  const watchDescription = watch('description');
-  const debouncedDescription = useDebounce(watchDescription, 300);
-  const watchAmount = watch('amount');
   const watchPayerType = watch('payerType');
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
-  const participantDeps = JSON.stringify(watchParticipants?.map(p => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
-
-
-  // Auto-suggest category based on description
-  React.useEffect(() => {
-    if (!debouncedDescription) return;
-    const currentCategory = getValues('category');
-    const { sub: suggestedCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
-    if (suggestedCategory && suggestedCategory !== currentCategory) {
-        setValue('category', suggestedCategory, { shouldValidate: true });
-    }
-  }, [debouncedDescription, settings.expenseCategories, getValues, setValue]);
-
-  // Recalculate split amounts when dependencies change
-  React.useEffect(() => {
-    const totalAmount = Number(watchAmount) || 0;
-    const allParticipants = getValues('participants') || [];
-    const selectedParticipants = allParticipants.filter(p => p.selected);
-    const numSelected = selectedParticipants.length;
-
-    if (totalAmount <= 0 || numSelected === 0) {
-        allParticipants.forEach((_, index) => {
-             setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
-        });
-        return;
-    }
-    
-    let amounts: number[] = [];
-
-    if (watchSplitType === 'equally') {
-        amounts = Array(numSelected).fill(totalAmount / numSelected);
-    } else if (watchSplitType === 'by_shares') {
-        const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 1), 0);
-        if (totalShares > 0) {
-            amounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 1)) / totalShares);
-        }
-    } else if (watchSplitType === 'by_percentage') {
-        amounts = selectedParticipants.map(p => (totalAmount * (Number(p.percentage) || 0)) / 100);
-    } else {
-        return; // Don't auto-calculate for 'unequally'
-    }
-
-    if (amounts.length > 0) {
-        // Distribute rounding errors
-        const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
-        let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
-        
-        for (let i = 0; i < Math.abs(remainder * 100); i++) {
-            roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
-        }
-
-        allParticipants.forEach((p, index) => {
-            const selectedIndex = selectedParticipants.findIndex(sp => sp.userId === p.userId);
-            if (selectedIndex !== -1) {
-                setValue(`participants.${index}.amountOwed`, roundedAmounts[selectedIndex], { shouldValidate: true });
-            } else {
-                setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
-            }
-        });
-    }
-  }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
-
-
+  
   const category = watch('category');
   const masterCategory = getMasterCategory(category, settings.expenseCategories);
   const categoryDetails = settings.expenseCategories[masterCategory]?.subCategories?.[category];
@@ -183,10 +102,10 @@ export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
                 <Popover><PopoverTrigger asChild><FormControl>
                     <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
                         <Icons.Calendar className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                        {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
                     </Button>
                 </FormControl></PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover>
+                <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus /></PopoverContent></Popover>
                 <FormMessage />
             </FormItem>
         )} />
@@ -204,32 +123,29 @@ export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
         </FormItem>
       )} />
       
-       <AnimatePresence>
-        {watchPayerType === 'single' ? (
-          <motion.div key="single" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <FormField control={control} name="singlePayerId" render={({ field }) => (
-              <FormItem>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select who paid..." /></SelectTrigger></FormControl>
-                  <SelectContent>{group.members.map(m => <SelectItem key={m.uid} value={m.uid}>{getFullName(m.firstName, m.lastName)}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage />
+      {watchPayerType === 'single' ? (
+          <FormField control={control} name="singlePayerId" render={({ field }) => (
+            <FormItem>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Select who paid..." /></SelectTrigger></FormControl>
+                <SelectContent>{group.members.map(m => <SelectItem key={m.uid} value={m.uid}>{getFullName(m.firstName, m.lastName)}</SelectItem>)}</SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+      ) : (
+        <div className="space-y-2">
+          {getValues('multiPayers')?.map((_: any, index: number) => (
+            <FormField key={index} control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (
+              <FormItem className="flex items-center gap-2 space-y-0">
+                <FormLabel className="font-normal w-1/2">{getValues(`multiPayers.${index}.name`)}</FormLabel>
+                <div className="relative w-1/2"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)} className="pl-6"/></div>
               </FormItem>
-            )} />
-          </motion.div>
-        ) : (
-          <motion.div key="multiple" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-2">
-            {getValues('multiPayers')?.map((_, index) => (
-              <FormField key={index} control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (
-                <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormLabel className="font-normal w-1/2">{getValues(`multiPayers.${index}.name`)}</FormLabel>
-                  <div className="relative w-1/2"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{CURRENCY_SYMBOL}</span><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)} className="pl-6"/></div>
-                </FormItem>
-              ))} />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ))} />
+          ))}
+          <FormMessage>{getValues('formState.errors.multiPayers.message')}</FormMessage>
+        </div>
+      )}
       
        <FormField control={control} name="splitType" render={({ field }) => (
         <FormItem>
@@ -247,7 +163,7 @@ export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
         <FormLabel>Participants</FormLabel>
         <ScrollArea className="h-40 border rounded-md">
             <div className="p-2 space-y-1">
-                {watchParticipants && watchParticipants.map((p, index) => (
+                {watchParticipants && watchParticipants.map((p: any, index: number) => (
                      <div key={p.userId} className={cn("flex items-center gap-3 p-2 rounded-md", p.selected ? "bg-muted/50" : "")}>
                         <FormField
                             control={control}
@@ -277,7 +193,22 @@ export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
                 ))}
             </div>
         </ScrollArea>
+        <FormMessage>{(getValues('formState.errors.participants') as any)?.message}</FormMessage>
       </div>
+
+       <FormField
+        control={control}
+        name="notes"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Notes (Optional)</FormLabel>
+            <FormControl>
+              <Textarea placeholder="Any extra details about the expense." {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

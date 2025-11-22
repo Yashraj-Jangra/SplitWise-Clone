@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetFooter } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetFooter, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import type { Group } from '@/types';
@@ -25,8 +25,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ExpenseForm } from './expense-form';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { useDebounce } from '@/hooks/use-debounce';
+import { classifyExpense } from '@/lib/expense-categories';
+import { useSiteSettings } from '@/contexts/site-settings-context';
 
-// Schema is now defined here
+
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
   amount: z.coerce.number().positive('Amount must be positive.'),
@@ -73,6 +76,7 @@ export function AddExpenseDialog({
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { userProfile } = useAuth();
+  const { settings } = useSiteSettings();
   const isMobile = useIsMobile();
 
   const defaultValues = useMemo(() => {
@@ -108,17 +112,81 @@ export function AddExpenseDialog({
     defaultValues,
   });
 
+  const { watch, setValue, getValues } = form;
+
+  const watchDescription = watch('description');
+  const debouncedDescription = useDebounce(watchDescription, 300);
+  const watchAmount = watch('amount');
+  const watchSplitType = watch('splitType');
+  const watchParticipants = watch('participants');
+  const participantDeps = JSON.stringify(watchParticipants?.map((p: any) => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
+
   useEffect(() => {
     if (open) {
-      form.reset(defaultValues);
+      form.reset(defaultValues as any);
     }
   }, [open, form, defaultValues]);
+  
+  useEffect(() => {
+    if (!debouncedDescription) return;
+    const currentCategory = getValues('category');
+    const { sub: suggestedCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
+    if (suggestedCategory && suggestedCategory !== currentCategory) {
+        setValue('category', suggestedCategory, { shouldValidate: true });
+    }
+  }, [debouncedDescription, settings.expenseCategories, getValues, setValue]);
+
+  useEffect(() => {
+    const totalAmount = Number(watchAmount) || 0;
+    const allParticipants = getValues('participants') || [];
+    const selectedParticipants = allParticipants.filter((p: any) => p.selected);
+    const numSelected = selectedParticipants.length;
+
+    if (totalAmount <= 0 || numSelected === 0) {
+        allParticipants.forEach((_: any, index: number) => {
+             setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+        });
+        return;
+    }
+    
+    let amounts: number[] = [];
+
+    if (watchSplitType === 'equally') {
+        amounts = Array(numSelected).fill(totalAmount / numSelected);
+    } else if (watchSplitType === 'by_shares') {
+        const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.shares) || 1), 0);
+        if (totalShares > 0) {
+            amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
+        }
+    } else if (watchSplitType === 'by_percentage') {
+        amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
+    } else {
+        return;
+    }
+
+    if (amounts.length > 0) {
+        const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
+        let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
+        
+        for (let i = 0; i < Math.abs(remainder * 100); i++) {
+            roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
+        }
+
+        allParticipants.forEach((p: any, index: number) => {
+            const selectedIndex = selectedParticipants.findIndex((sp: any) => sp.userId === p.userId);
+            if (selectedIndex !== -1) {
+                setValue(`participants.${index}.amountOwed`, roundedAmounts[selectedIndex], { shouldValidate: true });
+            } else {
+                setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+            }
+        });
+    }
+  }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;
 
-    // Manual validation
     const totalAmount = Number(values.amount);
 
     if (values.payerType === 'multiple') {
@@ -218,7 +286,15 @@ export function AddExpenseDialog({
           className="h-full flex flex-col p-0 border-0 bg-background"
         >
           <FormProviderWrapper>
-            <ExpenseForm group={group} isEditing={false} />
+            <SheetHeader className="p-4 border-b">
+              <SheetTitle>Add Expense</SheetTitle>
+              <SheetDescription>
+                Add a new expense to the group "{group.name}".
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto p-4">
+              <ExpenseForm group={group} />
+            </div>
             <SheetFooter className="p-4 border-t mt-auto">
                 <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting}>
@@ -243,7 +319,7 @@ export function AddExpenseDialog({
         </DialogHeader>
         <FormProviderWrapper>
             <div className="max-h-[60vh] overflow-y-auto p-1 -mx-4 px-4">
-                <ExpenseForm group={group} isEditing={false} />
+                <ExpenseForm group={group} />
             </div>
             <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -256,3 +332,4 @@ export function AddExpenseDialog({
     </Dialog>
   );
 }
+    
