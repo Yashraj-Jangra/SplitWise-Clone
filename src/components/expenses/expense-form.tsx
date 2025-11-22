@@ -19,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Icons, IconName } from '@/components/icons';
-import type { Group } from '@/types';
+import type { Group, UserProfile } from '@/types';
 import { cn, getFullName, getInitials } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -32,8 +32,9 @@ import { useSiteSettings } from '@/contexts/site-settings-context';
 import { useAuth } from '@/contexts/auth-context';
 import { Textarea } from '../ui/textarea';
 import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { X } from 'lucide-react';
+import { X, CheckCircle2, Circle } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Badge } from '../ui/badge';
 
 // --- Form Schema ---
 export const expenseSchema = z
@@ -74,6 +75,7 @@ export const expenseSchema = z
       .min(1, 'At least one participant is required.')
       .refine((arr) => arr.some((p) => p.selected), {
         message: 'At least one participant must be selected.',
+        path: ['-'], // General error for the array
       }),
     category: z.string({ required_error: 'Category is required.' }),
   })
@@ -143,7 +145,7 @@ interface ExpenseFormProps {
 
 // --- Panel Components ---
 
-const Panel = ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
+const Panel = ({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) => (
   <motion.div
     initial={{ x: '100%' }}
     animate={{ x: 0 }}
@@ -151,11 +153,14 @@ const Panel = ({ children, onClose }: { children: React.ReactNode; onClose: () =
     transition={{ duration: 0.3, ease: 'easeInOut' }}
     className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col"
   >
-    <div className="absolute top-4 right-4 z-10">
-      <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+    <div className="absolute top-2 right-2 z-10">
+      <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9">
         <X className="h-5 w-5" />
       </Button>
     </div>
+    <CardHeader className="pt-8">
+        <CardTitle>{title}</CardTitle>
+    </CardHeader>
     {children}
   </motion.div>
 );
@@ -165,11 +170,7 @@ const PayerPanel = ({ group, onClose }: { group: Group, onClose: () => void }) =
     const payerType = watch('payerType');
 
     return (
-        <Panel onClose={onClose}>
-            <CardHeader className="pt-10">
-                <CardTitle>Who paid?</CardTitle>
-                <CardDescription>Select a single payer or multiple people.</CardDescription>
-            </CardHeader>
+        <Panel onClose={onClose} title="Paid By">
             <CardContent className="flex-1 flex flex-col gap-4">
                  <Tabs defaultValue="single" className="w-full" value={payerType} onValueChange={(v) => setValue('payerType', v as any, { shouldValidate: true })}>
                     <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="single">Single Person</TabsTrigger><TabsTrigger value="multiple">Multiple People</TabsTrigger></TabsList>
@@ -232,7 +233,7 @@ const PayerPanel = ({ group, onClose }: { group: Group, onClose: () => void }) =
                     </div>
                 </ScrollArea>
             </CardContent>
-             <div className="p-4 border-t">
+             <div className="p-4 border-t mt-auto">
                 <Button onClick={onClose} className="w-full">Done</Button>
             </div>
         </Panel>
@@ -253,11 +254,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
     ] as const;
 
     return (
-        <Panel onClose={onClose}>
-            <CardHeader className="pt-10">
-                <CardTitle>Split options</CardTitle>
-                <CardDescription>Choose how to divide the expense.</CardDescription>
-            </CardHeader>
+        <Panel onClose={onClose} title="Split Options">
             <CardContent className="flex-1 flex flex-col gap-4">
                  <div className="grid grid-cols-4 gap-2">
                     {splitOptions.map(opt => {
@@ -299,7 +296,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
                     </div>
                 </ScrollArea>
             </CardContent>
-            <div className="p-4 border-t">
+            <div className="p-4 border-t mt-auto">
                 <Button onClick={onClose} className="w-full">Done</Button>
             </div>
         </Panel>
@@ -309,7 +306,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
 // --- Main Form Component ---
 
 export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFormProps) {
-  const { control, watch, setValue, getValues, formState: { isSubmitting } } =
+  const { control, watch, setValue, getValues, formState: { isSubmitting, errors } } =
     useFormContext<z.infer<typeof expenseSchema>>();
   const { settings } = useSiteSettings();
   const { userProfile } = useAuth();
@@ -324,27 +321,28 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
   const watchParticipants = watch('participants');
   const watchSinglePayerId = watch('singlePayerId');
   const watchMultiPayers = watch('multiPayers');
+  const participantDeps = JSON.stringify(watchParticipants.map(p => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
 
+
+  // Auto-suggest category based on description
   React.useEffect(() => {
+    if (!debouncedDescription) return;
     const currentCategory = getValues('category');
-    if (debouncedDescription) {
-      const { sub: suggestedCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
-      if (suggestedCategory && currentCategory === 'Other') {
+    const { sub: suggestedCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
+    if (suggestedCategory && suggestedCategory !== currentCategory) {
         setValue('category', suggestedCategory, { shouldValidate: true });
-      }
     }
   }, [debouncedDescription, settings.expenseCategories, getValues, setValue]);
 
-  // Recalculation effect
+  // Recalculate split amounts when dependencies change
   React.useEffect(() => {
-    const totalAmount = Number(getValues("amount")) || 0;
-    const splitType = getValues("splitType");
-    const allParticipants = getValues("participants") || [];
-    const selectedParticipants = allParticipants.filter((p: any) => p.selected);
+    const totalAmount = Number(watchAmount) || 0;
+    const allParticipants = getValues('participants') || [];
+    const selectedParticipants = allParticipants.filter(p => p.selected);
     const numSelected = selectedParticipants.length;
 
     if (totalAmount <= 0 || numSelected === 0) {
-        allParticipants.forEach((_: any, index: number) => {
+        allParticipants.forEach((_, index) => {
              setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
         });
         return;
@@ -352,16 +350,17 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
     
     let amounts: number[] = [];
 
-    if (splitType === 'equally') {
-        const baseAmount = totalAmount / numSelected;
-        amounts = Array(numSelected).fill(baseAmount);
-    } else if (splitType === 'by_shares') {
-        const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.shares) || 1), 0);
+    if (watchSplitType === 'equally') {
+        amounts = Array(numSelected).fill(totalAmount / numSelected);
+    } else if (watchSplitType === 'by_shares') {
+        const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 1), 0);
         if (totalShares > 0) {
             amounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 1)) / totalShares);
         }
-    } else if (splitType === 'by_percentage') {
+    } else if (watchSplitType === 'by_percentage') {
         amounts = selectedParticipants.map(p => (totalAmount * (Number(p.percentage) || 0)) / 100);
+    } else {
+        return; // Don't auto-calculate for 'unequally'
     }
 
     if (amounts.length > 0) {
@@ -382,7 +381,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
             }
         });
     }
-}, [watchAmount, watchSplitType, watchParticipants.filter(p => p.selected).length, JSON.stringify(watchParticipants.map(p => p.shares)), JSON.stringify(watchParticipants.map(p => p.percentage))]);
+  }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 
   const category = watch('category');
@@ -403,23 +402,8 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
         return `${payingCount} people`;
     }
   }
-
-  const getUserBalanceInfo = () => {
-    const amount = Number(watchAmount) || 0;
-    if (amount === 0 || !userProfile) return null;
-
-    const userPaid = watchPayerType === 'single'
-        ? (watchSinglePayerId === userProfile.uid ? amount : 0)
-        : (watchMultiPayers?.find(p => p.userId === userProfile.uid)?.amount || 0);
-
-    const userOwed = watchParticipants.find(p => p.userId === userProfile.uid)?.amountOwed || 0;
-    
-    const net = userPaid - userOwed;
-    
-    if (Math.abs(net) < 0.01) return null;
-
-    return net > 0 ? `You get back ${CURRENCY_SYMBOL}${net.toFixed(2)}` : `You owe ${CURRENCY_SYMBOL}${Math.abs(net).toFixed(2)}`;
-  }
+  
+  const selectedParticipantList = watchParticipants.filter(p => p.selected);
 
   return (
     <div
@@ -435,14 +419,27 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
         className="grid grid-cols-2 w-[200%]"
       >
         {/* Main Panel */}
-        <div className="w-full flex flex-col">
-          <div className="absolute top-4 right-4 z-10">
-            {!activePanel && <Button variant="ghost" size="icon" onClick={closeDialog} className="h-8 w-8"><X className="h-5 w-5" /></Button>}
+        <div className="w-full flex flex-col h-full">
+          <div className="absolute top-2 right-2 z-10">
+            {!activePanel && <Button variant="ghost" size="icon" onClick={closeDialog} className="h-9 w-9"><X className="h-5 w-5" /></Button>}
           </div>
           <CardHeader>
             <CardTitle>{isEditing ? 'Edit Expense' : 'Add Expense'}</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 space-y-4">
+          <CardContent className="flex-1 space-y-4 overflow-y-auto">
+              {selectedParticipantList.length > 0 && (
+                <div className="space-y-2">
+                    <FormLabel>With</FormLabel>
+                    <div className="flex flex-wrap gap-2">
+                        {selectedParticipantList.map((p, index) => (
+                            <Badge key={p.userId} variant="secondary" className="pl-2">
+                                {p.name}
+                                <button type="button" onClick={() => setValue(`participants.${watchParticipants.findIndex(par => par.userId === p.userId)}.selected`, false, { shouldValidate: true })} className="ml-1 rounded-full p-0.5 hover:bg-destructive/20 text-destructive"><X className="h-3 w-3" /></button>
+                            </Badge>
+                        ))}
+                    </div>
+                </div>
+              )}
               <FormField control={control} name="description" render={({ field }) => (
                 <FormItem>
                     <FormControl><Input placeholder="Description" {...field} className="h-12 text-lg px-2 border-x-0 border-t-0 rounded-none -mx-2 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent" /></FormControl>
@@ -459,12 +456,11 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
                 </FormItem>
               )} />
 
-              <div className="text-muted-foreground">
+              <div className="text-muted-foreground text-lg">
                   Paid by <button type="button" onClick={() => setActivePanel('payer')} className="font-bold underline text-primary">{getPayerSummary()}</button> and split <button type="button" onClick={() => setActivePanel('split')} className="font-bold underline text-primary">{watchSplitType}</button>.
-                  <span className="block text-xs mt-1">{getUserBalanceInfo()}</span>
               </div>
               
-               <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-2">
                 <FormField control={control} name="category" render={({ field }) => (
                     <FormItem>
                     <Select onValueChange={field.onChange} value={field.value}>
@@ -506,10 +502,38 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
               
               <FormField control={control} name="notes" render={({ field }) => (
                 <FormItem>
-                    <FormControl><Textarea placeholder="Add notes or an image URL..." {...field} className="text-xs min-h-[60px]"/></FormControl>
+                    <FormControl><Textarea placeholder="Add notes..." {...field} className="text-sm min-h-[60px]"/></FormControl>
                     <FormMessage />
                 </FormItem>
               )} />
+              <div className="space-y-2 pt-2">
+                <FormLabel>Participants</FormLabel>
+                <ScrollArea className="h-40 border rounded-md">
+                    <div className="p-2 space-y-1">
+                        {watchParticipants.map((p, index) => (
+                             <div key={p.userId} className={cn("flex items-center gap-3 p-2 rounded-md", p.selected ? "bg-muted/50" : "")}>
+                                <FormField
+                                    control={control}
+                                    name={`participants.${index}.selected`}
+                                    render={({ field }) => (
+                                        <FormItem className="flex items-center">
+                                            <FormControl>
+                                                <Checkbox
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <Avatar className="h-8 w-8"><AvatarImage src={p.avatarUrl} /><AvatarFallback>{getInitials(p.name)}</AvatarFallback></Avatar>
+                                <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+              </div>
+
           </CardContent>
           <div className="p-4 mt-auto flex gap-2 border-t">
             <Button type="button" variant="secondary" className="flex-1" onClick={closeDialog}>
@@ -522,7 +546,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
         </div>
 
         {/* Side Panel Container */}
-        <div className="w-full flex flex-col relative">
+        <div className="w-full flex flex-col relative h-full">
           <AnimatePresence>
             {activePanel === 'payer' && <PayerPanel group={group} onClose={() => setActivePanel(null)} />}
             {activePanel === 'split' && <SplitterPanel onClose={() => setActivePanel(null)} />}
@@ -533,221 +557,4 @@ export function ExpenseForm({ group, closeDialog, isEditing = false }: ExpenseFo
   );
 }
 
-```
-  </change>
-  <change>
-    <file>src/components/expenses/add-expense-dialog.tsx</file>
-    <content><![CDATA[
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useRouter } from 'next/navigation';
-
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Icons } from '@/components/icons';
-import { useToast } from '@/hooks/use-toast';
-import type { Group } from '@/types';
-import { addExpense } from '@/lib/mock-data';
-import { useAuth } from '@/contexts/auth-context';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { expenseSchema, ExpenseForm } from './expense-form';
-import { errorEmitter } from '@/firebase/error-emitter';
-
-type AddExpenseFormValues = z.infer<typeof expenseSchema>;
-
-interface AddExpenseDialogProps {
-  group: Group;
-  onExpenseAdded?: () => void;
-  trigger?: React.ReactNode;
-}
-
-export function AddExpenseDialog({
-  group,
-  onExpenseAdded,
-  trigger,
-}: AddExpenseDialogProps) {
-  const [open, setOpen] = useState(false);
-  const router = useRouter();
-  const { toast } = useToast();
-  const { userProfile } = useAuth();
-  const isMobile = useIsMobile();
-
-  const form = useForm<AddExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      description: '',
-      amount: undefined,
-      date: new Date(),
-      notes: '',
-      payerType: 'single',
-      splitType: 'equally',
-      category: 'Other',
-    },
-  });
-
-  useEffect(() => {
-    if (userProfile && open) {
-      form.reset({
-        description: '',
-        amount: undefined,
-        date: new Date(),
-        notes: '',
-        payerType: 'single',
-        singlePayerId: userProfile.uid,
-        multiPayers: group.members.map((member) => ({
-          userId: member.uid,
-          name: `${member.firstName} ${member.lastName || ''}`.trim(),
-          amount: undefined,
-        })),
-        splitType: 'equally',
-        participants: group.members.map((member) => ({
-          userId: member.uid,
-          name: `${member.firstName} ${member.lastName || ''}`.trim(),
-          avatarUrl: member.avatarUrl,
-          selected: true,
-          amountOwed: 0,
-          shares: 1,
-          percentage: 0,
-        })),
-        category: 'Other',
-      });
-    }
-  }, [userProfile, open, group.members, form]);
-
-  async function onSubmit(values: AddExpenseFormValues) {
-    if (!userProfile) return;
-
-    let payers: { userId: string; amount: number }[] = [];
-    if (values.payerType === 'single' && values.singlePayerId) {
-      payers = [{ userId: values.singlePayerId, amount: values.amount }];
-    } else {
-      payers =
-        values.multiPayers
-          ?.filter((p) => p.amount && p.amount > 0)
-          .map((p) => ({ userId: p.userId, amount: p.amount! })) || [];
-    }
-
-    if (payers.length === 0) {
-      form.setError('payerType', {
-        type: 'manual',
-        message: 'At least one payer must be specified.',
-      });
-      return;
-    }
-
-    const finalParticipants = values.participants
-      .filter((p) => p.selected)
-      .map((p) => ({
-        userId: p.userId,
-        amountOwed: Number(p.amountOwed) || 0,
-        share: Number(p.shares) || 1,
-      }));
-
-    if (finalParticipants.length === 0) {
-      form.setError('participants', {
-        type: 'manual',
-        message: 'At least one participant must be selected.',
-      });
-      return;
-    }
-
-    const totalAmount = Number(values.amount);
-
-    const expenseData = {
-      groupId: group.id,
-      description: values.description,
-      amount: totalAmount,
-      date: values.date,
-      notes: values.notes || '',
-      payers,
-      participants: finalParticipants,
-      splitType: values.splitType,
-      category: values.category,
-    };
-
-    try {
-      await addExpense(expenseData, userProfile.uid);
-      toast({
-        title: 'Expense Added!',
-        description: `"${values.description}" has been successfully added to ${group.name}.`,
-      });
-      setOpen(false);
-      if (onExpenseAdded) onExpenseAdded();
-      window.dispatchEvent(new CustomEvent('data-changed'));
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'An unknown error occurred.';
-      errorEmitter.emit('permission-error', {
-        message: errorMessage,
-        context: {
-          path: 'expenses',
-          operation: 'create',
-          requestResourceData: expenseData,
-        },
-      });
-      toast({
-        title: 'Error Adding Expense',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    }
-  }
-
-  if (!userProfile) return null;
-
-  const dialogTrigger = trigger || (
-    <Button>
-      <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
-    </Button>
-  );
-  const mobileTrigger = trigger || (
-    <Button className="w-full">
-      <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
-    </Button>
-  );
-
-  const FormProviderWrapper = ({ children }: { children: React.ReactNode }) => (
-    <FormProvider {...form}>
-      <form id="add-expense-form" onSubmit={form.handleSubmit(onSubmit)} className="h-full">
-        {children}
-      </form>
-    </FormProvider>
-  );
-
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>{mobileTrigger}</SheetTrigger>
-        <SheetContent
-          side="bottom"
-          className="h-screen flex flex-col p-0 border-0 bg-background"
-        >
-          <FormProviderWrapper>
-            <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
-          </FormProviderWrapper>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
-      <DialogContent className="max-w-none w-auto p-0 border-0 bg-transparent shadow-none">
-        <FormProviderWrapper>
-          <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
-        </FormProviderWrapper>
-      </DialogContent>
-    </Dialog>
-  );
-}
+    
