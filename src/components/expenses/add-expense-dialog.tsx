@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -32,7 +31,7 @@ import { useSiteSettings } from '@/contexts/site-settings-context';
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
-  amount: z.coerce.number().positive('Amount must be positive.'),
+  amount: z.coerce.number({ invalid_type_error: "Amount is required." }).positive('Amount must be positive.'),
   date: z.date({ required_error: 'Date is required.' }),
   notes: z.string().max(200, 'Notes must be 200 characters or less.').optional(),
   payerType: z.enum(['single', 'multiple']).default('single'),
@@ -67,11 +66,13 @@ type AddExpenseFormValues = z.infer<typeof expenseSchema>;
 interface AddExpenseDialogProps {
   group: Group;
   trigger?: React.ReactNode;
+  onExpenseAdded?: () => void;
 }
 
 export function AddExpenseDialog({
   group,
   trigger,
+  onExpenseAdded,
 }: AddExpenseDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -116,10 +117,14 @@ export function AddExpenseDialog({
 
   const watchDescription = watch('description');
   const debouncedDescription = useDebounce(watchDescription, 300);
+  
+  // Dynamic calculation logic
   const watchAmount = watch('amount');
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
+  // Stringify deps to avoid infinite loops from object references
   const participantDeps = JSON.stringify(watchParticipants?.map((p: any) => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
+
 
   useEffect(() => {
     if (open) {
@@ -181,6 +186,7 @@ export function AddExpenseDialog({
             }
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 
@@ -250,6 +256,7 @@ export function AddExpenseDialog({
         description: `"${values.description}" has been successfully added to ${group.name}.`,
       });
       setOpen(false);
+      if (onExpenseAdded) onExpenseAdded();
       appEventEmitter.emit('data-changed');
     } catch (error) {
       const errorMessage =

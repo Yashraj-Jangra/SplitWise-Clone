@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -27,7 +26,7 @@ import { useSiteSettings } from '@/contexts/site-settings-context';
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
-  amount: z.coerce.number().positive('Amount must be positive.'),
+  amount: z.coerce.number({ invalid_type_error: "Amount is required." }).positive('Amount must be positive.'),
   date: z.date({ required_error: 'Date is required.' }),
   notes: z.string().max(200, 'Notes must be 200 characters or less.').optional(),
   payerType: z.enum(['single', 'multiple']).default('single'),
@@ -70,7 +69,7 @@ interface EditExpenseDialogProps {
 export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup }: EditExpenseDialogProps) {
     const { userProfile } = useAuth();
     const [group, setGroup] = useState<Group | null>(initialGroup || null);
-    const [isGroupLoading, setIsGroupLoading] = useState(false);
+    const [isGroupLoading, setIsGroupLoading = useState(false);
     const { settings } = useSiteSettings();
     const router = useRouter();
     const { toast } = useToast();
@@ -209,6 +208,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
               }
           });
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 
