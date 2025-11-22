@@ -86,7 +86,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             amount: expense.amount,
             date: new Date(expense.date),
             notes: expense.notes || '',
-            payerType: expense.payers.length > 1 ? 'multiple' : 'single',
+            payerType: expense.payers.length > 1 ? 'multiple' as const : 'single' as const,
             singlePayerId: expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
             multiPayers: group.members.map((member) => ({
                 userId: member.uid,
@@ -106,10 +106,10 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     
     // Reset form when dialog opens
     useEffect(() => {
-        if(open) {
+        if(open && group) {
             form.reset(defaultValues);
         }
-    }, [open, defaultValues, form]);
+    }, [open, defaultValues, form, group]);
 
 
     if (!userProfile) return null;

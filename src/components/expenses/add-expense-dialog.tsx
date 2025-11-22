@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -50,14 +49,14 @@ export function AddExpenseDialog({
       amount: undefined,
       date: new Date(),
       notes: '',
-      payerType: 'single',
+      payerType: 'single' as const,
       singlePayerId: userProfile.uid,
       multiPayers: group.members.map((member) => ({
         userId: member.uid,
         name: `${member.firstName} ${member.lastName || ''}`.trim(),
         amount: undefined,
       })),
-      splitType: 'equally',
+      splitType: 'equally' as const,
       participants: group.members.map((member) => ({
         userId: member.uid,
         name: `${member.firstName} ${member.lastName || ''}`.trim(),

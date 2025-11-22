@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -25,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Icons, IconName } from '@/components/icons';
-import type { Group, UserProfile } from '@/types';
+import type { Group } from '@/types';
 import { cn, getFullName, getInitials } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -35,10 +34,8 @@ import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSiteSettings } from '@/contexts/site-settings-context';
-import { useAuth } from '@/contexts/auth-context';
 import { Textarea } from '../ui/textarea';
 import { useDebounce } from '@/hooks/use-debounce';
-import { Badge } from '../ui/badge';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // --- Form Schema ---
@@ -96,7 +93,6 @@ export const expenseSchema = z
         });
       }
     } else {
-      // multiple
       const totalPaid =
         data.multiPayers?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
       if (Math.abs(totalPaid - totalAmount) > 0.01) {
@@ -379,7 +375,6 @@ export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
             </div>
         </ScrollArea>
       </div>
-
     </div>
   );
 }
