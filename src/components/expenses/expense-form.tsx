@@ -19,7 +19,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -37,7 +36,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import type { Group } from '@/types';
 import { X, ArrowLeft } from 'lucide-react';
-import { DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { DialogHeader, DialogTitle } from '../ui/dialog';
 
 interface ExpenseFormProps {
   group: Group;
@@ -124,7 +123,7 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-0 bg-transparent shadow-none px-0 focus-visible:ring-0" />
+                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-0 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:border-b focus-visible:rounded-none transition-all duration-200" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -147,7 +146,7 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                          className="pl-2 text-4xl font-bold border-0 bg-transparent shadow-none px-0 focus-visible:ring-0 h-auto"
+                          className="pl-2 text-4xl font-bold border-0 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:border-b focus-visible:rounded-none h-auto transition-all duration-200"
                         />
                       </div>
                     </FormControl>
@@ -276,7 +275,7 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
 }
 
 const SplitView = ({ setView }: { setView: (view: 'main') => void }) => {
-    const { control, watch, setValue, formState: { errors } } = useFormContext();
+    const { control, watch, formState: { errors } } = useFormContext();
     const watchSplitType = watch('splitType');
     const watchParticipants = watch('participants');
     const watchAmount = watch('amount');

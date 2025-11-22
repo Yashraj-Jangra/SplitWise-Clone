@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -20,10 +21,6 @@ import { addExpense } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
 import { ExpenseForm } from './expense-form';
 import { appEventEmitter } from '@/lib/event-emitter';
-import { useDebounce } from '@/hooks/use-debounce';
-import { classifyExpense } from '@/lib/expense-categories';
-import { useSiteSettings } from '@/contexts/site-settings-context';
-import { AnimatePresence, motion } from 'framer-motion';
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
@@ -74,16 +71,12 @@ export function AddExpenseDialog({
   const [view, setView] = useState<'main' | 'split' | 'payer'>('main');
   const { toast } = useToast();
   const { userProfile } = useAuth();
-  const { settings } = useSiteSettings();
 
   const form = useForm<AddExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
   });
 
   const { watch, setValue, getValues, reset } = form;
-
-  const watchDescription = watch('description');
-  const debouncedDescription = useDebounce(watchDescription, 300);
   
   const watchAmount = watch('amount');
   const watchSplitType = watch('splitType');
@@ -120,15 +113,6 @@ export function AddExpenseDialog({
       setView('main');
     }
   }, [open, userProfile, group.members, reset]);
-  
-  useEffect(() => {
-    if (!debouncedDescription) return;
-    const currentCategory = getValues('category');
-    const { sub: suggestedCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
-    if (suggestedCategory && suggestedCategory !== currentCategory) {
-        setValue('category', suggestedCategory, { shouldValidate: true });
-    }
-  }, [debouncedDescription, settings.expenseCategories, getValues, setValue]);
 
   useEffect(() => {
     const totalAmount = Number(watchAmount) || 0;

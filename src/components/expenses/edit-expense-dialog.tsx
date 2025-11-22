@@ -5,10 +5,9 @@ import { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { Group, Expense } from '@/types';
 import { getGroupById, updateExpense } from '@/lib/mock-data';
@@ -19,10 +18,6 @@ import { ExpenseForm } from './expense-form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '../ui/button';
 import { appEventEmitter } from '@/lib/event-emitter';
-import { useDebounce } from '@/hooks/use-debounce';
-import { classifyExpense } from '@/lib/expense-categories';
-import { useSiteSettings } from '@/contexts/site-settings-context';
-
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
@@ -71,7 +66,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const [group, setGroup] = useState<Group | null>(initialGroup || null);
     const [isGroupLoading, setIsGroupLoading] = useState(false);
     const [view, setView] = useState<'main' | 'split' | 'payer'>('main');
-    const { settings } = useSiteSettings();
     const { toast } = useToast();
     
     useEffect(() => {
@@ -94,8 +88,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     const { watch, setValue, getValues } = form;
 
-    const watchDescription = watch('description');
-    const debouncedDescription = useDebounce(watchDescription, 300);
     const watchAmount = watch('amount');
     const watchSplitType = watch('splitType');
     const watchParticipants = watch('participants');
@@ -146,15 +138,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             setView('main');
         }
     }, [open, group, expense, form]);
-
-    useEffect(() => {
-      if (!debouncedDescription) return;
-      const currentCategory = getValues('category');
-      const { sub: suggestedCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
-      if (suggestedCategory && suggestedCategory !== currentCategory) {
-          setValue('category', suggestedCategory, { shouldValidate: true });
-      }
-    }, [debouncedDescription, settings.expenseCategories, getValues, setValue]);
 
     useEffect(() => {
       const totalAmount = Number(watchAmount) || 0;
@@ -353,4 +336,3 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     </Dialog>
   );
 }
-
