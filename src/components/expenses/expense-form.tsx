@@ -39,106 +39,8 @@ import { Textarea } from '../ui/textarea';
 import { useDebounce } from '@/hooks/use-debounce';
 import { AnimatePresence, motion } from 'framer-motion';
 
-// --- Form Schema ---
-export const expenseSchema = z
-  .object({
-    description: z.string().min(1, 'Description is required.').max(100),
-    amount: z.coerce.number().positive('Amount must be positive.'),
-    date: z.date({ required_error: 'Date is required.' }),
-    notes: z.string().max(200, 'Notes must be 200 characters or less.').optional(),
-    payerType: z.enum(['single', 'multiple']).default('single'),
-    singlePayerId: z.string().optional(),
-    multiPayers: z
-      .array(
-        z.object({
-          userId: z.string(),
-          name: z.string(),
-          amount: z.coerce.number().optional(),
-        })
-      )
-      .optional(),
-    splitType: z.enum(['equally', 'unequally', 'by_shares', 'by_percentage']),
-    participants: z
-      .array(
-        z.object({
-          userId: z.string(),
-          name: z.string(),
-          avatarUrl: z.string().optional(),
-          selected: z.boolean(),
-          amountOwed: z.coerce.number().optional(),
-          shares: z.coerce.number().min(0, 'Shares cannot be negative').optional(),
-          percentage: z
-            .coerce
-            .number()
-            .min(0, 'Percentage cannot be negative')
-            .max(100, 'Percentage cannot exceed 100')
-            .optional(),
-        })
-      )
-      .min(1, 'At least one participant is required.')
-      .refine((arr) => arr.some((p) => p.selected), {
-        message: 'At least one participant must be selected.',
-        path: ['-'], // General error for the array
-      }),
-    category: z.string({ required_error: 'Category is required.' }),
-  })
-  .superRefine((data, ctx) => {
-    const totalAmount = Number(data.amount) || 0;
-
-    if (data.payerType === 'single') {
-      if (!data.singlePayerId) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'A payer must be selected.',
-          path: ['singlePayerId'],
-        });
-      }
-    } else {
-      const totalPaid =
-        data.multiPayers?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-      if (Math.abs(totalPaid - totalAmount) > 0.01) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Payments (${CURRENCY_SYMBOL}${totalPaid.toFixed(
-            2
-          )}) must equal total expense (${CURRENCY_SYMBOL}${totalAmount.toFixed(2)}).`,
-          path: ['multiPayers'],
-        });
-      }
-    }
-
-    const finalParticipants = data.participants.filter((p) => p.selected);
-
-    if (data.splitType === 'unequally') {
-      const sumOfOwedAmounts = finalParticipants.reduce(
-        (sum, p) => sum + (Number(p.amountOwed) || 0),
-        0
-      );
-      if (Math.abs(sumOfOwedAmounts - totalAmount) > 0.01) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Split amounts (${CURRENCY_SYMBOL}${sumOfOwedAmounts.toFixed(
-            2
-          )}) must equal total expense (${CURRENCY_SYMBOL}${totalAmount.toFixed(2)}).`,
-          path: ['participants'],
-        });
-      }
-    }
-    if (data.splitType === 'by_percentage') {
-      const sumOfPercentages = finalParticipants.reduce(
-        (sum, p) => sum + (Number(p.percentage) || 0),
-        0
-      );
-      if (Math.abs(sumOfPercentages - 100) > 0.01) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Percentages (${sumOfPercentages.toFixed(2)}%) must equal 100%.`,
-          path: ['participants'],
-        });
-      }
-    }
-  });
-
+// The schema is now defined in the dialog components. This component is only for rendering.
+export const expenseSchema = z.any();
 
 interface ExpenseFormProps {
   group: Group;
@@ -147,7 +49,7 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
   const { control, watch, setValue, getValues, formState: { errors } } =
-    useFormContext<z.infer<typeof expenseSchema>>();
+    useFormContext();
   const { settings } = useSiteSettings();
   
   const watchDescription = watch('description');
@@ -156,7 +58,7 @@ export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
   const watchPayerType = watch('payerType');
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
-  const participantDeps = JSON.stringify(watchParticipants.map(p => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
+  const participantDeps = JSON.stringify(watchParticipants?.map(p => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
 
 
   // Auto-suggest category based on description
@@ -345,7 +247,7 @@ export function ExpenseForm({ group, isEditing = false }: ExpenseFormProps) {
         <FormLabel>Participants</FormLabel>
         <ScrollArea className="h-40 border rounded-md">
             <div className="p-2 space-y-1">
-                {watchParticipants.map((p, index) => (
+                {watchParticipants && watchParticipants.map((p, index) => (
                      <div key={p.userId} className={cn("flex items-center gap-3 p-2 rounded-md", p.selected ? "bg-muted/50" : "")}>
                         <FormField
                             control={control}

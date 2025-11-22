@@ -16,10 +16,44 @@ import { useAuth } from '@/contexts/auth-context';
 import { getFullName } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '../ui/skeleton';
-import { expenseSchema, ExpenseForm } from './expense-form';
+import { ExpenseForm } from './expense-form';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '../ui/button';
 import { appEventEmitter } from '@/lib/event-emitter';
+
+// Schema is now defined here
+const expenseSchema = z.object({
+  description: z.string().min(1, 'Description is required.').max(100),
+  amount: z.coerce.number().positive('Amount must be positive.'),
+  date: z.date({ required_error: 'Date is required.' }),
+  notes: z.string().max(200, 'Notes must be 200 characters or less.').optional(),
+  payerType: z.enum(['single', 'multiple']).default('single'),
+  singlePayerId: z.string().optional(),
+  multiPayers: z.array(
+    z.object({
+      userId: z.string(),
+      name: z.string(),
+      amount: z.coerce.number().optional(),
+    })
+  ).optional(),
+  splitType: z.enum(['equally', 'unequally', 'by_shares', 'by_percentage']),
+  participants: z.array(
+    z.object({
+      userId: z.string(),
+      name: z.string(),
+      avatarUrl: z.string().optional(),
+      selected: z.boolean(),
+      amountOwed: z.coerce.number().optional(),
+      shares: z.coerce.number().min(0, 'Shares cannot be negative').optional(),
+      percentage: z.coerce.number().min(0, 'Percentage cannot be negative').max(100, 'Percentage cannot exceed 100').optional(),
+    })
+  ).min(1, 'At least one participant is required.').refine((arr) => arr.some((p) => p.selected), {
+    message: 'At least one participant must be selected.',
+    path: ['-'],
+  }),
+  category: z.string({ required_error: 'Category is required.' }),
+});
+
 
 type EditExpenseFormValues = z.infer<typeof expenseSchema>;
 
@@ -38,7 +72,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const { toast } = useToast();
     const isMobile = useIsMobile();
     
-    // Fetch group if not provided
     useEffect(() => {
         if (!initialGroup && open) {
             setIsGroupLoading(true);
@@ -53,7 +86,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
     }, [initialGroup, expense.groupId, open]);
     
-    // Memoize default values to stabilize them
     const defaultValues = useMemo(() => {
         if (!group || !userProfile) return {};
         
@@ -104,7 +136,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         defaultValues,
     });
     
-    // Reset form when dialog opens
     useEffect(() => {
         if(open && group) {
             form.reset(defaultValues);
@@ -118,6 +149,32 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
   async function onSubmit(values: EditExpenseFormValues) {
     if (!userProfile || !group) return;
 
+    const totalAmount = Number(values.amount);
+
+    if (values.payerType === 'multiple') {
+        const totalPaid = values.multiPayers?.reduce((acc, p) => acc + (p.amount || 0), 0) || 0;
+        if (Math.abs(totalPaid - totalAmount) > 0.01) {
+            form.setError('multiPayers', { type: 'manual', message: `The total paid amount (${totalPaid.toFixed(2)}) must equal the expense amount (${totalAmount.toFixed(2)}).` });
+            return;
+        }
+    }
+    
+    if (values.splitType === 'unequally') {
+        const totalOwed = values.participants.filter(p => p.selected).reduce((acc, p) => acc + (p.amountOwed || 0), 0);
+        if (Math.abs(totalOwed - totalAmount) > 0.01) {
+            form.setError('participants', { type: 'manual', message: `The sum of owed amounts (${totalOwed.toFixed(2)}) must equal the total expense amount (${totalAmount.toFixed(2)}).` });
+            return;
+        }
+    }
+    
+    if (values.splitType === 'by_percentage') {
+        const totalPercentage = values.participants.filter(p => p.selected).reduce((acc, p) => acc + (p.percentage || 0), 0);
+        if (Math.abs(totalPercentage - 100) > 0.01) {
+            form.setError('participants', { type: 'manual', message: `The sum of percentages (${totalPercentage}%) must equal 100%.` });
+            return;
+        }
+    }
+
     let payers: { userId: string; amount: number }[] = [];
     if (values.payerType === 'single' && values.singlePayerId) {
       payers = [{ userId: values.singlePayerId, amount: values.amount }];
@@ -128,14 +185,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
           .map((p) => ({ userId: p.userId, amount: p.amount! })) || [];
     }
 
-    if (payers.length === 0) {
-      form.setError('payerType', {
-        type: 'manual',
-        message: 'At least one payer must be specified.',
-      });
-      return;
-    }
-
     const finalParticipants = values.participants
       .filter((p) => p.selected)
       .map((p) => ({
@@ -143,16 +192,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         amountOwed: Number(p.amountOwed) || 0,
         share: Number(p.shares) || 1,
       }));
-
-    if (finalParticipants.length === 0) {
-      form.setError('participants', {
-        type: 'manual',
-        message: 'At least one participant must be selected.',
-      });
-      return;
-    }
-
-    const totalAmount = Number(values.amount);
 
     const updatedExpenseData = {
       groupId: group.id,
