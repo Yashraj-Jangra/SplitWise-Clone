@@ -295,7 +295,7 @@ interface ExpenseFormProps {
 }
 
 export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = false }: ExpenseFormProps) {
-    const { control, watch, setValue, getValues, formState: { errors, isSubmitting } } = useFormContext();
+    const { control, watch, setValue, getValues, formState: { errors, isSubmitting } } = useFormContext<z.infer<typeof expenseSchema>>();
     const { settings } = useSiteSettings();
     const { userProfile } = useAuth();
 
@@ -310,16 +310,15 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
     
     // Auto-suggest category
     useEffect(() => {
-        if (watchDescription) {
-            const currentCategory = getValues("category");
-            const { sub: suggestedCategory } = classifyExpense(watchDescription, settings.expenseCategories);
-            if(suggestedCategory && suggestedCategory !== currentCategory) {
-                setValue("category", suggestedCategory, { shouldValidate: true });
-            }
+        const currentCategory = getValues("category");
+        const { sub: suggestedCategory } = classifyExpense(watchDescription, settings.expenseCategories);
+        if(suggestedCategory && suggestedCategory !== currentCategory) {
+            setValue("category", suggestedCategory, { shouldValidate: true });
         }
-    }, [watchDescription, settings.expenseCategories]);
+    }, [watchDescription, settings.expenseCategories, getValues, setValue]);
 
-    // Auto-calculate splits
+    // Auto-calculate splits - NOW STABLE
+    const participantDeps = JSON.stringify(watchParticipants?.map(p => p.selected));
     useEffect(() => {
         const totalAmount = Number(getValues("amount")) || 0;
         const splitType = getValues("splitType");
@@ -366,7 +365,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                 setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
             }
         });
-    }, [watchAmount, watchSplitType, watchParticipants, setValue, getValues]);
+    }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
 
     const { payerSummary, splitSummary, netChangeSummary } = useMemo(() => {
@@ -381,7 +380,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                 payerText = getFullName(payer.firstName, payer.lastName);
             }
         } else {
-            const numPayers = multiPayers.filter((p:any) => p.amount && p.amount > 0).length;
+            const numPayers = multiPayers?.filter((p:any) => p.amount && p.amount > 0).length || 0;
             payerText = `${numPayers} people`;
         }
 
@@ -402,7 +401,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
             if (payerType === 'single' && singlePayerId === userProfile?.uid) {
                 iPaid = amount;
             } else if (payerType === 'multiple') {
-                iPaid = getValues('multiPayers').find((p:any) => p.userId === userProfile?.uid)?.amount || 0;
+                iPaid = getValues('multiPayers')?.find((p:any) => p.userId === userProfile?.uid)?.amount || 0;
             }
             netChange = iPaid - myShare;
         }
