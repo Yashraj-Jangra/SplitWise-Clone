@@ -33,8 +33,10 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const { userProfile } = useAuth();
     const [group, setGroup] = useState<Group | null>(initialGroup || null);
     const [isGroupLoading, setIsGroupLoading] = useState(false);
-    const [dialogKey, setDialogKey] = useState(0);
-
+    const router = useRouter();
+    const { toast } = useToast();
+    const isMobile = useIsMobile();
+    
     // Fetch group if not provided
     useEffect(() => {
         if (!initialGroup && open) {
@@ -104,7 +106,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     // Reset form when dialog opens
     useEffect(() => {
         if(open) {
-            setDialogKey(prev => prev + 1);
             form.reset(defaultValues);
         }
     }, [open, defaultValues, form]);
@@ -112,26 +113,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
     if (!userProfile) return null;
 
-    return (
-        <DialogInternal
-            key={dialogKey}
-            open={open}
-            onOpenChange={onOpenChange}
-            expense={expense}
-            group={group}
-            isGroupLoading={isGroupLoading}
-            onActionComplete={onActionComplete}
-            form={form}
-            userProfile={userProfile}
-        />
-    )
-}
-
-
-function DialogInternal({ open, onOpenChange, expense, group, isGroupLoading, onActionComplete, form, userProfile }: any) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const isMobile = useIsMobile();
 
   async function onSubmit(values: EditExpenseFormValues) {
     if (!userProfile || !group) return;

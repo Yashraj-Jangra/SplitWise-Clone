@@ -138,6 +138,10 @@ export default function GroupDetailPage() {
     return balances.find(b => b.user.uid === userProfile?.uid)?.netBalance ?? 0;
   }, [balances, userProfile]);
 
+  const handleActionComplete = useCallback(() => {
+    loadGroupData();
+  }, [loadGroupData]);
+
 
   if (loading || !group || !userProfile) {
     return <GroupDetailLoading />;
@@ -149,11 +153,11 @@ export default function GroupDetailPage() {
         group={group}
         user={userProfile}
         currentUserBalance={currentUserBalance}
-        onActionComplete={loadGroupData}
+        onActionComplete={handleActionComplete}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 md:w-auto md:inline-flex">
           {TABS.map((tab) => {
             const Icon = Icons[tab.icon];
             return (
@@ -191,7 +195,7 @@ export default function GroupDetailPage() {
                                   expense={expense}
                                   currentUserId={userProfile.uid}
                                   group={group}
-                                  onActionComplete={loadGroupData}
+                                  onActionComplete={handleActionComplete}
                                   groupHistory={groupHistory}
                                 />
                             )
@@ -203,7 +207,7 @@ export default function GroupDetailPage() {
                                     settlement={settlement}
                                     currentUserId={userProfile.uid}
                                     group={group}
-                                    onActionComplete={loadGroupData}
+                                    onActionComplete={handleActionComplete}
                                 />
                             )
                         }
@@ -230,7 +234,7 @@ export default function GroupDetailPage() {
               </div>
               <AddSettlementDialog
                 group={group}
-                onSettlementAdded={loadGroupData}
+                onSettlementAdded={handleActionComplete}
               />
             </CardHeader>
             <CardContent className="p-0">
@@ -242,7 +246,7 @@ export default function GroupDetailPage() {
                       settlement={settlement}
                       currentUserId={userProfile.uid}
                       group={group}
-                      onActionComplete={loadGroupData}
+                      onActionComplete={handleActionComplete}
                     />
                   ))}
                 </Accordion>
@@ -260,7 +264,7 @@ export default function GroupDetailPage() {
           <GroupBalances
             balances={balances}
             group={group}
-            onSettlementAdded={loadGroupData}
+            onSettlementAdded={handleActionComplete}
           />
         </TabsContent>
 
@@ -271,13 +275,13 @@ export default function GroupDetailPage() {
         <TabsContent value="history" className="mt-4">
           <GroupHistoryTab
             groupId={group.id}
-            onActionComplete={loadGroupData}
+            onActionComplete={handleActionComplete}
             onViewExpense={handleViewExpense}
           />
         </TabsContent>
 
          <TabsContent value="settings" className="mt-4">
-            <GroupSettingsTab group={group} onActionComplete={loadGroupData} />
+            <GroupSettingsTab group={group} onActionComplete={handleActionComplete} />
         </TabsContent>
       </Tabs>
     </div>
