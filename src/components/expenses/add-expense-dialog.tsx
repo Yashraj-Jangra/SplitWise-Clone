@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,8 +19,12 @@ import { useToast } from '@/hooks/use-toast';
 import type { Group } from '@/types';
 import { addExpense } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
-import { ExpenseForm } from './expense-form';
+import { ExpenseForm, PayerView, SplitView } from './expense-form';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { ScrollArea } from '../ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
@@ -71,6 +75,7 @@ export function AddExpenseDialog({
   const [view, setView] = useState<'main' | 'split' | 'payer'>('main');
   const { toast } = useToast();
   const { userProfile } = useAuth();
+  const isMobile = useIsMobile();
 
   const form = useForm<AddExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -79,6 +84,7 @@ export function AddExpenseDialog({
   const { watch, setValue, getValues, reset } = form;
   
   const watchSplitType = watch('splitType');
+  const watchAmount = watch('amount');
   
   useEffect(() => {
     if (open && userProfile) {
@@ -159,7 +165,7 @@ export function AddExpenseDialog({
 
   useEffect(() => {
     calculateSplits();
-  }, [calculateSplits, watchSplitType, watch('participants')]);
+  }, [calculateSplits, watchAmount, watchSplitType]);
 
 
   async function onSubmit(values: AddExpenseFormValues) {
@@ -247,48 +253,102 @@ export function AddExpenseDialog({
       <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
     </Button>
   );
+  
+  const formId = "add-expense-form";
 
   const FormProviderWrapper = ({ children }: { children: React.ReactNode }) => (
     <FormProvider {...form}>
-      <form id="add-expense-form" onSubmit={form.handleSubmit(onSubmit)}>
         {children}
-      </form>
     </FormProvider>
   );
+
+  const viewContent = useMemo(() => {
+    switch (view) {
+      case 'split':
+        return <SplitView setView={setView} />;
+      case 'payer':
+        return <PayerView setView={setView} group={group} />;
+      case 'main':
+      default:
+        return <ExpenseForm group={group} isEditing={false} setView={setView} />;
+    }
+  }, [view, group]);
+  
+
+  if (isMobile) {
+    return (
+        <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>{dialogTrigger}</SheetTrigger>
+            <SheetContent side="bottom" className="h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0">
+                 <FormProviderWrapper>
+                    <SheetHeader className="p-4 border-b">
+                        <SheetTitle className="text-center text-lg font-semibold">New Expense</SheetTitle>
+                    </SheetHeader>
+                    <ScrollArea className="flex-1">
+                        <div className="p-6">{viewContent}</div>
+                    </ScrollArea>
+                    {view === 'main' && (
+                        <SheetFooter className="p-4 bg-background/50 border-t">
+                            <Button form={formId} onClick={form.handleSubmit(onSubmit)} disabled={form.formState.isSubmitting} className="w-full" size="lg">
+                                {form.formState.isSubmitting ? 'Saving...' : 'Save Expense'}
+                            </Button>
+                        </SheetFooter>
+                    )}
+                 </FormProviderWrapper>
+            </SheetContent>
+        </Sheet>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-         <FormProviderWrapper>
-            <div className="relative">
-                <AnimatePresence initial={false}>
-                    <motion.div
+      <DialogContent 
+        className={cn(
+            "sm:max-w-md p-0 overflow-hidden grid transition-all duration-300 gap-0",
+            view !== 'main' ? "sm:max-w-4xl grid-cols-2" : "sm:max-w-md grid-cols-1"
+        )}
+        onInteractOutside={(e) => {
+            if (view !== 'main') {
+                e.preventDefault();
+                setView('main');
+            }
+        }}
+    >
+        <FormProviderWrapper>
+            <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="p-6">
+                <ExpenseForm
+                    group={group}
+                    isEditing={false}
+                    setView={setView}
+                />
+                 {view === 'main' && (
+                    <DialogFooter className="pt-6">
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? 'Saving...' : 'Save Expense'}
+                        </Button>
+                    </DialogFooter>
+                )}
+            </form>
+            <AnimatePresence>
+                {view !== 'main' && (
+                     <motion.div
                         key={view}
-                        initial={{ x: view === 'main' ? 0 : '100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '-100%' }}
+                        initial={{ x: '100%', opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: '100%', opacity: 0 }}
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="p-6"
+                        className="bg-muted/50 h-full border-l p-6"
                     >
-                        <ExpenseForm
-                            group={group}
-                            isEditing={false}
-                            view={view}
-                            setView={setView}
-                        />
+                         <ScrollArea className="h-full pr-4 -mr-4">
+                            {view === 'split' && <SplitView setView={setView} />}
+                            {view === 'payer' && <PayerView setView={setView} group={group} />}
+                         </ScrollArea>
                     </motion.div>
-                </AnimatePresence>
-            </div>
-            {view === 'main' && (
-              <DialogFooter className="p-6 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button type="submit" form="add-expense-form" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? 'Saving...' : 'Save Expense'}
-                </Button>
-              </DialogFooter>
-            )}
-         </FormProviderWrapper>
+                )}
+            </AnimatePresence>
+        </FormProviderWrapper>
       </DialogContent>
     </Dialog>
   );
