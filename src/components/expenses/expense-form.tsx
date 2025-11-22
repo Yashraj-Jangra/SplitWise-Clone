@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { useAuth } from "@/contexts/auth-context";
+import { Textarea } from "../ui/textarea";
 
 // --- Form Schema ---
 export const expenseSchema = z.object({
@@ -100,16 +101,16 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
     const watchPayerType = watch('payerType');
     const watchParticipants = watch('participants');
     
-    // Auto-suggest category
     useEffect(() => {
         const currentCategory = getValues("category");
-        const { sub: suggestedCategory } = classifyExpense(watchDescription, settings.expenseCategories);
-        if(suggestedCategory && suggestedCategory !== currentCategory && currentCategory === 'Other') {
-            setValue("category", suggestedCategory, { shouldValidate: true });
+        if (watchDescription && currentCategory === 'Other') {
+            const { sub: suggestedCategory } = classifyExpense(watchDescription, settings.expenseCategories);
+            if (suggestedCategory && suggestedCategory !== currentCategory) {
+                setValue("category", suggestedCategory, { shouldValidate: true });
+            }
         }
     }, [watchDescription, settings.expenseCategories, getValues, setValue]);
 
-    // Auto-calculate splits
     useEffect(() => {
         const totalAmount = Number(getValues("amount")) || 0;
         const splitType = getValues("splitType");
@@ -225,7 +226,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                                         {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
                                             <React.Fragment key={masterCat}>
                                                 <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{masterCat}</p>
-                                                {Object.keys(details.subCategories).map(subCat => {
+                                                {details && details.subCategories && Object.keys(details.subCategories).map(subCat => {
                                                     const subDetails = details.subCategories[subCat];
                                                     const Icon = subDetails?.icon ? Icons[subDetails.icon] : Icons.Wallet;
                                                     return (<SelectItem key={subCat} value={subCat}><div className="flex items-center gap-2"><Icon className="h-4 w-4" /><span>{subCat}</span></div></SelectItem>)
@@ -238,6 +239,13 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                             </FormItem>
                         )}/>
                      </div>
+                      <FormField control={control} name="notes" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Notes (Optional)</FormLabel>
+                            <FormControl><Textarea placeholder="e.g., My share was double because I ate more." {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
                 </div>
 
                 <div className="px-6 space-y-4 mt-4">
@@ -247,16 +255,18 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                             <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="single">Single Person</TabsTrigger><TabsTrigger value="multiple">Multiple People</TabsTrigger></TabsList>
                         </Tabs>
                         {watchPayerType === 'single' ? (
-                            <FormField control={control} name="singlePayerId" render={({ field }) => (
+                             <FormField control={control} name="singlePayerId" render={({ field }) => (
                                 <FormItem className="mt-2"><FormControl>
-                                    <RadioGroup onValueChange={field.onChange} value={field.value} className="grid grid-cols-2 gap-2">
-                                        {group.members.map(member => (
-                                            <FormItem key={member.uid} className="flex items-center space-x-3 space-y-0">
-                                                <FormControl><RadioGroupItem value={member.uid} /></FormControl>
-                                                <FormLabel className="font-normal">{getFullName(member.firstName, member.lastName)}</FormLabel>
-                                            </FormItem>
-                                        ))}
-                                    </RadioGroup>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger><SelectValue placeholder="Select who paid..." /></SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                             {group.members.map(member => (
+                                                <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </FormControl><FormMessage /></FormItem>
                             )}/>
                         ) : (
@@ -304,4 +314,3 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
         </div>
     );
 }
-
