@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { useAuth } from "@/contexts/auth-context";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
 // --- Form Schema ---
@@ -85,20 +85,24 @@ export const expenseSchema = z.object({
 
 // --- Panel Components ---
 
-const Panel = ({ children, onClose }: { children: React.ReactNode; onClose: () => void; }) => {
+const Panel = ({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) => {
     return (
         <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="absolute top-0 right-0 h-full w-full sm:w-[350px] bg-card border-l rounded-r-lg flex flex-col"
+            className="absolute top-0 right-0 h-full w-full bg-card rounded-r-lg flex flex-col"
         >
-            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 z-10" onClick={onClose}><X className="h-5 w-5"/></Button>
+            <div className="flex items-center justify-between p-4 border-b">
+                 <h3 className="text-lg font-semibold">{title}</h3>
+                 <Button variant="ghost" size="icon" className="h-8 w-8 z-10" onClick={onClose}><X className="h-5 w-5"/></Button>
+            </div>
             {children}
         </motion.div>
     );
 };
+
 
 const PayerPanel = ({ onClose }: { onClose: () => void }) => {
     const { control, watch, setValue, getValues } = useFormContext();
@@ -114,14 +118,10 @@ const PayerPanel = ({ onClose }: { onClose: () => void }) => {
     const amountRemaining = (Number(watchAmount) || 0) - totalPaid;
 
     return (
-        <Panel onClose={onClose}>
-            <CardHeader className="pt-10">
-                <CardTitle>Who paid?</CardTitle>
-                <CardDescription>Select a single payer or split between multiple people.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col p-0">
+        <Panel onClose={onClose} title="Choose Payer(s)">
+            <div className="flex-1 flex flex-col p-0">
                  <Tabs defaultValue="single" className="w-full h-full flex flex-col" value={watchPayerType} onValueChange={(v) => setValue('payerType', v as any)}>
-                    <div className="px-4">
+                    <div className="px-4 pt-4">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="single">Single Payer</TabsTrigger>
                             <TabsTrigger value="multiple">Multiple Payers</TabsTrigger>
@@ -169,7 +169,7 @@ const PayerPanel = ({ onClose }: { onClose: () => void }) => {
                          </div>
                     </TabsContent>
                 </Tabs>
-            </CardContent>
+            </div>
         </Panel>
     )
 };
@@ -195,7 +195,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
             return { type: 'percentage', sum };
         }
         return { type: 'none', sum: 0 };
-    }, [JSON.stringify(watchParticipants), watchSplitType, getValues]);
+    }, [watchParticipants, watchSplitType, getValues]);
 
     const toggleAll = (select: boolean) => {
         getValues('participants').forEach((_: any, index: number) => {
@@ -204,12 +204,8 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
     };
 
     return (
-        <Panel onClose={onClose}>
-            <CardHeader className="pt-10">
-                <CardTitle>Split options</CardTitle>
-                <CardDescription>Choose how to divide the expense.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 flex-1 flex flex-col gap-4">
+        <Panel onClose={onClose} title="Choose Split Options">
+            <div className="p-4 flex-1 flex flex-col gap-4">
                 <Tabs defaultValue="equally" className="w-full flex-1 flex flex-col" value={watchSplitType} onValueChange={(value) => setValue('splitType', value as any)}>
                     <TabsList className="grid w-full grid-cols-4 h-auto">
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="equally" className="py-2 flex-col gap-1 h-auto"><Icons.Users className="h-5 w-5"/><span className="text-xs">Equally</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split equally among selected members</p></TooltipContent></Tooltip></TooltipProvider>
@@ -284,7 +280,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
                  <div className="mt-auto pt-2">
                     <Button onClick={onClose} className="w-full">Done</Button>
                 </div>
-            </CardContent>
+            </div>
         </Panel>
     )
 };
@@ -311,8 +307,8 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
     const watchPayerType = watch('payerType');
     const watchSinglePayerId = watch('singlePayerId');
     const watchParticipants = watch('participants');
-    const participantDeps = JSON.stringify(watchParticipants?.map((p: any) => ({ selected: p.selected, shares: p.shares, percentage: p.percentage, amountOwed: p.amountOwed })));
-
+    
+    // Auto-suggest category
     useEffect(() => {
         if (watchDescription) {
             const currentCategory = getValues("category");
@@ -321,8 +317,9 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                 setValue("category", suggestedCategory, { shouldValidate: true });
             }
         }
-    }, [watchDescription, settings.expenseCategories, getValues, setValue]);
+    }, [watchDescription, settings.expenseCategories]);
 
+    // Auto-calculate splits
     useEffect(() => {
         const totalAmount = Number(getValues("amount")) || 0;
         const splitType = getValues("splitType");
@@ -332,7 +329,9 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
 
         if (totalAmount <= 0 || numSelected === 0) {
             allParticipants.forEach((_: any, index: number) => {
-                if (getValues(`participants.${index}.amountOwed`) !== 0) setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+                if (getValues(`participants.${index}.amountOwed`) !== 0) {
+                    setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+                }
             });
             return;
         }
@@ -343,6 +342,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
             const baseAmount = totalAmount / numSelected;
             const roundedAmounts = selectedParticipants.map(() => parseFloat(baseAmount.toFixed(2)));
             let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
+            
             for (let i = 0; i < Math.abs(remainder * 100); i++) {
                 roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
             }
@@ -357,19 +357,17 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
         }
 
         allParticipants.forEach((p: any, index: number) => {
-            if (p.selected) {
-                 if (splitType !== 'unequally') {
-                    const finalAmount = parseFloat((newAmounts[p.userId] || 0).toFixed(2));
-                    if (Math.abs((getValues(`participants.${index}.amountOwed`) || 0) - finalAmount) > 1e-9) {
-                        setValue(`participants.${index}.amountOwed`, finalAmount, { shouldValidate: true, shouldDirty: true });
-                    }
-                 }
-            } else {
-                 if (getValues(`participants.${index}.amountOwed`) !== 0) setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+            if (p.selected && splitType !== 'unequally') {
+                const finalAmount = parseFloat((newAmounts[p.userId] || 0).toFixed(2));
+                if (Math.abs((getValues(`participants.${index}.amountOwed`) || 0) - finalAmount) > 1e-9) {
+                    setValue(`participants.${index}.amountOwed`, finalAmount, { shouldValidate: true, shouldDirty: true });
+                }
+            } else if (!p.selected && getValues(`participants.${index}.amountOwed`) !== 0) {
+                setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
             }
         });
+    }, [watchAmount, watchSplitType, watchParticipants, setValue, getValues]);
 
-    }, [watchAmount, watchSplitType, participantDeps, setValue, getValues]);
 
     const { payerSummary, splitSummary, netChangeSummary } = useMemo(() => {
         const payerType = getValues('payerType');
@@ -390,10 +388,10 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
         const splitType = getValues('splitType');
         let splitText = "";
         switch (splitType) {
-            case 'equally': splitText = "split equally"; break;
-            case 'unequally': splitText = "split unequally"; break;
-            case 'by_shares': splitText = "split by shares"; break;
-            case 'by_percentage': splitText = "split by percentage"; break;
+            case 'equally': splitText = "equally"; break;
+            case 'unequally': splitText = "unequally"; break;
+            case 'by_shares': splitText = "by shares"; break;
+            case 'by_percentage': splitText = "by percentage"; break;
         }
 
         const amount = Number(getValues('amount')) || 0;
@@ -414,7 +412,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
 
 
         return { payerSummary: payerText, splitSummary: splitText, netChangeSummary: netText };
-    }, [watchPayerType, watchSinglePayerId, JSON.stringify(watch('multiPayers')), watchSplitType, participantDeps, watchAmount, group.members, userProfile, getValues]);
+    }, [watchPayerType, watchSinglePayerId, watch('multiPayers'), watchSplitType, watchParticipants, watchAmount, group.members, userProfile, getValues]);
 
 
     const category = watch('category');
@@ -425,36 +423,46 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
     const CategoryIcon = Icons[categoryIconName];
     
     return (
-        <div className={cn("relative overflow-hidden w-full h-full", isMobile ? "flex flex-col" : "sm:grid sm:grid-cols-[450px_auto]")}>
+        <div className={cn(
+            "relative w-full h-full overflow-hidden", 
+            isMobile ? "flex flex-col" : "grid"
+            )}
+            style={!isMobile ? { gridTemplateColumns: "1fr 350px" } : {}}
+        >
             <motion.div 
                 className="bg-card rounded-l-lg flex flex-col p-6 h-full"
-                animate={{ x: activePanel ? (isMobile ? '0%' : '-350px') : '0%' }}
+                animate={{ x: activePanel ? (isMobile ? '-100%' : '-350px') : '0%' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             >
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold">{isEditing ? "Edit expense" : "Add an expense"}</h2>
-                    {!isMobile && !activePanel && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDialog}><X className="h-5 w-5"/></Button>}
+                    <h2 className="text-xl font-bold">{isEditing ? "Edit Expense" : "Add an Expense"}</h2>
+                    {!activePanel && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeDialog}><X className="h-5 w-5"/></Button>}
                 </div>
-
-                 <div className="flex items-start gap-4 p-3 rounded-lg bg-muted/50 mb-4">
-                     <FormField control={control} name="description" render={({ field }) => (
-                        <Input placeholder="Enter a description" {...field} className="text-base font-semibold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"/>
-                     )} />
+                
+                 <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 mb-4">
+                     <div className="bg-background/50 p-3 rounded-md">
+                        <CategoryIcon className="h-6 w-6 text-foreground" />
+                     </div>
+                     <div className="flex-1">
+                        <FormField control={control} name="description" render={({ field }) => (
+                            <Input placeholder="Enter description" {...field} className="text-base font-semibold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                        )} />
+                     </div>
                     <FormField control={control} name="amount" render={({ field }) => (
                          <div className="relative">
                             <span className="absolute left-0 top-1/2 -translate-y-1/2 text-lg font-bold text-muted-foreground">{CURRENCY_SYMBOL}</span>
-                            <input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-6 text-lg font-bold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 w-full outline-none"/>
+                            <input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="text-right pl-6 text-lg font-bold border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 w-full outline-none"/>
                         </div>
                     )} />
-                    {(errors.description || errors.amount) && <FormMessage className="mt-1">{(errors.description?.message || errors.amount?.message)?.toString()}</FormMessage>}
                  </div>
+                 {(errors.description || errors.amount) && <FormMessage className="mt-1 text-center">{(errors.description?.message || errors.amount?.message)?.toString()}</FormMessage>}
                 
-                <div className="text-center text-lg">
-                    <p className="text-base">Paid by <Button variant="link" className="p-0 h-auto text-base font-bold underline" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and <Button variant="link" className="p-0 h-auto text-base font-bold underline" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
+                <div className="text-center my-2">
+                    <p className="text-lg">Paid by <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and split <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
                     {netChangeSummary && <p className="text-muted-foreground text-xs mt-1">({netChangeSummary})</p>}
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 my-4">
+                 <div className="grid grid-cols-2 gap-4 my-4">
                     <Popover>
                         <PopoverTrigger asChild>
                         <FormControl>
@@ -515,10 +523,10 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
             </motion.div>
 
             {/* Side Panel Area */}
-            <div className={cn("absolute top-0 right-0 h-full w-full sm:w-[350px] pointer-events-none", activePanel && "pointer-events-auto")}>
+             <AnimatePresence>
                 {activePanel === 'payer' && <PayerPanel onClose={() => setActivePanel(null)} />}
                 {activePanel === 'split' && <SplitterPanel onClose={() => setActivePanel(null)} />}
-            </div>
+             </AnimatePresence>
         </div>
     )
 }
