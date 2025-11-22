@@ -143,7 +143,7 @@ export function ExpenseForm({ group }: ExpenseFormProps) {
               </FormItem>
             ))} />
           ))}
-          <FormMessage>{getValues('formState.errors.multiPayers.message')}</FormMessage>
+          <FormMessage>{(getValues('formState.errors') as any)?.multiPayers?.message}</FormMessage>
         </div>
       )}
       
@@ -193,7 +193,7 @@ export function ExpenseForm({ group }: ExpenseFormProps) {
                 ))}
             </div>
         </ScrollArea>
-        <FormMessage>{(getValues('formState.errors.participants') as any)?.message}</FormMessage>
+        <FormMessage>{(getValues('formState.errors') as any)?.participants?.message}</FormMessage>
       </div>
 
        <FormField
