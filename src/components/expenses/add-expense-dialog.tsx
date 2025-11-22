@@ -12,8 +12,8 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import type { Group, ExpenseDocument } from "@/types";
-import { addExpense, getSiteSettings } from "@/lib/mock-data";
+import type { Group } from "@/types";
+import { addExpense } from "@/lib/mock-data";
 import { useAuth } from "@/contexts/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { expenseSchema, ExpenseForm } from "./expense-form";
@@ -42,9 +42,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       date: new Date(),
       notes: "",
       payerType: 'single',
-      singlePayerId: userProfile?.uid || "",
       splitType: "equally",
-      participants: [],
       category: "Other",
     }
   });
@@ -76,7 +74,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
         category: "Other",
       });
     }
-  }, [userProfile, open, group.members]);
+  }, [userProfile, open, group.members, form]);
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;
@@ -164,7 +162,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
             </SheetTrigger>
             <SheetContent side="bottom" className="h-screen flex flex-col p-0 border-0 bg-background">
               <FormProviderWrapper>
-                  <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
+                  <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} isMobile={true} />
               </FormProviderWrapper>
             </SheetContent>
         </Sheet>
@@ -176,7 +174,7 @@ export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseD
       <DialogTrigger asChild>
         {dialogTrigger}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl w-full h-[500px] p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-lg p-0">
           <DialogTitle className="sr-only">Add an expense</DialogTitle>
           <FormProviderWrapper>
               <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />

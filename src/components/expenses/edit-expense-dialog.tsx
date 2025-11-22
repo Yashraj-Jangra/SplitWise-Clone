@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
@@ -109,7 +108,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
             category: expense.category || 'Other',
         });
     }
-  }, [group, userProfile, open, expense]);
+  }, [group, userProfile, open, expense, form]);
 
   async function onSubmit(values: EditExpenseFormValues) {
     if (!userProfile || !group) return;
@@ -213,7 +212,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-full h-[500px] p-0 gap-0 border-0 bg-transparent shadow-none">
+      <DialogContent className="max-w-lg p-0">
           <DialogTitle className="sr-only">Edit an expense</DialogTitle>
           <FormProviderWrapper>
               {FormContent}
