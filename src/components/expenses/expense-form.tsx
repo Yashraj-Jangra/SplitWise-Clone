@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Icons, IconName } from "@/components/icons";
 import type { Group } from "@/types";
 import { cn } from "@/lib/utils";
@@ -24,9 +23,8 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useSiteSettings } from "@/contexts/site-settings-context";
-import { Textarea } from "../ui/textarea";
 import { useAuth } from "@/contexts/auth-context";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -133,23 +131,18 @@ const PayerPanel = ({ onClose }: { onClose: () => void }) => {
                          <FormField control={control} name="singlePayerId" render={({ field }) => (
                             <FormItem>
                             <FormControl>
-                                <RadioGroup onValueChange={(v) => {field.onChange(v); onClose();}} value={field.value} className="p-4">
+                                <div className="p-4">
                                     <ScrollArea className="h-[calc(100vh-18rem)] sm:h-auto sm:max-h-[350px] pr-2">
                                         <div className="space-y-2">
                                         {groupMembers.map((member: any) => (
-                                            <FormItem key={member.userId} className="flex items-center space-x-3 space-y-0 p-2 rounded-md hover:bg-muted/50 transition-colors has-[:checked]:bg-muted">
-                                                <FormControl><RadioGroupItem value={member.userId} /></FormControl>
-                                                <FormLabel className="font-normal flex-1 cursor-pointer">
-                                                    <div className="flex items-center gap-2">
-                                                        <Avatar className="h-8 w-8"><AvatarImage src={member.avatarUrl} /><AvatarFallback>{getInitials(member.name)}</AvatarFallback></Avatar>
-                                                        <span>{member.name}</span>
-                                                    </div>
-                                                </FormLabel>
+                                            <FormItem key={member.userId} onClick={() => {field.onChange(member.userId); onClose();}} className={cn("flex items-center space-x-3 space-y-0 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer", field.value === member.userId && "bg-muted")}>
+                                                <Avatar className="h-8 w-8"><AvatarImage src={member.avatarUrl} /><AvatarFallback>{getInitials(member.name)}</AvatarFallback></Avatar>
+                                                <FormLabel className="font-normal flex-1 cursor-pointer">{member.name}</FormLabel>
                                             </FormItem>
                                         ))}
                                         </div>
                                     </ScrollArea>
-                                </RadioGroup>
+                                </div>
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -179,7 +172,7 @@ const PayerPanel = ({ onClose }: { onClose: () => void }) => {
             </CardContent>
         </Panel>
     )
-}
+};
 
 const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
     const { control, watch, setValue, getValues, formState: { errors } } = useFormContext();
@@ -221,7 +214,7 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
                     <TabsList className="grid w-full grid-cols-4 h-auto">
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="equally" className="py-2 flex-col gap-1 h-auto"><Icons.Users className="h-5 w-5"/><span className="text-xs">Equally</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split equally among selected members</p></TooltipContent></Tooltip></TooltipProvider>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="unequally" className="py-2 flex-col gap-1 h-auto"><Icons.Baseline className="h-5 w-5"/><span className="text-xs">Unequally</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Manually enter specific amounts for each person</p></TooltipContent></Tooltip></TooltipProvider>
-                        <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="by_shares" className="py-2 flex-col gap-1 h-auto"><Icons.Layers className="h-5 w-5"/><span className="text-xs">By Shares</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split by shares (e.g. 2 shares vs 1 share)</p></TooltipContent></TooltipProvider>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="by_shares" className="py-2 flex-col gap-1 h-auto"><Icons.Layers className="h-5 w-5"/><span className="text-xs">By Shares</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split by shares (e.g. 2 shares vs 1 share)</p></TooltipContent></Tooltip></TooltipProvider>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><TabsTrigger value="by_percentage" className="py-2 flex-col gap-1 h-auto"><Icons.PieChart className="h-5 w-5"/><span className="text-xs">By %</span></TabsTrigger></TooltipTrigger><TooltipContent><p>Split by percentage</p></TooltipContent></Tooltip></TooltipProvider>
                     </TabsList>
                     
@@ -294,7 +287,8 @@ const SplitterPanel = ({ onClose }: { onClose: () => void }) => {
             </CardContent>
         </Panel>
     )
-}
+};
+
 
 // --- Main Form Component ---
 interface ExpenseFormProps {
@@ -431,13 +425,10 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
     const CategoryIcon = Icons[categoryIconName];
     
     return (
-        <div className={cn("relative overflow-hidden w-full h-full", isMobile ? "flex flex-col" : "sm:grid sm:grid-cols-[1fr_auto]")}>
+        <div className={cn("relative overflow-hidden w-full h-full", isMobile ? "flex flex-col" : "sm:grid sm:grid-cols-[450px_auto]")}>
             <motion.div 
                 className="bg-card rounded-l-lg flex flex-col p-6 h-full"
-                animate={{ 
-                    x: activePanel ? (isMobile ? '0%' : '-350px') : '0%',
-                    width: activePanel ? (isMobile ? '100%' : 'calc(100% + 350px)') : '100%'
-                }}
+                animate={{ x: activePanel ? (isMobile ? '0%' : '-350px') : '0%' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             >
                 <div className="flex items-center justify-between mb-4">
@@ -459,7 +450,7 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
                  </div>
                 
                 <div className="text-center text-lg">
-                    <p>Paid by <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and <Button variant="link" className="p-0 h-auto text-lg font-bold underline" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
+                    <p className="text-base">Paid by <Button variant="link" className="p-0 h-auto text-base font-bold underline" onClick={() => setActivePanel('payer')}>{payerSummary}</Button> and <Button variant="link" className="p-0 h-auto text-base font-bold underline" onClick={() => setActivePanel('split')}>{splitSummary}</Button>.</p>
                     {netChangeSummary && <p className="text-muted-foreground text-xs mt-1">({netChangeSummary})</p>}
                 </div>
                 
@@ -531,5 +522,3 @@ export function ExpenseForm({ group, closeDialog, isEditing = false, isMobile = 
         </div>
     )
 }
-
-    
