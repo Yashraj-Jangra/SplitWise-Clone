@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -43,47 +43,45 @@ export function AddExpenseDialog({
   const { userProfile } = useAuth();
   const isMobile = useIsMobile();
 
-  const form = useForm<AddExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: {
+  const defaultValues = useMemo(() => {
+    if (!userProfile) return {};
+    return {
       description: '',
       amount: undefined,
       date: new Date(),
       notes: '',
-      payerType: 'single',
-      splitType: 'equally',
+      payerType: 'single' as const,
+      singlePayerId: userProfile.uid,
+      multiPayers: group.members.map((member) => ({
+        userId: member.uid,
+        name: `${member.firstName} ${member.lastName || ''}`.trim(),
+        amount: undefined,
+      })),
+      splitType: 'equally' as const,
+      participants: group.members.map((member) => ({
+        userId: member.uid,
+        name: `${member.firstName} ${member.lastName || ''}`.trim(),
+        avatarUrl: member.avatarUrl,
+        selected: true,
+        amountOwed: 0,
+        shares: 1,
+        percentage: 0,
+      })),
       category: 'Other',
-    },
+    };
+  }, [userProfile, group.members]);
+
+  const form = useForm<AddExpenseFormValues>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: defaultValues,
   });
 
   useEffect(() => {
-    if (userProfile && open) {
-      form.reset({
-        description: '',
-        amount: undefined,
-        date: new Date(),
-        notes: '',
-        payerType: 'single',
-        singlePayerId: userProfile.uid,
-        multiPayers: group.members.map((member) => ({
-          userId: member.uid,
-          name: `${member.firstName} ${member.lastName || ''}`.trim(),
-          amount: undefined,
-        })),
-        splitType: 'equally',
-        participants: group.members.map((member) => ({
-          userId: member.uid,
-          name: `${member.firstName} ${member.lastName || ''}`.trim(),
-          avatarUrl: member.avatarUrl,
-          selected: true,
-          amountOwed: 0,
-          shares: 1,
-          percentage: 0,
-        })),
-        category: 'Other',
-      });
+    if (open) {
+      form.reset(defaultValues);
     }
-  }, [userProfile, open, group.members]);
+  }, [open, form, defaultValues]);
+
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;
@@ -193,7 +191,7 @@ export function AddExpenseDialog({
           side="bottom"
           className="h-screen flex flex-col p-0 border-0 bg-background"
         >
-          <FormProviderWrapper>
+          <FormProviderWrapper key={open ? 'open' : 'closed'}>
             <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
           </FormProviderWrapper>
         </SheetContent>
@@ -206,7 +204,7 @@ export function AddExpenseDialog({
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
       <DialogContent className="max-w-none w-auto p-0 border-0 bg-transparent shadow-none">
         <DialogTitle className="sr-only">Add Expense</DialogTitle>
-        <FormProviderWrapper>
+        <FormProviderWrapper key={open ? 'open' : 'closed'}>
           <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
         </FormProviderWrapper>
       </DialogContent>
