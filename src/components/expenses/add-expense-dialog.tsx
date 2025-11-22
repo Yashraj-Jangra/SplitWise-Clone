@@ -83,7 +83,7 @@ export function AddExpenseDialog({
         category: 'Other',
       });
     }
-  }, [userProfile, open, group.members, form]);
+  }, [userProfile, open, group.members]);
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;
