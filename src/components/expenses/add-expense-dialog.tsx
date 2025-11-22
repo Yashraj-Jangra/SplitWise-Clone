@@ -32,56 +32,77 @@ interface AddExpenseDialogProps {
   trigger?: React.ReactNode;
 }
 
-export function AddExpenseDialog({
-  group,
-  onExpenseAdded,
-  trigger,
-}: AddExpenseDialogProps) {
-  const [open, setOpen] = useState(false);
+// Wrapper component to handle form initialization and prevent re-renders
+export function AddExpenseDialog({ group, onExpenseAdded, trigger }: AddExpenseDialogProps) {
+    const { userProfile } = useAuth();
+
+    const defaultValues = useMemo(() => {
+        if (!userProfile) return {};
+        return {
+            description: '',
+            amount: undefined,
+            date: new Date(),
+            notes: '',
+            payerType: 'single' as const,
+            singlePayerId: userProfile.uid,
+            multiPayers: group.members.map((member) => ({
+                userId: member.uid,
+                name: `${member.firstName} ${member.lastName || ''}`.trim(),
+                amount: undefined,
+            })),
+            splitType: 'equally' as const,
+            participants: group.members.map((member) => ({
+                userId: member.uid,
+                name: `${member.firstName} ${member.lastName || ''}`.trim(),
+                avatarUrl: member.avatarUrl,
+                selected: true,
+                amountOwed: 0,
+                shares: 1,
+                percentage: 0,
+            })),
+            category: 'Other',
+        };
+    }, [userProfile, group.members]);
+
+    const form = useForm<AddExpenseFormValues>({
+        resolver: zodResolver(expenseSchema),
+        defaultValues: defaultValues,
+    });
+    
+    // This key ensures the form is re-mounted and reset with default values when the dialog opens
+    const [dialogKey, setDialogKey] = useState(0);
+    const handleOpenChange = (open: boolean) => {
+        if (open) {
+            setDialogKey(prev => prev + 1);
+            form.reset(defaultValues);
+        }
+        setOpen(open);
+    };
+    const [open, setOpen] = useState(false);
+
+
+    if (!userProfile) return null;
+
+    return (
+        <DialogInternal
+            key={dialogKey}
+            open={open}
+            onOpenChange={handleOpenChange}
+            group={group}
+            onExpenseAdded={onExpenseAdded}
+            trigger={trigger}
+            form={form}
+            userProfile={userProfile}
+        />
+    );
+}
+
+
+// The actual dialog implementation, which now receives the form object as a prop
+function DialogInternal({ open, onOpenChange, group, onExpenseAdded, trigger, form, userProfile }: any) {
   const router = useRouter();
   const { toast } = useToast();
-  const { userProfile } = useAuth();
   const isMobile = useIsMobile();
-
-  const defaultValues = useMemo(() => {
-    if (!userProfile) return {};
-    return {
-      description: '',
-      amount: undefined,
-      date: new Date(),
-      notes: '',
-      payerType: 'single' as const,
-      singlePayerId: userProfile.uid,
-      multiPayers: group.members.map((member) => ({
-        userId: member.uid,
-        name: `${member.firstName} ${member.lastName || ''}`.trim(),
-        amount: undefined,
-      })),
-      splitType: 'equally' as const,
-      participants: group.members.map((member) => ({
-        userId: member.uid,
-        name: `${member.firstName} ${member.lastName || ''}`.trim(),
-        avatarUrl: member.avatarUrl,
-        selected: true,
-        amountOwed: 0,
-        shares: 1,
-        percentage: 0,
-      })),
-      category: 'Other',
-    };
-  }, [userProfile, group.members]);
-
-  const form = useForm<AddExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: defaultValues,
-  });
-
-  useEffect(() => {
-    if (open) {
-      form.reset(defaultValues);
-    }
-  }, [open, form, defaultValues]);
-
 
   async function onSubmit(values: AddExpenseFormValues) {
     if (!userProfile) return;
@@ -140,7 +161,7 @@ export function AddExpenseDialog({
         title: 'Expense Added!',
         description: `"${values.description}" has been successfully added to ${group.name}.`,
       });
-      setOpen(false);
+      onOpenChange(false);
       if (onExpenseAdded) onExpenseAdded();
       window.dispatchEvent(new CustomEvent('data-changed'));
     } catch (error) {
@@ -161,9 +182,7 @@ export function AddExpenseDialog({
       });
     }
   }
-
-  if (!userProfile) return null;
-
+  
   const dialogTrigger = trigger || (
     <Button>
       <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
@@ -185,14 +204,14 @@ export function AddExpenseDialog({
 
   if (isMobile) {
     return (
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetTrigger asChild>{mobileTrigger}</SheetTrigger>
         <SheetContent
           side="bottom"
           className="h-screen flex flex-col p-0 border-0 bg-background"
         >
-          <FormProviderWrapper key={open ? 'open' : 'closed'}>
-            <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
+          <FormProviderWrapper>
+            <ExpenseForm group={group} closeDialog={() => onOpenChange(false)} isEditing={false} />
           </FormProviderWrapper>
         </SheetContent>
       </Sheet>
@@ -200,12 +219,12 @@ export function AddExpenseDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
       <DialogContent className="max-w-none w-auto p-0 border-0 bg-transparent shadow-none">
         <DialogTitle className="sr-only">Add Expense</DialogTitle>
-        <FormProviderWrapper key={open ? 'open' : 'closed'}>
-          <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
+        <FormProviderWrapper>
+          <ExpenseForm group={group} closeDialog={() => onOpenChange(false)} isEditing={false} />
         </FormProviderWrapper>
       </DialogContent>
     </Dialog>

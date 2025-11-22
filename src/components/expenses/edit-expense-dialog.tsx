@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,99 +29,109 @@ interface EditExpenseDialogProps {
   onActionComplete?: () => void;
 }
 
-export function EditExpenseDialog({
-  open,
-  onOpenChange,
-  expense,
-  group: initialGroup,
-  onActionComplete,
-}: EditExpenseDialogProps) {
+export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup, onActionComplete, }: EditExpenseDialogProps) {
+    const { userProfile } = useAuth();
+    const [group, setGroup] = useState<Group | null>(initialGroup || null);
+    const [isGroupLoading, setIsGroupLoading] = useState(false);
+    const [dialogKey, setDialogKey] = useState(0);
+
+    // Fetch group if not provided
+    useEffect(() => {
+        if (!initialGroup && open) {
+            setIsGroupLoading(true);
+            async function fetchGroup() {
+                const fetchedGroup = await getGroupById(expense.groupId);
+                if (fetchedGroup) setGroup(fetchedGroup);
+                setIsGroupLoading(false);
+            }
+            fetchGroup();
+        } else if (initialGroup) {
+            setGroup(initialGroup);
+        }
+    }, [initialGroup, expense.groupId, open]);
+    
+    // Memoize default values to stabilize them
+    const defaultValues = useMemo(() => {
+        if (!group || !userProfile) return {};
+        
+        const participantData = group.members.map((member) => {
+            const existingParticipant = expense.participants.find((p) => p.user.uid === member.uid);
+            return {
+                userId: member.uid,
+                name: getFullName(member.firstName, member.lastName),
+                avatarUrl: member.avatarUrl,
+                selected: !!existingParticipant,
+                amountOwed: existingParticipant?.amountOwed || 0,
+                shares: existingParticipant?.share || 1,
+                percentage: 0,
+            };
+        });
+
+        if (expense.splitType === 'by_percentage') {
+            const totalAmount = expense.amount;
+            if (totalAmount > 0) {
+                participantData.forEach((p) => {
+                    if (p.selected) {
+                        p.percentage = parseFloat(((p.amountOwed / totalAmount) * 100).toFixed(2));
+                    }
+                });
+            }
+        }
+        
+        return {
+            description: expense.description,
+            amount: expense.amount,
+            date: new Date(expense.date),
+            notes: expense.notes || '',
+            payerType: expense.payers.length > 1 ? 'multiple' : 'single',
+            singlePayerId: expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
+            multiPayers: group.members.map((member) => ({
+                userId: member.uid,
+                name: getFullName(member.firstName, member.lastName),
+                amount: expense.payers.find((p) => p.user.uid === member.uid)?.amount || undefined,
+            })),
+            splitType: expense.splitType,
+            participants: participantData,
+            category: expense.category || 'Other',
+        }
+    }, [group, userProfile, expense]);
+
+    const form = useForm<EditExpenseFormValues>({
+        resolver: zodResolver(expenseSchema),
+        defaultValues,
+    });
+    
+    // Reset form when dialog opens
+    useEffect(() => {
+        if(open) {
+            setDialogKey(prev => prev + 1);
+            form.reset(defaultValues);
+        }
+    }, [open, defaultValues, form]);
+
+
+    if (!userProfile) return null;
+
+    return (
+        <DialogInternal
+            key={dialogKey}
+            open={open}
+            onOpenChange={onOpenChange}
+            expense={expense}
+            group={group}
+            isGroupLoading={isGroupLoading}
+            onActionComplete={onActionComplete}
+            form={form}
+            userProfile={userProfile}
+        />
+    )
+}
+
+
+function DialogInternal({ open, onOpenChange, expense, group, isGroupLoading, onActionComplete, form, userProfile }: any) {
   const router = useRouter();
   const { toast } = useToast();
-  const { userProfile } = useAuth();
-  const [group, setGroup] = useState<Group | null>(initialGroup || null);
-  const [isGroupLoading, setIsGroupLoading] = useState(false);
   const isMobile = useIsMobile();
-
-  const form = useForm<EditExpenseFormValues>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      description: '',
-      amount: 0,
-      date: new Date(),
-      notes: '',
-      payerType: 'single',
-      splitType: 'equally',
-      participants: [],
-      category: 'Other',
-    },
-  });
-
-  useEffect(() => {
-    if (!initialGroup && open) {
-      setIsGroupLoading(true);
-      async function fetchGroup() {
-        const fetchedGroup = await getGroupById(expense.groupId);
-        if (fetchedGroup) setGroup(fetchedGroup);
-        setIsGroupLoading(false);
-      }
-      fetchGroup();
-    } else if (initialGroup) {
-      setGroup(initialGroup);
-    }
-  }, [initialGroup, expense.groupId, open]);
-
-  useEffect(() => {
-    if (group && userProfile && open) {
-      const participantData = group.members.map((member) => {
-        const existingParticipant = expense.participants.find(
-          (p) => p.user.uid === member.uid
-        );
-        return {
-          userId: member.uid,
-          name: getFullName(member.firstName, member.lastName),
-          avatarUrl: member.avatarUrl,
-          selected: !!existingParticipant,
-          amountOwed: existingParticipant?.amountOwed || 0,
-          shares: existingParticipant?.share || 1,
-          percentage: 0,
-        };
-      });
-
-      if (expense.splitType === 'by_percentage') {
-        const totalAmount = expense.amount;
-        if (totalAmount > 0) {
-          participantData.forEach((p) => {
-            if (p.selected) {
-              p.percentage = parseFloat(
-                ((p.amountOwed / totalAmount) * 100).toFixed(2)
-              );
-            }
-          });
-        }
-      }
-
-      form.reset({
-        description: expense.description,
-        amount: expense.amount,
-        date: new Date(expense.date),
-        notes: expense.notes || '',
-        payerType: expense.payers.length > 1 ? 'multiple' : 'single',
-        singlePayerId:
-          expense.payers.length === 1 ? expense.payers[0].user.uid : undefined,
-        multiPayers: group.members.map((member) => ({
-          userId: member.uid,
-          name: getFullName(member.firstName, member.lastName),
-          amount:
-            expense.payers.find((p) => p.user.uid === member.uid)?.amount ||
-            undefined,
-        })),
-        splitType: expense.splitType,
-        participants: participantData,
-        category: expense.category || 'Other',
-      });
-    }
-  }, [group, userProfile, open, expense, form]);
 
   async function onSubmit(values: EditExpenseFormValues) {
     if (!userProfile || !group) return;
@@ -249,6 +259,7 @@ export function EditExpenseDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-none w-auto p-0 border-0 bg-transparent shadow-none">
+        <DialogTitle className="sr-only">Edit Expense</DialogTitle>
         <FormProviderWrapper>{FormContent}</FormProviderWrapper>
       </DialogContent>
     </Dialog>
