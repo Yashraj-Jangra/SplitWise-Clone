@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -150,4 +149,7 @@ export {
   CommandList,
   CommandEmpty,
   CommandGroup,
-  CommandItem
+  CommandItem,
+  CommandShortcut,
+  CommandSeparator,
+}

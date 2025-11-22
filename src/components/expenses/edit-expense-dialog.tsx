@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -91,7 +91,9 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const watchAmount = watch('amount');
     const watchSplitType = watch('splitType');
     const watchParticipants = watch('participants');
-    const participantDeps = JSON.stringify(watchParticipants?.map((p: any) => ({ s: p.selected, sh: p.shares, pe: p.percentage })));
+    const participantDeps = useMemo(() => {
+        return (watchParticipants || []).map((p: any) => ({ s: p.selected, sh: p.shares, pe: p.percentage }));
+    }, [watchParticipants]);
     
     useEffect(() => {
         if(open && group) {

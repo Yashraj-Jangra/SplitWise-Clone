@@ -4,21 +4,23 @@
 import * as React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { getFullName, getInitials } from '@/lib/utils';
+import { cn, getFullName, getInitials } from '@/lib/utils';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { getMasterCategory } from '@/lib/expense-categories';
-import { Icons, IconName } from '@/components/icons';
+import { Icons } from '@/components/icons';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
 
+// UI Components
 import {
   FormControl,
   FormField,
   FormItem,
   FormMessage,
+  FormLabel,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -34,10 +36,22 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  Command, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandInput, 
+  CommandItem, 
+  CommandList 
+} from '@/components/ui/command';
+
+// Icons
+import { X, ArrowLeft } from 'lucide-react';
+
+// Types
 import type { Group } from '@/types';
-import { X, ArrowLeft, Search } from 'lucide-react';
-import { DialogHeader, DialogTitle } from '../ui/dialog';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 interface ExpenseFormProps {
   group: Group;
@@ -46,77 +60,78 @@ interface ExpenseFormProps {
   setView: (view: 'main' | 'split' | 'payer') => void;
 }
 
-
 function CategorySelector() {
-    const { control, watch } = useFormContext();
-    const { settings } = useSiteSettings();
-    const [open, setOpen] = React.useState(false);
+  const { control, watch } = useFormContext();
+  const { settings } = useSiteSettings();
+  const [open, setOpen] = React.useState(false);
 
-    const watchCategory = watch('category');
+  const watchCategory = watch('category');
 
-    const { categoryIconName, CategoryIcon } = React.useMemo(() => {
-        const masterCategory = getMasterCategory(watchCategory, settings.expenseCategories);
-        const iconName = settings.expenseCategories[masterCategory]?.subCategories?.[watchCategory]?.icon || 'Wallet';
-        return {
-            categoryIconName: iconName,
-            CategoryIcon: (Icons as any)[iconName] || Icons.Wallet,
-        };
-    }, [watchCategory, settings.expenseCategories]);
+  const { CategoryIcon } = React.useMemo(() => {
+    if (!settings.expenseCategories) return { CategoryIcon: Icons.Wallet };
+    const masterCategory = getMasterCategory(watchCategory, settings.expenseCategories);
+    if (!masterCategory || !settings.expenseCategories[masterCategory]?.subCategories?.[watchCategory]) {
+        return { CategoryIcon: Icons.Wallet };
+    }
+    const iconName = settings.expenseCategories[masterCategory].subCategories[watchCategory].icon || 'Wallet';
+    return {
+      CategoryIcon: (Icons as any)[iconName] || Icons.Wallet,
+    };
+  }, [watchCategory, settings.expenseCategories]);
 
-    return (
-        <FormField
-            control={control}
-            name="category"
-            render={({ field }) => (
-                <FormItem className="flex flex-col items-center">
-                    <Popover open={open} onOpenChange={setOpen}>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button variant="ghost" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1">
-                                    <div className="flex-shrink-0 p-4 bg-muted rounded-lg">
-                                        <CategoryIcon className="h-8 w-8 text-muted-foreground" />
-                                    </div>
-                                    <span className="text-xs text-muted-foreground">{field.value}</span>
-                                </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[250px] p-0">
-                            <Command>
-                                <CommandInput placeholder="Search category..." />
-                                <CommandList>
-                                    <CommandEmpty>No category found.</CommandEmpty>
-                                    {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
-                                        <CommandGroup key={masterCat} heading={masterCat}>
-                                            {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
-                                                const subDetails = details.subCategories[subCat];
-                                                const Icon = subDetails?.icon ? (Icons as any)[subDetails.icon] : Icons.Wallet;
-                                                return (
-                                                    <CommandItem
-                                                        value={subCat}
-                                                        key={subCat}
-                                                        onSelect={() => {
-                                                            field.onChange(subCat);
-                                                            setOpen(false);
-                                                        }}
-                                                    >
-                                                        <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
-                                                        {subCat}
-                                                    </CommandItem>
-                                                );
-                                            })}
-                                        </CommandGroup>
-                                    ))}
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                </FormItem>
-            )}
-        />
-    )
+  return (
+    <FormField
+      control={control}
+      name="category"
+      render={({ field }) => (
+        <FormItem className="flex flex-col items-center">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <FormControl>
+                <Button variant="ghost" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1">
+                  <div className="flex-shrink-0 p-4 bg-muted rounded-lg">
+                    <CategoryIcon className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <span className="text-xs text-muted-foreground">{field.value}</span>
+                </Button>
+              </FormControl>
+            </PopoverTrigger>
+            <PopoverContent className="w-[250px] p-0">
+              <Command>
+                <CommandInput placeholder="Search category..." />
+                <CommandList>
+                  <CommandEmpty>No category found.</CommandEmpty>
+                  {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
+                    <CommandGroup key={masterCat} heading={masterCat}>
+                      {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
+                        const subDetails = details.subCategories[subCat];
+                        const Icon = subDetails?.icon ? (Icons as any)[subDetails.icon] : Icons.Wallet;
+                        return (
+                          <CommandItem
+                            value={subCat}
+                            key={subCat}
+                            onSelect={() => {
+                              field.onChange(subCat);
+                              setOpen(false);
+                            }}
+                          >
+                            <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
+                            {subCat}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 }
-
 
 export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProps) {
   const { control, watch, setValue } = useFormContext();
@@ -152,21 +167,23 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
     return `You owe ${CURRENCY_SYMBOL}${Math.abs(net).toFixed(2)}`;
   };
   
-  const paidByText = () => {
+  const paidByText = React.useMemo(() => {
     if (watchPayerType === 'single') {
         const payer = group.members.find(m => m.uid === watchSinglePayerId);
+        if (payer?.uid === userProfile?.uid) return 'you';
         return payer ? getFullName(payer.firstName, payer.lastName) : '...';
     }
     const payers = watchMultiPayers?.filter((p: any) => p.amount > 0) || [];
     if (payers.length === 0) return 'no one';
     if (payers.length === 1) {
         const payer = group.members.find(m => m.uid === payers[0].userId);
+        if (payer?.uid === userProfile?.uid) return 'you';
         return payer ? getFullName(payer.firstName, payer.lastName) : '...';
     }
-    return `${payers.length} people`;
-  }
+    return `multiple people`;
+  }, [watchPayerType, watchSinglePayerId, watchMultiPayers, group.members, userProfile?.uid]);
   
-  const splitText = `split ${watchSplitType.replace('_', ' ')}`;
+  const splitText = watchSplitType.replace('_', ' ');
 
   if (view === 'payer') {
       return <PayerView setView={setView} group={group} />;
@@ -227,7 +244,7 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
       </div>
       
       <div className="space-y-2">
-        <p className="text-sm">Paid by <Button variant="link" className="p-0 h-auto" onClick={() => setView('payer')}>{paidByText()}</Button> and {splitText}.</p>
+        <p className="text-sm">Paid by <Button variant="link" className="p-0 h-auto" onClick={() => setView('payer')}>{paidByText}</Button> and split <Button variant="link" className="p-0 h-auto" onClick={() => setView('split')}>{splitText}</Button>.</p>
         <p className="text-xs text-muted-foreground">({getSummaryText()})</p>
       </div>
 
@@ -296,7 +313,7 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
                          <FormControl>
                             <Button type="button" variant="outline" className="w-full justify-start font-normal">
                                 <Icons.Edit className="mr-2 h-4 w-4" />
-                                {field.value ? "Edit notes" : "Add notes/image"}
+                                {field.value ? "Edit notes" : "Add notes"}
                             </Button>
                         </FormControl>
                     </PopoverTrigger>
@@ -318,7 +335,7 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
 }
 
 const PayerView = ({ setView, group }: { setView: (view: 'main') => void, group: Group }) => {
-    const { control, watch, setValue, formState: { errors } } = useFormContext();
+    const { control, watch, formState: { errors } } = useFormContext();
     const watchPayerType = watch('payerType');
     const watchMultiPayers = watch('multiPayers');
     const watchAmount = watch('amount');
@@ -377,14 +394,16 @@ const PayerView = ({ setView, group }: { setView: (view: 'main') => void, group:
                                             variant={field.value === member.uid ? 'default' : 'outline'}
                                             className="w-full h-auto p-2 justify-start cursor-pointer"
                                         >
-                                            <RadioGroupItem value={member.uid} className="sr-only" />
-                                            <div className="flex items-center gap-2">
-                                                 <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={member.avatarUrl} />
-                                                    <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</span>
-                                            </div>
+                                            <label>
+                                                <RadioGroupItem value={member.uid} className="sr-only" />
+                                                <div className="flex items-center gap-2">
+                                                     <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={member.avatarUrl} />
+                                                        <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</span>
+                                                </div>
+                                            </label>
                                         </Button>
                                     </FormControl>
                                 </FormItem>
@@ -409,7 +428,7 @@ const PayerView = ({ setView, group }: { setView: (view: 'main') => void, group:
                                     <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
                                      <div className="w-28">
                                         <FormField control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (<Input type="number" {...field} placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
-                                    </div>
+                                     </div>
                                 </div>
                             ))}
                          </div>
@@ -545,165 +564,4 @@ const SplitView = ({ setView }: { setView: (view: 'main') => void }) => {
 
         </div>
     )
-}
-
-```
-  </change>
-  <change>
-    <file>src/components/ui/command.tsx</file>
-    <content><![CDATA[
-"use client"
-
-import * as React from "react"
-import { type DialogProps } from "@radix-ui/react-dialog"
-import { Command as CommandPrimitive } from "cmdk"
-import { Search } from "lucide-react"
-
-import { cn } from "@/lib/utils"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-
-const Command = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive
-    ref={ref}
-    className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
-      className
-    )}
-    {...props}
-  />
-))
-Command.displayName = CommandPrimitive.displayName
-
-interface CommandDialogProps extends DialogProps {}
-
-const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
-  return (
-    <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0 shadow-lg">
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-          {children}
-        </Command>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-const CommandInput = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-    <CommandPrimitive.Input
-      ref={ref}
-      className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      {...props}
-    />
-  </div>
-))
-
-CommandInput.displayName = CommandPrimitive.Input.displayName
-
-const CommandList = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.List
-    ref={ref}
-    className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
-    {...props}
-  />
-))
-
-CommandList.displayName = CommandPrimitive.List.displayName
-
-const CommandEmpty = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Empty>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
->((props, ref) => (
-  <CommandPrimitive.Empty
-    ref={ref}
-    className="py-6 text-center text-sm"
-    {...props}
-  />
-))
-
-CommandEmpty.displayName = CommandPrimitive.Empty.displayName
-
-const CommandGroup = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Group>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Group
-    ref={ref}
-    className={cn(
-      "overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground",
-      className
-    )}
-    {...props}
-  />
-))
-
-CommandGroup.displayName = CommandPrimitive.Group.displayName
-
-const CommandSeparator = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Separator>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Separator
-    ref={ref}
-    className={cn("-mx-1 h-px bg-border", className)}
-    {...props}
-  />
-))
-CommandSeparator.displayName = CommandPrimitive.Separator.displayName
-
-const CommandItem = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
-      className
-    )}
-    {...props}
-  />
-))
-
-CommandItem.displayName = CommandPrimitive.Item.displayName
-
-const CommandShortcut = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLSpanElement>) => {
-  return (
-    <span
-      className={cn(
-        "ml-auto text-xs tracking-widest text-muted-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-CommandShortcut.displayName = "CommandShortcut"
-
-export {
-  Command,
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandShortcut,
-  CommandSeparator,
 }
