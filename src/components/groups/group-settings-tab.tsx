@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { appEventEmitter } from '@/lib/event-emitter';
 
 
 const settingsSchema = z.object({
@@ -40,10 +41,9 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 interface GroupSettingsTabProps {
   group: Group;
-  onActionComplete: () => void;
 }
 
-export function GroupSettingsTab({ group, onActionComplete }: GroupSettingsTabProps) {
+export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
   const router = useRouter();
   const { userProfile } = useAuth();
   const { toast } = useToast();
@@ -76,7 +76,7 @@ export function GroupSettingsTab({ group, onActionComplete }: GroupSettingsTabPr
     try {
       await updateGroup(group.id, values, userProfile.uid);
       toast({ title: "Group Updated", description: "The group details have been saved." });
-      onActionComplete();
+      appEventEmitter.emit('data-changed');
     } catch (error) {
       toast({ title: "Error", description: "Failed to update group.", variant: "destructive" });
     }
@@ -140,7 +140,7 @@ export function GroupSettingsTab({ group, onActionComplete }: GroupSettingsTabPr
         </Form>
       </Card>
       
-      <GroupMembers members={group.members} group={group} onActionComplete={onActionComplete} />
+      <GroupMembers members={group.members} group={group} />
       
       {isCreator && (
         <Card className="border-destructive">

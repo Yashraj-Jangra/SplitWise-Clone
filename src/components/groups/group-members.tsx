@@ -12,10 +12,9 @@ import { AddMemberDialog } from "./add-member-dialog";
 interface GroupMembersProps {
   members: UserProfile[];
   group: Group;
-  onActionComplete: () => void;
 }
 
-export function GroupMembers({ members, group, onActionComplete }: GroupMembersProps) {
+export function GroupMembers({ members, group }: GroupMembersProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row justify-between items-start">
@@ -23,7 +22,7 @@ export function GroupMembers({ members, group, onActionComplete }: GroupMembersP
             <CardTitle>Group Members ({members.length})</CardTitle>
             <CardDescription>People sharing expenses in this group.</CardDescription>
         </div>
-        <AddMemberDialog group={group} onActionComplete={onActionComplete}/>
+        <AddMemberDialog group={group} />
       </CardHeader>
       <CardContent className="p-6 pt-0">
         <ScrollArea className="h-[45vh] -mx-6 pr-6">

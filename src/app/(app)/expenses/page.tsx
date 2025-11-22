@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 // export const metadata: Metadata = {
 //   title: 'All Expenses - SettleEase',
@@ -34,6 +35,10 @@ export default function AllExpensesPage() {
 
   useEffect(() => {
     loadExpenses();
+    appEventEmitter.on('data-changed', loadExpenses);
+    return () => {
+      appEventEmitter.off('data-changed', loadExpenses);
+    };
   }, [loadExpenses]);
 
   return (
@@ -64,7 +69,7 @@ export default function AllExpensesPage() {
                 <ScrollArea className="h-[calc(100vh-22rem)]">
                 <div className="divide-y divide-border/50">
                     {userExpenses.map((expense) => (
-                    <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} onActionComplete={loadExpenses} />
+                    <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} groupHistory={[]} />
                     ))}
                 </div>
                 </ScrollArea>

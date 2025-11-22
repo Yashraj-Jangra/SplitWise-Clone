@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import type { Expense, Group, HistoryEvent } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
@@ -26,8 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { deleteExpense } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';
-import { ScrollArea } from '../ui/scroll-area';
-import { Skeleton } from '../ui/skeleton';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 
 interface ExpenseListItemProps {
@@ -35,12 +33,10 @@ interface ExpenseListItemProps {
   currentUserId: string;
   group?: Group;
   groupHistory: HistoryEvent[];
-  onActionComplete?: () => void;
 }
 
-function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete, groupHistory }: Omit<ExpenseListItemProps, ''>) {
+function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: Omit<ExpenseListItemProps, ''>) {
     const { toast } = useToast();
-    const router = useRouter();
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -59,10 +55,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
             await deleteExpense(expense.id, expense.groupId, expense.amount, currentUserId);
             toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
             setIsDeleteDialogOpen(false);
-            if (onActionComplete) {
-                onActionComplete();
-            }
-            window.dispatchEvent(new CustomEvent('data-changed'));
+            appEventEmitter.emit('data-changed');
         } catch (error) {
             toast({
                 variant: "destructive",
@@ -73,13 +66,6 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
             setIsDeleting(false);
         }
     };
-    
-    const handleActionComplete = () => {
-        setIsEditDialogOpen(false);
-        if (onActionComplete) {
-            onActionComplete();
-        }
-    }
 
     return (
         <>
@@ -215,7 +201,6 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
                     onOpenChange={setIsEditDialogOpen}
                     expense={expense}
                     group={group}
-                    onActionComplete={handleActionComplete}
                 />
             )}
         </>
@@ -223,7 +208,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, onActionComplete,
 }
 
 
-export function ExpenseListItem({ expense, currentUserId, group, onActionComplete, groupHistory }: ExpenseListItemProps) {
+export function ExpenseListItem({ expense, currentUserId, group, groupHistory }: ExpenseListItemProps) {
   const { settings } = useSiteSettings();
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
@@ -271,7 +256,7 @@ export function ExpenseListItem({ expense, currentUserId, group, onActionComplet
             </div>
         </AccordionTrigger>
         <AccordionContent>
-            <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} onActionComplete={onActionComplete} groupHistory={groupHistory} />
+            <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} groupHistory={groupHistory} />
         </AccordionContent>
     </AccordionItem>
   );

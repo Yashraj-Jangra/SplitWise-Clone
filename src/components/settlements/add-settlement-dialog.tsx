@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -27,6 +26,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { getFullName } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "../ui/scroll-area";
+import { appEventEmitter } from "@/lib/event-emitter";
 
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
@@ -43,14 +43,12 @@ type AddSettlementFormValues = z.infer<typeof settlementSchema>;
 
 interface AddSettlementDialogProps {
   group: Group;
-  onSettlementAdded: () => void;
   initialSettlement?: Partial<AddSettlementFormValues>;
   trigger?: React.ReactNode;
 }
 
-export function AddSettlementDialog({ group, onSettlementAdded, initialSettlement, trigger }: AddSettlementDialogProps) {
+export function AddSettlementDialog({ group, initialSettlement, trigger }: AddSettlementDialogProps) {
   const [open, setOpen] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
   const { userProfile } = useAuth();
   const isMobile = useIsMobile();
@@ -82,7 +80,7 @@ export function AddSettlementDialog({ group, onSettlementAdded, initialSettlemen
   async function onSubmit(values: AddSettlementFormValues) {
     if (!userProfile) return;
 
-    const newSettlement: Omit<SettlementDocument, 'date' | 'groupMemberIds'> & {date: Date} = {
+    const newSettlement: Omit<SettlementDocument, 'date' | 'groupMemberIds'> & { date: Date } = {
       groupId: group.id,
       paidById: values.paidById,
       paidToId: values.paidToId,
@@ -101,9 +99,7 @@ export function AddSettlementDialog({ group, onSettlementAdded, initialSettlemen
         description: `Payment from ${paidByName} to ${paidToName} of ${CURRENCY_SYMBOL}${values.amount.toFixed(2)} recorded.`,
         });
         setOpen(false);
-        onSettlementAdded();
-        router.refresh();
-        window.dispatchEvent(new CustomEvent('data-changed'));
+        appEventEmitter.emit('data-changed');
     } catch (error) {
         toast({ title: "Error", description: "Failed to record settlement.", variant: "destructive" });
     }

@@ -4,7 +4,7 @@ import type { Group, UserProfile } from "@/types";
 import { Icons } from "@/components/icons";
 import Image from "next/image";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import {
   Popover,
@@ -23,10 +23,9 @@ interface GroupDetailHeaderProps {
   group: Group;
   user: UserProfile;
   currentUserBalance: number;
-  onActionComplete: () => void;
 }
 
-export function GroupDetailHeader({ group, user, currentUserBalance, onActionComplete }: GroupDetailHeaderProps) {
+export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDetailHeaderProps) {
   const { toast } = useToast();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [coverImages, setCoverImages] = useState<string[]>([]);
@@ -54,7 +53,6 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
     try {
         await updateGroup(group.id, { coverImageUrl: imageUrl }, user.uid);
         toast({ title: "Cover Image Updated" });
-        onActionComplete();
         setIsPopoverOpen(false); // Close popover on selection
     } catch(e) {
         toast({ title: "Error", description: "Failed to update cover image", variant: "destructive"});
@@ -114,7 +112,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance, onActionCom
             </div>
             {/* Add Expense Button */}
             <div className="flex-shrink-0">
-                <AddExpenseDialog group={group} onExpenseAdded={onActionComplete} />
+                <AddExpenseDialog group={group} />
             </div>
           </div>
         </div>

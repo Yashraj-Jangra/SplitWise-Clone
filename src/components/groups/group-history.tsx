@@ -31,11 +31,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Timestamp } from 'firebase/firestore';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 interface GroupHistoryTabProps {
   groupId: string;
-  onActionComplete: () => void;
   onViewExpense: (expenseId: string) => void;
 }
 
@@ -60,7 +59,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
 };
 
 
-function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }: { event: HistoryEvent; onActionComplete: () => void; onViewExpense: (expenseId: string) => void; isDeleted?: boolean; }) {
+function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryEvent; onViewExpense: (expenseId: string) => void; isDeleted?: boolean; }) {
     const { userProfile } = useAuth();
     const { toast } = useToast();
     const [isRestoring, setIsRestoring] = useState(false);
@@ -95,7 +94,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
                 await restoreSettlement(event.id, userProfile.uid);
                 toast({ title: "Settlement Restored", description: "The settlement has been successfully restored."});
             }
-            onActionComplete();
+            appEventEmitter.emit('data-changed');
         } catch (error) {
             toast({ variant: "destructive", title: "Restore Failed", description: error instanceof Error ? error.message : "Could not restore the item."});
         } finally {
@@ -108,7 +107,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
         try {
             await deleteHistoryEvent(event.id);
             toast({ title: "History Event Deleted" });
-            onActionComplete();
+            appEventEmitter.emit('data-changed');
         } catch (error) {
              toast({ variant: "destructive", title: "Delete Failed", description: "Could not delete history event."});
         } finally {
@@ -245,7 +244,7 @@ function HistoryEventItem({ event, onActionComplete, onViewExpense, isDeleted }:
 }
 
 
-export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: GroupHistoryTabProps) {
+export function GroupHistoryTab({ groupId, onViewExpense }: GroupHistoryTabProps) {
   const [history, setHistory] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -269,12 +268,11 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
 
   useEffect(() => {
     fetchHistory();
+    appEventEmitter.on('data-changed', fetchHistory);
+    return () => {
+      appEventEmitter.off('data-changed', fetchHistory);
+    };
   }, [fetchHistory]);
-  
-  const handleAction = () => {
-    fetchHistory();
-    onActionComplete();
-  }
 
   const deletedExpenseIds = useMemo(() => {
     const deletedIds = new Set<string>();
@@ -314,7 +312,7 @@ export function GroupHistoryTab({ groupId, onActionComplete, onViewExpense }: Gr
           <div className="divide-y divide-border">
               {history.map(event => {
                   const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
-                  return (<HistoryEventItem key={event.id} event={event} onActionComplete={handleAction} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
+                  return (<HistoryEventItem key={event.id} event={event} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
               })}
           </div>
         ) : (

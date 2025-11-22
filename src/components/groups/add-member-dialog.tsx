@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { X } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { appEventEmitter } from "@/lib/event-emitter";
 
 const addMembersSchema = z.object({
   memberIds: z.array(z.string()).min(1, { message: "Select at least one member to add." }),
@@ -38,10 +39,9 @@ type AddMembersFormValues = z.infer<typeof addMembersSchema>;
 
 interface AddMemberDialogProps {
   group: Group;
-  onActionComplete: () => void;
 }
 
-export function AddMemberDialog({ group, onActionComplete }: AddMemberDialogProps) {
+export function AddMemberDialog({ group }: AddMemberDialogProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -118,7 +118,7 @@ export function AddMemberDialog({ group, onActionComplete }: AddMemberDialogProp
       description: `${values.memberIds.length} new member(s) added to "${group.name}".`,
     });
     setOpen(false);
-    onActionComplete();
+    appEventEmitter.emit('data-changed');
     router.refresh();
   }
 

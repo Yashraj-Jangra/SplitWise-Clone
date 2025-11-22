@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { Balance, UserProfile, Group, SimplifiedSettlement } from "@/types";
+import type { Balance, Group, SimplifiedSettlement } from "@/types";
 import { simplifyDebts } from "@/lib/mock-data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -18,10 +18,9 @@ import { cn } from "@/lib/utils";
 interface GroupBalancesProps {
   balances: Balance[];
   group: Group;
-  onSettlementAdded: () => void;
 }
 
-export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalancesProps) {
+export function GroupBalances({ balances, group }: GroupBalancesProps) {
   const [isSimplified, setIsSimplified] = useState(false);
 
   const everythingIsSettled = useMemo(() => balances.every(b => Math.abs(b.netBalance) < 0.01), [balances]);
@@ -103,7 +102,6 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                  <div className="flex-shrink-0 ml-2">
                     <AddSettlementDialog
                         group={group}
-                        onSettlementAdded={onSettlementAdded}
                         initialSettlement={{
                             paidById: s.from.uid,
                             paidToId: s.to.uid,
@@ -176,7 +174,7 @@ export function GroupBalances({ balances, group, onSettlementAdded }: GroupBalan
                     />
                 </div>
                 )}
-                 <AddSettlementDialog group={group} onSettlementAdded={onSettlementAdded} />
+                 <AddSettlementDialog group={group} />
             </div>
         </div>
       </CardHeader>

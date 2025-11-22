@@ -26,15 +26,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/auth-context';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 interface SettlementListItemProps {
   settlement: Settlement;
   currentUserId: string;
   group?: Group;
-  onActionComplete?: () => void;
 }
 
-function SettlementDetailContent({ settlement, group, onActionComplete }: Omit<SettlementListItemProps, 'currentUserId'>) {
+function SettlementDetailContent({ settlement, group }: Omit<SettlementListItemProps, 'currentUserId'>) {
     const { toast } = useToast();
     const { userProfile } = useAuth();
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -48,18 +48,12 @@ function SettlementDetailContent({ settlement, group, onActionComplete }: Omit<S
             await deleteSettlement(settlement.id, settlement.groupId, userProfile.uid);
             toast({ title: "Settlement Deleted" });
             setIsDeleteDialogOpen(false);
-            if (onActionComplete) onActionComplete();
-            window.dispatchEvent(new CustomEvent('data-changed'));
+            appEventEmitter.emit('data-changed');
         } catch (error) {
             toast({ variant: "destructive", title: "Error Deleting Settlement", description: "Failed to delete the settlement." });
         } finally {
             setIsDeleting(false);
         }
-    };
-    
-    const handleActionComplete = () => {
-        setIsEditDialogOpen(false);
-        if (onActionComplete) onActionComplete();
     };
 
     return (
@@ -102,7 +96,6 @@ function SettlementDetailContent({ settlement, group, onActionComplete }: Omit<S
                     onOpenChange={setIsEditDialogOpen}
                     settlement={settlement}
                     group={group}
-                    onActionComplete={handleActionComplete}
                 />
             )}
         </>
@@ -110,7 +103,7 @@ function SettlementDetailContent({ settlement, group, onActionComplete }: Omit<S
 }
 
 
-export function SettlementListItem({ settlement, currentUserId, group, onActionComplete }: SettlementListItemProps) {
+export function SettlementListItem({ settlement, currentUserId, group }: SettlementListItemProps) {
   const isPayer = settlement.paidBy.uid === currentUserId;
   const isPayee = settlement.paidTo.uid === currentUserId;
 
@@ -145,9 +138,8 @@ export function SettlementListItem({ settlement, currentUserId, group, onActionC
             </div>
         </AccordionTrigger>
         <AccordionContent>
-            <SettlementDetailContent settlement={settlement} group={group} onActionComplete={onActionComplete} />
+            <SettlementDetailContent settlement={settlement} group={group} />
         </AccordionContent>
     </AccordionItem>
   );
 }
-
