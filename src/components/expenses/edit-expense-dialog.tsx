@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -89,10 +89,6 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     const { watch, setValue, getValues } = form;
 
     const watchSplitType = watch('splitType');
-    const watchParticipants = watch('participants');
-    const participantDeps = useMemo(() => {
-        return (watchParticipants || []).map((p: any) => ({ s: p.selected, sh: p.shares, pe: p.percentage }));
-    }, [watchParticipants]);
     
     useEffect(() => {
         if(open && group) {
@@ -140,7 +136,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
         }
     }, [open, group, expense, form]);
 
-    useEffect(() => {
+    const calculateSplits = useCallback(() => {
       const totalAmount = Number(getValues('amount')) || 0;
       const allParticipants = getValues('participants') || [];
       const selectedParticipants = allParticipants.filter((p: any) => p.selected);
@@ -185,7 +181,11 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
               }
           });
       }
-    }, [watchSplitType, participantDeps, setValue, getValues]);
+    }, [watchSplitType, setValue, getValues]);
+
+    useEffect(() => {
+        calculateSplits();
+    }, [calculateSplits, watchSplitType, watch('participants')]);
 
 
     if (!userProfile) return null;
