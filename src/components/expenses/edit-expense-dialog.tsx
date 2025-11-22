@@ -7,8 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import type { Group, Expense } from '@/types';
 import { getGroupById, updateExpense } from '@/lib/mock-data';
@@ -18,6 +18,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '../ui/skeleton';
 import { expenseSchema, ExpenseForm } from './expense-form';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { Button } from '../ui/button';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 type EditExpenseFormValues = z.infer<typeof expenseSchema>;
 
@@ -26,10 +28,9 @@ interface EditExpenseDialogProps {
   onOpenChange: (open: boolean) => void;
   expense: Expense;
   group?: Group;
-  onActionComplete?: () => void;
 }
 
-export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup, onActionComplete, }: EditExpenseDialogProps) {
+export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup }: EditExpenseDialogProps) {
     const { userProfile } = useAuth();
     const [group, setGroup] = useState<Group | null>(initialGroup || null);
     const [isGroupLoading, setIsGroupLoading] = useState(false);
@@ -180,10 +181,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       });
 
       onOpenChange(false);
-      if (onActionComplete) {
-        onActionComplete();
-      }
-      window.dispatchEvent(new CustomEvent('data-changed'));
+      appEventEmitter.emit('data-changed');
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'An unknown error occurred.';
@@ -221,7 +219,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
     isGroupLoading || !group ? (
       <SkeletonLoader />
     ) : (
-      <ExpenseForm group={group} closeDialog={() => onOpenChange(false)} isEditing />
+      <ExpenseForm group={group} isEditing />
     );
 
   if (isMobile) {
@@ -229,9 +227,22 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="h-screen flex flex-col p-0 border-0 bg-background"
+          className="h-full flex flex-col p-0 border-0 bg-background"
         >
-          <FormProviderWrapper>{FormContent}</FormProviderWrapper>
+          <FormProviderWrapper>
+             <SheetHeader className="p-4 border-b">
+                 <DialogTitle>Edit Expense</DialogTitle>
+             </SheetHeader>
+            <div className="max-h-full overflow-y-auto p-4">
+               {FormContent}
+            </div>
+             <SheetFooter className="p-4 border-t mt-auto">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button type="submit" form="edit-expense-form" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </SheetFooter>
+          </FormProviderWrapper>
         </SheetContent>
       </Sheet>
     );
@@ -239,9 +250,24 @@ export function EditExpenseDialog({ open, onOpenChange, expense, group: initialG
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-auto p-0 border-0 bg-transparent shadow-none">
-        <DialogTitle className="sr-only">Edit Expense</DialogTitle>
-        <FormProviderWrapper>{FormContent}</FormProviderWrapper>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Expense</DialogTitle>
+          <DialogDescription>
+            Update the details for "{expense.description}".
+          </DialogDescription>
+        </DialogHeader>
+        <FormProviderWrapper>
+            <div className="max-h-[60vh] overflow-y-auto p-1 -mx-4 px-4">
+                {FormContent}
+            </div>
+            <DialogFooter className="pt-4 border-t">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button type="submit" form="edit-expense-form" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+        </FormProviderWrapper>
       </DialogContent>
     </Dialog>
   );
