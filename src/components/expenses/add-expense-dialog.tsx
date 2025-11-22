@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -204,6 +205,7 @@ export function AddExpenseDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
       <DialogContent className="max-w-none w-auto p-0 border-0 bg-transparent shadow-none">
+        <DialogTitle className="sr-only">Add Expense</DialogTitle>
         <FormProviderWrapper>
           <ExpenseForm group={group} closeDialog={() => setOpen(false)} isEditing={false} />
         </FormProviderWrapper>
