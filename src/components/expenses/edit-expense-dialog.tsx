@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -69,7 +70,7 @@ interface EditExpenseDialogProps {
 export function EditExpenseDialog({ open, onOpenChange, expense, group: initialGroup }: EditExpenseDialogProps) {
     const { userProfile } = useAuth();
     const [group, setGroup] = useState<Group | null>(initialGroup || null);
-    const [isGroupLoading, setIsGroupLoading = useState(false);
+    const [isGroupLoading, setIsGroupLoading] = useState(false);
     const { settings } = useSiteSettings();
     const router = useRouter();
     const { toast } = useToast();
