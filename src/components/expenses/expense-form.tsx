@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -137,7 +138,7 @@ export function MainExpenseForm({ setView, group }: { setView: (view: 'main' | '
   };
   
   const getSummaryText = () => {
-    if (!userProfile || !watchAmount) return 'Enter an amount to see your share.';
+    if (!userProfile || !watchAmount || isNaN(Number(watchAmount))) return 'Enter an amount to see your share.';
     const userPaid = watchPayerType === 'single'
       ? (watchSinglePayerId === userProfile.uid ? watchAmount : 0)
       : watchMultiPayers?.find((p: any) => p.userId === userProfile.uid)?.amount || 0;
@@ -275,21 +276,19 @@ export function MainExpenseForm({ setView, group }: { setView: (view: 'main' | '
         <p className="text-xs text-muted-foreground">({getSummaryText()})</p>
       </div>
 
-      <div className="flex items-start gap-2">
-        <p className="text-sm mr-1 mt-1.5 flex-shrink-0">With:</p>
-        <div className="flex-grow">
-          <div className="flex flex-wrap items-center gap-1">
-            {selectedParticipants.map((p: any) => (
-              <Badge key={p.userId} variant="secondary" className="pl-2 pr-1">
-                {p.name}
-                <button type="button" onClick={() => handleParticipantSelection(p.userId, false)} className="ml-1 rounded-full hover:bg-destructive/50">
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
+      <div className="flex flex-row items-start gap-2">
+        <p className="text-sm mt-1.5 flex-shrink-0">With:</p>
+        <div className="flex-1 flex flex-wrap items-center gap-1">
+          {selectedParticipants.map((p: any) => (
+            <Badge key={p.userId} variant="secondary" className="pl-2 pr-1">
+              {p.name}
+              <button type="button" onClick={() => handleParticipantSelection(p.userId, false)} className="ml-1 rounded-full hover:bg-destructive/50">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => setView('split')}>Edit</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setView('split')} className="flex-shrink-0">Edit</Button>
       </div>
 
 
@@ -579,7 +578,7 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
   const formId = isEditing ? 'edit-expense-form' : 'add-expense-form';
   
   const FormUI = (
-      <div className={cn("flex flex-nowrap", isMobile ? "flex-col" : "flex-row")}>
+      <div className={cn("flex flex-nowrap w-full", isMobile ? "flex-col" : "flex-row")}>
         <div className="flex-shrink-0 w-full sm:w-[480px]">
           <div className="flex flex-col h-full">
             <ScrollArea className="flex-1">
@@ -899,5 +898,3 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
         </div>
     )
 }
-
-    
