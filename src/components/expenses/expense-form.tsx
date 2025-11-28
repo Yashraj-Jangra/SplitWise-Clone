@@ -334,7 +334,7 @@ export function ExpenseForm({ group, isEditing, view, setView }: ExpenseFormProp
   );
 }
 
-const PayerView = ({ setView, group }: { setView: (view: 'main') => void, group: Group }) => {
+export const PayerView = ({ setView, group }: { setView: (view: 'main') => void, group: Group }) => {
     const { control, watch, formState: { errors } } = useFormContext();
     const watchPayerType = watch('payerType');
     const watchMultiPayers = watch('multiPayers');
@@ -447,7 +447,7 @@ const PayerView = ({ setView, group }: { setView: (view: 'main') => void, group:
     )
 }
 
-const SplitView = ({ setView }: { setView: (view: 'main') => void }) => {
+export const SplitView = ({ setView }: { setView: (view: 'main') => void }) => {
     const { control, watch, formState: { errors } } = useFormContext();
     const watchSplitType = watch('splitType');
     const watchParticipants = watch('participants');
