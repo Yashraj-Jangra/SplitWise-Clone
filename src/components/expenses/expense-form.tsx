@@ -171,12 +171,16 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
   
-  // This effect will run ONLY when one of these specific values changes, not on every keystroke.
   React.useEffect(() => {
     if (getValues('splitType') !== 'unequally') {
       calculateSplits();
     }
-  }, [watchAmount, watchSplitType, watchParticipants, calculateSplits, getValues]);
+  }, [watchAmount, watchSplitType, calculateSplits, getValues]);
+  
+  // This useEffect will only run when the selected state of participants changes.
+  React.useEffect(() => {
+      calculateSplits();
+  }, [JSON.stringify(watchParticipants?.map(p => p.selected)), calculateSplits]);
 
 
   React.useEffect(() => {
@@ -324,12 +328,12 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
   const formId = isEditing ? 'edit-expense-form' : 'add-expense-form';
   
   const FormUI = (
-      <div className={cn("flex", isMobile ? "flex-col" : "flex-row")}>
-        <div className={cn("flex-shrink-0", isMobile ? "w-full" : "w-full sm:w-[480px]")}>
+      <div className={cn("flex flex-nowrap", isMobile ? "flex-col" : "flex-row")}>
+        <div className="flex-shrink-0 w-full sm:w-[480px]">
           <div className="flex flex-col h-full">
             <ScrollArea className="flex-1">
               <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="p-6">
-                  <MainExpenseForm setView={setView} group={group} />
+                  <MainExpenseForm group={group} setView={setView} />
               </form>
             </ScrollArea>
             <DialogFooter className="p-6 pt-0">
@@ -342,21 +346,23 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
         </div>
 
         <AnimatePresence>
-            {view !== 'main' && !isMobile && (
-                 <motion.div
+            {view !== 'main' && (
+                <motion.div
                     key={view}
                     initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 420, opacity: 1 }}
+                    animate={{ width: isMobile ? '100%' : 420, opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                     className="bg-muted/50 overflow-hidden flex flex-col border-l"
                 >
-                    <ScrollArea className="h-full">
-                        <div className="p-6 h-full">
-                            {view === 'split' && <SplitView setView={setView} />}
-                            {view === 'payer' && <PayerView setView={setView} group={group} />}
-                        </div>
-                    </ScrollArea>
+                    <div className="w-[420px]">
+                        <ScrollArea className="h-full">
+                            <div className="p-6 h-full">
+                                {view === 'split' && <SplitView setView={setView} />}
+                                {view === 'payer' && <PayerView setView={setView} group={group} />}
+                            </div>
+                        </ScrollArea>
+                    </div>
                 </motion.div>
             )}
         </AnimatePresence>
@@ -373,7 +379,7 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
               <ScrollArea className="flex-1">
                   <form id={formId} onSubmit={form.handleSubmit(onSubmit)}>
                     <div className="p-6">
-                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm setView={setView} group={group} />}
+                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm group={group} setView={setView} />}
                     </div>
                   </form>
               </ScrollArea>
@@ -398,7 +404,6 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
         onInteractOutside={(e) => {
             if (view !== 'main') {
                 e.preventDefault();
-                setView('main');
             }
         }}
     >
@@ -412,8 +417,8 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
 
 // --- Child Components for Different Views ---
 
-function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' | 'payer') => void, group: Group }) {
-  const { control, watch, setValue } = useFormContext();
+function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group }) {
+  const { control, watch } = useFormContext();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
   
@@ -441,7 +446,7 @@ function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' 
     const updatedParticipants = watchParticipants.map((p: any) =>
       p.userId === userId ? { ...p, selected: isSelected } : p
     );
-    setValue('participants', updatedParticipants, { shouldValidate: true });
+    control.setValue('participants', updatedParticipants, { shouldValidate: true });
   };
   
   const getSummaryText = () => {
@@ -452,7 +457,12 @@ function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' 
       
     const userOwed = watchParticipants?.find((p: any) => p.userId === userProfile.uid)?.amountOwed || 0;
     
-    const net = userPaid - userOwed;
+    // Ensure both values are numbers before calculating
+    const net = (Number(userPaid) || 0) - (Number(userOwed) || 0);
+    
+    if (isNaN(net)) {
+        return 'Calculating...';
+    }
     if (Math.abs(net) < 0.01) return 'You are all square.';
     if (net > 0) return `You get back ${CURRENCY_SYMBOL}${net.toFixed(2)}`;
     return `You owe ${CURRENCY_SYMBOL}${Math.abs(net).toFixed(2)}`;
