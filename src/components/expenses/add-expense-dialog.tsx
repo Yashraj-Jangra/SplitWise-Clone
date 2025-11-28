@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Group, Expense, UserProfile } from '@/types';
 import { Button, type ButtonProps } from '@/components/ui/button';
