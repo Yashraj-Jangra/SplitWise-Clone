@@ -1,35 +1,19 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/contexts/auth-context';
-import { getExpensesByUserId } from '@/lib/mock-data';
+import { useMemo } from 'react';
 import type { Expense } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { subDays, differenceInDays } from 'date-fns';
+import { subDays } from 'date-fns';
 import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-export function PredictiveInsights() {
-  const { userProfile, loading: authLoading } = useAuth();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+interface PredictiveInsightsProps {
+    expenses: Expense[];
+}
 
-  useEffect(() => {
-    async function loadExpenses() {
-      if (!userProfile?.uid) return;
-      setLoading(true);
-      const userExpenses = await getExpensesByUserId(userProfile.uid);
-      setExpenses(userExpenses);
-      setLoading(false);
-    }
-    if (userProfile) {
-      loadExpenses();
-    }
-  }, [userProfile]);
-
+export function PredictiveInsights({ expenses }: PredictiveInsightsProps) {
   const { velocityPercentage, primaryDriver } = useMemo(() => {
     const thirtyDaysAgo = subDays(new Date(), 30);
     const sevenDaysAgo = subDays(new Date(), 7);
@@ -70,10 +54,6 @@ export function PredictiveInsights() {
     };
   }, [expenses]);
 
-  if (authLoading || loading) {
-    return <Skeleton className="h-80 w-full" />;
-  }
-  
   const isFaster = velocityPercentage > 0;
   const isSlower = velocityPercentage < 0;
 

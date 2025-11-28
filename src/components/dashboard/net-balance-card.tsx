@@ -1,18 +1,16 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { Area, AreaChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
 
 import type { Expense, Settlement } from '@/types';
-import { getExpensesByUserId, getSettlementsByUserId } from '@/lib/mock-data';
 
 import { cn } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
 const chartConfig = {
@@ -29,36 +27,13 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
-    const [expenses, setExpenses] = useState<Expense[]>([]);
-    const [settlements, setSettlements] = useState<Settlement[]>([]);
-    const [loading, setLoading] = useState(true);
+interface NetBalanceCardProps {
+    expenses: Expense[];
+    settlements: Settlement[];
+    currentUserId: string;
+}
 
-    const loadData = useCallback(async () => {
-        setLoading(true);
-        const [userExpenses, userSettlements] = await Promise.all([
-            getExpensesByUserId(currentUserId),
-            getSettlementsByUserId(currentUserId),
-        ]);
-        setExpenses(userExpenses);
-        setSettlements(userSettlements);
-        setLoading(false);
-    }, [currentUserId]);
-
-    useEffect(() => {
-        loadData();
-        
-        const handleDataChange = () => {
-            loadData();
-        };
-
-        window.addEventListener('data-changed', handleDataChange);
-
-        return () => {
-            window.removeEventListener('data-changed', handleDataChange);
-        };
-    }, [loadData]);
-    
+export function NetBalanceCard({ expenses, settlements, currentUserId }: NetBalanceCardProps) {
     const { netBalance, chartData, domain, gradientOffset } = useMemo(() => {
         // 1. Consolidate all transactions into a single array
         const allTransactions: { date: Date, amount: number }[] = [];
@@ -133,11 +108,6 @@ export function NetBalanceCard({ currentUserId }: { currentUserId: string }) {
         };
     }, [expenses, settlements, currentUserId]);
 
-
-    if (loading) {
-        return <Skeleton className="h-[180px] w-full" />;
-    }
-    
     const isNegative = netBalance < 0;
     const finalColor = isNegative ? 'text-red-500' : 'text-green-500';
 

@@ -2,11 +2,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/contexts/auth-context';
-import { getExpensesByUserId } from '@/lib/mock-data';
 import type { Expense } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip, Sector } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
@@ -44,11 +41,11 @@ const AnimatedActiveShape = (props: any) => {
   );
 };
 
+interface DynamicSpendingChartProps {
+    expenses: Expense[];
+}
 
-export function DynamicSpendingChart() {
-  const { userProfile, loading: authLoading } = useAuth();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+export function DynamicSpendingChart({ expenses }: DynamicSpendingChartProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   
   // State for animation control
@@ -66,20 +63,6 @@ export function DynamicSpendingChart() {
     setIsAnimationEnabled(enabled);
     localStorage.setItem('spendingChartAnimationEnabled', String(enabled));
   };
-
-
-  useEffect(() => {
-    async function loadExpenses() {
-      if (!userProfile?.uid) return;
-      setLoading(true);
-      const userExpenses = await getExpensesByUserId(userProfile.uid);
-      setExpenses(userExpenses);
-      setLoading(false);
-    }
-    if (userProfile) {
-      loadExpenses();
-    }
-  }, [userProfile]);
 
   const { expensesByCategory, totalAmount } = useMemo(() => {
     const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
@@ -133,11 +116,6 @@ export function DynamicSpendingChart() {
     : isHovered ? null : (isAnimationEnabled ? expensesByCategory[animationIndex] : null);
     
   const activePercentage = activeData && totalAmount > 0 ? (activeData.total / totalAmount * 100).toFixed(1) : null;
-
-
-  if (authLoading || loading) {
-    return <Skeleton className="h-80 w-full" />;
-  }
 
   return (
     <Card 

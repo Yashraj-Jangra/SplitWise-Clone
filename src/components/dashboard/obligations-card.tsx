@@ -1,10 +1,8 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getGroupBalances, getGroupsByUserId } from '@/lib/mock-data';
 import type { UserProfile, Balance } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { getFullName, getInitials } from '@/lib/utils';
@@ -17,39 +15,12 @@ interface Obligation {
     amount: number;
 }
 
-async function getOverallBalances(userId: string): Promise<Balance[]> {
-    const userGroups = await getGroupsByUserId(userId);
-    if (userGroups.length === 0) return [];
-    
-    const allGroupBalancesPromises = userGroups.map(group => getGroupBalances(group.id));
-    const allGroupBalances = await Promise.all(allGroupBalancesPromises);
-
-    const userBalanceMap = new Map<string, { user: UserProfile, netBalance: number }>();
-
-    allGroupBalances.flat().forEach(balance => {
-        if (balance.user.uid === userId) return;
-        const existing = userBalanceMap.get(balance.user.uid) || { user: balance.user, netBalance: 0 };
-        existing.netBalance += balance.netBalance;
-        userBalanceMap.set(balance.user.uid, existing);
-    });
-
-    return Array.from(userBalanceMap.values());
+interface ObligationsCardProps {
+    balances: Balance[];
+    type: 'owed' | 'owes';
 }
 
-export function ObligationsCard({ currentUserId, type }: { currentUserId: string; type: 'owed' | 'owes' }) {
-    const [balances, setBalances] = useState<Balance[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function loadData() {
-            setLoading(true);
-            const overallBalances = await getOverallBalances(currentUserId);
-            setBalances(overallBalances);
-            setLoading(false);
-        }
-        loadData();
-    }, [currentUserId]);
-
+export function ObligationsCard({ balances, type }: ObligationsCardProps) {
     const { total, obligations } = useMemo(() => {
         let totalAmount = 0;
         let obligationList: Obligation[] = [];
@@ -71,9 +42,6 @@ export function ObligationsCard({ currentUserId, type }: { currentUserId: string
         return { total: totalAmount, obligations: obligationList.sort((a,b) => b.amount - a.amount) };
     }, [balances, type]);
 
-    if (loading) {
-        return <Skeleton className="h-[180px] w-full" />;
-    }
 
     const title = type === 'owed' ? 'You Are Owed' : 'You Owe';
     const totalColor = type === 'owed' ? 'text-green-500' : 'text-red-500';
