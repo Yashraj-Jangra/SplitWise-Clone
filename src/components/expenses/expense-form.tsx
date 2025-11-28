@@ -319,7 +319,7 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
   const FormUI = (
       <FormProvider {...form}>
           <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="p-6">
-              <MainExpenseForm setView={setView} />
+              <MainExpenseForm setView={setView} group={group} />
           </form>
           <AnimatePresence>
               {view !== 'main' && (
@@ -351,7 +351,7 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
               <ScrollArea className="flex-1">
                   <form id={formId} onSubmit={form.handleSubmit(onSubmit)}>
                     <div className="p-6">
-                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm setView={setView} />}
+                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm setView={setView} group={group} />}
                     </div>
                   </form>
               </ScrollArea>
@@ -398,11 +398,10 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
 
 // --- Child Components for Different Views ---
 
-function MainExpenseForm({ setView }: { setView: (view: 'main' | 'split' | 'payer') => void }) {
-  const { control, watch } = useFormContext();
+function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' | 'payer') => void, group: Group }) {
+  const { control, watch, setValue } = useFormContext();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
-  const group = watch('group'); // Assuming group is passed into form values or available in context
   
   const watchAmount = watch('amount');
   const watchPayerType = watch('payerType');
@@ -764,7 +763,7 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
     )
 }
 
-export function SplitView({ setView }: { setView: (view: 'main') => void }) => {
+export function SplitView({ setView }: { setView: (view: 'main') => void }) {
     const { control, watch, formState: { errors } } = useFormContext();
     const watchSplitType = watch('splitType');
     const watchParticipants = watch('participants');
