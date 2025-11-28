@@ -95,8 +95,8 @@ const expenseSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
-function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group }) {
-  const { control, watch, setValue } = useFormContext<ExpenseFormValues>();
+function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group, setValue: any }) {
+  const { control, watch } = useFormContext<ExpenseFormValues>();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
   
@@ -266,9 +266,9 @@ function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' 
         <p className="text-xs text-muted-foreground">({getSummaryText()})</p>
       </div>
 
-      <div className="flex flex-row items-start gap-2">
-        <p className="text-sm mt-1.5 flex-shrink-0">With:</p>
-        <div className="flex-1 flex flex-wrap items-center gap-1">
+       <div className="flex flex-row items-start gap-2">
+         <p className="text-sm mt-1.5 flex-shrink-0">With:</p>
+         <div className="flex-1 flex flex-wrap items-center gap-1">
           {selectedParticipants.map((p: any) => (
             <Badge key={p.userId} variant="secondary" className="pl-2 pr-1">
               {p.name}
@@ -596,7 +596,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     resolver: zodResolver(expenseSchema),
   });
 
-  const { reset, watch, setValue, getValues, formState } = form;
+  const { reset, watch, setValue, getValues, formState, trigger } = form;
 
   const calculateSplits = React.useCallback(() => {
     const totalAmount = Number(getValues('amount')) || 0;
@@ -645,19 +645,6 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
         });
     }
   }, [getValues, setValue]);
-  
-  React.useEffect(() => {
-    const subscription = watch((value, { name, type }) => {
-      if (name === 'splitType' || name?.startsWith('participants')) {
-        calculateSplits();
-      }
-      if (name === 'amount' && getValues('splitType') !== 'unequally') {
-        calculateSplits();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, calculateSplits, getValues]);
-
 
   React.useEffect(() => {
     if (isEditing && expenseToEdit && group) {
@@ -727,6 +714,25 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
         });
     }
   }, [isEditing, expenseToEdit, group, userProfile, reset]);
+
+  // Manually trigger split calculation when certain fields change.
+  React.useEffect(() => {
+    const subscription = watch((value, { name }) => {
+      if (
+        name === "amount" ||
+        name === "splitType" ||
+        name?.match(/^participants\.(\d+)\.selected$/) ||
+        name?.match(/^participants\.(\d+)\.shares$/) ||
+        name?.match(/^participants\.(\d+)\.percentage$/)
+      ) {
+        if(getValues('splitType') !== 'unequally') {
+            calculateSplits();
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, calculateSplits, getValues]);
+
 
   async function onSubmit(values: ExpenseFormValues) {
     if (!userProfile) return;
@@ -809,7 +815,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
           <div className="flex flex-col h-full">
             <ScrollArea className="flex-1">
               <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="p-6">
-                  <MainExpenseForm group={group} setView={setView} />
+                  <MainExpenseForm group={group} setView={setView} setValue={setValue} />
               </form>
             </ScrollArea>
             <DialogFooter className="p-6 pt-0">
@@ -855,7 +861,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
               <ScrollArea className="flex-1">
                   <form id={formId} onSubmit={form.handleSubmit(onSubmit)}>
                     <div className="p-6">
-                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm group={group} setView={setView} />}
+                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm group={group} setView={setView} setValue={setValue} />}
                     </div>
                   </form>
               </ScrollArea>
