@@ -141,21 +141,25 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
     } else if (getValues('splitType') === 'by_percentage') {
         amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
     } else {
+        // For 'unequally', amounts are set manually, so we don't calculate them here.
         return;
     }
 
     if (amounts.length > 0) {
+        // Distribute remainder for equal splits
         const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
         let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
         
         for (let i = 0; i < Math.abs(remainder * 100); i++) {
             roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
         }
-
+        
+        // Update the form values
+        let roundedIndex = 0;
         allParticipants.forEach((p: any, index: number) => {
-            const selectedIndex = selectedParticipants.findIndex((sp: any) => sp.userId === p.userId);
-            if (selectedIndex !== -1) {
-                setValue(`participants.${index}.amountOwed`, roundedAmounts[selectedIndex], { shouldValidate: true });
+            if (p.selected) {
+                 setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex], { shouldValidate: true });
+                 roundedIndex++;
             } else {
                 setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
             }
@@ -166,10 +170,13 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
   const watchAmount = watch('amount');
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
-
+  
+  // This effect will run ONLY when one of these specific values changes, not on every keystroke.
   React.useEffect(() => {
-    calculateSplits();
-  }, [watchAmount, watchSplitType, watchParticipants, calculateSplits]);
+    if (getValues('splitType') !== 'unequally') {
+      calculateSplits();
+    }
+  }, [watchAmount, watchSplitType, watchParticipants, calculateSplits, getValues]);
 
 
   React.useEffect(() => {
@@ -317,28 +324,43 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
   const formId = isEditing ? 'edit-expense-form' : 'add-expense-form';
   
   const FormUI = (
-      <FormProvider {...form}>
-          <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="p-6">
-              <MainExpenseForm setView={setView} group={group} />
-          </form>
-          <AnimatePresence>
-              {view !== 'main' && (
-                  <motion.div
-                      key={view}
-                      initial={{ x: '100%', opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ x: '100%', opacity: 0 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
-                      className="bg-muted/50 h-full border-l p-6"
-                  >
-                      <ScrollArea className="h-full pr-4 -mr-4">
-                          {view === 'split' && <SplitView setView={setView} />}
-                          {view === 'payer' && <PayerView setView={setView} group={group} />}
-                      </ScrollArea>
-                  </motion.div>
-              )}
-          </AnimatePresence>
-      </FormProvider>
+      <div className={cn("flex", isMobile ? "flex-col" : "flex-row")}>
+        <div className={cn("flex-shrink-0", isMobile ? "w-full" : "w-full sm:w-[480px]")}>
+          <div className="flex flex-col h-full">
+            <ScrollArea className="flex-1">
+              <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="p-6">
+                  <MainExpenseForm setView={setView} group={group} />
+              </form>
+            </ScrollArea>
+            <DialogFooter className="p-6 pt-0">
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="submit" form={formId} disabled={formState.isSubmitting}>
+                {formState.isSubmitting ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Expense')}
+              </Button>
+            </DialogFooter>
+          </div>
+        </div>
+
+        <AnimatePresence>
+            {view !== 'main' && !isMobile && (
+                 <motion.div
+                    key={view}
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 420, opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="bg-muted/50 overflow-hidden flex flex-col border-l"
+                >
+                    <ScrollArea className="h-full">
+                        <div className="p-6 h-full">
+                            {view === 'split' && <SplitView setView={setView} />}
+                            {view === 'payer' && <PayerView setView={setView} group={group} />}
+                        </div>
+                    </ScrollArea>
+                </motion.div>
+            )}
+        </AnimatePresence>
+      </div>
   );
 
   if (isMobile) {
@@ -370,8 +392,8 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
   return (
     <DialogContent
         className={cn(
-            "p-0 overflow-hidden grid transition-all duration-300 gap-0",
-            view !== 'main' ? "sm:max-w-4xl grid-cols-2" : "sm:max-w-md grid-cols-1"
+            "p-0 gap-0 transition-all duration-300",
+            view !== 'main' ? "sm:max-w-4xl" : "sm:max-w-md"
         )}
         onInteractOutside={(e) => {
             if (view !== 'main') {
@@ -380,17 +402,9 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
             }
         }}
     >
-      <div className="relative">
+        <FormProvider {...form}>
           {FormUI}
-           {view === 'main' && (
-              <DialogFooter className="p-6 pt-0">
-                  <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                  <Button type="submit" form={formId} disabled={formState.isSubmitting}>
-                      {formState.isSubmitting ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Expense')}
-                  </Button>
-              </DialogFooter>
-          )}
-      </div>
+        </FormProvider>
     </DialogContent>
   );
 }
