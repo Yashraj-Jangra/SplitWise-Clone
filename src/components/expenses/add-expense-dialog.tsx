@@ -8,15 +8,19 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
 import { Icons } from '@/components/icons';
 import { ExpenseForm } from './expense-form';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { AnimatePresence, motion } from 'framer-motion';
+import { FormProvider, useForm } from 'react-hook-form';
+import * as z from 'zod';
+
+const expenseSchema = z.object({
+  // This can be simplified as it's not directly used here, but for context
+  description: z.string().min(1, 'Description is required.'),
+  amount: z.coerce.number().positive('Amount must be positive.'),
+});
 
 interface AddExpenseDialogProps {
   group: Group;
