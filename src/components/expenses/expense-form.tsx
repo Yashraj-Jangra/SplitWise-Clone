@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -60,9 +59,8 @@ import {
 import { X, ArrowLeft } from 'lucide-react';
 
 // Types
-import type { Group, Expense } from '@/types';
+import type { Group, Expense, UserProfile } from '@/types';
 
-// --- Zod Schema for Form Validation ---
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
   amount: z.coerce.number({ invalid_type_error: "Amount is required." }).positive('Amount must be positive.'),
@@ -97,16 +95,8 @@ const expenseSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
-// --- Main Form Component ---
-interface ExpenseFormProps {
-  group: Group;
-  isEditing: boolean;
-  expenseToEdit?: Expense;
-  onClose: () => void;
-}
-
-export function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group }) {
-  const { control, watch } = useFormContext<ExpenseFormValues>();
+function MainExpenseForm({ setView, group }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group }) {
+  const { control, watch, setValue } = useFormContext<ExpenseFormValues>();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
   
@@ -134,7 +124,7 @@ export function MainExpenseForm({ setView, group }: { setView: (view: 'main' | '
     const updatedParticipants = watchParticipants.map((p: any) =>
       p.userId === userId ? { ...p, selected: isSelected } : p
     );
-    control.setValue('participants', updatedParticipants, { shouldValidate: true });
+    setValue('participants', updatedParticipants, { shouldValidate: true });
   };
   
   const getSummaryText = () => {
@@ -212,7 +202,7 @@ export function MainExpenseForm({ setView, group }: { setView: (view: 'main' | '
                                   value={subCat}
                                   key={subCat}
                                   onSelect={() => {
-                                    field.onChange(subCat);
+                                    setValue('category', subCat);
                                   }}
                                 >
                                   <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
@@ -357,9 +347,248 @@ export function MainExpenseForm({ setView, group }: { setView: (view: 'main' | '
   );
 }
 
-export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: ExpenseFormProps) {
+export function PayerView({ setView, group }: { setView: (view: 'main') => void, group: Group }) {
+    const { control, watch, formState: { errors } } = useFormContext();
+    const watchPayerType = watch('payerType');
+    const watchMultiPayers = watch('multiPayers');
+    const watchAmount = watch('amount');
+    const totalAmount = parseFloat(watchAmount) || 0;
+    
+    let sumOfPaid = 0;
+    if (watchPayerType === 'multiple') {
+        sumOfPaid = watchMultiPayers.reduce((acc: number, p: any) => acc + (parseFloat(p.amount) || 0), 0);
+    }
+    const remaining = totalAmount - sumOfPaid;
+    
+    return (
+        <div className="space-y-4">
+             <header className="flex items-center gap-2 mb-4">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
+                    <ArrowLeft />
+                </Button>
+                <div>
+                    <DialogTitle>Who paid?</DialogTitle>
+                </div>
+            </header>
+            
+            <FormField
+                control={control}
+                name="payerType"
+                render={({ field }) => (
+                    <ToggleGroup
+                        type="single"
+                        className="grid w-full grid-cols-2"
+                        value={field.value}
+                        onValueChange={(v) => { if(v) field.onChange(v as any) }}
+                      >
+                        <ToggleGroupItem value="single">Single Person</ToggleGroupItem>
+                        <ToggleGroupItem value="multiple">Multiple People</ToggleGroupItem>
+                    </ToggleGroup>
+                )}
+            />
+
+            {watchPayerType === 'single' ? (
+                <FormField
+                    control={control}
+                    name="singlePayerId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormControl>
+                            <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                className="grid grid-cols-2 gap-2"
+                            >
+                            {group.members.map(member => (
+                                <FormItem key={member.uid} className="flex-1">
+                                    <FormControl>
+                                        <Button
+                                            asChild
+                                            variant={field.value === member.uid ? 'default' : 'outline'}
+                                            className="w-full h-auto p-2 justify-start cursor-pointer"
+                                        >
+                                            <label>
+                                                <RadioGroupItem value={member.uid} className="sr-only" />
+                                                <div className="flex items-center gap-2">
+                                                     <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={member.avatarUrl} />
+                                                        <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</span>
+                                                </div>
+                                            </label>
+                                        </Button>
+                                    </FormControl>
+                                </FormItem>
+                            ))}
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            ) : (
+                <div className="space-y-2">
+                    <p className="font-semibold">Enter amounts paid</p>
+                    <ScrollArea className="h-64">
+                         <div className="p-1 space-y-1">
+                             {watchMultiPayers && watchMultiPayers.map((p: any, index: number) => (
+                                 <div key={p.userId} className="flex items-center gap-3 p-2 rounded-md">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={p.avatarUrl} />
+                                        <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
+                                     <div className="w-28">
+                                        <FormField control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (<Input type="number" {...field} placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
+                                     </div>
+                                </div>
+                            ))}
+                         </div>
+                    </ScrollArea>
+                    <FormMessage>{(errors as any)?.multiPayers?.message}</FormMessage>
+                    <div className="flex items-center justify-between font-bold text-lg p-2 bg-muted rounded-md">
+                      <p>TOTAL</p>
+                      <div>
+                        <p>{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+                        <p className={cn("text-xs font-normal text-right", Math.abs(remaining) > 0.01 ? 'text-destructive' : 'text-green-500')}>{CURRENCY_SYMBOL}{Math.abs(remaining).toFixed(2)} {remaining > 0 ? 'left' : 'over'}</p>
+                      </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+export function SplitView({ setView }: { setView: (view: 'main') => void }) {
+    const { control, watch, formState: { errors } } = useFormContext();
+    const watchSplitType = watch('splitType');
+    const watchParticipants = watch('participants');
+    const watchAmount = watch('amount');
+
+    const totalAmount = parseFloat(watchAmount) || 0;
+    
+    let sumOfSplit = 0;
+    if (watchSplitType === 'unequally') {
+        sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.amountOwed) || 0), 0);
+    } else if (watchSplitType === 'by_percentage') {
+        sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.percentage) || 0), 0);
+    } else if (watchSplitType === 'by_shares') {
+         sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.shares) || 1), 0);
+    }
+
+    const remaining = totalAmount - sumOfSplit;
+
+    return (
+        <div className="space-y-4">
+             <header className="flex items-center gap-2 mb-4">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
+                    <ArrowLeft />
+                </Button>
+                <div>
+                    <DialogTitle>Choose split options</DialogTitle>
+                </div>
+            </header>
+            
+            <FormField
+                control={control}
+                name="splitType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ToggleGroup
+                        type="single"
+                        defaultValue="equally"
+                        className="grid w-full grid-cols-4"
+                        value={field.value}
+                        onValueChange={(v) => { if(v) field.onChange(v as any)}}
+                      >
+                        <ToggleGroupItem value="equally" aria-label="Split equally" > <Icons.Baseline className="h-5 w-5"/></ToggleGroupItem>
+                        <ToggleGroupItem value="unequally" aria-label="Split unequally">1.23</ToggleGroupItem>
+                        <ToggleGroupItem value="by_percentage" aria-label="Split by percentage">%</ToggleGroupItem>
+                        <ToggleGroupItem value="by_shares" aria-label="Split by shares">+/-</ToggleGroupItem>
+                      </ToggleGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+             <div className="space-y-2">
+                <p className="font-semibold capitalize">Split {watchSplitType.replace('_', ' ')}</p>
+                <ScrollArea className="h-64">
+                    <div className="p-1 space-y-1">
+                        {watchParticipants && watchParticipants.map((p: any, index: number) => (
+                          <div key={p.userId} className="flex items-center gap-3 p-2 rounded-md">
+                            <FormField
+                              control={control}
+                              name={`participants.${index}.selected`}
+                              render={({ field }) => (
+                                <FormItem className="flex items-center">
+                                  <FormControl>
+                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={p.avatarUrl} />
+                              <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
+                            {p.selected && (
+                              <div className="w-28">
+                                {watchSplitType === 'equally' && (
+                                  <p className="text-sm text-right text-muted-foreground">
+                                    {CURRENCY_SYMBOL}
+                                    {(p.amountOwed || 0).toFixed(2)}
+                                  </p>
+                                )}
+                                {watchSplitType === 'unequally' && (
+                                  <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} />)} />
+                                )}
+                                {watchSplitType === 'by_shares' && (
+                                  <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} />)} />
+                                )}
+                                {watchSplitType === 'by_percentage' && (
+                                  <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} />)} />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+                <FormMessage>{(errors as any)?.participants?.message}</FormMessage>
+            </div>
+            
+            <div className="flex items-center justify-between font-bold text-lg p-2 bg-muted rounded-md">
+              <p>TOTAL</p>
+              <div>
+                <p>{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+                {(watchSplitType === 'unequally' || watchSplitType === 'by_percentage') && (
+                    <p className={cn("text-xs font-normal text-right", Math.abs(remaining) > 0.01 ? 'text-destructive' : 'text-green-500')}>{CURRENCY_SYMBOL}{Math.abs(remaining).toFixed(2)} {remaining > 0 ? 'left' : 'over'}</p>
+                )}
+                 {watchSplitType === 'by_shares' && (
+                    <p className="text-xs font-normal text-right text-muted-foreground">{sumOfSplit} {sumOfSplit === 1 ? 'share' : 'shares'}</p>
+                 )}
+              </div>
+            </div>
+
+        </div>
+    )
+}
+
+interface ExpenseFormProps {
+  group: Group;
+  userProfile: UserProfile;
+  isEditing: boolean;
+  expenseToEdit?: Expense;
+  onClose: () => void;
+}
+
+export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onClose }: ExpenseFormProps) {
   const [view, setView] = React.useState<'main' | 'split' | 'payer'>('main');
-  const { userProfile } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -394,12 +623,10 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
     } else if (getValues('splitType') === 'by_percentage') {
         amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
     } else {
-        // For 'unequally', amounts are set manually, so we don't calculate them here.
         return;
     }
 
     if (amounts.length > 0) {
-        // Distribute remainder for equal splits
         const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
         let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
         
@@ -407,7 +634,6 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
             roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
         }
         
-        // Update the form values
         let roundedIndex = 0;
         allParticipants.forEach((p: any, index: number) => {
             if (p.selected) {
@@ -662,239 +888,4 @@ export function ExpenseForm({ group, isEditing, expenseToEdit, onClose }: Expens
         </FormProvider>
     </DialogContent>
   );
-}
-
-
-// --- Child Components for Different Views ---
-
-export function PayerView({ setView, group }: { setView: (view: 'main') => void, group: Group }) {
-    const { control, watch, formState: { errors } } = useFormContext();
-    const watchPayerType = watch('payerType');
-    const watchMultiPayers = watch('multiPayers');
-    const watchAmount = watch('amount');
-    const totalAmount = parseFloat(watchAmount) || 0;
-    
-    let sumOfPaid = 0;
-    if (watchPayerType === 'multiple') {
-        sumOfPaid = watchMultiPayers.reduce((acc: number, p: any) => acc + (parseFloat(p.amount) || 0), 0);
-    }
-    const remaining = totalAmount - sumOfPaid;
-    
-    return (
-        <div className="space-y-4">
-             <header className="flex items-center gap-2 mb-4">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
-                    <ArrowLeft />
-                </Button>
-                <div>
-                    <DialogTitle>Who paid?</DialogTitle>
-                </div>
-            </header>
-            
-            <FormField
-                control={control}
-                name="payerType"
-                render={({ field }) => (
-                    <ToggleGroup
-                        type="single"
-                        className="grid w-full grid-cols-2"
-                        value={field.value}
-                        onValueChange={(v) => { if(v) field.onChange(v as any) }}
-                      >
-                        <ToggleGroupItem value="single">Single Person</ToggleGroupItem>
-                        <ToggleGroupItem value="multiple">Multiple People</ToggleGroupItem>
-                    </ToggleGroup>
-                )}
-            />
-
-            {watchPayerType === 'single' ? (
-                <FormField
-                    control={control}
-                    name="singlePayerId"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormControl>
-                            <RadioGroup
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                className="grid grid-cols-2 gap-2"
-                            >
-                            {group.members.map(member => (
-                                <FormItem key={member.uid} className="flex-1">
-                                    <FormControl>
-                                        <Button
-                                            asChild
-                                            variant={field.value === member.uid ? 'default' : 'outline'}
-                                            className="w-full h-auto p-2 justify-start cursor-pointer"
-                                        >
-                                            <label>
-                                                <RadioGroupItem value={member.uid} className="sr-only" />
-                                                <div className="flex items-center gap-2">
-                                                     <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={member.avatarUrl} />
-                                                        <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</span>
-                                                </div>
-                                            </label>
-                                        </Button>
-                                    </FormControl>
-                                </FormItem>
-                            ))}
-                            </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            ) : (
-                <div className="space-y-2">
-                    <p className="font-semibold">Enter amounts paid</p>
-                    <ScrollArea className="h-64">
-                         <div className="p-1 space-y-1">
-                             {watchMultiPayers && watchMultiPayers.map((p: any, index: number) => (
-                                 <div key={p.userId} className="flex items-center gap-3 p-2 rounded-md">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={p.avatarUrl} />
-                                        <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
-                                     <div className="w-28">
-                                        <FormField control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (<Input type="number" {...field} placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
-                                     </div>
-                                </div>
-                            ))}
-                         </div>
-                    </ScrollArea>
-                    <FormMessage>{(errors as any)?.multiPayers?.message}</FormMessage>
-                    <div className="flex items-center justify-between font-bold text-lg p-2 bg-muted rounded-md">
-                      <p>TOTAL</p>
-                      <div>
-                        <p>{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
-                        <p className={cn("text-xs font-normal text-right", Math.abs(remaining) > 0.01 ? 'text-destructive' : 'text-green-500')}>{CURRENCY_SYMBOL}{Math.abs(remaining).toFixed(2)} {remaining > 0 ? 'left' : 'over'}</p>
-                      </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-export function SplitView({ setView }: { setView: (view: 'main') => void }) {
-    const { control, watch, formState: { errors } } = useFormContext();
-    const watchSplitType = watch('splitType');
-    const watchParticipants = watch('participants');
-    const watchAmount = watch('amount');
-
-    const totalAmount = parseFloat(watchAmount) || 0;
-    
-    let sumOfSplit = 0;
-    if (watchSplitType === 'unequally') {
-        sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.amountOwed) || 0), 0);
-    } else if (watchSplitType === 'by_percentage') {
-        sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.percentage) || 0), 0);
-    } else if (watchSplitType === 'by_shares') {
-         sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.shares) || 1), 0);
-    }
-
-    const remaining = totalAmount - sumOfSplit;
-
-    return (
-        <div className="space-y-4">
-             <header className="flex items-center gap-2 mb-4">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
-                    <ArrowLeft />
-                </Button>
-                <div>
-                    <DialogTitle>Choose split options</DialogTitle>
-                </div>
-            </header>
-            
-            <FormField
-                control={control}
-                name="splitType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <ToggleGroup
-                        type="single"
-                        defaultValue="equally"
-                        className="grid w-full grid-cols-4"
-                        value={field.value}
-                        onValueChange={(v) => { if(v) field.onChange(v as any)}}
-                      >
-                        <ToggleGroupItem value="equally" aria-label="Split equally" > <Icons.Baseline className="h-5 w-5"/></ToggleGroupItem>
-                        <ToggleGroupItem value="unequally" aria-label="Split unequally">1.23</ToggleGroupItem>
-                        <ToggleGroupItem value="by_percentage" aria-label="Split by percentage">%</ToggleGroupItem>
-                        <ToggleGroupItem value="by_shares" aria-label="Split by shares">+/-</ToggleGroupItem>
-                      </ToggleGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-             <div className="space-y-2">
-                <p className="font-semibold capitalize">Split {watchSplitType.replace('_', ' ')}</p>
-                <ScrollArea className="h-64">
-                    <div className="p-1 space-y-1">
-                        {watchParticipants && watchParticipants.map((p: any, index: number) => (
-                          <div key={p.userId} className="flex items-center gap-3 p-2 rounded-md">
-                            <FormField
-                              control={control}
-                              name={`participants.${index}.selected`}
-                              render={({ field }) => (
-                                <FormItem className="flex items-center">
-                                  <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={p.avatarUrl} />
-                              <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
-                            </Avatar>
-                            <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
-                            {p.selected && (
-                              <div className="w-28">
-                                {watchSplitType === 'equally' && (
-                                  <p className="text-sm text-right text-muted-foreground">
-                                    {CURRENCY_SYMBOL}
-                                    {(p.amountOwed || 0).toFixed(2)}
-                                  </p>
-                                )}
-                                {watchSplitType === 'unequally' && (
-                                  <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                )}
-                                {watchSplitType === 'by_shares' && (
-                                  <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                )}
-                                {watchSplitType === 'by_percentage' && (
-                                  <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-                <FormMessage>{(errors as any)?.participants?.message}</FormMessage>
-            </div>
-            
-            <div className="flex items-center justify-between font-bold text-lg p-2 bg-muted rounded-md">
-              <p>TOTAL</p>
-              <div>
-                <p>{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
-                {(watchSplitType === 'unequally' || watchSplitType === 'by_percentage') && (
-                    <p className={cn("text-xs font-normal text-right", Math.abs(remaining) > 0.01 ? 'text-destructive' : 'text-green-500')}>{CURRENCY_SYMBOL}{Math.abs(remaining).toFixed(2)} {remaining > 0 ? 'left' : 'over'}</p>
-                )}
-                 {watchSplitType === 'by_shares' && (
-                    <p className="text-xs font-normal text-right text-muted-foreground">{sumOfSplit} {sumOfSplit === 1 ? 'share' : 'shares'}</p>
-                 )}
-              </div>
-            </div>
-
-        </div>
-    )
 }
