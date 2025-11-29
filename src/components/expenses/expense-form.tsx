@@ -190,7 +190,16 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                       </button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[250px] p-0">
+                  <PopoverContent 
+                    className="w-[250px] p-0"
+                    onPointerDownOutside={(e) => {
+                      // Allow interaction with the scrollbar
+                      const target = e.target as HTMLElement;
+                      if (target?.hasAttribute('data-radix-scroll-area-viewport')) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
                     <Command>
                       <CommandInput placeholder="Search category..." />
                       <CommandList>
@@ -613,56 +622,58 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
   const watchedAmount = watch('amount');
   const watchedSplitType = watch('splitType');
   const watchedParticipants = watch('participants');
-
-  const calculateSplits = React.useCallback(() => {
-    const totalAmount = Number(watchedAmount) || 0;
-    const allParticipants = watchedParticipants || [];
-    const selectedParticipants = allParticipants.filter((p: any) => p.selected);
-    const numSelected = selectedParticipants.length;
-
-    if (totalAmount <= 0 || numSelected === 0) {
-        allParticipants.forEach((_: any, index: number) => {
-             setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
-        });
-        return;
-    }
-    
-    let amounts: number[] = [];
-    const splitType = watchedSplitType;
-
-    if (splitType === 'equally') {
-        amounts = Array(numSelected).fill(totalAmount / numSelected);
-    } else if (splitType === 'by_shares') {
-        const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.shares) || 1), 0);
-        if (totalShares > 0) {
-            amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
-        }
-    } else if (splitType === 'by_percentage') {
-        amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
-    } else { // unequally
-        return; // Don't auto-calculate for unequal split
-    }
-
-    if (amounts.length > 0) {
-        const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
-        let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
-        
-        for (let i = 0; i < Math.abs(remainder * 100); i++) {
-            roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
-        }
-        
-        let roundedIndex = 0;
-        allParticipants.forEach((p: any, index: number) => {
-            if (p.selected) {
-                 setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex], { shouldDirty: true });
-                 roundedIndex++;
-            } else {
-                setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
-            }
-        });
-    }
-  }, [watchedAmount, watchedSplitType, watchedParticipants, setValue]);
   
+  const calculateSplits = React.useCallback(() => {
+      const allParticipants = getValues('participants') || [];
+      const splitType = getValues('splitType');
+      const totalAmount = Number(getValues('amount')) || 0;
+
+      const selectedParticipants = allParticipants.filter((p: any) => p.selected);
+      const numSelected = selectedParticipants.length;
+
+      if (totalAmount <= 0 || numSelected === 0) {
+          allParticipants.forEach((_: any, index: number) => {
+              setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
+          });
+          return;
+      }
+
+      let amounts: number[] = [];
+
+      if (splitType === 'equally') {
+          amounts = Array(numSelected).fill(totalAmount / numSelected);
+      } else if (splitType === 'by_shares') {
+          const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.shares) || 1), 0);
+          if (totalShares > 0) {
+              amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
+          }
+      } else if (splitType === 'by_percentage') {
+          amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
+      } else { // unequally
+          return; // Don't auto-calculate for unequal split
+      }
+
+      if (amounts.length > 0) {
+          // Correct for rounding errors
+          const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
+          let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
+          
+          for (let i = 0; i < Math.abs(remainder * 100); i++) {
+              roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
+          }
+          
+          let roundedIndex = 0;
+          allParticipants.forEach((p: any, index: number) => {
+              if (p.selected) {
+                   setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex], { shouldDirty: true });
+                   roundedIndex++;
+              } else {
+                  setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
+              }
+          });
+      }
+  }, [getValues, setValue]);
+
   React.useEffect(() => {
     if (watchedSplitType !== 'unequally') {
       calculateSplits();
