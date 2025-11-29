@@ -230,7 +230,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-0 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b transition-all duration-200" />
+                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary transition-all duration-200" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -243,7 +243,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                   <FormItem>
                     <FormControl>
                       <div className="relative flex items-baseline">
-                        <span className="text-2xl font-bold text-muted-foreground">
+                        <span className="text-4xl font-bold text-muted-foreground">
                           {CURRENCY_SYMBOL}
                         </span>
                         <Input
@@ -253,7 +253,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                          className="pl-2 text-4xl font-bold border-0 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b h-auto transition-all duration-200"
+                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary h-auto transition-all duration-200"
                         />
                       </div>
                     </FormControl>
