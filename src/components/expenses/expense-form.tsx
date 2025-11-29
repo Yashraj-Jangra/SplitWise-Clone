@@ -109,13 +109,16 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
   const watchCategory = watch('category');
 
   const { CategoryIcon } = React.useMemo(() => {
-    if (!settings.expenseCategories) return { CategoryIcon: Icons.Wallet };
+    if (!settings.expenseCategories || !watchCategory) {
+      return { CategoryIcon: Icons.Wallet };
+    }
     const masterCategory = getMasterCategory(watchCategory, settings.expenseCategories);
     if (!masterCategory || !settings.expenseCategories[masterCategory]?.subCategories?.[watchCategory]) {
         return { CategoryIcon: Icons.Wallet };
     }
     const iconName = settings.expenseCategories[masterCategory].subCategories[watchCategory].icon || 'Wallet';
-    return { CategoryIcon: Icons[iconName] || Icons.Wallet };
+    const IconComponent = Icons[iconName] || Icons.Wallet;
+    return { CategoryIcon: IconComponent };
   }, [watchCategory, settings.expenseCategories]);
 
   const selectedParticipants = watchParticipants?.filter((p: any) => p.selected) || [];
@@ -196,7 +199,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                           <CommandGroup key={masterCat} heading={masterCat}>
                             {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
                               const subDetails = details.subCategories[subCat];
-                              const Icon = subDetails?.icon ? (Icons as any)[subDetails.icon] : Icons.Wallet;
+                              const Icon = subDetails?.icon ? (Icons[subDetails.icon] || Icons.Wallet) : Icons.Wallet;
                               return (
                                 <CommandItem
                                   value={subCat}
