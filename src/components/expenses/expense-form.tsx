@@ -284,7 +284,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
           {selectedParticipants.map((p: any) => (
             <Badge key={p.userId} variant="secondary" className="pl-2 pr-1">
               {p.name}
-              <button type="button" onClick={() => handleParticipantSelection(p.userId, false)} className="ml-1 rounded-full hover:bg-destructive/50">
+              <button type="button" onClick={() => handleParticipantSelection(p.userId, false)} className="ml-1 rounded-full hover:bg-muted">
                 <X className="h-3 w-3" />
               </button>
             </Badge>
