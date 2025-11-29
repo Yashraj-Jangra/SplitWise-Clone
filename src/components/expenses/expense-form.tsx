@@ -52,7 +52,7 @@ import {
   CommandGroup, 
   CommandInput, 
   CommandItem, 
-  CommandList 
+  CommandList
 } from '@/components/ui/command';
 
 // Icons
@@ -609,7 +609,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
 
     if (totalAmount <= 0 || numSelected === 0) {
         allParticipants.forEach((_: any, index: number) => {
-             setValue(`participants.${index}.amountOwed`, 0);
+             setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
         });
         return;
     }
@@ -641,22 +641,24 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
         let roundedIndex = 0;
         allParticipants.forEach((p: any, index: number) => {
             if (p.selected) {
-                 setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex]);
+                 setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex], { shouldDirty: true });
                  roundedIndex++;
             } else {
-                setValue(`participants.${index}.amountOwed`, 0);
+                setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
             }
         });
     }
   }, [getValues, setValue]);
 
-  const watchedFields = watch(['amount', 'splitType', 'participants']);
+  const watchedAmount = watch('amount');
+  const watchedSplitType = watch('splitType');
+  const watchedParticipants = watch('participants');
   
   React.useEffect(() => {
-    if (getValues('splitType') !== 'unequally') {
+    if (watchedSplitType !== 'unequally') {
       calculateSplits();
     }
-  }, [watchedFields, calculateSplits, getValues]);
+  }, [watchedAmount, watchedSplitType, watchedParticipants, calculateSplits, watchedSplitType]);
 
 
   React.useEffect(() => {
@@ -890,4 +892,5 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     </DialogContent>
   );
 }
+
 
