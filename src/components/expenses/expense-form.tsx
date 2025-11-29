@@ -51,7 +51,8 @@ import {
   CommandEmpty, 
   CommandGroup, 
   CommandInput, 
-  CommandList
+  CommandList,
+  CommandItem
 } from '@/components/ui/command';
 
 // Icons
@@ -181,7 +182,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button variant="ghost" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1">
+                       <Button variant="ghost" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1">
                         <div className="flex-shrink-0 p-4 bg-muted rounded-lg">
                           <CategoryIcon className="h-8 w-8 text-muted-foreground" />
                         </div>
@@ -633,7 +634,10 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
             amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
         }
     } else if (splitType === 'by_percentage') {
-        amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
+        const totalPercentage = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.percentage) || 0), 0);
+        if (totalPercentage > 0) {
+            amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
+        }
     } else { // unequally
         return; // Don't auto-calculate for unequal split
     }
