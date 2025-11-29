@@ -541,21 +541,15 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                             <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
                             {p.selected && (
                               <div className="w-28">
-                                {watchSplitType === 'equally' && (
-                                  <p className="text-sm text-right text-muted-foreground">
-                                    {CURRENCY_SYMBOL}
-                                    {(p.amountOwed || 0).toFixed(2)}
-                                  </p>
-                                )}
-                                {watchSplitType === 'unequally' && (
+                                {watchSplitType === 'equally' ? (
+                                  <Input type="number" value={(p.amountOwed || 0).toFixed(2)} disabled />
+                                ) : watchSplitType === 'unequally' ? (
                                   <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                )}
-                                {watchSplitType === 'by_shares' && (
+                                ) : watchSplitType === 'by_shares' ? (
                                   <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                )}
-                                {watchSplitType === 'by_percentage' && (
+                                ) : watchSplitType === 'by_percentage' ? (
                                   <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                )}
+                                ) : null}
                               </div>
                             )}
                           </div>
