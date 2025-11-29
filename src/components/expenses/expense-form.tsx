@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -892,5 +891,3 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     </DialogContent>
   );
 }
-
-
