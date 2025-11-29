@@ -5,18 +5,18 @@ import type { MasterCategory, SubCategory } from '@/types';
 export const defaultExpenseCategories: Record<string, MasterCategory> = {
   'Food and Drink': {
     subCategories: {
-      'Groceries': { icon: 'Users', keywords: ['grocery', 'market', 'supermarket', 'bigbasket', 'blinkit', 'instamart'] },
-      'Dining Out': { icon: 'Wallet', keywords: ['restaurant', 'cafe', 'bar', 'pub', 'dining', 'dinner', 'lunch', 'breakfast'] },
-      'Takeout': { icon: 'Home', keywords: ['takeout', 'swiggy', 'zomato', 'ubereats', 'food delivery'] },
+      'Groceries': { icon: 'ShoppingBag', keywords: ['grocery', 'market', 'supermarket', 'bigbasket', 'blinkit', 'instamart'] },
+      'Dining Out': { icon: 'UtensilsCrossed', keywords: ['restaurant', 'cafe', 'bar', 'pub', 'dining', 'dinner', 'lunch', 'breakfast'] },
+      'Takeout': { icon: 'UtensilsCrossed', keywords: ['takeout', 'swiggy', 'zomato', 'ubereats', 'food delivery'] },
       'Coffee Shop': { icon: 'Wallet', keywords: ['coffee', 'starbucks', 'tea'] },
     },
   },
   'Transportation': {
     subCategories: {
-      'Bus/Train': { icon: 'Home', keywords: ['bus', 'train', 'metro', 'railway'] },
-      'Taxi': { icon: 'Home', keywords: ['taxi', 'uber', 'ola', 'cab', 'auto', 'rickshaw'] },
-      'Flights': { icon: 'Home', keywords: ['flight', 'airline', 'indigo', 'vistara', 'airways'] },
-      'Car': { icon: 'Home', keywords: ['car', 'fuel', 'petrol', 'diesel', 'parking', 'maintenance'] },
+      'Bus/Train': { icon: 'Bus', keywords: ['bus', 'train', 'metro', 'railway'] },
+      'Taxi': { icon: 'Car', keywords: ['taxi', 'uber', 'ola', 'cab', 'auto', 'rickshaw'] },
+      'Flights': { icon: 'Plane', keywords: ['flight', 'airline', 'indigo', 'vistara', 'airways'] },
+      'Car': { icon: 'Car', keywords: ['car', 'fuel', 'petrol', 'diesel', 'parking', 'maintenance'] },
     },
   },
   'Housing': {
@@ -29,32 +29,32 @@ export const defaultExpenseCategories: Record<string, MasterCategory> = {
   },
   'Utilities': {
     subCategories: {
-      'Electricity': { icon: 'Settings', keywords: ['electricity', 'power', 'bill'] },
-      'Water': { icon: 'Settings', keywords: ['water bill'] },
-      'Internet': { icon: 'Settings', keywords: ['internet', 'wifi', 'broadband', 'jiofiber', 'airtel'] },
-      'Phone': { icon: 'Settings', keywords: ['phone', 'mobile', 'recharge', 'postpaid', 'prepaid'] },
+      'Electricity': { icon: 'Bolt', keywords: ['electricity', 'power', 'bill'] },
+      'Water': { icon: 'Droplets', keywords: ['water bill'] },
+      'Internet': { icon: 'Wifi', keywords: ['internet', 'wifi', 'broadband', 'jiofiber', 'airtel'] },
+      'Phone': { icon: 'Smartphone', keywords: ['phone', 'mobile', 'recharge', 'postpaid', 'prepaid'] },
     },
   },
   'Entertainment': {
     subCategories: {
-      'Movies': { icon: 'Wallet', keywords: ['movie', 'cinema', 'pvr', 'inox', 'bookmyshow'] },
-      'Games': { icon: 'Wallet', keywords: ['game', 'gaming', 'steam', 'playstation', 'xbox'] },
-      'Music': { icon: 'Wallet', keywords: ['music', 'spotify', 'apple music', 'concert'] },
-      'TV/Streaming': { icon: 'Wallet', keywords: ['netflix', 'hotstar', 'amazon prime', 'hulu', 'streaming'] },
-      'Sports': { icon: 'Wallet', keywords: ['sports', 'tickets', 'match', 'ipl'] },
+      'Movies': { icon: 'Film', keywords: ['movie', 'cinema', 'pvr', 'inox', 'bookmyshow'] },
+      'Games': { icon: 'Gamepad2', keywords: ['game', 'gaming', 'steam', 'playstation', 'xbox'] },
+      'Music': { icon: 'Music', keywords: ['music', 'spotify', 'apple music', 'concert'] },
+      'TV/Streaming': { icon: 'Tv', keywords: ['netflix', 'hotstar', 'amazon prime', 'hulu', 'streaming'] },
+      'Sports': { icon: 'Ticket', keywords: ['sports', 'tickets', 'match', 'ipl'] },
     },
   },
   'Shopping': {
     subCategories: {
-      'Clothing': { icon: 'Wallet', keywords: ['clothing', 'apparel', 'shirt', 'trousers', 'dress'] },
-      'Electronics': { icon: 'Wallet', keywords: ['electronics', 'gadget', 'phone', 'laptop', 'croma'] },
-      'Online': { icon: 'Wallet', keywords: ['amazon', 'flipkart', 'myntra', 'online shopping'] },
+      'Clothing': { icon: 'Shirt', keywords: ['clothing', 'apparel', 'shirt', 'trousers', 'dress'] },
+      'Electronics': { icon: 'Laptop', keywords: ['electronics', 'gadget', 'phone', 'laptop', 'croma'] },
+      'Online': { icon: 'ShoppingBag', keywords: ['amazon', 'flipkart', 'myntra', 'online shopping'] },
     },
   },
   'Health and Wellness': {
     subCategories: {
-      'Doctor': { icon: 'Heart', keywords: ['doctor', 'clinic', 'consultation'] },
-      'Pharmacy': { icon: 'Heart', keywords: ['pharmacy', 'medicine', 'apollo'] },
+      'Doctor': { icon: 'HeartPulse', keywords: ['doctor', 'clinic', 'consultation'] },
+      'Pharmacy': { icon: 'HeartPulse', keywords: ['pharmacy', 'medicine', 'apollo'] },
       'Gym': { icon: 'Heart', keywords: ['gym', 'fitness', 'cultfit'] },
     },
   },
@@ -66,20 +66,20 @@ export const defaultExpenseCategories: Record<string, MasterCategory> = {
   },
   'Education': {
     subCategories: {
-      'Tuition/Fees': { icon: 'Wallet', keywords: ['tuition', 'fees', 'school', 'college', 'university'] },
+      'Tuition/Fees': { icon: 'University', keywords: ['tuition', 'fees', 'school', 'college', 'university'] },
       'Books/Supplies': { icon: 'Wallet', keywords: ['book', 'stationery'] },
     },
   },
   'Gifts and Donations': {
     subCategories: {
-      'Gift': { icon: 'Wallet', keywords: ['gift', 'present', 'birthday', 'wedding'] },
+      'Gift': { icon: 'Gift', keywords: ['gift', 'present', 'birthday', 'wedding'] },
       'Donation': { icon: 'Wallet', keywords: ['donation', 'charity'] },
     },
   },
   'Travel': {
     subCategories: {
-      'Hotel': { icon: 'Wallet', keywords: ['hotel', 'motel', 'resort', 'stay'] },
-      'Bookings': { icon: 'Wallet', keywords: ['airbnb', 'booking.com', 'makemytrip'] },
+      'Hotel': { icon: 'Hotel', keywords: ['hotel', 'motel', 'resort', 'stay'] },
+      'Bookings': { icon: 'Plane', keywords: ['airbnb', 'booking.com', 'makemytrip'] },
     },
   },
   'Uncategorized': {
