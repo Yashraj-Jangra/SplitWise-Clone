@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select';
 
 export default function AdminCategorySettingsPage() {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [categories, setCategories] = useState<Record<string, MasterCategory> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -58,10 +58,11 @@ export default function AdminCategorySettingsPage() {
     async function fetchSettings() {
       setLoading(true);
       try {
+        // getSiteSettings now fetches categories correctly, so we can just extract them.
         const siteSettings = await getSiteSettings();
-        setSettings(siteSettings);
+        setCategories(siteSettings.expenseCategories);
       } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not load site settings.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load expense categories.' });
       } finally {
         setLoading(false);
       }
@@ -70,19 +71,20 @@ export default function AdminCategorySettingsPage() {
   }, [toast]);
   
   const handleSaveChanges = async () => {
-    if (!settings) return;
+    if (!categories) return;
     setIsSaving(true);
     try {
-      await updateSiteSettings({ expenseCategories: settings.expenseCategories });
+      // Use updateSiteSettings, which now correctly handles separate category updates.
+      await updateSiteSettings({ expenseCategories: categories });
       toast({
-        title: 'Settings Saved',
-        description: 'Expense category settings have been updated.',
+        title: 'Categories Saved',
+        description: 'Your expense category settings have been updated.',
       });
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'Could not save the settings.',
+        description: 'Could not save the category settings.',
       });
     } finally {
       setIsSaving(false);
@@ -90,46 +92,46 @@ export default function AdminCategorySettingsPage() {
   };
 
   const handleSubCategoryDetailChange = (master: string, sub: string, field: keyof SubCategory, value: any) => {
-    if (!settings) return;
-    const updatedCategories = { ...settings.expenseCategories };
+    if (!categories) return;
+    const updatedCategories = { ...categories };
     if (updatedCategories[master]) {
       updatedCategories[master].subCategories[sub] = { ...updatedCategories[master].subCategories[sub], [field]: value };
-      setSettings({ ...settings, expenseCategories: updatedCategories });
+      setCategories(updatedCategories);
     }
   };
   
   const handleAddMasterCategory = () => {
-    if (!settings || !newMasterCategoryName.trim()) return;
+    if (!categories || !newMasterCategoryName.trim()) return;
     const trimmedName = newMasterCategoryName.trim();
-    if (settings.expenseCategories[trimmedName]) {
+    if (categories[trimmedName]) {
       toast({ variant: 'destructive', title: 'Category exists', description: 'This master category name already exists.' });
       return;
     }
     const newMasterCategory: MasterCategory = { subCategories: {} };
-    const updatedCategories = { ...settings.expenseCategories, [trimmedName]: newMasterCategory };
-    setSettings({ ...settings, expenseCategories: updatedCategories });
+    const updatedCategories = { ...categories, [trimmedName]: newMasterCategory };
+    setCategories(updatedCategories);
     setNewMasterCategoryName("");
   };
 
   const handleDeleteMasterCategory = () => {
-    if (!settings || !masterCategoryToDelete) return;
+    if (!categories || !masterCategoryToDelete) return;
     if (['Uncategorized'].includes(masterCategoryToDelete)) {
         toast({ variant: 'destructive', title: 'Cannot Delete', description: 'This is a default master category and cannot be deleted.' });
         setMasterCategoryToDelete(null);
         return;
     }
-    const updatedCategories = { ...settings.expenseCategories };
+    const updatedCategories = { ...categories };
     delete updatedCategories[masterCategoryToDelete];
-    setSettings({ ...settings, expenseCategories: updatedCategories });
+    setCategories(updatedCategories);
     setMasterCategoryToDelete(null);
     toast({ title: 'Master Category Deleted' });
   };
   
   const handleAddSubCategory = (master: string) => {
-    if (!settings || !newSubCategory[master]?.trim()) return;
+    if (!categories || !newSubCategory[master]?.trim()) return;
     const subName = newSubCategory[master].trim();
     
-    const updatedCategories = { ...settings.expenseCategories };
+    const updatedCategories = { ...categories };
     
     if (!updatedCategories[master].subCategories) {
         updatedCategories[master].subCategories = {};
@@ -141,43 +143,43 @@ export default function AdminCategorySettingsPage() {
     }
     
     updatedCategories[master].subCategories[subName] = { icon: 'Wallet', keywords: [] };
-    setSettings({ ...settings, expenseCategories: updatedCategories });
+    setCategories(updatedCategories);
     setNewSubCategory({ ...newSubCategory, [master]: "" });
   };
   
   const handleDeleteSubCategory = () => {
-      if (!settings || !subCategoryToDelete) return;
+      if (!categories || !subCategoryToDelete) return;
       const { master, sub } = subCategoryToDelete;
       if (master === 'Uncategorized' && sub === 'Other') {
         toast({ variant: 'destructive', title: 'Cannot Delete', description: 'The "Other" sub-category cannot be deleted.' });
       } else {
-        const updatedCategories = { ...settings.expenseCategories };
+        const updatedCategories = { ...categories };
         delete updatedCategories[master].subCategories[sub];
-        setSettings({ ...settings, expenseCategories: updatedCategories });
+        setCategories(updatedCategories);
         toast({ title: 'Sub-Category Deleted' });
       }
       setSubCategoryToDelete(null);
   };
 
   const handleAddKeyword = (master: string, sub: string) => {
-    if (!settings || !newKeyword[`${master}-${sub}`]?.trim()) return;
+    if (!categories || !newKeyword[`${master}-${sub}`]?.trim()) return;
     const keyword = newKeyword[`${master}-${sub}`].trim().toLowerCase();
-    const currentKeywords = settings.expenseCategories[master].subCategories[sub].keywords || [];
+    const currentKeywords = categories[master].subCategories[sub].keywords || [];
     if (currentKeywords.includes(keyword)) {
       toast({ variant: 'destructive', title: 'Keyword exists' });
       return;
     }
-    const updatedCategories = { ...settings.expenseCategories };
+    const updatedCategories = { ...categories };
     updatedCategories[master].subCategories[sub].keywords = [...currentKeywords, keyword];
-    setSettings({ ...settings, expenseCategories: updatedCategories });
+    setCategories(updatedCategories);
     setNewKeyword({ ...newKeyword, [`${master}-${sub}`]: "" });
   };
 
   const handleRemoveKeyword = (master: string, sub: string, keyword: string) => {
-    if (!settings) return;
-    const updatedCategories = { ...settings.expenseCategories };
+    if (!categories) return;
+    const updatedCategories = { ...categories };
     updatedCategories[master].subCategories[sub].keywords = (updatedCategories[master].subCategories[sub].keywords || []).filter(k => k !== keyword);
-    setSettings({ ...settings, expenseCategories: updatedCategories });
+    setCategories(updatedCategories);
   };
 
   const handleStartRenameMaster = (name: string) => {
@@ -191,17 +193,17 @@ export default function AdminCategorySettingsPage() {
   };
 
   const handleConfirmRenameMaster = () => {
-    if (!settings || !editingMaster || !editingMasterName.trim() || editingMasterName === editingMaster) {
+    if (!categories || !editingMaster || !editingMasterName.trim() || editingMasterName === editingMaster) {
       handleCancelRenameMaster();
       return;
     }
 
-    if (Object.keys(settings.expenseCategories).includes(editingMasterName)) {
+    if (Object.keys(categories).includes(editingMasterName)) {
       toast({ variant: 'destructive', title: 'Name already exists' });
       return;
     }
 
-    const entries = Object.entries(settings.expenseCategories);
+    const entries = Object.entries(categories);
     const index = entries.findIndex(([key]) => key === editingMaster);
     if (index === -1) return;
 
@@ -209,7 +211,7 @@ export default function AdminCategorySettingsPage() {
     newEntries[index] = [editingMasterName, newEntries[index][1]];
 
     const newCategories = Object.fromEntries(newEntries);
-    setSettings({ ...settings, expenseCategories: newCategories });
+    setCategories(newCategories);
     handleCancelRenameMaster();
   };
 
@@ -224,26 +226,26 @@ export default function AdminCategorySettingsPage() {
   };
 
   const handleConfirmRenameSub = () => {
-    if (!settings || !editingSub || !editingSubName.trim() || editingSubName === editingSub.sub) {
+    if (!categories || !editingSub || !editingSubName.trim() || editingSubName === editingSub.sub) {
       handleCancelRenameSub();
       return;
     }
     const { master, sub } = editingSub;
-    if (Object.keys(settings.expenseCategories[master].subCategories).includes(editingSubName)) {
+    if (Object.keys(categories[master].subCategories).includes(editingSubName)) {
       toast({ variant: 'destructive', title: 'Name already exists' });
       return;
     }
 
-    const subCategoryData = settings.expenseCategories[master].subCategories[sub];
-    delete settings.expenseCategories[master].subCategories[sub];
-    settings.expenseCategories[master].subCategories[editingSubName] = subCategoryData;
+    const subCategoryData = categories[master].subCategories[sub];
+    delete categories[master].subCategories[sub];
+    categories[master].subCategories[editingSubName] = subCategoryData;
 
-    setSettings({ ...settings });
+    setCategories({ ...categories });
     handleCancelRenameSub();
   };
 
   const renderContent = () => {
-    if (loading || !settings) {
+    if (loading || !categories) {
       return <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
     }
 
@@ -256,7 +258,7 @@ export default function AdminCategorySettingsPage() {
                 </CardHeader>
                 <CardContent>
                     <Accordion type="multiple" className="w-full space-y-4">
-                        {Object.entries(settings.expenseCategories).map(([masterCat, masterDetails]) => {
+                        {Object.entries(categories).map(([masterCat, masterDetails]) => {
                             if (!masterDetails) return null;
                             const isEditingThisMaster = editingMaster === masterCat;
                             return (
@@ -412,7 +414,7 @@ export default function AdminCategorySettingsPage() {
             </Card>
 
              <div className="flex justify-end">
-                <Button onClick={handleSaveChanges} disabled={isSaving || loading || !settings} size="lg">
+                <Button onClick={handleSaveChanges} disabled={isSaving || loading || !categories} size="lg">
                     {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
                     Save All Changes
                 </Button>

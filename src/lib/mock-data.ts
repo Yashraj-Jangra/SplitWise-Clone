@@ -1,5 +1,4 @@
 
-
 import {
   collection,
   doc,
@@ -1164,6 +1163,8 @@ export async function deleteHistoryEvent(historyEventId: string): Promise<void> 
 // --- Site Settings ---
 const SETTINGS_COLLECTION = 'settings';
 const GENERAL_SETTINGS_DOC = 'general';
+const EXPENSE_CATEGORIES_DOC = 'expenseCategories';
+
 
 const DEFAULT_APP_NAME = '{AppName}';
 const FALLBACK_GROUP_COVER_IMAGES = [
@@ -1318,13 +1319,29 @@ const DEFAULT_EMAIL_SETTINGS = {
     }
 };
 
+async function getExpenseCategories(): Promise<Record<string, MasterCategory>> {
+    const docRef = doc(db, SETTINGS_COLLECTION, EXPENSE_CATEGORIES_DOC);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        // The document's data is the Record<string, MasterCategory>
+        return docSnap.data() as Record<string, MasterCategory>;
+    } else {
+        // If the document doesn't exist, create it with default values
+        await setDoc(docRef, defaultExpenseCategories);
+        return defaultExpenseCategories;
+    }
+}
 
 export async function getSiteSettings(): Promise<SiteSettings> {
-    const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
-    const docSnap = await getDoc(docRef);
+    const generalDocRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
+    
+    const [generalDocSnap, expenseCategories] = await Promise.all([
+        getDoc(generalDocRef),
+        getExpenseCategories()
+    ]);
 
-    if (docSnap.exists()) {
-        const data = docSnap.data();
+    if (generalDocSnap.exists()) {
+        const data = generalDocSnap.data();
         
         const privacyPolicy = data.privacyPolicy && Array.isArray(data.privacyPolicy.sections)
             ? data.privacyPolicy
@@ -1376,7 +1393,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             customThemes: data.customThemes || [],
             defaultThemeId: data.defaultThemeId || 'default-dark',
             userSelectableThemeIds: data.userSelectableThemeIds || ['default-dark', 'default-light'],
-            expenseCategories: data.expenseCategories || defaultExpenseCategories,
+            expenseCategories: expenseCategories,
             countryCodes: data.countryCodes?.length > 0 ? data.countryCodes : DEFAULT_COUNTRY_CODES,
             landingPage: { ...DEFAULT_LANDING_PAGE_SETTINGS, ...(data.landingPage || {}) },
             authPage: { ...DEFAULT_AUTH_PAGE_SETTINGS, ...(data.authPage || {}) },
@@ -1399,7 +1416,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             customThemes: [],
             defaultThemeId: 'default-dark',
             userSelectableThemeIds: ['default-dark', 'default-light'],
-            expenseCategories: defaultExpenseCategories,
+            expenseCategories: expenseCategories, // Use the fetched/defaulted categories
             countryCodes: DEFAULT_COUNTRY_CODES,
             landingPage: DEFAULT_LANDING_PAGE_SETTINGS,
             authPage: DEFAULT_AUTH_PAGE_SETTINGS,
@@ -1412,17 +1429,29 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             emailSettings: DEFAULT_EMAIL_SETTINGS,
             emailTemplates: DEFAULT_EMAIL_TEMPLATES,
         };
-        await setDoc(docRef, {
+        await setDoc(generalDocRef, {
             ...defaultSettings,
+            expenseCategories: undefined, // Don't save categories in the general doc
         });
         return defaultSettings;
     }
 }
 
 export async function updateSiteSettings(settings: Partial<SiteSettings>): Promise<void> {
-    const docRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
-    const cleanSettings = Object.fromEntries(Object.entries(settings).filter(([_, v]) => v !== undefined));
-    await setDoc(docRef, cleanSettings, { merge: true });
+    const { expenseCategories, ...generalSettings } = settings;
+    const generalDocRef = doc(db, SETTINGS_COLLECTION, GENERAL_SETTINGS_DOC);
+    
+    // Update general settings if there are any
+    const cleanGeneralSettings = Object.fromEntries(Object.entries(generalSettings).filter(([_, v]) => v !== undefined));
+    if (Object.keys(cleanGeneralSettings).length > 0) {
+        await setDoc(generalDocRef, cleanGeneralSettings, { merge: true });
+    }
+
+    // Update expense categories if they are provided
+    if (expenseCategories) {
+        const categoriesDocRef = doc(db, SETTINGS_COLLECTION, EXPENSE_CATEGORIES_DOC);
+        await setDoc(categoriesDocRef, expenseCategories);
+    }
 }
 
 // --- Support Ticket Functions ---
