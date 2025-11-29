@@ -178,16 +178,16 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
             control={control}
             name="category"
             render={({ field }) => (
-              <FormItem className="flex flex-col items-center">
+              <FormItem className="flex flex-col items-center group">
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                       <Button variant="ghost" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1">
+                       <button role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 focus:outline-none">
                         <div className="flex-shrink-0 p-4 bg-muted rounded-lg">
-                          <CategoryIcon className="h-8 w-8 text-muted-foreground" />
+                          <CategoryIcon className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                         <span className="text-xs text-muted-foreground">{field.value}</span>
-                      </Button>
+                      </button>
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-[250px] p-0">
@@ -384,8 +384,8 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
                         value={field.value}
                         onValueChange={(v) => { if(v) field.onChange(v as any) }}
                       >
-                        <ToggleGroupItem value="single">Single Person</ToggleGroupItem>
-                        <ToggleGroupItem value="multiple">Multiple People</ToggleGroupItem>
+                        <ToggleGroupItem value="single" data-state={field.value === 'single' ? 'on' : 'off'}>Single Person</ToggleGroupItem>
+                        <ToggleGroupItem value="multiple" data-state={field.value === 'multiple' ? 'on' : 'off'}>Multiple People</ToggleGroupItem>
                     </ToggleGroup>
                 )}
             />
@@ -507,10 +507,10 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                         value={field.value}
                         onValueChange={(v) => { if(v) field.onChange(v as any)}}
                       >
-                        <ToggleGroupItem value="equally" aria-label="Split equally" > <Icons.Baseline className="h-5 w-5"/></ToggleGroupItem>
-                        <ToggleGroupItem value="unequally" aria-label="Split unequally">1.23</ToggleGroupItem>
-                        <ToggleGroupItem value="by_percentage" aria-label="Split by percentage">%</ToggleGroupItem>
-                        <ToggleGroupItem value="by_shares" aria-label="Split by shares">+/-</ToggleGroupItem>
+                        <ToggleGroupItem value="equally" aria-label="Split equally" data-state={field.value === 'equally' ? 'on' : 'off'}> <Icons.Baseline className="h-5 w-5"/></ToggleGroupItem>
+                        <ToggleGroupItem value="unequally" aria-label="Split unequally" data-state={field.value === 'unequally' ? 'on' : 'off'}>1.23</ToggleGroupItem>
+                        <ToggleGroupItem value="by_percentage" aria-label="Split by percentage" data-state={field.value === 'by_percentage' ? 'on' : 'off'}>%</ToggleGroupItem>
+                        <ToggleGroupItem value="by_shares" aria-label="Split by shares" data-state={field.value === 'by_shares' ? 'on' : 'off'}>+/-</ToggleGroupItem>
                       </ToggleGroup>
                     </FormControl>
                     <FormMessage />
@@ -610,9 +610,13 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
 
   const { reset, watch, setValue, getValues, formState, trigger } = form;
 
+  const watchedAmount = watch('amount');
+  const watchedSplitType = watch('splitType');
+  const watchedParticipants = watch('participants');
+
   const calculateSplits = React.useCallback(() => {
-    const totalAmount = Number(getValues('amount')) || 0;
-    const allParticipants = getValues('participants') || [];
+    const totalAmount = Number(watchedAmount) || 0;
+    const allParticipants = watchedParticipants || [];
     const selectedParticipants = allParticipants.filter((p: any) => p.selected);
     const numSelected = selectedParticipants.length;
 
@@ -624,7 +628,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     }
     
     let amounts: number[] = [];
-    const splitType = getValues('splitType');
+    const splitType = watchedSplitType;
 
     if (splitType === 'equally') {
         amounts = Array(numSelected).fill(totalAmount / numSelected);
@@ -634,10 +638,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
             amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
         }
     } else if (splitType === 'by_percentage') {
-        const totalPercentage = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.percentage) || 0), 0);
-        if (totalPercentage > 0) {
-            amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
-        }
+        amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
     } else { // unequally
         return; // Don't auto-calculate for unequal split
     }
@@ -660,11 +661,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
             }
         });
     }
-  }, [getValues, setValue]);
-
-  const watchedAmount = watch('amount');
-  const watchedSplitType = watch('splitType');
-  const watchedParticipants = watch('participants');
+  }, [watchedAmount, watchedSplitType, watchedParticipants, setValue]);
   
   React.useEffect(() => {
     if (watchedSplitType !== 'unequally') {
