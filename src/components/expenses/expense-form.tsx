@@ -178,11 +178,11 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
             control={control}
             name="category"
             render={({ field }) => (
-              <FormItem className="flex flex-col items-center group">
+              <FormItem className="flex flex-col items-center">
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                       <button role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 focus:outline-none">
+                       <button role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 focus:outline-none group">
                         <div className="flex-shrink-0 p-4 bg-muted rounded-lg">
                           <CategoryIcon className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
@@ -375,7 +375,7 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
     return (
         <div className="space-y-4">
              <header className="flex items-center gap-2 mb-4">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
                     <ArrowLeft />
                 </Button>
                 <div>
@@ -393,8 +393,8 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
                         value={field.value}
                         onValueChange={(v) => { if(v) field.onChange(v as any) }}
                       >
-                        <ToggleGroupItem value="single" data-state={field.value === 'single' ? 'on' : 'off'}>Single Person</ToggleGroupItem>
-                        <ToggleGroupItem value="multiple" data-state={field.value === 'multiple' ? 'on' : 'off'}>Multiple People</ToggleGroupItem>
+                        <ToggleGroupItem value="single" aria-label="Single Person" data-state={field.value === 'single' ? 'on' : 'off'}>Single Person</ToggleGroupItem>
+                        <ToggleGroupItem value="multiple" aria-label="Multiple People" data-state={field.value === 'multiple' ? 'on' : 'off'}>Multiple People</ToggleGroupItem>
                     </ToggleGroup>
                 )}
             />
@@ -495,7 +495,7 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
     return (
         <div className="space-y-4">
              <header className="flex items-center gap-2 mb-4">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
                     <ArrowLeft />
                 </Button>
                 <div>
@@ -511,7 +511,6 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                     <FormControl>
                       <ToggleGroup
                         type="single"
-                        defaultValue="equally"
                         className="grid w-full grid-cols-4"
                         value={field.value}
                         onValueChange={(v) => { if(v) field.onChange(v as any)}}
@@ -562,7 +561,7 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                                 )}
                                 {watchSplitType === 'by_percentage' && (
                                     <div className="relative">
-                                      <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8" placeholder="0.00"/>)} />
+                                      <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8" placeholder="0"/>)} />
                                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                                     </div>
                                 )}
