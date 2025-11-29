@@ -163,15 +163,36 @@ export default function AdminCategorySettingsPage() {
 
   const handleAddKeyword = (master: string, sub: string) => {
     if (!categories || !newKeyword[`${master}-${sub}`]?.trim()) return;
-    const keyword = newKeyword[`${master}-${sub}`].trim().toLowerCase();
-    const currentKeywords = categories[master].subCategories[sub].keywords || [];
-    if (currentKeywords.includes(keyword)) {
-      toast({ variant: 'destructive', title: 'Keyword exists' });
-      return;
+
+    const currentKeywords = new Set(categories[master].subCategories[sub].keywords || []);
+    const inputKeywords = newKeyword[`${master}-${sub}`]
+      .split(',')
+      .map(k => k.trim().toLowerCase())
+      .filter(k => k.length > 0);
+    
+    let addedCount = 0;
+    inputKeywords.forEach(keyword => {
+        if (!currentKeywords.has(keyword)) {
+            currentKeywords.add(keyword);
+            addedCount++;
+        }
+    });
+
+    if (addedCount > 0) {
+        const updatedCategories = { ...categories };
+        updatedCategories[master].subCategories[sub].keywords = Array.from(currentKeywords);
+        setCategories(updatedCategories);
+        toast({
+            title: `${addedCount} keyword${addedCount > 1 ? 's' : ''} added.`,
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'No new keywords',
+            description: 'The keywords entered already exist or were empty.'
+        });
     }
-    const updatedCategories = { ...categories };
-    updatedCategories[master].subCategories[sub].keywords = [...currentKeywords, keyword];
-    setCategories(updatedCategories);
+
     setNewKeyword({ ...newKeyword, [`${master}-${sub}`]: "" });
   };
 
@@ -369,7 +390,7 @@ export default function AdminCategorySettingsPage() {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <Input
-                                                        placeholder="Add a keyword..."
+                                                        placeholder="Add keywords, comma-separated..."
                                                         value={newKeyword[`${masterCat}-${subCat}`] || ""}
                                                         onChange={(e) => setNewKeyword({ ...newKeyword, [`${masterCat}-${subCat}`]: e.target.value })}
                                                         onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword(masterCat, subCat)}
