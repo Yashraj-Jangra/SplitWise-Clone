@@ -51,7 +51,6 @@ import {
   CommandEmpty, 
   CommandGroup, 
   CommandInput, 
-  CommandItem, 
   CommandList
 } from '@/components/ui/command';
 
@@ -84,7 +83,7 @@ const expenseSchema = z.object({
       selected: z.boolean(),
       amountOwed: z.coerce.number().optional(),
       shares: z.coerce.number().min(0, 'Shares cannot be negative').optional(),
-      percentage: z.coerce.number().min(0, 'Percentage cannot exceed 100').optional(),
+      percentage: z.coerce.number().min(0, 'Percentage cannot be negative').optional(),
     })
   ).min(1, 'At least one participant is required.').refine((arr) => arr.some((p) => p.selected), {
     message: 'At least one participant must be selected.',
@@ -481,6 +480,7 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
     }
 
     const remaining = totalAmount - sumOfSplit;
+    const remainingPercentage = 100 - sumOfSplit;
 
     return (
         <div className="space-y-4">
@@ -540,16 +540,22 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                             </Avatar>
                             <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
                             {p.selected && (
-                              <div className="w-28">
-                                {watchSplitType === 'equally' ? (
-                                  <Input type="number" value={(p.amountOwed || 0).toFixed(2)} disabled />
-                                ) : watchSplitType === 'unequally' ? (
-                                  <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                ) : watchSplitType === 'by_shares' ? (
-                                  <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                ) : watchSplitType === 'by_percentage' ? (
-                                  <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} />)} />
-                                ) : null}
+                              <div className="w-32 relative">
+                                {watchSplitType === 'equally' && (
+                                  <Input type="number" value={(p.amountOwed || 0).toFixed(2)} disabled className="pr-8"/>
+                                )}
+                                {watchSplitType === 'unequally' && (
+                                  <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="pr-8" placeholder="0.00"/>)} />
+                                )}
+                                {watchSplitType === 'by_shares' && (
+                                  <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1"/>)} />
+                                )}
+                                {watchSplitType === 'by_percentage' && (
+                                    <div className="relative">
+                                      <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8" placeholder="0.00"/>)} />
+                                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                                    </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -562,16 +568,24 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
             <div className="flex items-center justify-between font-bold text-lg p-2 bg-muted rounded-md">
               <p>TOTAL</p>
               <div>
-                <p>{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
-                {(watchSplitType === 'unequally' || watchSplitType === 'by_percentage') && (
-                    <p className={cn("text-xs font-normal text-right", Math.abs(remaining) > 0.01 ? 'text-destructive' : 'text-green-500')}>{CURRENCY_SYMBOL}{Math.abs(remaining).toFixed(2)} {remaining > 0 ? 'left' : 'over'}</p>
+                {watchSplitType !== 'by_percentage' ? (
+                  <>
+                    <p>{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+                    {watchSplitType === 'unequally' && (
+                        <p className={cn("text-xs font-normal text-right", Math.abs(remaining) > 0.01 ? 'text-destructive' : 'text-green-500')}>{CURRENCY_SYMBOL}{Math.abs(remaining).toFixed(2)} {remaining > 0 ? 'left' : 'over'}</p>
+                    )}
+                    {watchSplitType === 'by_shares' && (
+                        <p className="text-xs font-normal text-right text-muted-foreground">{sumOfSplit} {sumOfSplit === 1 ? 'share' : 'shares'}</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                     <p>{sumOfSplit.toFixed(2)}%</p>
+                     <p className={cn("text-xs font-normal text-right", Math.abs(remainingPercentage) > 0.01 ? 'text-destructive' : 'text-green-500')}>{remainingPercentage.toFixed(2)}% left</p>
+                  </>
                 )}
-                 {watchSplitType === 'by_shares' && (
-                    <p className="text-xs font-normal text-right text-muted-foreground">{sumOfSplit} {sumOfSplit === 1 ? 'share' : 'shares'}</p>
-                 )}
               </div>
             </div>
-
         </div>
     )
 }
