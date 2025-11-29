@@ -230,7 +230,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary transition-all duration-200" />
+                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary h-auto" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -243,7 +243,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                   <FormItem>
                     <FormControl>
                       <div className="relative flex items-baseline">
-                        <span className="text-4xl font-bold text-muted-foreground">
+                        <span className="text-4xl font-bold text-muted-foreground align-baseline">
                           {CURRENCY_SYMBOL}
                         </span>
                         <Input
@@ -253,11 +253,11 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary h-auto transition-all duration-200"
+                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary h-auto"
                         />
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-destructive"/>
                   </FormItem>
                 )}
               />
@@ -609,24 +609,25 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
 
     if (totalAmount <= 0 || numSelected === 0) {
         allParticipants.forEach((_: any, index: number) => {
-             setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+             setValue(`participants.${index}.amountOwed`, 0);
         });
         return;
     }
     
     let amounts: number[] = [];
+    const splitType = getValues('splitType');
 
-    if (getValues('splitType') === 'equally') {
+    if (splitType === 'equally') {
         amounts = Array(numSelected).fill(totalAmount / numSelected);
-    } else if (getValues('splitType') === 'by_shares') {
+    } else if (splitType === 'by_shares') {
         const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.shares) || 1), 0);
         if (totalShares > 0) {
             amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
         }
-    } else if (getValues('splitType') === 'by_percentage') {
+    } else if (splitType === 'by_percentage') {
         amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
-    } else {
-        return;
+    } else { // unequally
+        return; // Don't auto-calculate for unequal split
     }
 
     if (amounts.length > 0) {
@@ -640,14 +641,23 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
         let roundedIndex = 0;
         allParticipants.forEach((p: any, index: number) => {
             if (p.selected) {
-                 setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex], { shouldValidate: true });
+                 setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex]);
                  roundedIndex++;
             } else {
-                setValue(`participants.${index}.amountOwed`, 0, { shouldValidate: true });
+                setValue(`participants.${index}.amountOwed`, 0);
             }
         });
     }
   }, [getValues, setValue]);
+
+  const watchedFields = watch(['amount', 'splitType', 'participants']);
+  
+  React.useEffect(() => {
+    if (getValues('splitType') !== 'unequally') {
+      calculateSplits();
+    }
+  }, [watchedFields, calculateSplits, getValues]);
+
 
   React.useEffect(() => {
     if (isEditing && expenseToEdit && group) {
@@ -717,24 +727,6 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
         });
     }
   }, [isEditing, expenseToEdit, group, userProfile, reset]);
-
-  // Manually trigger split calculation when certain fields change.
-  React.useEffect(() => {
-    const subscription = watch((value, { name }) => {
-      if (
-        name === "amount" ||
-        name === "splitType" ||
-        name?.match(/^participants\.(\d+)\.selected$/) ||
-        name?.match(/^participants\.(\d+)\.shares$/) ||
-        name?.match(/^participants\.(\d+)\.percentage$/)
-      ) {
-        if(getValues('splitType') !== 'unequally') {
-            calculateSplits();
-        }
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, calculateSplits, getValues]);
 
 
   async function onSubmit(values: ExpenseFormValues) {
@@ -813,7 +805,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
   const formId = isEditing ? 'edit-expense-form' : 'add-expense-form';
   
   const FormUI = (
-      <div className={cn("flex flex-nowrap w-full", isMobile ? "flex-col" : "flex-row")}>
+      <div className={cn("flex w-full", isMobile ? "flex-col" : "flex-row")}>
         <div className="flex-shrink-0 w-full sm:w-[480px]">
           <div className="flex flex-col h-full">
             <ScrollArea className="flex-1">
@@ -840,7 +832,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                     className="bg-muted/50 overflow-hidden flex flex-col border-l"
                 >
-                    <div className="w-[420px]">
+                    <div className="flex-1">
                         <ScrollArea className="h-full">
                             <div className="p-6 h-full">
                                 {view === 'split' && <SplitView setView={setView} />}
@@ -883,8 +875,8 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
   return (
     <DialogContent
         className={cn(
-            "p-0 gap-0 transition-all duration-300",
-            view !== 'main' ? "sm:max-w-4xl" : "sm:max-w-md"
+            "p-0 gap-0 transition-all duration-300 w-auto max-w-none",
+            view !== 'main' ? "sm:w-[900px]" : "sm:w-[480px]"
         )}
         onInteractOutside={(e) => {
             if (view !== 'main') {
@@ -898,3 +890,4 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     </DialogContent>
   );
 }
+
