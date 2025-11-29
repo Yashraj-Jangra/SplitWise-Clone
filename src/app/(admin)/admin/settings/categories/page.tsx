@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
 import type { SiteSettings, MasterCategory, SubCategory } from '@/types';
-import { X } from 'lucide-react';
+import { X, GripVertical } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +45,11 @@ export default function AdminCategorySettingsPage() {
   const [masterCategoryToDelete, setMasterCategoryToDelete] = useState<string | null>(null);
   const [subCategoryToDelete, setSubCategoryToDelete] = useState<{ master: string; sub: string } | null>(null);
 
+  const [editingMaster, setEditingMaster] = useState<string | null>(null);
+  const [editingMasterName, setEditingMasterName] = useState('');
+  const [editingSub, setEditingSub] = useState<{ master: string, sub: string } | null>(null);
+  const [editingSubName, setEditingSubName] = useState('');
+
   const iconNames = Object.keys(Icons).filter(
     (key) => !['AppLogo', 'Logo', 'Google', 'Github', 'Linkedin', 'NextJs', 'ReactLogo', 'FirebaseLogo', 'TailwindLogo', 'ShadcnLogo', 'FirebaseStudio', 'GenkitLogo'].includes(key)
   ) as IconName[];
@@ -63,7 +68,7 @@ export default function AdminCategorySettingsPage() {
     }
     fetchSettings();
   }, [toast]);
-
+  
   const handleSaveChanges = async () => {
     if (!settings) return;
     setIsSaving(true);
@@ -126,7 +131,6 @@ export default function AdminCategorySettingsPage() {
     
     const updatedCategories = { ...settings.expenseCategories };
     
-    // Ensure subCategories object exists before trying to add to it.
     if (!updatedCategories[master].subCategories) {
         updatedCategories[master].subCategories = {};
     }
@@ -154,7 +158,6 @@ export default function AdminCategorySettingsPage() {
       }
       setSubCategoryToDelete(null);
   };
-  
 
   const handleAddKeyword = (master: string, sub: string) => {
     if (!settings || !newKeyword[`${master}-${sub}`]?.trim()) return;
@@ -177,6 +180,68 @@ export default function AdminCategorySettingsPage() {
     setSettings({ ...settings, expenseCategories: updatedCategories });
   };
 
+  const handleStartRenameMaster = (name: string) => {
+    setEditingMaster(name);
+    setEditingMasterName(name);
+  };
+
+  const handleCancelRenameMaster = () => {
+    setEditingMaster(null);
+    setEditingMasterName('');
+  };
+
+  const handleConfirmRenameMaster = () => {
+    if (!settings || !editingMaster || !editingMasterName.trim() || editingMasterName === editingMaster) {
+      handleCancelRenameMaster();
+      return;
+    }
+
+    if (Object.keys(settings.expenseCategories).includes(editingMasterName)) {
+      toast({ variant: 'destructive', title: 'Name already exists' });
+      return;
+    }
+
+    const entries = Object.entries(settings.expenseCategories);
+    const index = entries.findIndex(([key]) => key === editingMaster);
+    if (index === -1) return;
+
+    const newEntries = [...entries];
+    newEntries[index] = [editingMasterName, newEntries[index][1]];
+
+    const newCategories = Object.fromEntries(newEntries);
+    setSettings({ ...settings, expenseCategories: newCategories });
+    handleCancelRenameMaster();
+  };
+
+  const handleStartRenameSub = (master: string, sub: string) => {
+    setEditingSub({ master, sub });
+    setEditingSubName(sub);
+  };
+
+  const handleCancelRenameSub = () => {
+    setEditingSub(null);
+    setEditingSubName('');
+  };
+
+  const handleConfirmRenameSub = () => {
+    if (!settings || !editingSub || !editingSubName.trim() || editingSubName === editingSub.sub) {
+      handleCancelRenameSub();
+      return;
+    }
+    const { master, sub } = editingSub;
+    if (Object.keys(settings.expenseCategories[master].subCategories).includes(editingSubName)) {
+      toast({ variant: 'destructive', title: 'Name already exists' });
+      return;
+    }
+
+    const subCategoryData = settings.expenseCategories[master].subCategories[sub];
+    delete settings.expenseCategories[master].subCategories[sub];
+    settings.expenseCategories[master].subCategories[editingSubName] = subCategoryData;
+
+    setSettings({ ...settings });
+    handleCancelRenameSub();
+  };
+
   const renderContent = () => {
     if (loading || !settings) {
       return <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent><Skeleton className="h-48 w-full" /></CardContent></Card>
@@ -193,25 +258,47 @@ export default function AdminCategorySettingsPage() {
                     <Accordion type="multiple" className="w-full space-y-4">
                         {Object.entries(settings.expenseCategories).map(([masterCat, masterDetails]) => {
                             if (!masterDetails) return null;
+                            const isEditingThisMaster = editingMaster === masterCat;
                             return (
                             <AccordionItem value={masterCat} key={masterCat} className="border rounded-lg px-4">
-                                <div className="flex items-center">
+                                <div className="flex items-center group">
+                                     <GripVertical className="h-5 w-5 text-muted-foreground/50 mr-2 cursor-grab group-hover:text-muted-foreground transition-colors" />
                                     <AccordionTrigger className="flex-1">
-                                        <h3 className="text-xl font-semibold">{masterCat}</h3>
+                                        {isEditingThisMaster ? (
+                                            <div className="flex items-center gap-2">
+                                                <Input value={editingMasterName} onChange={(e) => setEditingMasterName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleConfirmRenameMaster()} autoFocus onBlur={handleConfirmRenameMaster} />
+                                            </div>
+                                        ) : (
+                                            <h3 className="text-xl font-semibold">{masterCat}</h3>
+                                        )}
                                     </AccordionTrigger>
                                     {!['Uncategorized'].includes(masterCat) && (
-                                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setMasterCategoryToDelete(masterCat) }} className="h-8 w-8 ml-2 hover:bg-destructive/10 text-destructive">
-                                            <X className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex items-center">
+                                            {isEditingThisMaster ? (
+                                                <>
+                                                    <Button variant="ghost" size="icon" onClick={handleConfirmRenameMaster} className="h-8 w-8 ml-2 text-green-500 hover:text-green-600"><Icons.Check className="h-5 w-5"/></Button>
+                                                    <Button variant="ghost" size="icon" onClick={handleCancelRenameMaster} className="h-8 w-8 text-destructive hover:text-destructive-foreground/90"><Icons.Close className="h-5 w-5"/></Button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleStartRenameMaster(masterCat)} className="h-8 w-8 ml-2 opacity-0 group-hover:opacity-100"><Icons.Edit className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setMasterCategoryToDelete(masterCat) }} className="h-8 w-8 ml-2 hover:bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100">
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                                 <AccordionContent className="space-y-4 pt-4">
                                      {masterDetails.subCategories && Object.entries(masterDetails.subCategories).map(([subCat, subDetails]) => {
                                         const IconComponent = Icons[subDetails.icon] || Icons.Wallet;
+                                        const isEditingThisSub = editingSub?.master === masterCat && editingSub?.sub === subCat;
                                         return (
-                                            <div key={subCat} className="p-3 border rounded-lg space-y-3 bg-muted/30">
+                                            <div key={subCat} className="p-3 border rounded-lg space-y-3 bg-muted/30 group">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex items-center gap-4">
+                                                         <GripVertical className="h-5 w-5 text-muted-foreground/30 cursor-grab group-hover:text-muted-foreground transition-colors" />
                                                         <Select
                                                             value={subDetails.icon}
                                                             onValueChange={(value) => handleSubCategoryDetailChange(masterCat, subCat, 'icon', value as IconName)}
@@ -238,12 +325,30 @@ export default function AdminCategorySettingsPage() {
                                                                 })}
                                                             </SelectContent>
                                                         </Select>
-                                                        <h4 className="text-md font-semibold">{subCat}</h4>
+                                                        {isEditingThisSub ? (
+                                                          <Input value={editingSubName} onChange={(e) => setEditingSubName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleConfirmRenameSub()} autoFocus onBlur={handleConfirmRenameSub} />
+                                                        ) : (
+                                                          <h4 className="text-md font-semibold">{subCat}</h4>
+                                                        )}
                                                     </div>
                                                     {!(masterCat === 'Uncategorized' && subCat === 'Other') && (
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => setSubCategoryToDelete({ master: masterCat, sub: subCat })}>
-                                                            <X className="h-4 w-4 text-destructive" />
-                                                        </Button>
+                                                        <div className="flex items-center">
+                                                          {isEditingThisSub ? (
+                                                              <>
+                                                                  <Button variant="ghost" size="icon" onClick={handleConfirmRenameSub} className="h-7 w-7 text-green-500 hover:text-green-600"><Icons.Check className="h-4 w-4"/></Button>
+                                                                  <Button variant="ghost" size="icon" onClick={handleCancelRenameSub} className="h-7 w-7 text-destructive hover:text-destructive-foreground/90"><Icons.Close className="h-4 w-4"/></Button>
+                                                              </>
+                                                          ) : (
+                                                              <>
+                                                                  <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 opacity-0 group-hover:opacity-100" onClick={() => handleStartRenameSub(masterCat, subCat)}>
+                                                                    <Icons.Edit className="h-4 w-4"/>
+                                                                  </Button>
+                                                                  <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 opacity-0 group-hover:opacity-100" onClick={() => setSubCategoryToDelete({ master: masterCat, sub: subCat })}>
+                                                                      <X className="h-4 w-4 text-destructive" />
+                                                                  </Button>
+                                                              </>
+                                                          )}
+                                                        </div>
                                                     )}
                                                 </div>
                                                 <div className="space-y-2">
