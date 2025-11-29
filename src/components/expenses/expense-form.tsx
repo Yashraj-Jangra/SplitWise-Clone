@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -229,7 +230,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary h-auto" />
+                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary h-auto" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -252,7 +253,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-input bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-primary h-auto"
+                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary h-auto"
                         />
                       </div>
                     </FormControl>
@@ -657,7 +658,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     if (watchedSplitType !== 'unequally') {
       calculateSplits();
     }
-  }, [watchedAmount, watchedSplitType, watchedParticipants, calculateSplits, watchedSplitType]);
+  }, [watchedAmount, watchedSplitType, watchedParticipants, calculateSplits]);
 
 
   React.useEffect(() => {
