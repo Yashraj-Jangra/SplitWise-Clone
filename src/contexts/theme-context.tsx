@@ -13,6 +13,7 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const THEME_STORAGE_KEY = 'user-theme-preference';
 
 function generateThemeCss(theme: Theme): string {
     return `
@@ -67,14 +68,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [settings, settingsLoading]);
 
-  // Set initial theme based on user settings or admin default
+  // Set initial theme based on user's saved preference or admin default
   useEffect(() => {
     if (!settingsLoading) {
-        // TODO: Later, check for user's preference in localStorage first
-        const defaultTheme = settings.defaultThemeId || 'default-dark';
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      const defaultTheme = settings.defaultThemeId || 'default-dark';
+      
+      if (savedTheme && allThemes.some(t => t.id === savedTheme)) {
+        setThemeState(savedTheme);
+      } else {
         setThemeState(defaultTheme);
+      }
     }
-  }, [settings, settingsLoading]);
+  }, [settings, settingsLoading, allThemes]);
   
   // Apply theme class to body and inject custom theme styles
   useEffect(() => {
@@ -98,8 +104,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newTheme = allThemes.find(t => t.id === themeId);
     if (newTheme) {
       setThemeState(newTheme.id);
+      localStorage.setItem(THEME_STORAGE_KEY, newTheme.id);
     } else {
-      setThemeState('default-dark'); // Fallback
+      const fallbackThemeId = 'default-dark';
+      setThemeState(fallbackThemeId);
+      localStorage.setItem(THEME_STORAGE_KEY, fallbackThemeId);
     }
   }, [allThemes]);
 
