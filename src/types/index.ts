@@ -103,6 +103,15 @@ export interface SupportTicketDocument {
     assignedToId?: string; // Admin UID
 }
 
+export interface NotificationDocument {
+    type: 'announcement' | 'critical_alert';
+    title: string;
+    message: string;
+    createdAt: Timestamp;
+    target: 'all_users'; // Future can include 'group', 'user'
+    readBy: string[]; // Array of user UIDs who have read it
+}
+
 
 // --- Hydrated Types for Client-side Usage ---
 // These types include the full nested objects for easier display
@@ -179,6 +188,11 @@ export interface HistoryEvent extends Omit<HistoryEventDocument, 'timestamp' | '
     id: string;
     timestamp: string; // ISO string
     actor: UserProfile;
+}
+
+export interface Notification extends Omit<NotificationDocument, 'createdAt'> {
+    id: string;
+    createdAt: string; // ISO string
 }
 
 export interface PolicySection {

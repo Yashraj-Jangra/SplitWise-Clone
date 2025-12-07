@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { Skeleton } from "../ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { NotificationBell } from "./notification-bell";
 
 
 const adminNavItems: NavItem[] = [
@@ -37,6 +39,11 @@ const adminNavItems: NavItem[] = [
     title: "Support Tickets",
     href: "/admin/support",
     icon: "Help",
+  },
+  {
+    title: "Broadcasts",
+    href: "/admin/broadcasts",
+    icon: "Mail",
   },
   {
     title: "Site Settings",
@@ -71,6 +78,7 @@ function AdminHeader() {
       </div>
       <div className="flex flex-1 items-center justify-end space-x-4">
         <span className="text-xs font-semibold uppercase text-destructive tracking-wider rounded-full bg-destructive/20 px-3 py-1">Admin Mode</span>
+        <NotificationBell />
         <nav className="flex items-center space-x-2">
             <UserNav />
         </nav>

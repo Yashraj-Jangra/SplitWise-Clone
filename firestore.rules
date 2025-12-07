@@ -66,5 +66,18 @@ service cloud.firestore {
       allow update: if (isUser(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt', 'status'])) || isAdmin();
       allow delete: if isAdmin();
     }
+
+    // Rules for 'notifications' collection
+    match /notifications/{notificationId} {
+      // Any signed-in user can read announcements
+      allow read: if isSignedIn();
+      // Only admins can create notifications
+      allow create: if isAdmin();
+      // Users can update a notification only to add themselves to the 'readBy' array
+      allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+                    && request.resource.data.readBy == resource.data.readBy.concat([request.auth.uid]);
+      // Only admins can delete notifications
+      allow delete: if isAdmin();
+    }
   }
 }

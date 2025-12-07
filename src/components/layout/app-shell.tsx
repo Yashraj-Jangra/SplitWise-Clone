@@ -19,6 +19,7 @@ import { Skeleton } from "../ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SearchDialog } from "./search-dialog";
+import { NotificationBell } from "./notification-bell";
 
 
 const mainNavItems: NavItem[] = [
@@ -185,6 +186,7 @@ function Header() {
         <div className="relative flex-1">
             <SearchDialog />
         </div>
+        <NotificationBell />
         <UserNav />
       </header>
   )
