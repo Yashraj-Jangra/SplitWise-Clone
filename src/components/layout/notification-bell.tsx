@@ -41,7 +41,7 @@ function NotificationItem({ notification, onMarkRead }: { notification: Notifica
         </p>
       </div>
       {!notification.isRead && (
-        <Button variant="ghost" size="sm" onClick={() => onMarkRead(notification.id)} className="h-auto px-2 py-1 text-xs">
+        <Button variant="outline" size="sm" onClick={() => onMarkRead(notification.id)} className="h-auto px-2 py-1 text-xs">
           Mark Read
         </Button>
       )}

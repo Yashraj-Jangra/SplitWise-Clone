@@ -45,6 +45,8 @@ import type {
   Theme,
   ExpenseCategory,
   MasterCategory,
+  Notification,
+  NotificationDocument,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -1555,4 +1557,27 @@ export async function updateTicket(ticketId: string, data: Partial<SupportTicket
     const ticketDocRef = doc(db, 'tickets', ticketId);
     const updateData = { ...data, updatedAt: Timestamp.now() };
     await updateDoc(ticketDocRef, updateData);
+}
+
+// --- Notification Functions ---
+
+export async function getAllNotifications(): Promise<Notification[]> {
+    const notifsCol = collection(db, 'notifications');
+    const notifSnapshot = await getDocs(query(notifsCol, orderBy('createdAt', 'desc')));
+    
+    const notifications: Notification[] = notifSnapshot.docs.map(doc => {
+        const data = doc.data() as NotificationDocument;
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
+        } as Notification;
+    });
+
+    return notifications;
+}
+
+export async function deleteNotification(notificationId: string): Promise<void> {
+    const notifDocRef = doc(db, 'notifications', notificationId);
+    await deleteDoc(notifDocRef);
 }

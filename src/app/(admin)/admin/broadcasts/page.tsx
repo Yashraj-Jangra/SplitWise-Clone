@@ -10,8 +10,9 @@ import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import Link from 'next/link';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,9 +74,16 @@ export default function BroadcastPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-headline">Broadcasts</h1>
-        <p className="text-muted-foreground">Send notifications to all users of the application.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold font-headline">Broadcasts</h1>
+          <p className="text-muted-foreground">Send notifications to all users of the application.</p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/admin/broadcasts/history">
+            <Icons.History className="mr-2" /> View History
+          </Link>
+        </Button>
       </div>
 
       <Card>
