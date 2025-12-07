@@ -96,7 +96,7 @@ const expenseSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
-function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group, setValue: any }) {
+function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, setUserOverriddenCategory }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group, setValue: any, userOverriddenCategory: boolean, setUserOverriddenCategory: (value: boolean) => void }) {
   const { control, watch, formState: { dirtyFields } } = useFormContext<ExpenseFormValues>();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
@@ -114,14 +114,13 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
 
   // Effect for auto-categorization
   React.useEffect(() => {
-    // Only auto-classify if the description is present and the user has not manually changed the category.
-    if (debouncedDescription && !dirtyFields.category) {
+    if (debouncedDescription && !userOverriddenCategory) {
         const { sub: predictedSubCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
         if (predictedSubCategory) {
-            setValue('category', predictedSubCategory, { shouldDirty: true });
+            setValue('category', predictedSubCategory, { shouldDirty: false }); // Set shouldDirty to false
         }
     }
-  }, [debouncedDescription, settings.expenseCategories, setValue, dirtyFields.category]);
+  }, [debouncedDescription, settings.expenseCategories, setValue, userOverriddenCategory]);
 
 
   const { CategoryIcon } = React.useMemo(() => {
@@ -199,7 +198,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                   <PopoverTrigger asChild>
                     <FormControl>
                        <button type="button" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 group focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md">
-                        <div className="flex-shrink-0 p-3 bg-muted rounded-lg">
+                        <div className="flex-shrink-0 p-3 bg-muted rounded-lg group-hover:bg-primary/10 transition-colors">
                           <CategoryIcon className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                         <span className="text-xs text-muted-foreground">{field.value}</span>
@@ -210,7 +209,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                     className="w-[250px] p-0"
                     onPointerDownOutside={(e) => {
                       const target = e.target as HTMLElement;
-                      if (target?.hasAttribute('data-radix-scroll-area-viewport')) {
+                      if (target?.hasAttribute('data-radix-scroll-area-viewport') || target.closest('[cmdk-list]')) {
                         e.preventDefault();
                       }
                     }}
@@ -231,6 +230,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                                     key={subCat}
                                     onSelect={() => {
                                       setValue('category', subCat);
+                                      setUserOverriddenCategory(true);
                                     }}
                                   >
                                     <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
@@ -279,7 +279,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
                         />
                       </div>
                     </FormControl>
@@ -301,8 +301,8 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
           {selectedParticipants.map((p: any) => (
             <Badge key={p.userId} variant="secondary" className="pl-2 pr-1">
               {p.name}
-              <button type="button" onClick={() => handleParticipantSelection(p.userId, false)} className="ml-1 rounded-full hover:bg-muted">
-                <X className="h-3 w-3" />
+              <button type="button" onClick={() => handleParticipantSelection(p.userId, false)} className="ml-1 rounded-full hover:bg-destructive/20">
+                <X className="h-3 w-3 text-destructive" />
               </button>
             </Badge>
           ))}
@@ -568,17 +568,17 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                             {p.selected && (
                               <div className="w-32 relative">
                                 {watchSplitType === 'equally' && (
-                                  <Input type="number" value={(p.amountOwed || 0).toFixed(2)} disabled className="pr-8"/>
+                                  <Input type="number" value={(p.amountOwed || 0).toFixed(2)} disabled className="pr-8 hide-number-arrows"/>
                                 )}
                                 {watchSplitType === 'unequally' && (
-                                  <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="pr-8" placeholder="0.00"/>)} />
+                                  <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0.00"/>)} />
                                 )}
                                 {watchSplitType === 'by_shares' && (
-                                  <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1"/>)} />
+                                  <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1" className="hide-number-arrows"/>)} />
                                 )}
                                 {watchSplitType === 'by_percentage' && (
                                     <div className="relative">
-                                      <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8" placeholder="0"/>)} />
+                                      <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0"/>)} />
                                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                                     </div>
                                 )}
@@ -626,6 +626,7 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onClose }: ExpenseFormProps) {
   const [view, setView] = React.useState<'main' | 'split' | 'payer'>('main');
+  const [userOverriddenCategory, setUserOverriddenCategory] = React.useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -738,6 +739,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
             participants: participantData,
             category: expenseToEdit.category || 'Other',
         });
+        setUserOverriddenCategory(true); // For edits, assume user is happy with the category
     } else if (!isEditing && userProfile && group) {
         reset({
             description: '',
@@ -763,8 +765,9 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
             })),
             category: 'Other',
         });
+        setUserOverriddenCategory(false);
     }
-  }, [isEditing, expenseToEdit, group, userProfile, reset]);
+  }, [isEditing, expenseToEdit, group, userProfile, reset, setUserOverriddenCategory]);
 
 
   async function onSubmit(values: ExpenseFormValues) {
@@ -848,7 +851,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
           <div className="flex flex-col h-full">
             <ScrollArea className="flex-1">
               <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="p-6">
-                  <MainExpenseForm group={group} setView={setView} setValue={setValue} />
+                  <MainExpenseForm group={group} setView={setView} setValue={setValue} userOverriddenCategory={userOverriddenCategory} setUserOverriddenCategory={setUserOverriddenCategory} />
               </form>
             </ScrollArea>
             <DialogFooter className="p-6 pt-0">
@@ -894,7 +897,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
               <ScrollArea className="flex-1">
                   <form id={formId} onSubmit={form.handleSubmit(onSubmit)}>
                     <div className="p-6">
-                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm group={group} setView={setView} setValue={setValue} />}
+                      {view === 'split' ? <SplitView setView={setView} /> : view === 'payer' ? <PayerView setView={setView} group={group} /> : <MainExpenseForm group={group} setView={setView} setValue={setValue} userOverriddenCategory={userOverriddenCategory} setUserOverriddenCategory={setUserOverriddenCategory}/>}
                     </div>
                   </form>
               </ScrollArea>
