@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function NotificationActions({ notification, onActionComplete }: { notification: Notification, onActionComplete: () => void }) {
     const { toast } = useToast();
