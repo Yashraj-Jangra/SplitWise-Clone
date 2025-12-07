@@ -47,7 +47,7 @@ function NotificationActions({ notification, onActionComplete }: { notification:
 
     return (
         <>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
                 <Icons.Delete className="h-4 w-4" />
                 <span className="sr-only">Delete Notification</span>
             </Button>
