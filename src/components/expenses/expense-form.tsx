@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { format } from 'date-fns';
 import { cn, getFullName, getInitials } from '@/lib/utils';
 import { useSiteSettings } from '@/contexts/site-settings-context';
-import { getMasterCategory } from '@/lib/expense-categories';
+import { classifyExpense, getMasterCategory } from '@/lib/expense-categories';
 import { Icons } from '@/components/icons';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
@@ -17,6 +17,7 @@ import { appEventEmitter } from '@/lib/event-emitter';
 import { addExpense, updateExpense } from '@/lib/mock-data';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useDebounce } from '@/hooks/use-debounce';
 
 // UI Components
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -107,6 +108,20 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
   const watchCategory = watch('category');
+  const watchDescription = watch('description');
+  
+  const debouncedDescription = useDebounce(watchDescription, 300);
+
+  // Effect for auto-categorization
+  React.useEffect(() => {
+    if (debouncedDescription && watchCategory === 'Other') {
+        const { sub: predictedSubCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
+        if (predictedSubCategory && predictedSubCategory !== 'Other') {
+            setValue('category', predictedSubCategory, { shouldDirty: true });
+        }
+    }
+  }, [debouncedDescription, watchCategory, settings.expenseCategories, setValue]);
+
 
   const { CategoryIcon } = React.useMemo(() => {
     if (!settings.expenseCategories || !watchCategory) {
@@ -182,8 +197,8 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
-                       <button role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 focus:outline-none group">
-                        <div className="flex-shrink-0 p-4 bg-muted rounded-lg">
+                       <button type="button" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 group focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md">
+                        <div className="flex-shrink-0 p-3 bg-muted rounded-lg">
                           <CategoryIcon className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                         <span className="text-xs text-muted-foreground">{field.value}</span>
@@ -193,7 +208,6 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                   <PopoverContent 
                     className="w-[250px] p-0"
                     onPointerDownOutside={(e) => {
-                      // Allow interaction with the scrollbar
                       const target = e.target as HTMLElement;
                       if (target?.hasAttribute('data-radix-scroll-area-viewport')) {
                         e.preventDefault();
@@ -202,29 +216,31 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                   >
                     <Command>
                       <CommandInput placeholder="Search category..." />
-                      <CommandList>
-                        <CommandEmpty>No category found.</CommandEmpty>
-                        {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
-                          <CommandGroup key={masterCat} heading={masterCat}>
-                            {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
-                              const subDetails = details.subCategories[subCat];
-                              const Icon = subDetails?.icon ? (Icons[subDetails.icon] || Icons.Wallet) : Icons.Wallet;
-                              return (
-                                <CommandItem
-                                  value={subCat}
-                                  key={subCat}
-                                  onSelect={() => {
-                                    setValue('category', subCat);
-                                  }}
-                                >
-                                  <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
-                                  {subCat}
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        ))}
-                      </CommandList>
+                      <ScrollArea className="h-64">
+                        <CommandList>
+                          <CommandEmpty>No category found.</CommandEmpty>
+                          {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
+                            <CommandGroup key={masterCat} heading={masterCat}>
+                              {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
+                                const subDetails = details.subCategories[subCat];
+                                const Icon = subDetails?.icon ? (Icons[subDetails.icon] || Icons.Wallet) : Icons.Wallet;
+                                return (
+                                  <CommandItem
+                                    value={subCat}
+                                    key={subCat}
+                                    onSelect={() => {
+                                      setValue('category', subCat);
+                                    }}
+                                  >
+                                    <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
+                                    {subCat}
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          ))}
+                        </CommandList>
+                      </ScrollArea>
                     </Command>
                   </PopoverContent>
                 </Popover>
@@ -239,7 +255,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary h-auto" />
+                    <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -262,7 +278,7 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
                           {...field}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary h-auto"
+                          className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
                       </div>
                     </FormControl>
@@ -375,7 +391,7 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
     return (
         <div className="space-y-4">
              <header className="flex items-center gap-2 mb-4">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
+                <Button variant="outline" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setView('main')}>
                     <ArrowLeft />
                 </Button>
                 <div>
@@ -495,7 +511,7 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
     return (
         <div className="space-y-4">
              <header className="flex items-center gap-2 mb-4">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setView('main')}>
+                <Button variant="outline" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setView('main')}>
                     <ArrowLeft />
                 </Button>
                 <div>
