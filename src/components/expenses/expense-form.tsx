@@ -97,7 +97,7 @@ const expenseSchema = z.object({
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' | 'split' | 'payer') => void; group: Group, setValue: any }) {
-  const { control, watch } = useFormContext<ExpenseFormValues>();
+  const { control, watch, formState: { dirtyFields } } = useFormContext<ExpenseFormValues>();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
   
@@ -114,13 +114,14 @@ function MainExpenseForm({ setView, group, setValue }: { setView: (view: 'main' 
 
   // Effect for auto-categorization
   React.useEffect(() => {
-    if (debouncedDescription && watchCategory === 'Other') {
+    // Only auto-classify if the description is present and the user has not manually changed the category.
+    if (debouncedDescription && !dirtyFields.category) {
         const { sub: predictedSubCategory } = classifyExpense(debouncedDescription, settings.expenseCategories);
-        if (predictedSubCategory && predictedSubCategory !== 'Other') {
+        if (predictedSubCategory) {
             setValue('category', predictedSubCategory, { shouldDirty: true });
         }
     }
-  }, [debouncedDescription, watchCategory, settings.expenseCategories, setValue]);
+  }, [debouncedDescription, settings.expenseCategories, setValue, dirtyFields.category]);
 
 
   const { CategoryIcon } = React.useMemo(() => {
