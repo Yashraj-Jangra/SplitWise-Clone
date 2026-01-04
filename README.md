@@ -1,3 +1,4 @@
+
 # {AppName} - Effortless Group Expense Management
 
 {AppName} is a modern, full-stack web application designed to simplify expense tracking and settlement within groups. Built with Next.js, Firebase, and ShadCN UI, it provides a seamless and intuitive user experience for managing shared costs, whether for trips, household bills, or any group activity.
@@ -8,6 +9,9 @@
 ## Table of Contents
 
 - [Features](#features)
+  - [Core Functionality](#core-functionality)
+  - [User Experience](#user-experience)
+  - [Admin Panel](#admin-panel)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
@@ -19,19 +23,43 @@
   - [Groups](#groups)
   - [Expenses](#expenses)
   - [Settlements](#settlements)
-  - [Admin Panel](#admin-panel)
 
 ## Features
 
-- **User Authentication**: Secure sign-up and login with Email/Password and Google.
-- **Group Management**: Create shared expense groups, invite members, and manage group settings.
-- **Expense Tracking**: Add detailed expenses with complex splits (equal, unequal, by shares, by percentage) and multiple payers.
-- **Real-time Balances**: Instantly see who owes whom within each group.
-- **Simplified Settlements**: A smart algorithm calculates the most efficient way to settle all debts.
-- **Personal Dashboard**: A centralized view of your overall balance, recent activities, and quick actions.
-- **Expense Analysis**: Visualize spending patterns with charts for both personal and group expenses.
-- **Admin Panel**: A dedicated dashboard for administrators to manage users, groups, and site-wide settings.
+### Core Functionality
+
+- **Secure User Authentication**: Sign-up and login with Email/Password and Google OAuth.
+- **Group Management**: Create shared expense groups, invite members by email, and manage group settings.
+- **Advanced Expense Tracking**: Add detailed expenses with complex splits (equally, unequally, by shares, or by percentage).
+- **Multi-Payer Support**: An expense can be paid by one or more members.
+- **Real-time Balances**: Instantly see who owes whom within each group and across all groups.
+- **Smart Settlements**: A "Simplify Debts" algorithm calculates the most efficient payment path to clear all debts in a group.
+- **Group Archiving**: Group creators can archive a group once all debts are settled, making it read-only.
+- **Activity & Audit Trail**: A detailed history log tracks every action within a group, from expense creation to member additions.
+
+### User Experience
+
+- **Personal Dashboard**: A centralized view of your overall net balance, outstanding debts, and recent spending trends.
+- **Financial Analysis**: Visualize personal spending patterns with interactive charts and date-range filters.
 - **Responsive Design**: A beautiful and functional interface on both desktop and mobile devices.
+- **Theming**: Users can choose from several pre-configured themes to personalize their experience.
+-   **Global Search**: Instantly find any group, expense, or user with a powerful global search (`⌘K` / `Ctrl+K`).
+-   **Notifications**: Receive site-wide announcements and critical alerts from administrators.
+
+### Admin Panel
+
+A dedicated dashboard for administrators to manage the entire application.
+
+- **Site-Wide Statistics**: View key metrics like total users, groups, and expenses.
+- **User & Group Management**: View, edit, and manage all users and groups in the system.
+- **Advanced Data Tools**: A powerful UID replacement tool to migrate user data if necessary.
+- **Broadcast System**: Send in-app announcements or broadcast emails to all registered users.
+- **Site Settings Customization**:
+    - **Branding**: Change the application name and logos.
+    - **Theming**: Create, edit, and delete themes. Set the default theme and control which themes are user-selectable.
+    - **Content Management**: Customize the content for the landing page, about page, legal pages (privacy/terms), and 404 page.
+    - **Expense Categories**: Manage the master and sub-categories for expenses, including keywords for auto-categorization.
+    - **Mail Configuration**: Configure custom SMTP servers for sending transactional emails.
 
 ## Tech Stack
 
@@ -112,7 +140,7 @@ Follow these instructions to get a local copy of {AppName} up and running on you
     ```bash
     npm run dev
     ```
-    The application will be available at `http://localhost:9002`.
+    The application will be available at `http://localhost:3231`.
 
 -   **(Optional) Start the Genkit developer UI**:
     If you plan to work on AI features, you can run the Genkit tools in a separate terminal:
@@ -154,7 +182,3 @@ This will upload the `firestore.rules` file to your Firebase project, fixing any
 - When you are ready to pay someone back or get paid, you can record a settlement.
 - The "Balances" tab in a group shows a detailed breakdown of who owes whom.
 - You can use the "Simplify Debts" feature to find the most efficient way to clear all debts in the group.
-
-### Admin Panel
-- Users with the `admin` role have access to a special administrative dashboard at `/admin/dashboard`.
-- Admins can view all users and groups, manage site-wide settings (like the app name and default images), and have elevated permissions for data management.
