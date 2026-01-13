@@ -216,32 +216,30 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                   >
                     <Command>
                       <CommandInput placeholder="Search category..." />
-                      <ScrollArea className="h-64">
-                        <CommandList>
-                          <CommandEmpty>No category found.</CommandEmpty>
-                          {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
-                            <CommandGroup key={masterCat} heading={masterCat}>
-                              {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
-                                const subDetails = details.subCategories[subCat];
-                                const Icon = subDetails?.icon ? (Icons[subDetails.icon] || Icons.Wallet) : Icons.Wallet;
-                                return (
-                                  <CommandItem
-                                    value={subCat}
-                                    key={subCat}
-                                    onSelect={() => {
-                                      setValue('category', subCat);
-                                      setUserOverriddenCategory(true);
-                                    }}
-                                  >
-                                    <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
-                                    {subCat}
-                                  </CommandItem>
-                                );
-                              })}
-                            </CommandGroup>
-                          ))}
-                        </CommandList>
-                      </ScrollArea>
+                      <CommandList className="max-h-64">
+                        <CommandEmpty>No category found.</CommandEmpty>
+                        {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
+                          <CommandGroup key={masterCat} heading={masterCat}>
+                            {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
+                              const subDetails = details.subCategories[subCat];
+                              const Icon = subDetails?.icon ? (Icons[subDetails.icon] || Icons.Wallet) : Icons.Wallet;
+                              return (
+                                <CommandItem
+                                  value={subCat}
+                                  key={subCat}
+                                  onSelect={() => {
+                                    setValue('category', subCat);
+                                    setUserOverriddenCategory(true);
+                                  }}
+                                >
+                                  <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
+                                  {subCat}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        ))}
+                      </CommandList>
                     </Command>
                   </PopoverContent>
                 </Popover>
