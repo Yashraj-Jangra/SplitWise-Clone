@@ -136,9 +136,9 @@ export default function AboutPage() {
                                     <p className="text-primary">{member.title}</p>
                                     <p className="text-muted-foreground mt-2 text-sm">{member.bio}</p>
                                     <div className="flex justify-center sm:justify-start gap-2 mt-4">
-                                        {member.githubUrl && <Button variant="ghost" size="icon" asChild><Link href={member.githubUrl} target="_blank" rel="noopener noreferrer"><Icons.Github className="h-5 w-5" /></Link></Button>}
-                                        {member.linkedinUrl && <Button variant="ghost" size="icon" asChild><Link href={member.linkedinUrl} target="_blank" rel="noopener noreferrer"><Icons.Linkedin className="h-5 w-5" /></Link></Button>}
-                                        {member.portfolioUrl && <Button variant="ghost" size="icon" asChild><Link href={member.portfolioUrl} target="_blank" rel="noopener noreferrer"><Icons.Link className="h-5 w-5" /></Link></Button>}
+                                        {member.githubUrl && <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:bg-muted/50 hover:text-foreground"><Link href={member.githubUrl} target="_blank" rel="noopener noreferrer"><Icons.Github className="h-5 w-5" /></Link></Button>}
+                                        {member.linkedinUrl && <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:bg-muted/50 hover:text-foreground"><Link href={member.linkedinUrl} target="_blank" rel="noopener noreferrer"><Icons.Linkedin className="h-5 w-5" /></Link></Button>}
+                                        {member.portfolioUrl && <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:bg-muted/50 hover:text-foreground"><Link href={member.portfolioUrl} target="_blank" rel="noopener noreferrer"><Icons.Link className="h-5 w-5" /></Link></Button>}
                                     </div>
                                 </div>
                             </div>
