@@ -71,9 +71,8 @@ import {
   University,
   Gift,
   Hotel,
-  // New Icons
-  Zap, // For Electricity
-  Flame, // For Gas
+  Zap,
+  Flame, 
   ShoppingCart,
   Carrot,
   Coffee,
@@ -133,6 +132,19 @@ const QuantumLogo = ({className}: {className?: string}) => (
         />
         <circle cx="50" cy="50" r="10" fill="hsl(var(--primary) / 0.5)"/>
         <circle cx="50" cy="50" r="5" fill="hsl(var(--primary))"/>
+    </svg>
+);
+
+const FirebaseStudioIcon = ({className}: {className?: string}) => (
+    <svg
+      viewBox="0 0 1024 1024"
+      className={cn("h-5 w-5", className)}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <g fill="currentColor">
+        <path d="M512 64q198.869 0 338.933 140.067T991 542.933q0 87.829-27.477 167.339t-77.867 149.376-118.613 118.613-149.376 77.867-167.339 27.477q-198.869 0-338.933-140.067T33 542.933q0-87.829 27.477-167.339t77.867-149.376T256.955 137.605 406.33 59.739 573.67 32.261q-61.675-23.467-129.429-23.467zM320 320v384h384V320H320z m0-64h384q26.517 0 45.259 18.741T768 320v384q0 26.517-18.741 45.259T704 768H320q-26.517 0-45.259-18.741T256 704V320q0-26.517 18.741-45.259T320 256z"></path>
+        <path d="M64 543.5v-1.066q230.144-118.869 350.123-288.768t120.597-287.68q-25.045 2.133-51.499 7.424t-52.053 14.165-51.413 22.101-49.237 30.635-46.123 39.467-41.579 48-36.267 55.467-30.08 61.248-22.933 64.939-14.72 66.219-5.973 64.853z"></path>
+      </g>
     </svg>
 );
 
@@ -276,7 +288,7 @@ export const Icons = {
   ShadcnLogo: ({ className }: { className?: string }) => (
      <svg role="img" className={cn("h-5 w-5", className)} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M208.33,88.42a8,8,0,0,1,7.44,12.39L128,192,40.23,100.81a8,8,0,0,1,7.44-12.39H208.33M208.33,72.42H48.67a16,16,0,0,0-14.88,24.78l87.77,91.19a8,8,0,0,0,12.23,0l87.77-91.19A16,16,0,0,0,208.33,72.42Z"></path></svg>
   ),
-  FirebaseStudio: QuantumLogo,
+  FirebaseStudio: FirebaseStudioIcon,
   GenkitLogo: ({ className }: { className?: string }) => (
     <svg role="img" className={cn("h-5 w-5", className)} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 9.24434 20.9407 6.75841 19.1662 5M12 2V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M19.1662 5C19.1662 5 18.4234 8.71078 15.5 10.5C12.5766 12.2892 12 15.5 12 15.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M12 15.5H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
   ),
