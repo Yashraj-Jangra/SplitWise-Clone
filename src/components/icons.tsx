@@ -136,16 +136,58 @@ const QuantumLogo = ({className}: {className?: string}) => (
 );
 
 const FirebaseStudioIcon = ({ className }: { className?: string }) => (
-    <svg
-      viewBox="0 0 24 24"
-      className={cn("h-5 w-5", className)}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M12 12L4 16.5V7.5L12 12Z" fill="#FFC107" />
-      <path d="M12 12L20 16.5V7.5L12 12Z" fill="#FFC107" />
-      <path d="M12 12L4 7.5L12 3L20 7.5L12 12Z" fill="#FFA000" />
-      <path d="M12 12L4 16.5L12 21L20 16.5L12 12Z" fill="#F57C00" />
-    </svg>
+  <svg
+    role="img"
+    viewBox="0 0 43.5 65"
+    xmlns="http://www.w3.org/2000/svg"
+    className={cn("h-5 w-5", className)}
+  >
+    <defs>
+      <linearGradient
+        id="astro-gradient-a"
+        x1="5.9"
+        x2="27.6"
+        y1="28"
+        y2="64.5"
+        gradientTransform="matrix(1 0 0 -1 0 66)"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0" stopColor="#f8682f" />
+        <stop offset="1" stopColor="#dd2c00" />
+      </linearGradient>
+      <linearGradient
+        id="astro-gradient-b"
+        x1="29"
+        x2="26.5"
+        y1="38.5"
+        y2="-5"
+        gradientTransform="matrix(1 0 0 -1 0 66)"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop offset="0" stopColor="#f8682f" />
+        <stop offset=".6" stopColor="#e92a4e" />
+        <stop offset="1" stopColor="#c447ff" />
+      </linearGradient>
+    </defs>
+    <g>
+      <path
+        d="M31.4 24.3c.4 0 .9.2 1.6.3l6.6 4.3-21.5 12.8c-.3.1-.7.2-1.1.4-.5.1-1.1.2-1.5.3h-1.4l-8.3-9.9 17.3-6.7c1.8-.7 3.3-1 4.5-1.2 1.3-.2 2.5-.4 3.9-.3Z"
+        fill="#ffc400"
+      />
+      <path
+        d="M31 7.9c-.1-.6-.3-1.2-.5-1.7-.3-1-1.1-3-3-4.9-.3-.3-.8-.8-1.4-1.2-2.3 2.8-4.4 4.8-5.8 6-3.6 3.3-9.5 7.8-13.3 11.3-.7.6-2 1.9-3.2 4-.2.4-.5.9-.8 1.4 0 0 0 .2-.1.3-.1.3-.2.5-.4.8-.5 1.1-1.1 2.6-1.2 4.5-.2 1.7 0 3 .1 3.6 0 .2 0 .4.1.6.2.7.4 1.4.7 2 1.3 3 3.4 4.7 3.8 5 2.3 1.8 4.6 2.3 5.3 2.5 1 .2 1.9.2 2.6.2-.1-.5-.3-1.2-.4-2-.3-2.9.7-5.1 1.1-6.3.4-.8 1.2-2.8 3.1-4.6.9-.8 1.8-1.5 2.7-2.1 1-.7 1.9-1.2 2.4-1.5 1.8-1.3 5.3-4.3 7.1-9 .2-.6.4-1.1.4-1.1.6-1.8 1.1-4.5.4-7.7Z"
+        fill="url(#astro-gradient-a)"
+      />
+      <path
+        d="M14 42.3c-.6 0-1.5 0-2.6-.2-.7-.1-3-.7-5.3-2.5-.5-.4-3.7-3-4.6-7.7-.1-.6-.3-1.9-.1-3.6.2-1.9.8-3.3 1.2-4.5.4-1.1.9-1.9 1.2-2.5.1.4.4 1 .8 1.6.9 1.4 2 2.1 2.8 2.7.4.2 2.1 1.3 4.7 1.9 1.8.4 3.2.4 3.6.4 1.1 0 2.7-.2 4.7-.9 1.1-.4 2-1 2.6-1.3-.5.4-1.4.9-2.5 1.6-.9.6-1.9 1.3-2.7 2.1-1.9 1.8-2.7 3.8-3.1 4.6-.5 1.1-1.4 3.3-1.1 6.3 0 .9.2 1.6.4 2Z"
+        fill="#ff9100"
+      />
+      <path
+        d="M42 41.4c.8-1.6 1.1-3.3 1.1-3.3 0-.4.2-1.1.3-1.8 0-.7 0-1.8-.1-2.7-.5-2.9-2.7-5.2-3-5.5 0 0-1.5-1.5-3.7-2.6-.3-.2-.9-.4-1.7-.7-.8-.2-1.4-.3-2-.4-.7 0-1.2-.1-1.6-.2h.4c.4 0 .6.2.8.3.2 0 .5.2.8.5.1.1.3.2.4.4.1.2.3.4.4.8.3 1.1-.4 2.1-.6 2.5-1.7 2.6-11.1 8.1-16.6 13.8-1.4 1.5-2.4 2.8-3.2 4.4-1.7 3.8-1.1 7.4-.9 8.2 1 5.3 4.9 8.2 5.8 8.8 2.7-3 5.1-5.3 6.9-7 4.5-4.1 10.3-8.6 10.3-8.6s4.5-3.6 6.2-7.1Z"
+        fill="url(#astro-gradient-b)"
+      />
+    </g>
+  </svg>
 );
 
 
@@ -269,28 +311,136 @@ export const Icons = {
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"/>
     </svg>
   ),
+
+
   NextJs: ({ className }: { className?: string }) => (
-    <svg role="img" viewBox="0 0 76 76" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={cn("h-5 w-5", className)}><path d="M38 0C17.013 0 0 17.013 0 38s17.013 38 38 38 38-17.013 38-38S58.987 0 38 0zm21.563 56h-6.531V26.85L27.563 56H21V20h6.531v29.15L53.001 20h6.562v36z"></path></svg>
+    <svg
+    role="img"
+    viewBox="0 0 128 128"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="currentColor"
+    className={cn("h-5 w-5", className)}
+    >
+    <path d="M64 0C28.7 0 0 28.7 0 64s28.7 64 64 64c11.2 0 21.7-2.9 30.8-7.9L48.4 55.3v36.6h-6.8V41.8h6.8l50.5 75.8C116.4 106.2 128 86.5 128 64c0-35.3-28.7-64-64-64zm22.1 84.6l-7.5-11.3V41.8h7.5v42.8z" />
+    </svg>
   ),
+
+  
   ReactLogo: ({ className }: { className?: string }) => (
     <svg role="img" className={cn("h-5 w-5", className)} viewBox="-10.5 -9.45 21 18.9" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="0" cy="0" r="1" fill="currentColor"></circle><g stroke="currentColor" strokeWidth="1" fill="none"><ellipse rx="10" ry="3.45"></ellipse><ellipse rx="10" ry="3.45" transform="rotate(60)"></ellipse><ellipse rx="10" ry="3.45" transform="rotate(120)"></ellipse></g></svg>
   ),
+
+
   FirebaseLogo: ({ className }: { className?: string }) => (
-    <svg role="img" className={cn("h-5 w-5", className)} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12.24 3.66L3.37 19.02c-.4.69.05 1.58.84 1.58h17.74c.79 0 1.24-.89.84-1.58L13.92 3.66a.985.985 0 00-1.68 0z" fill="#FFC24A"/>
-        <path d="M12.24 3.66L3.37 19.02c-.4.69.05 1.58.84 1.58h4.49l8.03-13.9-4.49 7.78c-.4.69-1.28.69-1.68 0L9.12 12.3l3.12-8.64z" fill="#F47121"/>
-        <path d="M16.73 6.7L3.37 19.02c-.4.69.05 1.58.84 1.58h4.49l8.87-12.32z" fill="#FFA000"/>
+    <svg
+    role="img"
+    viewBox="-47.5 0 351 351"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={cn("h-5 w-5", className)}
+    >
+    <path
+      d="M0 282.998l2.123-2.972L102.527 89.512l.212-2.017L58.479 4.358C54.77-2.606 44.331-.845 43.114 6.95L0 282.998z"
+      fill="#FFC24A"
+    />
+    <path
+      d="M1.253 280.732l1.605-3.131L102.211 89.083 58.061 5.608C54.393-1.283 45.074.474 43.87 8.188L1.253 280.732z"
+      fill="#FFA712"
+    />
+    <path
+      d="M135.005 150.381l32.955-33.751-32.965-62.93c-3.129-5.957-11.866-5.974-14.963 0L102.421 87.288v2.86l32.584 60.233z"
+      fill="#F4BD62"
+    />
+    <path
+      d="M134.417 148.974l32.039-32.812-32.039-61.007c-3.042-5.791-10.433-6.398-13.444-.59l-17.705 34.11-.529 1.744 31.678 58.555z"
+      fill="#FFA50E"
+    />
+    <path
+      d="M0 282.998l.962-.968 3.496-1.42 128.477-128 1.628-4.431-32.05-61.074"
+      fill="#F6820C"
+    />
+    <path
+      d="M139.121 347.551L255.396 282.704l-33.204-204.494c-1.039-6.398-8.888-8.928-13.468-4.34L0 282.998l115.608 64.548c7.306 4.079 16.205 4.081 23.513.005z"
+      fill="#FDE068"
+    />
+    <path
+      d="M254.354 282.16L221.402 79.218c-1.031-6.35-7.558-8.977-12.103-4.424L1.289 282.601l114.339 63.909c7.25 4.048 16.08 4.05 23.334.005l115.392-64.355z"
+      fill="#FCCA3F"
+    />
+    <path
+      d="M139.121 345.641c-7.308 4.075-16.206 4.074-23.513-.006L.931 282.015 0 282.998l115.608 64.548c7.306 4.079 16.205 4.081 23.513.005l116.275-64.848-.285-1.752-115.99 64.689z"
+      fill="#EEAB37"
+    />
     </svg>
   ),
+
+
   TailwindLogo: ({ className }: { className?: string }) => (
-    <svg role="img" className={cn("h-5 w-5", className)} fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8.007 8.257c.29.545.437 1.06.437 1.734 0 1.545-.96 2.488-2.58 2.488-1.56 0-2.618-.943-2.618-2.678 0-1.83 1.1-2.91 2.73-2.91.438 0 .84.14 1.15.394.02.015.03.02.04.02s.013-.005.02-.02c-.15-.24-.465-.66-.465-1.29 0-1.02.73-1.635 1.76-1.635.885 0 1.515.54 1.515 1.545 0 .825-.435 1.44-1.2 2.145l-1.035.96zM15.12 8c0 4.02-3.15 7.17-7.17 7.17S.78 12.02.78 8 .78.83 4.8.83s7.17 3.15 7.17 7.17zm-1.8 0c0-3.09-2.43-5.52-5.37-5.52S2.58 4.91 2.58 8s2.43 5.52 5.37 5.52 5.37-2.43 5.37-5.52z"></path></svg>
+    <svg
+    role="img"
+    viewBox="0 0 54 33"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={cn("h-5 w-5", className)}
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M27 0c-7.2 0-11.7 3.6-13.5 10.8 2.7-3.6 5.85-4.95 9.45-4.05 2.054.513 3.522 2.004 5.147 3.653C30.744 13.09 33.808 16.2 40.5 16.2c7.2 0 11.7-3.6 13.5-10.8-2.7 3.6-5.85 4.95-9.45 4.05-2.054-.513-3.522-2.004-5.147-3.653C36.756 3.11 33.692 0 27 0zM13.5 16.2C6.3 16.2 1.8 19.8 0 27c2.7-3.6 5.85-4.95 9.45-4.05 2.054.514 3.522 2.004 5.147 3.653C17.244 29.29 20.308 32.4 27 32.4c7.2 0 11.7-3.6 13.5-10.8-2.7 3.6-5.85 4.95-9.45 4.05-2.054-.513-3.522-2.004-5.147-3.653C23.256 19.31 20.192 16.2 13.5 16.2z"
+      fill="currentColor"
+    />
+    </svg>
   ),
+
+
   ShadcnLogo: ({ className }: { className?: string }) => (
-     <svg role="img" className={cn("h-5 w-5", className)} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M208.33,88.42a8,8,0,0,1,7.44,12.39L128,192,40.23,100.81a8,8,0,0,1,7.44-12.39H208.33M208.33,72.42H48.67a16,16,0,0,0-14.88,24.78l87.77,91.19a8,8,0,0,0,12.23,0l87.77-91.19A16,16,0,0,0,208.33,72.42Z"></path></svg>
+    <svg
+    role="img"
+    viewBox="0 0 100 100"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={cn("h-5 w-5", className)}
+  >
+    <path
+      d="M81.25 49.9996L50 81.2496"
+      stroke="currentColor"
+      strokeWidth="6.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M75 15.6246L15.625 74.9996"
+      stroke="currentColor"
+      strokeWidth="6.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    </svg>
   ),
+
+
   FirebaseStudio: FirebaseStudioIcon,
+
+
   GenkitLogo: ({ className }: { className?: string }) => (
-    <svg role="img" className={cn("h-5 w-5", className)} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 9.24434 20.9407 6.75841 19.1662 5M12 2V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M19.1662 5C19.1662 5 18.4234 8.71078 15.5 10.5C12.5766 12.2892 12 15.5 12 15.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path><path d="M12 15.5H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+    <svg
+    role="img"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={cn("h-5 w-5", className)}
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2L4 6.5V15.5L12 20L20 15.5V6.5L12 2ZM18 14.36L12 17.74L6 14.36V7.64L12 4.26L18 7.64V14.36Z"
+      fill="currentColor"
+    />
+    <path
+      d="M12 8L13.1 10.9L16 12L13.1 13.1L12 16L10.9 13.1L8 12L10.9 10.9L12 8Z"
+      fill="currentColor"
+    />
+    </svg>
   ),
 };
 

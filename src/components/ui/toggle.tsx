@@ -14,7 +14,7 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline:
-          "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-transparent hover:bg-muted hover:text-muted-foreground",
       },
       size: {
         default: "h-10 px-3",
@@ -46,3 +46,4 @@ Toggle.displayName = TogglePrimitive.Root.displayName
 export { Toggle, toggleVariants }
 
     
+
