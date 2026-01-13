@@ -205,15 +205,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                       </button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-[250px] p-0"
-                    onPointerDownOutside={(e) => {
-                      const target = e.target as HTMLElement;
-                      if (target?.hasAttribute('data-radix-scroll-area-viewport') || target.closest('[cmdk-list]')) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
+                  <PopoverContent className="w-[250px] p-0">
                     <Command>
                       <CommandInput placeholder="Search category..." />
                       <CommandList className="max-h-64">
