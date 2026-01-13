@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { Accordion } from '@/components/ui/accordion';
 
 // export const metadata: Metadata = {
 //   title: 'All Expenses - SettleEase',
@@ -67,11 +68,11 @@ export default function AllExpensesPage() {
                 </div>
             ) : userExpenses.length > 0 ? (
                 <ScrollArea className="h-[calc(100vh-22rem)]">
-                <div className="divide-y divide-border/50">
+                <Accordion type="single" collapsible className="w-full">
                     {userExpenses.map((expense) => (
                     <ExpenseListItem key={expense.id} expense={expense} currentUserId={userProfile!.uid} groupHistory={[]} />
                     ))}
-                </div>
+                </Accordion>
                 </ScrollArea>
             ) : (
                 <div className="text-center p-12 text-muted-foreground">
