@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Settlement } from '@/types';
+import { Accordion } from '@/components/ui/accordion';
 
 
 // export const metadata: Metadata = {
@@ -64,16 +65,15 @@ export default function AllSettlementsPage() {
             </div>
           ) : userSettlements.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-22rem)]">
-              <div className="divide-y divide-border/50">
+              <Accordion type="single" collapsible className="w-full">
                 {userSettlements.map((settlement) => (
                   <SettlementListItem
                     key={settlement.id}
                     settlement={settlement}
                     currentUserId={userProfile!.uid}
-                    onActionComplete={loadSettlements}
                   />
                 ))}
-              </div>
+              </Accordion>
             </ScrollArea>
           ) : (
             <div className="text-center p-12 text-muted-foreground">
