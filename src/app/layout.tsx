@@ -1,5 +1,6 @@
 
 import type { Metadata } from 'next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
@@ -41,6 +42,7 @@ export default function RootLayout({
           </ThemeProvider>
           <Toaster />
         </SiteSettingsProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
