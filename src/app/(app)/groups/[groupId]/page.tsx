@@ -26,7 +26,7 @@ import {
 } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, Settlement, Balance, HistoryEvent } from '@/types';
-import GroupDetailLoading from './loading'; // Import loading component
+import GroupDetailLoading from '@/app/(app)/groups/[groupId]/loading';
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
