@@ -13,6 +13,7 @@
   - [User Experience](#user-experience)
   - [Admin Panel](#admin-panel)
 - [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Firebase Project Setup](#firebase-project-setup)
@@ -71,6 +72,44 @@ A dedicated dashboard for administrators to manage the entire application.
 - **Forms**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/)
 - **Charts**: [Recharts](https://recharts.org/)
 - **AI (Optional)**: [Genkit](https://firebase.google.com/docs/genkit)
+
+## Project Structure
+
+A brief overview of the key directories in this project.
+
+```
+/
+├── public/             # Static assets (not present by default, but can be added)
+├── src/
+│   ├── app/            # Next.js App Router: pages, layouts, and API routes
+│   │   ├── (app)/      # Authenticated application routes (dashboard, groups, etc.)
+│   │   ├── (admin)/    # Admin panel routes
+│   │   ├── (auth)/     # Authentication pages (login, signup)
+│   │   ├── (info)/     # Informational pages (about, privacy)
+│   │   ├── api/        # API routes for server-side logic
+│   │   ├── layout.tsx  # Root layout of the application
+│   │   └── page.tsx    # Root page, handles initial routing
+│   ├── components/
+│   │   ├── analysis/   # Components for the financial analysis page
+│   │   ├── auth/       # Authentication-related forms
+│   │   ├── dashboard/  # Dashboard-specific components and cards
+│   │   ├── expenses/   # Expense forms, list items, and dialogs
+│   │   ├── groups/     # Group management components
+│   │   ├── layout/     # Core layout components (App shell, sidebar, header)
+│   │   ├── settlements/# Settlement forms and list items
+│   │   └── ui/         # Reusable UI components from ShadCN
+│   ├── contexts/       # React context providers (Auth, Site Settings, Theme)
+│   ├── firebase/       # Firebase configuration and error handling logic
+│   ├── hooks/          # Custom React hooks (e.g., useIsMobile)
+│   ├── lib/            # Core libraries, utilities, and data fetching logic (mock-data.ts)
+│   ├── themes/         # Theme color definitions
+│   └── types/          # TypeScript type definitions for the application
+├── firebase.json       # Firebase deployment configuration for rules and indexes
+├── firestore.rules     # Firestore security rules
+├── next.config.ts      # Next.js configuration file
+├── tailwind.config.ts  # Tailwind CSS configuration file
+└── README.md           # You are here
+```
 
 ## Getting Started
 
