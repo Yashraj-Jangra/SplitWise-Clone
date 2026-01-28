@@ -183,7 +183,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleArchive} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                  <AlertDialogAction onClick={handleArchive} disabled={isDeleting} variant="destructive">
                       {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
                       Yes, archive it
                   </AlertDialogAction>

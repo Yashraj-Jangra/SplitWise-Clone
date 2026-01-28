@@ -284,7 +284,7 @@ export default function BroadcastPage() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={emailForm.handleSubmit(handleEmailBroadcastSubmit)} disabled={isEmailBroadcasting} className="bg-destructive hover:bg-destructive/90">
+                  <AlertDialogAction onClick={emailForm.handleSubmit(handleEmailBroadcastSubmit)} disabled={isEmailBroadcasting} variant="destructive">
                       Confirm and Send
                   </AlertDialogAction>
               </AlertDialogFooter>

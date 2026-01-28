@@ -215,7 +215,7 @@ export default function AdminDataToolsPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogAction onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting} variant="destructive">
                            Confirm and Execute
                         </AlertDialogAction>
                     </AlertDialogFooter>
