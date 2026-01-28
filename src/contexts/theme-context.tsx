@@ -88,16 +88,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const themeClass = `theme-${theme}`;
     document.body.classList.add(themeClass);
 
-    // Inject custom theme styles into the head
-    const styleElement = document.getElementById('custom-themes-style') || document.createElement('style');
-    styleElement.id = 'custom-themes-style';
+    // Inject all theme styles into the head
+    const styleElement = document.getElementById('themes-style') || document.createElement('style');
+    styleElement.id = 'themes-style';
     
-    const customThemes = settings.customThemes || [];
-    styleElement.innerHTML = customThemes.map(generateThemeCss).join('\n');
+    styleElement.innerHTML = allThemes.map(generateThemeCss).join('\n');
     
     document.head.appendChild(styleElement);
 
-  }, [theme, settings.customThemes]);
+  }, [theme, allThemes]);
 
 
   const setTheme = useCallback((themeId: string) => {
