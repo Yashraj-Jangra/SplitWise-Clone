@@ -84,11 +84,11 @@ export default function ManageUsersPage() {
     if (loading) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-10 w-1/3" />
+                <Skeleton className="h-10 w-2/3 sm:w-1/3" />
                 <Card>
                     <CardHeader>
-                        <Skeleton className="h-8 w-1/4" />
-                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-8 w-1/2 sm:w-1/4" />
+                        <Skeleton className="h-4 w-3/4 sm:w-1/2" />
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}

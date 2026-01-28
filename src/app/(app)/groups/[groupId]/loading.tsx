@@ -1,3 +1,4 @@
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GroupDetailLoading() {
@@ -7,9 +8,9 @@ export default function GroupDetailLoading() {
       <div className="mb-6">
         <Skeleton className="h-48 md:h-64 w-full rounded-lg mb-6" />
         <div className="p-4 bg-card rounded-lg shadow">
-          <Skeleton className="h-6 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-1/2 mb-3" />
-          <Skeleton className="h-8 w-1/4" />
+          <Skeleton className="h-6 w-full sm:w-3/4 mb-2" />
+          <Skeleton className="h-4 w-2/3 sm:w-1/2 mb-3" />
+          <Skeleton className="h-8 w-1/3 sm:w-1/4" />
         </div>
       </div>
 
@@ -26,7 +27,7 @@ export default function GroupDetailLoading() {
       {/* Tab Content Skeleton (e.g., Expenses List) */}
       <div className="border rounded-lg p-4">
         <div className="flex justify-between items-center mb-4">
-            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-8 w-full sm:w-1/3" />
             <Skeleton className="h-10 w-32" />
         </div>
         <div className="space-y-3">
