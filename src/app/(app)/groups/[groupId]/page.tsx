@@ -159,7 +159,7 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex md:justify-start">
           {TABS.map((tab) => {
             const Icon = Icons[tab.icon];
             return (
