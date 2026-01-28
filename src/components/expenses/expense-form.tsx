@@ -281,7 +281,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
       </div>
       
       <div className="space-y-2">
-        <p className="text-sm">Paid by <Button variant="link" className="p-0 h-auto" onClick={() => setView('payer')}>{paidByText}</Button> and split <Button variant="link" className="p-0 h-auto" onClick={() => setView('split')}>{splitText}</Button>.</p>
+        <p className="text-sm">Paid by <Button type="button" variant="link" className="p-0 h-auto" onClick={() => setView('payer')}>{paidByText}</Button> and split <Button type="button" variant="link" className="p-0 h-auto" onClick={() => setView('split')}>{splitText}</Button>.</p>
         <p className="text-xs text-muted-foreground">({getSummaryText()})</p>
       </div>
 
@@ -311,6 +311,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
+                      type="button"
                       variant={'outline'}
                       className={cn(
                         'w-full justify-start text-left font-normal',
@@ -423,6 +424,7 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
                                     <FormControl>
                                         <Button
                                             asChild
+                                            type="button"
                                             variant={field.value === member.uid ? 'default' : 'outline'}
                                             className="w-full h-auto p-2 justify-start cursor-pointer"
                                         >
