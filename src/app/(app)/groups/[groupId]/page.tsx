@@ -26,7 +26,7 @@ import {
 } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, Settlement, Balance, HistoryEvent } from '@/types';
-import GroupDetailLoading from '@/app/(app)/groups/[groupId]/loading';
+import GroupDetailLoading from './loading';
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
@@ -159,7 +159,7 @@ export default function GroupDetailPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 md:w-auto md:inline-flex">
+        <TabsList className="w-full justify-start overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {TABS.map((tab) => {
             const Icon = Icons[tab.icon];
             return (
