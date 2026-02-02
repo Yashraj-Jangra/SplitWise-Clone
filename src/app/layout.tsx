@@ -1,6 +1,5 @@
 
 import type { Metadata } from 'next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
@@ -16,7 +15,14 @@ export async function generateMetadata(): Promise<Metadata> {
     description: `Simplify group expenses with ${settings.appName}. Track, split, and settle shared costs with ease.`,
     icons: {
       icon: settings.faviconUrl || '/favicon.svg',
-    }
+      apple: '/icons/icon-192x192.png',
+    },
+    manifest: '/manifest.json',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: settings.appName,
+    },
   };
 }
 
@@ -31,6 +37,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
       </head>
       <body>
         <SiteSettingsProvider>
@@ -42,7 +50,6 @@ export default function RootLayout({
           </ThemeProvider>
           <Toaster />
         </SiteSettingsProvider>
-        <SpeedInsights />
       </body>
     </html>
   );
