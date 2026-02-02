@@ -7,6 +7,8 @@ import { getSiteSettings } from '@/lib/mock-data';
 import { SiteSettingsProvider } from '@/contexts/site-settings-context';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { ThemeProvider } from '@/contexts/theme-context';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
@@ -50,6 +52,8 @@ export default function RootLayout({
           </ThemeProvider>
           <Toaster />
         </SiteSettingsProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
