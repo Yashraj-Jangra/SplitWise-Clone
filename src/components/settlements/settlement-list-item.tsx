@@ -117,9 +117,11 @@ export function SettlementListItem({ settlement, currentUserId, group }: Settlem
                     <p className="text-xs text-muted-foreground">{format(new Date(settlement.date), 'MMM dd')}</p>
                 </div>
                 <div className="grid gap-0.5 text-left">
-                    <p className="text-base font-medium leading-none">
-                        {isPayer ? 'You' : getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} paid {isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}
-                    </p>
+                    <div className="flex items-center gap-2 text-base font-medium leading-none">
+                        <span>{isPayer ? 'You' : getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)}</span>
+                        <Icons.ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span>{isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}</span>
+                    </div>
                     <p className="text-xs text-muted-foreground">Settlement</p>
                 </div>
             </div>
