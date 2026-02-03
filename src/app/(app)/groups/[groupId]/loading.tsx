@@ -15,13 +15,13 @@ export default function GroupDetailLoading() {
       </div>
 
       {/* Tabs Skeleton */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex space-x-2">
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-24" />
-        </div>
+      <div className="grid grid-cols-6 gap-2 mb-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </div>
 
       {/* Tab Content Skeleton (e.g., Expenses List) */}
