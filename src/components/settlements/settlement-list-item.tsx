@@ -111,25 +111,16 @@ export function SettlementListItem({ settlement, currentUserId, group }: Settlem
         <AccordionTrigger className="p-3 hover:bg-muted/50 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50">
             <div className="flex items-center gap-4 flex-1">
                 <div className="text-center w-12 flex-shrink-0">
-                    <Icons.Settle className="h-7 w-7 text-green-500 mx-auto"/>
+                    <div className="bg-green-500/10 rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-1">
+                        <Icons.Settle className="h-5 w-5 text-green-500" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">{format(new Date(settlement.date), 'MMM dd')}</p>
                 </div>
-                <div className="grid gap-1 text-left">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                    <Avatar className="h-6 w-6">
-                        <AvatarImage src={settlement.paidBy.avatarUrl} alt={getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} />
-                        <AvatarFallback>{getInitials(settlement.paidBy.firstName, settlement.paidBy.lastName)}</AvatarFallback>
-                    </Avatar>
-                    <span className="truncate max-w-[80px]">{isPayer ? 'You' : getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)}</span>
-                    <Icons.ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0"/>
-                    <Avatar className="h-6 w-6">
-                        <AvatarImage src={settlement.paidTo.avatarUrl} alt={getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)} />
-                        <AvatarFallback>{getInitials(settlement.paidTo.firstName, settlement.paidTo.lastName)}</AvatarFallback>
-                    </Avatar>
-                    <span className="truncate max-w-[80px]">{isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                       <span>{format(new Date(settlement.date), "PPP")}</span>
-                    </div>
+                <div className="grid gap-0.5 text-left">
+                    <p className="text-base font-medium leading-none">
+                        {isPayer ? 'You' : getFullName(settlement.paidBy.firstName, settlement.paidBy.lastName)} paid {isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Settlement</p>
                 </div>
             </div>
             <div className="text-right">
