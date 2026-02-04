@@ -1,6 +1,6 @@
 {
-  "name": "{AppName}",
-  "short_name": "{AppName}",
+  "name": "SplitWise",
+  "short_name": "SplitWIse",
   "description": "Effortless Group Expense Management",
   "start_url": "/",
   "display": "standalone",
