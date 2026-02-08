@@ -495,7 +495,7 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
     } else if (watchSplitType === 'by_percentage') {
         sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.percentage) || 0), 0);
     } else if (watchSplitType === 'by_shares') {
-         sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (parseFloat(p.shares) || 1), 0);
+         sumOfSplit = watchParticipants.filter((p: any) => p.selected).reduce((acc: number, p: any) => acc + (Number(p.shares) || 0), 0);
     }
 
     const remaining = totalAmount - sumOfSplit;
@@ -540,41 +540,51 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                 <ScrollArea className="h-64">
                     <div className="p-1 space-y-1">
                         {watchParticipants && watchParticipants.map((p: any, index: number) => (
-                          <div key={p.userId} className="flex items-center gap-3 p-2 rounded-md">
-                            <FormField
-                              control={control}
-                              name={`participants.${index}.selected`}
-                              render={({ field }) => (
-                                <FormItem className="flex items-center">
-                                  <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={p.avatarUrl} />
-                              <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
-                            </Avatar>
-                            <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
+                          <div key={p.userId} className="flex items-center justify-between p-2 rounded-md">
+                            <div className="flex items-center gap-3">
+                                <FormField
+                                control={control}
+                                name={`participants.${index}.selected`}
+                                render={({ field }) => (
+                                    <FormItem className="flex items-center">
+                                    <FormControl>
+                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                    </FormControl>
+                                    </FormItem>
+                                )}
+                                />
+                                <Avatar className="h-8 w-8">
+                                <AvatarImage src={p.avatarUrl} />
+                                <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium text-sm truncate">{p.name}</span>
+                            </div>
+                            
                             {p.selected && (
-                              <div className="w-32 relative">
-                                {watchSplitType === 'equally' && (
-                                  <Input type="number" value={(p.amountOwed || 0).toFixed(2)} disabled className="pr-8 hide-number-arrows"/>
-                                )}
-                                {watchSplitType === 'unequally' && (
-                                  <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0.00"/>)} />
-                                )}
-                                {watchSplitType === 'by_shares' && (
-                                  <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1" className="hide-number-arrows"/>)} />
-                                )}
-                                {watchSplitType === 'by_percentage' && (
-                                    <div className="relative">
-                                      <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0"/>)} />
-                                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                                <div className="flex items-center gap-4">
+                                    {watchSplitType !== 'unequally' && (
+                                        <div className="w-24 text-right">
+                                            <span className="text-sm font-semibold">{CURRENCY_SYMBOL}{(p.amountOwed || 0).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="w-32 relative">
+                                        {watchSplitType === 'equally' && (
+                                            <Input type="text" value="-" disabled className="text-center bg-transparent border-none"/>
+                                        )}
+                                        {watchSplitType === 'unequally' && (
+                                            <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="hide-number-arrows" placeholder="0.00"/>)} />
+                                        )}
+                                        {watchSplitType === 'by_shares' && (
+                                            <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1" className="hide-number-arrows"/>)} />
+                                        )}
+                                        {watchSplitType === 'by_percentage' && (
+                                            <div className="relative">
+                                                <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0"/>)} />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                              </div>
+                                </div>
                             )}
                           </div>
                         ))}
@@ -664,9 +674,11 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
       if (splitType === 'equally') {
           amounts = Array(numSelected).fill(totalAmount / numSelected);
       } else if (splitType === 'by_shares') {
-          const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (p.shares ?? 1), 0);
+          const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
           if (totalShares > 0) {
-              amounts = selectedParticipants.map((p: any) => (totalAmount * (p.shares ?? 1)) / totalShares);
+              amounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 0)) / totalShares);
+          } else {
+              amounts = Array(numSelected).fill(0);
           }
       } else if (splitType === 'by_percentage') {
           amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
@@ -935,3 +947,5 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     </DialogContent>
   );
 }
+
+    
