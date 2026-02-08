@@ -632,6 +632,18 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
   const watchedSplitType = watch('splitType');
   const watchedParticipants = watch('participants');
   
+  const participantDeps = React.useMemo(() => {
+    if (!watchedParticipants) return null;
+    return JSON.stringify(
+      watchedParticipants.map(p => ({
+        userId: p.userId,
+        selected: p.selected,
+        shares: p.shares,
+        percentage: p.percentage
+      }))
+    );
+  }, [watchedParticipants]);
+  
   const calculateSplits = React.useCallback(() => {
       const allParticipants = getValues('participants') || [];
       const splitType = getValues('splitType');
@@ -652,9 +664,9 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
       if (splitType === 'equally') {
           amounts = Array(numSelected).fill(totalAmount / numSelected);
       } else if (splitType === 'by_shares') {
-          const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (Number(p.shares) || 1), 0);
+          const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + (p.shares ?? 1), 0);
           if (totalShares > 0) {
-              amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.shares) || 1)) / totalShares);
+              amounts = selectedParticipants.map((p: any) => (totalAmount * (p.shares ?? 1)) / totalShares);
           }
       } else if (splitType === 'by_percentage') {
           amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
@@ -687,7 +699,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     if (watchedSplitType !== 'unequally') {
       calculateSplits();
     }
-  }, [watchedAmount, watchedSplitType, watchedParticipants, calculateSplits]);
+  }, [watchedAmount, watchedSplitType, participantDeps, calculateSplits]);
 
 
   React.useEffect(() => {
