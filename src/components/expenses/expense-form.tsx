@@ -561,29 +561,22 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                             </div>
                             
                             {p.selected && (
-                                <div className="flex items-center gap-4">
-                                    {watchSplitType !== 'unequally' && (
-                                        <div className="w-24 text-right">
-                                            <span className="text-sm font-semibold">{CURRENCY_SYMBOL}{(p.amountOwed || 0).toFixed(2)}</span>
-                                        </div>
-                                    )}
-                                    <div className="w-32 relative">
-                                        {watchSplitType === 'equally' && (
-                                            <Input type="text" value="-" disabled className="text-center bg-transparent border-none"/>
-                                        )}
-                                        {watchSplitType === 'unequally' && (
-                                            <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="hide-number-arrows" placeholder="0.00"/>)} />
-                                        )}
-                                        {watchSplitType === 'by_shares' && (
-                                            <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1" className="hide-number-arrows"/>)} />
-                                        )}
-                                        {watchSplitType === 'by_percentage' && (
-                                            <div className="relative">
-                                                <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0"/>)} />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                <div className="w-32 relative">
+                                  {watchSplitType === 'equally' && (
+                                    <Input type="number" disabled value={(p.amountOwed || 0).toFixed(2)} />
+                                  )}
+                                  {watchSplitType === 'unequally' && (
+                                    <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="hide-number-arrows" placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
+                                  )}
+                                  {watchSplitType === 'by_shares' && (
+                                    <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1" className="hide-number-arrows" value={field.value === undefined ? '' : field.value} />)} />
+                                  )}
+                                  {watchSplitType === 'by_percentage' && (
+                                      <div className="relative">
+                                          <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0" value={field.value === undefined ? '' : field.value} />)} />
+                                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                                      </div>
+                                  )}
                                 </div>
                             )}
                           </div>
