@@ -689,10 +689,13 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
       if (amounts.length > 0) {
           // Correct for rounding errors
           const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
-          let remainder = parseFloat((totalAmount - roundedAmounts.reduce((s, a) => s + a, 0)).toFixed(2));
+          const sumOfRounded = roundedAmounts.reduce((s, a) => s + a, 0);
+          let remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
           
-          for (let i = 0; i < Math.abs(remainder * 100); i++) {
-              roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
+          if (Math.abs(remainder) > 0) {
+            for (let i = 0; i < Math.abs(remainder * 100); i++) {
+                roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
+            }
           }
           
           let roundedIndex = 0;
@@ -813,14 +816,50 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
         }
     }
     // --- End Validation ---
+    
+    // --- Recalculate final participant data on submit to ensure accuracy ---
+    const selectedParticipantsRaw = values.participants.filter(p => p.selected);
+    const numSelected = selectedParticipantsRaw.length;
+    let finalParticipants: { userId: string, amountOwed: number, share: number }[] = [];
+    
+    if (totalAmount > 0 && numSelected > 0) {
+      let amounts: number[];
+
+      if (values.splitType === 'by_shares') {
+          const totalShares = selectedParticipantsRaw.reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
+          amounts = totalShares > 0
+              ? selectedParticipantsRaw.map(p => (totalAmount * (Number(p.shares) || 0)) / totalShares)
+              : Array(numSelected).fill(0);
+      } else if (values.splitType === 'by_percentage') {
+          amounts = selectedParticipantsRaw.map(p => (totalAmount * (Number(p.percentage) || 0)) / 100);
+      } else if (values.splitType === 'unequally') {
+          amounts = selectedParticipantsRaw.map(p => Number(p.amountOwed) || 0);
+      } else { // 'equally'
+          amounts = Array(numSelected).fill(totalAmount / numSelected);
+      }
+      
+      // Correct for rounding errors
+      const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
+      const sumOfRounded = roundedAmounts.reduce((s, a) => s + a, 0);
+      let remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
+      
+      if (Math.abs(remainder) > 0) {
+        for (let i = 0; i < Math.abs(remainder * 100); i++) {
+          roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
+        }
+      }
+
+      finalParticipants = selectedParticipantsRaw.map((p, i) => ({
+          userId: p.userId,
+          amountOwed: roundedAmounts[i],
+          share: Number(p.shares) || 1
+      }));
+    }
+
 
     const payers = values.payerType === 'single' && values.singlePayerId
       ? [{ userId: values.singlePayerId, amount: values.amount }]
       : values.multiPayers?.filter(p => p.amount && p.amount > 0).map(p => ({ userId: p.userId, amount: p.amount! })) || [];
-
-    const finalParticipants = values.participants
-      .filter(p => p.selected)
-      .map(p => ({ userId: p.userId, amountOwed: Number(p.amountOwed) || 0, share: Number(p.shares) || 1 }));
 
     try {
         if (isEditing && expenseToEdit) {
@@ -947,5 +986,3 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     </DialogContent>
   );
 }
-
-    
