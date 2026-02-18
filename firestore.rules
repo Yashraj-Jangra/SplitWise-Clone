@@ -14,7 +14,8 @@ service cloud.firestore {
     }
     
     function getRole() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+        return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+               && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
     
     function isAdmin() {
@@ -23,7 +24,9 @@ service cloud.firestore {
 
     function isGroupActiveAndMember(groupId) {
       let group = get(/databases/$(database)/documents/groups/$(groupId));
-      return group.data.archivedAt == null && group.data.memberIds.hasAny([request.auth.uid]);
+      // Check for existence of archivedAt before comparing to null
+      return ('archivedAt' in group.data && group.data.archivedAt == null) && 
+             group.data.memberIds.hasAny([request.auth.uid]);
     }
     
     function isCreator(groupId) {
@@ -39,26 +42,35 @@ service cloud.firestore {
     }
     
     match /groups/{groupId} {
-        allow read: if (isGroupActiveAndMember(groupId)) || isAdmin();
+        // GET (single doc): Check if group is active AND user is a member
+        allow get: if isGroupActiveAndMember(groupId) || isAdmin();
+        
+        // LIST (query): Check if user is a member. The query in code must filter for archivedAt == null.
+        allow list: if (isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid])) || isAdmin();
+      
         allow create: if isSignedIn();
-        // Only creator/admin can change name/desc/archive. Any active member can add members.
+        
         allow update: if isAdmin() || isCreator(groupId) || 
                       (isGroupActiveAndMember(groupId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']));
+                      
         allow delete: if isAdmin();
     }
 
     match /expenses/{expenseId} {
-        allow read, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow get, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow list: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
         allow create, update: if isGroupActiveAndMember(request.resource.data.groupId) || isAdmin();
     }
     
     match /settlements/{settlementId} {
-        allow read, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow get, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow list: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
         allow create, update: if isGroupActiveAndMember(request.resource.data.groupId) || isAdmin();
     }
 
     match /history/{historyId} {
-        allow read: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow get: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow list: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
         allow create: if isSignedIn();
         allow update: if (isGroupActiveAndMember(request.resource.data.groupId) || isAdmin())
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
