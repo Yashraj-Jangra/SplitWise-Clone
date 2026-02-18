@@ -29,6 +29,9 @@ import { getFullName, getInitials } from '@/lib/utils';
 import { useAuth } from "@/contexts/auth-context";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { FirebaseError } from "firebase/app";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 function GroupActions({ group, onActionComplete }: { group: Group, onActionComplete: () => void }) {
     const { toast } = useToast();
@@ -44,8 +47,17 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
             toast({ title: "Group Archived", description: `The group "${group.name}" has been archived.`});
             onActionComplete();
         } catch (error) {
-             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-             toast({ title: "Error Archiving Group", description: errorMessage, variant: "destructive"});
+             if (error instanceof FirebaseError && error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: `/groups/${group.id}`,
+                    operation: 'update',
+                    requestResourceData: { archivedAt: "..." }
+                });
+                errorEmitter.emit('permission-error', permissionError);
+             } else {
+                const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+                toast({ title: "Error Archiving Group", description: errorMessage, variant: "destructive"});
+             }
         } finally {
             setIsUpdating(false);
             setIsArchiveDialogOpen(false);
@@ -60,8 +72,17 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
             toast({ title: "Group Restored", description: `The group "${group.name}" has been restored.`});
             onActionComplete();
         } catch (error) {
-             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-             toast({ title: "Error Restoring Group", description: errorMessage, variant: "destructive"});
+            if (error instanceof FirebaseError && error.code === 'permission-denied') {
+                const permissionError = new FirestorePermissionError({
+                    path: `/groups/${group.id}`,
+                    operation: 'update',
+                    requestResourceData: { archivedAt: null }
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+                toast({ title: "Error Restoring Group", description: errorMessage, variant: "destructive"});
+            }
         } finally {
             setIsUpdating(false);
         }
@@ -100,14 +121,14 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
                     <AlertDialogHeader>
                         <AlertDialogTitle>Archive Group "{group.name}"?</AlertDialogTitle>
                         <AlertDialogDescription>
-                           Archiving this group will make it read-only for all members. No new expenses or settlements can be added. Are you sure?
+                           Archiving this group will make it read-only for all members. After 30 days, the group and all its data will be permanently deleted. This action cannot be undone. Are you sure?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleArchive} disabled={isUpdating} className="bg-orange-500 hover:bg-orange-600">
                             {isUpdating && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
-                            Yes, archive group
+                            Yes, archive it
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
