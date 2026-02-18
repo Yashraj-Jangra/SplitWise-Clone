@@ -29,9 +29,9 @@ const FabTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttribute
     ref={ref}
     {...props}
     size="icon"
-    className="group h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300 hover:scale-110 ring-4 ring-background"
+    className="group h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-300"
   >
-    <Icons.Add className="h-8 w-8 transition-transform duration-300 group-hover:rotate-90" />
+    <Icons.Add className="h-10 w-10 transition-transform duration-300 group-hover:rotate-90" />
     <span className="sr-only">Add Expense</span>
   </Button>
 ));
