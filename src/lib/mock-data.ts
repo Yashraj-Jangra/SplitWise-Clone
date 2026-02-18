@@ -747,11 +747,20 @@ export async function getSettlementsByGroupId(groupId: string): Promise<Settleme
     const user = auth.currentUser;
     if (!user) return [];
 
-    const q = query(
-        collection(db, 'settlements'), 
-        where('groupId', '==', groupId), 
-        where('groupMemberIds', 'array-contains', user.uid)
-    );
+    const profile = await getUserProfile(user.uid);
+    const isAdmin = profile?.role === 'admin';
+
+    let q;
+    if (isAdmin) {
+        q = query(collection(db, 'settlements'), where('groupId', '==', groupId));
+    } else {
+        q = query(
+            collection(db, 'settlements'), 
+            where('groupId', '==', groupId), 
+            where('groupMemberIds', 'array-contains', user.uid)
+        );
+    }
+    
     const querySnapshot = await getDocs(q);
     
     const userIds = new Set<string>();
@@ -1209,6 +1218,7 @@ const FALLBACK_LANDING_IMAGES = [
     'https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2070&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop',
 ];
+
 const DEFAULT_COUNTRY_CODES: CountryCode[] = [
     { name: 'India', code: '+91', flag: '🇮🇳' },
     { name: 'United States', code: '+1', flag: '🇺🇸' },

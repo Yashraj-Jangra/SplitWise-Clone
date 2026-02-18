@@ -14,18 +14,18 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-        return isSignedIn() && request.auth.token.role == 'admin';
+      return isSignedIn() && request.auth.token.role == 'admin';
     }
 
+    // Checks if the group is not archived.
+    // This uses get() and is safe for single-document operations (get, create, update, delete).
+    // It MUST NOT be used in rules for `list` operations.
     function isGroupActiveAndMember(groupId) {
       let group = get(/databases/$(database)/documents/groups/$(groupId));
-      // Check for existence of archivedAt before comparing to null
-      return ('archivedAt' in group.data && group.data.archivedAt == null) && 
-             (request.auth.uid in group.data.memberIds);
-    }
-    
-    function isCreator(groupId) {
-    	return get(/databases/$(database)/documents/groups/$(groupId)).data.createdById == request.auth.uid;
+      // Ensure group exists, user is a member, and group is not archived.
+      return group != null && 
+             (request.auth.uid in group.data.memberIds) && 
+             group.data.archivedAt == null;
     }
 
     // --- Collections ---
@@ -37,39 +37,50 @@ service cloud.firestore {
     }
     
     match /groups/{groupId} {
-        allow read, write: if isAdmin(); // Admins can do anything
-        
-        allow get: if isGroupActiveAndMember(groupId);
-        allow list: if isSignedIn() && request.auth.uid in resource.data.memberIds;
-        allow create: if isSignedIn();
-        allow update: if isCreator(groupId) || 
-                      (isGroupActiveAndMember(groupId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']));
+      allow read, write: if isAdmin();
+      
+      allow get: if isGroupMemberAndActive(groupId);
+      
+      // For `list` queries, the client query MUST filter for `archivedAt == null`.
+      // This rule is efficient as it only checks data within the document being listed.
+      allow list: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      
+      allow create: if isSignedIn();
+      
+      // Allow the creator to update any field on an active group.
+      // Allow any member to only update the `memberIds` field of an active group.
+      allow update: if isGroupMemberAndActive(groupId) && 
+                     (request.auth.uid == resource.data.createdById || 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']));
     }
 
     match /expenses/{expenseId} {
-        allow read, write: if isAdmin(); // Admins can do anything
+      allow read, write: if isAdmin();
+      
+      // Read allowed if you're a member. Client queries are responsible for filtering out archived content.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
 
-        allow get, delete: if isGroupActiveAndMember(resource.data.groupId);
-        allow list: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
-        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId);
+      // Write allowed only if you are a member of the target group and it's active.
+      allow write: if isGroupMemberAndActive(request.resource.data.groupId);
     }
     
     match /settlements/{settlementId} {
-        allow read, write: if isAdmin(); // Admins can do anything
+       allow read, write: if isAdmin();
+      
+      // Read allowed if you're a member.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
 
-        allow get, delete: if isGroupActiveAndMember(resource.data.groupId);
-        allow list: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
-        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId);
+      // Write allowed only if you are a member of the target group and it's active.
+      allow write: if isGroupMemberAndActive(request.resource.data.groupId);
     }
-
+    
     match /history/{historyId} {
-        allow read, delete: if isAdmin();
-
-        allow get: if isGroupActiveAndMember(resource.data.groupId);
+        allow read, write: if isAdmin(); // Let admin do everything on history for now
+        allow get: if isGroupMemberAndActive(resource.data.groupId);
         allow list: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
-        allow create: if isSignedIn();
-        allow update: if (isGroupActiveAndMember(request.resource.data.groupId))
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
+        allow create: if isSignedIn(); // Relies on client functions being secure
+        allow update: if isGroupMemberAndActive(request.resource.data.groupId) &&
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
     }
     
     match /settings/{docId} {
@@ -77,25 +88,18 @@ service cloud.firestore {
         allow write: if isAdmin();
     }
     
-    // Rules for 'tickets' collection
     match /tickets/{ticketId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if isUser(resource.data.userId) || isAdmin();
-      // Allow user to add messages, or admin to do anything
       allow update: if (isUser(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt', 'status'])) || isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Rules for 'notifications' collection
     match /notifications/{notificationId} {
-      // Any signed-in user can read announcements
       allow read: if isSignedIn();
-      // Only admins can create notifications
       allow create: if isAdmin();
-      // Users can update a notification only to add themselves to the 'readBy' array
       allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
                     && request.resource.data.readBy == resource.data.readBy.concat([request.auth.uid]);
-      // Only admins can delete notifications
       allow delete: if isAdmin();
     }
   }
