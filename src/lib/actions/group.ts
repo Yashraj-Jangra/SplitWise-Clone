@@ -18,13 +18,6 @@ export async function archiveGroupAction(groupId: string, actorId: string): Prom
         if (group.createdById !== actorId) {
             return { success: false, error: "Unauthorized. Only the group creator can archive the group." };
         }
-
-        const balances: Balance[] = await getGroupBalances(groupId);
-        const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
-
-        if (!isSettled) {
-            return { success: false, error: "Cannot archive group. All debts must be settled first." };
-        }
         
         await archiveGroup(groupId);
         return { success: true };

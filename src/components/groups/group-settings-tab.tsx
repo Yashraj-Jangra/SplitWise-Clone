@@ -149,26 +149,12 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
             <CardDescription>These actions are irreversible. Please proceed with caution.</CardDescription>
           </CardHeader>
           <CardContent>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="inline-block">
-                    <Button
-                      variant="destructive"
-                      onClick={() => setIsDeleteDialogOpen(true)}
-                      disabled={!isSettled}
-                    >
-                      Archive Group
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                {!isSettled && (
-                  <TooltipContent>
-                    <p>All debts must be settled before you can archive the group.</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              variant="destructive"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              Archive Group
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -178,7 +164,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
               <AlertDialogHeader>
                   <AlertDialogTitle>Archive this group?</AlertDialogTitle>
                   <AlertDialogDescription>
-                      Archiving this group will remove all members' access, including your own. The group and its history will be preserved for administrative review but will not be accessible to members. Are you sure?
+                      Archiving this group will make it read-only for all members. After 30 days, the group and all its data will be permanently deleted. This action cannot be undone. Are you sure?
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
