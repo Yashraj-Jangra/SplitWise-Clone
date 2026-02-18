@@ -37,39 +37,39 @@ service cloud.firestore {
     }
     
     match /groups/{groupId} {
-        // GET (single doc): Check if group is active AND user is a member
-        allow get: if isGroupActiveAndMember(groupId) || isAdmin();
+        allow read, write: if isAdmin(); // Admins can do anything
         
-        // LIST (query): Admins can list all. Users can list groups they are members of.
-        allow list: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.memberIds);
-      
+        allow get: if isGroupActiveAndMember(groupId);
+        allow list: if isSignedIn() && request.auth.uid in resource.data.memberIds;
         allow create: if isSignedIn();
-        
-        allow update: if isAdmin() || isCreator(groupId) || 
+        allow update: if isCreator(groupId) || 
                       (isGroupActiveAndMember(groupId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']));
-                      
-        allow delete: if isAdmin();
     }
 
     match /expenses/{expenseId} {
-        allow get, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
-        allow list: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.groupMemberIds);
-        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId) || isAdmin();
+        allow read, write: if isAdmin(); // Admins can do anything
+
+        allow get, delete: if isGroupActiveAndMember(resource.data.groupId);
+        allow list: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId);
     }
     
     match /settlements/{settlementId} {
-        allow get, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
-        allow list: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.groupMemberIds);
-        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId) || isAdmin();
+        allow read, write: if isAdmin(); // Admins can do anything
+
+        allow get, delete: if isGroupActiveAndMember(resource.data.groupId);
+        allow list: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId);
     }
 
     match /history/{historyId} {
-        allow get: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
-        allow list: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.groupMemberIds);
+        allow read, delete: if isAdmin();
+
+        allow get: if isGroupActiveAndMember(resource.data.groupId);
+        allow list: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
         allow create: if isSignedIn();
-        allow update: if (isGroupActiveAndMember(request.resource.data.groupId) || isAdmin())
+        allow update: if (isGroupActiveAndMember(request.resource.data.groupId))
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
-        allow delete: if isAdmin();
     }
     
     match /settings/{docId} {
