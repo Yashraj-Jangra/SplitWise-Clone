@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState } from 'react';
@@ -19,42 +17,46 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { getInitials } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronRight } from 'lucide-react';
+import React from 'react';
 
-interface DashboardAddExpenseButtonProps {
+interface BottomNavAddButtonProps {
   groups: Group[];
 }
 
-export function DashboardAddExpenseButton({ groups }: DashboardAddExpenseButtonProps) {
+const FabTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>((props, ref) => (
+  <Button
+    ref={ref}
+    {...props}
+    size="icon"
+    className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:scale-105 transition-transform"
+  >
+    <Icons.Add className="h-6 w-6" />
+    <span className="sr-only">Add Expense</span>
+  </Button>
+));
+FabTrigger.displayName = 'FabTrigger';
+
+
+export function BottomNavAddButton({ groups }: BottomNavAddButtonProps) {
   const [isSelectGroupOpen, setIsSelectGroupOpen] = useState(false);
 
-  // If there are no groups, the button is disabled.
   if (groups.length === 0) {
     return (
-      <Button disabled size="icon" className="h-14 w-14 rounded-full">
-        <Icons.Add className="h-6 w-6" />
-      </Button>
+        <FabTrigger disabled />
     );
   }
 
-  // If there is only one group, render the AddExpenseDialog directly, but with a different button style.
   if (groups.length === 1) {
     return <AddExpenseDialog 
         group={groups[0]} 
-        trigger={
-            <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90">
-                <Icons.Add className="h-6 w-6" />
-            </Button>
-        }
+        trigger={ <FabTrigger /> }
     />;
   }
   
-  // If there are multiple groups, show a selection dialog.
   return (
     <Dialog open={isSelectGroupOpen} onOpenChange={setIsSelectGroupOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90">
-          <Icons.Add className="h-6 w-6" />
-        </Button>
+        <FabTrigger />
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

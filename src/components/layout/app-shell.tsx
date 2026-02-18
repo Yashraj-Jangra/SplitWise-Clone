@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SearchDialog } from "./search-dialog";
 import { NotificationBell } from "./notification-bell";
+import { BottomNavBar } from "./bottom-nav-bar";
 
 
 const mainNavItems: NavItem[] = [
@@ -259,9 +260,10 @@ export function AppShell({ children }: AppShellProps) {
        <div className="flex flex-col">
           <Header />
           <EmailVerificationBanner />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pt-0 animate-in fade-in-0 zoom-in-98 duration-300">
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 pt-0 animate-in fade-in-0 zoom-in-98 duration-300 pb-20 md:pb-4 lg:pb-6">
             {children}
           </main>
+          <BottomNavBar />
       </div>
     </div>
   );
