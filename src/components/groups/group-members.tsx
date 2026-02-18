@@ -27,7 +27,7 @@ export function GroupMembers({ members, group }: GroupMembersProps) {
             <CardTitle>Group Members ({members.length})</CardTitle>
             <CardDescription>People sharing expenses in this group.</CardDescription>
         </div>
-        {(isCreator || isAdmin) && <AddMemberDialog group={group} />}
+        {(isCreator || isAdmin) && !group.archivedAt && <AddMemberDialog group={group} />}
       </CardHeader>
       <CardContent className="p-6 pt-0">
         <ScrollArea className="h-[45vh] -mx-6 pr-6">

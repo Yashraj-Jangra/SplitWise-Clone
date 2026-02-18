@@ -59,7 +59,7 @@ export default function GroupDetailPage() {
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
 
   const loadGroupData = useCallback(async () => {
-    if (!groupId) return;
+    if (!groupId || !userProfile) return;
     setLoading(true);
     try {
       const [
@@ -80,6 +80,12 @@ export default function GroupDetailPage() {
         notFound();
         return;
       }
+      
+      if (groupData.archivedAt && userProfile.role !== 'admin') {
+        notFound();
+        return;
+      }
+
 
       setGroup(groupData);
       setExpenses(
@@ -100,7 +106,7 @@ export default function GroupDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [groupId]);
+  }, [groupId, userProfile]);
 
   useEffect(() => {
     loadGroupData();
@@ -232,9 +238,9 @@ export default function GroupDetailPage() {
                   All settlements made in this group.
                 </CardDescription>
               </div>
-              <AddSettlementDialog
+              {!group.archivedAt && <AddSettlementDialog
                 group={group}
-              />
+              />}
             </CardHeader>
             <CardContent className="p-0">
               {settlements.length > 0 ? (

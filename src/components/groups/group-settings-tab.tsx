@@ -69,6 +69,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
   
   const isCreator = userProfile?.uid === group.createdById;
   const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
+  const isArchived = !!group.archivedAt;
 
   async function onSubmit(values: SettingsFormValues) {
     if (!userProfile) return;
@@ -113,7 +114,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Group Name</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} disabled={isArchived} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -124,14 +125,14 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Group Description</FormLabel>
-                    <FormControl><Textarea {...field} /></FormControl>
+                    <FormControl><Textarea {...field} disabled={isArchived} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
-              <Button type="submit" disabled={!isCreator || form.formState.isSubmitting}>
+              <Button type="submit" disabled={!isCreator || form.formState.isSubmitting || isArchived}>
                 {form.formState.isSubmitting && <Icons.AppLogo className="mr-2 animate-spin" />}
                 Save Changes
               </Button>
@@ -142,7 +143,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
       
       <GroupMembers members={group.members} group={group} />
       
-      {isCreator && (
+      {isCreator && !isArchived && (
         <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive">Danger Zone</CardTitle>

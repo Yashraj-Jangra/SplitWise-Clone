@@ -65,12 +65,16 @@ function SettlementDetailContent({ settlement, group }: Omit<SettlementListItemP
                     </div>
                 )}
                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
-                        <Icons.Edit className="mr-2 h-4 w-4" /> Edit
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
-                        <Icons.Delete className="mr-2 h-4 w-4" /> Delete
-                    </Button>
+                    {(!group || !group.archivedAt) && (
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
+                                <Icons.Edit className="mr-2 h-4 w-4" /> Edit
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                                <Icons.Delete className="mr-2 h-4 w-4" /> Delete
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
 

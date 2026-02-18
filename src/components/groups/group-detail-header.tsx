@@ -74,6 +74,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
         
         {/* Actions - Always visible for mobile-friendliness */}
         <div className="absolute top-2 right-2 flex items-center gap-2 z-10">
+            {!group.archivedAt && (
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="text-white bg-black/30 hover:bg-black/50 hover:text-white">
@@ -99,6 +100,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
                     )}
                 </PopoverContent>
             </Popover>
+            )}
         </div>
 
 
@@ -112,7 +114,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
             </div>
             {/* Add Expense Button */}
             <div className="flex-shrink-0">
-                <AddExpenseDialog group={group} />
+                {!group.archivedAt && <AddExpenseDialog group={group} />}
             </div>
           </div>
         </div>
