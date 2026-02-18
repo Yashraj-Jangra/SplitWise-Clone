@@ -6,8 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { getAllGroups } from "@/lib/mock-data";
-import { format } from 'date-fns';
+import { getAllGroups, archiveGroup, restoreGroup } from "@/lib/mock-data";
+import { format, formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -21,57 +21,50 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { getFullName, getInitials } from '@/lib/utils';
 import { useAuth } from "@/contexts/auth-context";
-import { writeBatch, query, collection, where, getDocs, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
-function GroupActions({ group, onGroupDeleted }: { group: Group, onGroupDeleted: (groupId: string) => void }) {
+function GroupActions({ group, onActionComplete }: { group: Group, onActionComplete: () => void }) {
     const { toast } = useToast();
     const { userProfile } = useAuth();
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
 
-    const handleDelete = async () => {
-        if (userProfile?.role !== 'admin') {
-            toast({ title: "Unauthorized", description: "You do not have permission to delete groups.", variant: "destructive"});
-            return;
-        }
-
-        setIsDeleting(true);
+    const handleArchive = async () => {
+        if (!userProfile) return;
+        setIsUpdating(true);
         try {
-            const batch = writeBatch(db);
-
-            // Find and delete all related documents
-            const collectionsToDelete = ['expenses', 'settlements', 'history'];
-            for (const collectionName of collectionsToDelete) {
-                const q = query(collection(db, collectionName), where('groupId', '==', group.id));
-                const snapshot = await getDocs(q);
-                snapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
-            }
-
-            // Delete the group itself
-            const groupDocRef = doc(db, 'groups', group.id);
-            batch.delete(groupDocRef);
-
-            await batch.commit();
-            
-            toast({ title: "Group Deleted", description: `The group "${group.name}" and all its data have been permanently deleted.`});
-            onGroupDeleted(group.id);
-
+            await archiveGroup(group.id, userProfile.uid);
+            toast({ title: "Group Archived", description: `The group "${group.name}" has been archived.`});
+            onActionComplete();
         } catch (error) {
              const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-             toast({ title: "Error Deleting Group", description: errorMessage, variant: "destructive"});
+             toast({ title: "Error Archiving Group", description: errorMessage, variant: "destructive"});
+        } finally {
+            setIsUpdating(false);
+            setIsArchiveDialogOpen(false);
         }
-        
-        setIsDeleting(false);
-        setIsDeleteDialogOpen(false);
+    }
+    
+    const handleRestore = async () => {
+        if (!userProfile) return;
+        setIsUpdating(true);
+        try {
+            await restoreGroup(group.id, userProfile.uid);
+            toast({ title: "Group Restored", description: `The group "${group.name}" has been restored.`});
+            onActionComplete();
+        } catch (error) {
+             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+             toast({ title: "Error Restoring Group", description: errorMessage, variant: "destructive"});
+        } finally {
+            setIsUpdating(false);
+        }
     }
 
     return (
@@ -89,25 +82,32 @@ function GroupActions({ group, onGroupDeleted }: { group: Group, onGroupDeleted:
                             <Icons.Details className="mr-2 h-4 w-4" /> View Group
                         </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                        <Icons.Delete className="mr-2 h-4 w-4" /> Delete Group
-                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {group.archivedAt ? (
+                         <DropdownMenuItem onClick={handleRestore} disabled={isUpdating}>
+                            <Icons.Restore className="mr-2 h-4 w-4" /> Restore Group
+                        </DropdownMenuItem>
+                    ) : (
+                         <DropdownMenuItem onClick={() => setIsArchiveDialogOpen(true)} className="text-orange-500 focus:text-orange-500 focus:bg-orange-500/10">
+                            <Icons.Archive className="mr-2 h-4 w-4" /> Archive Group
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Archive Group "{group.name}"?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action is irreversible. It will permanently delete the group "{group.name}" and all associated expenses, settlements, and history.
+                           Archiving this group will make it read-only for all members. No new expenses or settlements can be added. Are you sure?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} disabled={isDeleting} variant="destructive">
-                            {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
-                            Yes, delete permanently
+                        <AlertDialogAction onClick={handleArchive} disabled={isUpdating} className="bg-orange-500 hover:bg-orange-600">
+                            {isUpdating && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+                            Yes, archive group
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -124,17 +124,13 @@ export default function ManageGroupsPage() {
     const fetchGroups = async () => {
         setLoading(true);
         const groupList = await getAllGroups();
-        setGroups(groupList);
+        setGroups(groupList.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         setLoading(false);
     }
 
     useEffect(() => {
         fetchGroups();
     }, []);
-
-    const handleGroupDeleted = (groupId: string) => {
-        setGroups(prev => prev.filter(g => g.id !== groupId));
-    };
 
     if (loading || !userProfile) {
         return (
@@ -172,13 +168,13 @@ export default function ManageGroupsPage() {
                                 <TableHead>Created By</TableHead>
                                 <TableHead>Members</TableHead>
                                 <TableHead>Total Expenses</TableHead>
-                                <TableHead>Created Date</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {groups.map(group => (
-                                <TableRow key={group.id}>
+                                <TableRow key={group.id} className={cn(group.archivedAt && "bg-muted/50 text-muted-foreground")}>
                                     <TableCell className="font-medium">{group.name}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -189,11 +185,20 @@ export default function ManageGroupsPage() {
                                             <span>{getFullName(group.createdBy.firstName, group.createdBy.lastName)}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{group.members.length > 0 ? group.members.length : <span className="text-muted-foreground">Archived</span>}</TableCell>
+                                    <TableCell>{group.members.length}</TableCell>
                                     <TableCell>{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</TableCell>
-                                    <TableCell>{format(new Date(group.createdAt), "PPP")}</TableCell>
+                                    <TableCell>
+                                        {group.archivedAt ? (
+                                            <div>
+                                                <Badge variant="destructive">Archived</Badge>
+                                                <p className="text-xs">{formatDistanceToNow(new Date(group.archivedAt), { addSuffix: true })}</p>
+                                            </div>
+                                        ) : (
+                                            <Badge variant="secondary">Active</Badge>
+                                        )}
+                                    </TableCell>
                                     <TableCell className="text-right">
-                                        <GroupActions group={group} onGroupDeleted={handleGroupDeleted} />
+                                        <GroupActions group={group} onActionComplete={fetchGroups} />
                                     </TableCell>
                                 </TableRow>
                             ))}

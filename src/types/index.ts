@@ -28,6 +28,7 @@ export interface GroupDocument {
   createdById: string; // user uid
   totalExpenses: number;
   coverImageUrl?: string;
+  archivedAt?: Timestamp;
 }
 
 export interface ExpensePayerDocument {
@@ -116,11 +117,12 @@ export interface NotificationDocument {
 // --- Hydrated Types for Client-side Usage ---
 // These types include the full nested objects for easier display
 
-export interface Group extends Omit<GroupDocument, 'memberIds' | 'createdById' | 'createdAt'> {
+export interface Group extends Omit<GroupDocument, 'memberIds' | 'createdById' | 'createdAt' | 'archivedAt'> {
   id: string; // The document ID
   members: UserProfile[];
   createdBy: UserProfile;
   createdAt: string; // ISO string for client
+  archivedAt?: string;
 }
 
 export interface ExpensePayer extends Omit<ExpensePayerDocument, 'userId'> {

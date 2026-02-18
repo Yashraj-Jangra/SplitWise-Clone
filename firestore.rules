@@ -20,6 +20,11 @@ service cloud.firestore {
         return isSignedIn() && getRole() == 'admin';
     }
 
+    function isGroupActiveAndMember(groupId) {
+      let group = get(/databases/$(database)/documents/groups/$(groupId));
+      return group.data.archivedAt == null && group.data.memberIds.hasAny([request.auth.uid]);
+    }
+
     // --- Collections ---
     match /users/{userId} {
       allow read: if isSignedIn();
@@ -29,26 +34,26 @@ service cloud.firestore {
     }
     
     match /groups/{groupId} {
-        allow read, update: if (isSignedIn() && resource.data.memberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow read: if (isGroupActiveAndMember(groupId)) || isAdmin();
         allow create: if isSignedIn();
-        allow delete: if false; 
+        allow update: if (isGroupActiveAndMember(groupId)) || isAdmin();
+        allow delete: if isAdmin();
     }
 
     match /expenses/{expenseId} {
-        allow read, delete: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
-        allow create, update: if (isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow read, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId) || isAdmin();
     }
     
     match /settlements/{settlementId} {
-        allow read, delete: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
-        allow create, update: if (isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow read, delete: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
+        allow create, update: if isGroupActiveAndMember(request.resource.data.groupId) || isAdmin();
     }
 
     match /history/{historyId} {
-        allow read: if (isSignedIn() && resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin();
+        allow read: if isGroupActiveAndMember(resource.data.groupId) || isAdmin();
         allow create: if isSignedIn();
-        // Allow update only to change the 'restored' flag, by a group member OR an admin.
-        allow update: if ((isSignedIn() && request.resource.data.groupMemberIds.hasAny([request.auth.uid])) || isAdmin())
+        allow update: if (isGroupActiveAndMember(request.resource.data.groupId) || isAdmin())
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
         allow delete: if isAdmin();
     }

@@ -1,4 +1,5 @@
 
+
 import {
   collection,
   doc,
@@ -167,6 +168,7 @@ export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | '
         groupCreatorId: groupData.createdById,
         totalExpenses: 0,
         createdAt: Timestamp.now(),
+        archivedAt: null,
     });
     return docRef.id;
 }
@@ -190,13 +192,18 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
         ...groupData,
         id: groupSnap.id,
         createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
+        archivedAt: (groupData.archivedAt as Timestamp)?.toDate().toISOString() || undefined,
         members,
         createdBy,
     };
 }
 
 export async function getGroupsByUserId(userId: string): Promise<Group[]> {
-    const q = query(collection(db, 'groups'), where('memberIds', 'array-contains', userId));
+    const q = query(
+        collection(db, 'groups'), 
+        where('memberIds', 'array-contains', userId),
+        where('archivedAt', '==', null)
+    );
     const querySnapshot = await getDocs(q);
 
     const groups: Group[] = await Promise.all(
@@ -211,6 +218,7 @@ export async function getGroupsByUserId(userId: string): Promise<Group[]> {
                 ...groupData,
                 id: docSnap.id,
                 createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
+                archivedAt: (groupData.archivedAt as Timestamp)?.toDate().toISOString() || undefined,
                 members,
                 createdBy
             }
@@ -241,6 +249,7 @@ export async function getAllGroups(): Promise<Group[]> {
                 ...groupData,
                 id: groupData.id,
                 createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
+                archivedAt: (groupData.archivedAt as Timestamp)?.toDate().toISOString() || undefined,
                 members,
                 createdBy
             }
@@ -264,12 +273,30 @@ export async function addMembersToGroup(groupId: string, memberIds: string[], ac
     await logHistoryEvent(groupId, 'member_added', actorId, description, { memberIds });
 }
 
-export async function archiveGroup(groupId: string): Promise<void> {
+export async function archiveGroup(groupId: string, actorId: string): Promise<void> {
     const groupDocRef = doc(db, 'groups', groupId);
     await updateDoc(groupDocRef, {
-        memberIds: []
+        archivedAt: Timestamp.now()
     });
+    
+    const actor = await getUserProfile(actorId);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const description = `${actorName} archived the group.`;
+    await logHistoryEvent(groupId, 'group_updated', actorId, description, { changes: [{ field: 'Status', from: 'Active', to: 'Archived' }] });
 }
+
+export async function restoreGroup(groupId: string, actorId: string): Promise<void> {
+    const groupDocRef = doc(db, 'groups', groupId);
+    await updateDoc(groupDocRef, {
+        archivedAt: null
+    });
+    
+    const actor = await getUserProfile(actorId);
+    const actorName = getFullName(actor?.firstName, actor?.lastName);
+    const description = `${actorName} restored the group.`;
+    await logHistoryEvent(groupId, 'group_updated', actorId, description, { changes: [{ field: 'Status', from: 'Archived', to: 'Active' }] });
+}
+
 
 export async function updateGroup(groupId: string, data: Partial<GroupDocument>, actorId: string): Promise<void> {
     const groupDocRef = doc(db, 'groups', groupId);

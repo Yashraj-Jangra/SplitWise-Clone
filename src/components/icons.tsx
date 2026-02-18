@@ -100,6 +100,7 @@ import {
   Apple,
   Bell,
   Megaphone,
+  Archive,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -192,6 +193,7 @@ const FirebaseStudioIcon = ({ className }: { className?: string }) => (
 
 
 export const Icons = {
+  Archive,
   Users,
   Dashboard: LayoutGrid,
   Add: PlusCircle,
@@ -219,6 +221,10 @@ export const Icons = {
   Analysis: BarChart3,
   History,
   Restore: Undo2,
+  GitMerge,
+  Atom,
+  Coins,
+  BarChart3,
   Search,
   SearchX,
   Filter: SlidersHorizontal,
