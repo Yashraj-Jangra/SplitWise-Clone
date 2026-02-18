@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -24,6 +25,10 @@ service cloud.firestore {
       let group = get(/databases/$(database)/documents/groups/$(groupId));
       return group.data.archivedAt == null && group.data.memberIds.hasAny([request.auth.uid]);
     }
+    
+    function isCreator(groupId) {
+    	return get(/databases/$(database)/documents/groups/$(groupId)).data.createdById == request.auth.uid;
+    }
 
     // --- Collections ---
     match /users/{userId} {
@@ -36,7 +41,9 @@ service cloud.firestore {
     match /groups/{groupId} {
         allow read: if (isGroupActiveAndMember(groupId)) || isAdmin();
         allow create: if isSignedIn();
-        allow update: if (isGroupActiveAndMember(groupId)) || isAdmin();
+        // Only creator/admin can change name/desc/archive. Any active member can add members.
+        allow update: if isAdmin() || isCreator(groupId) || 
+                      (isGroupActiveAndMember(groupId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds']));
         allow delete: if isAdmin();
     }
 

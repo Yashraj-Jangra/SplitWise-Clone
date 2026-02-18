@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Icons } from "@/components/icons";
 import { getFullName, getInitials } from "@/lib/utils";
 import { AddMemberDialog } from "./add-member-dialog";
+import { useAuth } from "@/contexts/auth-context";
 
 interface GroupMembersProps {
   members: UserProfile[];
@@ -15,6 +16,10 @@ interface GroupMembersProps {
 }
 
 export function GroupMembers({ members, group }: GroupMembersProps) {
+  const { userProfile } = useAuth();
+  const isCreator = userProfile?.uid === group.createdById;
+  const isAdmin = userProfile?.role === 'admin';
+
   return (
     <Card>
       <CardHeader className="flex flex-row justify-between items-start">
@@ -22,7 +27,7 @@ export function GroupMembers({ members, group }: GroupMembersProps) {
             <CardTitle>Group Members ({members.length})</CardTitle>
             <CardDescription>People sharing expenses in this group.</CardDescription>
         </div>
-        <AddMemberDialog group={group} />
+        {(isCreator || isAdmin) && <AddMemberDialog group={group} />}
       </CardHeader>
       <CardContent className="p-6 pt-0">
         <ScrollArea className="h-[45vh] -mx-6 pr-6">

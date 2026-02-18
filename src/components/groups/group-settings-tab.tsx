@@ -9,8 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Balance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { updateGroup, getGroupBalances } from '@/lib/mock-data';
-import { archiveGroupAction } from '@/lib/actions/group';
+import { updateGroup, getGroupBalances, archiveGroup } from '@/lib/mock-data';
 import { GroupMembers } from './group-members';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -85,13 +84,14 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
   const handleArchive = async () => {
     if (!userProfile) return;
     setIsDeleting(true);
-    const result = await archiveGroupAction(group.id, userProfile.uid);
-    if (result.success) {
+    try {
+      await archiveGroup(group.id, userProfile.uid);
       toast({ title: "Group Archived", description: `The group "${group.name}" has been archived and is now read-only.`});
       router.push('/groups');
+      appEventEmitter.emit('data-changed');
       router.refresh();
-    } else {
-      toast({ title: "Error", description: result.error, variant: "destructive"});
+    } catch(error) {
+       toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to archive group.", variant: "destructive"});
     }
     setIsDeleting(false);
     setIsDeleteDialogOpen(false);
@@ -131,7 +131,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
               />
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={!isCreator || form.formState.isSubmitting}>
                 {form.formState.isSubmitting && <Icons.AppLogo className="mr-2 animate-spin" />}
                 Save Changes
               </Button>
