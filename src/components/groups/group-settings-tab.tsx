@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { appEventEmitter } from '@/lib/event-emitter';
+import { getFullName } from '@/lib/utils';
 
 
 const settingsSchema = z.object({
@@ -82,7 +82,29 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
     }
   }
 
-  const handleArchive = async () => {
+  const handleArchiveRequest = () => {
+    if (!isSettled) {
+      // This state should not be reachable if the button is disabled, but as a fallback.
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Archive Group',
+        description: 'All debts must be settled before you can archive the group.',
+      });
+      return;
+    }
+    if (!isCreator) {
+      toast({
+        variant: 'destructive',
+        title: 'Action Not Allowed',
+        description: `Only the group creator, ${getFullName(group.createdBy.firstName, group.createdBy.lastName)}, can archive this group.`,
+      });
+      return;
+    }
+    // If all checks pass, open the confirmation dialog
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleArchiveConfirm = async () => {
     if (!userProfile) return;
     setIsDeleting(true);
     try {
@@ -143,19 +165,33 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
       
       <GroupMembers members={group.members} group={group} />
       
-      {isCreator && !isArchived && (
+      {!isArchived && (
         <Card className="border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive">Danger Zone</CardTitle>
             <CardDescription>These actions are irreversible. Please proceed with caution.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button
-              variant="destructive"
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              Archive Group
-            </Button>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span tabIndex={isSettled ? -1 : 0}>
+                            <Button
+                                variant="destructive"
+                                onClick={handleArchiveRequest}
+                                disabled={!isSettled}
+                            >
+                                Archive Group
+                            </Button>
+                        </span>
+                    </TooltipTrigger>
+                    {!isSettled && (
+                        <TooltipContent>
+                            <p>All debts must be settled before this group can be archived.</p>
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
           </CardContent>
         </Card>
       )}
@@ -170,7 +206,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleArchive} disabled={isDeleting} variant="destructive">
+                  <AlertDialogAction onClick={handleArchiveConfirm} disabled={isDeleting} variant="destructive">
                       {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
                       Yes, archive it
                   </AlertDialogAction>
