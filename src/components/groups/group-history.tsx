@@ -51,6 +51,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   // Deletions
   expense_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   settlement_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
+  member_removed: <Icons.UserMinus className="h-4 w-4 text-red-500" />,
   // Restorations
   expense_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
   settlement_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
@@ -204,7 +205,7 @@ function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryE
                                 <div className="space-y-2">
                                     {event.data.changes.map((change: any, index: number) => (
                                         <div key={index}>
-                                            <span className="font-semibold text-foreground">{change.field}</span>
+                                            <span className="font-semibold text-foreground">{change.field}:</span>
                                             {change.to ? (
                                                 <div className="text-muted-foreground flex items-center gap-2">
                                                     <span className="text-red-500 line-through">{change.from}</span>
