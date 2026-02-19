@@ -50,7 +50,7 @@ function MemberActions({ member, group }: { member: UserProfile, group: Group })
         <>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50">
                         <Icons.MoreHorizontal className="h-4 w-4" />
                     </Button>
                 </DropdownMenuTrigger>
