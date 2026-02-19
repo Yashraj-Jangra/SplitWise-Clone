@@ -334,6 +334,38 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
     }
 }
 
+export async function removeMemberFromGroup(groupId: string, memberIdToRemove: string, actorId: string): Promise<void> {
+    const groupDocRef = doc(db, 'groups', groupId);
+    
+    const [actor, memberToRemoveProfile, balances] = await Promise.all([
+        getUserProfile(actorId),
+        getUserProfile(memberIdToRemove),
+        getGroupBalances(groupId),
+    ]);
+    
+    if (!actor || !memberToRemoveProfile) {
+        throw new Error("Could not find user profiles for this action.");
+    }
+    
+    const memberBalance = balances.find(b => b.user.uid === memberIdToRemove)?.netBalance || 0;
+    
+    if (Math.abs(memberBalance) > 0.01) {
+        throw new Error(`${getFullName(memberToRemoveProfile.firstName, memberToRemoveProfile.lastName)} has an outstanding balance of ${CURRENCY_SYMBOL}${Math.abs(memberBalance).toFixed(2)} and cannot be removed. Please settle all debts first.`);
+    }
+
+    const actorName = getFullName(actor.firstName, actor.lastName);
+    const memberName = getFullName(memberToRemoveProfile.firstName, memberToRemoveProfile.lastName);
+    const description = `${actorName} removed ${memberName} from the group.`;
+    
+    // Log history before making the change
+    await logHistoryEvent(groupId, 'member_removed', actorId, description, { removedMemberId: memberIdToRemove });
+
+    // Update the group document
+    await updateDoc(groupDocRef, {
+        memberIds: arrayRemove(memberIdToRemove)
+    });
+}
+
 
 // --- Expense Functions ---
 
