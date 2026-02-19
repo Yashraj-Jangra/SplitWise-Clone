@@ -231,7 +231,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                         <div
                           key={user.uid}
                           onClick={() => handleSelectMember(user)}
-                          className="flex items-center gap-2 p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                          className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
                         >
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={user.avatarUrl} alt={getFullName(user.firstName, user.lastName)} />
