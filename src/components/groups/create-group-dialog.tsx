@@ -100,14 +100,14 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   }, [open]);
 
   const searchResults = useMemo(() => {
-    if (!searchTerm || !userProfile) return [];
+    if (searchTerm.length < 3 || !userProfile) return [];
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     const selectedMemberIds = selectedMembers.map(m => m.uid);
 
     return allUsers.filter(user =>
       user.uid !== userProfile.uid && // Exclude self
       !selectedMemberIds.includes(user.uid) && // Exclude already selected
-      (getFullName(user.firstName, user.lastName).toLowerCase().includes(lowerCaseSearchTerm) ||
+      (user.username.toLowerCase().includes(lowerCaseSearchTerm) ||
        user.email.toLowerCase().includes(lowerCaseSearchTerm))
     ).slice(0, 5); // Limit results
   }, [searchTerm, allUsers, userProfile, selectedMembers]);
@@ -217,7 +217,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                   <FormDescription>Search for users to invite. You are automatically included.</FormDescription>
                   <div className="relative">
                     <Input
-                      placeholder="Search by name or email..."
+                      placeholder="Search by username or email..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pr-8"
@@ -239,7 +239,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                           </Avatar>
                           <div>
                             <p className="text-sm font-medium">{getFullName(user.firstName, user.lastName)}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                            <p className="text-xs text-muted-foreground">@{user.username} &bull; {user.email}</p>
                           </div>
                         </div>
                       ))}
@@ -266,7 +266,10 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                                   <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
                                   <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
                                 </Avatar>
-                                <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</span>
+                                <div>
+                                    <p className="text-sm font-medium">{getFullName(member.firstName, member.lastName)}</p>
+                                    <p className="text-xs text-muted-foreground">@{member.username}</p>
+                                </div>
                               </div>
                               <Button
                                 type="button"
