@@ -1,6 +1,6 @@
-# {AppName} - Data Model Overview
+# SplitIt - Data Model Overview
 
-This document provides a high-level overview of the core data models used in the {AppName} application and illustrates the relationships between them. This class diagram serves as a blueprint for understanding the application's Firestore database structure.
+This document provides a high-level overview of the core data models used in the SplitIt application and illustrates the relationships between them. This class diagram serves as a blueprint for understanding the application's Firestore database structure.
 
 ```mermaid
 classDiagram

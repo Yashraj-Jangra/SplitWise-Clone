@@ -1,10 +1,10 @@
-# Welcome to {AppName} - Effortless Group Expense Management
+# Welcome to SplitIt - A Full-Stack SplitWise Clone
 
-Tired of chasing friends for money or getting lost in endless spreadsheets after a trip? **{AppName}** is a modern, full-stack web application designed to eliminate the headache of managing shared expenses. Built with a powerful tech stack including Next.js, Firebase, and Tailwind CSS, it provides a beautiful and intuitive platform for tracking costs, splitting bills, and settling debts within any group.
+Tired of chasing friends for money or getting lost in endless spreadsheets after a trip? **SplitIt** is a full-stack SplitWise-Clone application built to eliminate the headache of managing shared expenses. Built with a powerful tech stack including Next.js, Firebase, and Tailwind CSS, it provides a beautiful and intuitive platform for tracking costs, splitting bills, and settling debts within any group.
 
-Whether you're planning a vacation, sharing household bills, or organizing an event, {AppName} ensures fairness and clarity, letting you focus on what matters most.
+Whether you're planning a vacation, sharing household bills, or organizing an event, SplitIt ensures fairness and clarity, letting you focus on what matters most.
 
-![{AppName} Dashboard Screenshot](/public/screenshots/dashboard.png)
+![SplitIt Dashboard Screenshot](/public/screenshots/dashboard.png)
 _A snapshot of the main dashboard, giving you a complete overview of your finances._
 
 ## Table of Contents
@@ -18,7 +18,7 @@ _A snapshot of the main dashboard, giving you a complete overview of your financ
 
 ## Key Features
 
-{AppName} is packed with features designed for a seamless user experience, from powerful core functionalities to a comprehensive admin panel.
+SplitIt is packed with features designed for a seamless user experience, from powerful core functionalities to a comprehensive admin panel.
 
 ### Core Functionality
 
@@ -81,7 +81,7 @@ This project leverages a modern, robust, and scalable technology stack:
 
 ## Getting Started
 
-Follow these instructions to get a local copy of {AppName} up and running on your machine for development and testing purposes.
+Follow these instructions to get a local copy of SplitIt up and running on your machine for development and testing purposes.
 
 ### Prerequisites
 
@@ -97,7 +97,7 @@ Follow these instructions to get a local copy of {AppName} up and running on you
 
 2.  **Register a Web App**:
     -   In your project's dashboard, click the web icon (`</>`) to add a new web app.
-    -   Give it a nickname (e.g., "{AppName} Web") and register the app.
+    -   Give it a nickname (e.g., "SplitIt Web") and register the app.
     -   After registration, Firebase will show you a configuration object. Copy these credentials.
 
 3.  **Enable Authentication Methods**:
