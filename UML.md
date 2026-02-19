@@ -1,7 +1,6 @@
+# {AppName} - Data Model Overview
 
-# {AppName} UML Class Diagram
-
-This diagram outlines the core data models and their relationships within the {AppName} application.
+This document provides a high-level overview of the core data models used in the {AppName} application and illustrates the relationships between them. This class diagram serves as a blueprint for understanding the application's Firestore database structure.
 
 ```mermaid
 classDiagram
@@ -97,24 +96,20 @@ classDiagram
 
 ```
 
-### Relationships Explained:
+### Relationship Explanations
 
-*   **UserProfile & Group**:
-    *   One `UserProfile` can create many `Group`s.
-    *   Many `UserProfile`s can be members of many `Group`s.
+Here's a breakdown of how the primary data models connect and interact within the application:
 
-*   **Group, Expense, Settlement, History**:
-    *   One `Group` can contain multiple `Expense`s, `Settlement`s, and `HistoryEvent`s.
+-   **`UserProfile` & `Group`**: This is a many-to-many relationship. A user can create many groups (as `createdBy`) and can be a member of many different groups. The `members` list in a `Group` links back to multiple `UserProfile` documents.
 
-*   **Expense & UserProfile**:
-    *   An `Expense` is paid by one or more `UserProfile`s (via the `ExpensePayer` link).
-    *   An `Expense` is split among one or more `UserProfile`s (via the `ExpenseParticipant` link).
+-   **`Group` & its Children (`Expense`, `Settlement`, `HistoryEvent`)**: This is a one-to-many relationship. A `Group` serves as the primary container. It can have numerous `Expense` documents, multiple `Settlement` records, and a running log of `HistoryEvent`s associated with it. This structure keeps all group-related data neatly organized.
 
-*   **Settlement & UserProfile**:
-    *   A `Settlement` is a direct transaction from one `UserProfile` (`paidBy`) to another (`paidTo`).
+-   **`Expense` & `UserProfile`**: This relationship is managed through two intermediate models:
+    -   `ExpensePayer`: Links an `Expense` to the `UserProfile`(s) who paid for it and how much they paid.
+    -   `ExpenseParticipant`: Links an `Expense` to the `UserProfile`(s) who owe a share of the cost and how much they owe. This allows for complex splitting scenarios.
 
-*   **HistoryEvent & UserProfile**:
-    *   Each `HistoryEvent` is triggered by a single `UserProfile` (the `actor`).
+-   **`Settlement` & `UserProfile`**: This represents a direct transaction between two users to clear a debt. It has two clear links: one to the `UserProfile` who made the payment (`paidBy`) and one to the `UserProfile` who received it (`paidTo`).
 
-*   **SiteSettings**:
-    *   This is a global configuration object, not directly linked to other models in this diagram, but it governs application-wide behavior and content.
+-   **`HistoryEvent` & `UserProfile`**: Each action in a group (like adding an expense or a member) creates a `HistoryEvent`. This event is linked to the `UserProfile` who performed the action (the `actor`), providing a clear and transparent audit trail.
+
+-   **`SiteSettings`**: This is a global, singleton document. It's not directly linked to the other models in the diagram because it contains application-wide configurations (like branding, themes, and content) rather than user-specific data.
