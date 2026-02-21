@@ -102,7 +102,8 @@ export default function GroupDetailPage() {
       setGroupHistory(historyData);
     } catch (error) {
       console.error('Failed to load group data', error);
-      // Handle error state
+      // If there's an error (e.g., permission denied), show not found page.
+      notFound();
     } finally {
       setLoading(false);
     }
