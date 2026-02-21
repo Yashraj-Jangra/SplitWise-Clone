@@ -1,3 +1,4 @@
+
 # Welcome to SplitIt - A Full-Stack SplitWise Clone
 
 Tired of chasing friends for money or getting lost in endless spreadsheets after a trip? **SplitIt** is a full-stack SplitWise-Clone application built to eliminate the headache of managing shared expenses. Built with a powerful tech stack including Next.js, Firebase, and Tailwind CSS, it provides a beautiful and intuitive platform for tracking costs, splitting bills, and settling debts within any group.
@@ -151,6 +152,9 @@ Follow these instructions to get a local copy of SplitIt up and running on your 
 -   **Groups**: A group is the central container for shared activities. It holds members, expenses, and settlements. Every expense belongs to a group.
 -   **Expenses**: This represents a single cost incurred by one or more members of a group. The app's strength lies in its ability to split this cost in various ways among participants.
 -   **Settlements**: A settlement is a direct payment from one member to another to clear a debt. The "Simplify Debts" feature helps calculate the minimum number of payments needed to balance the group's finances.
+-   **Historical Data Access**: When a user is added to a group, they will not see expenses or history that occurred before they joined. This is a deliberate design choice for two key reasons:
+    -   **Data Integrity**: To maintain accurate and fair balances, expenses are permanently tied to the members who were part of the group when the expense was created. Including new members in past transactions would incorrectly assign them debt.
+    -   **Security & Privacy**: The application's security rules are designed to protect historical data. When an expense is recorded, it captures the list of current members. Only those members are granted permission to view that specific record. This ensures that a user's financial activity within a group is only visible to those who were members at the time.
 
 ## Project Structure
 
