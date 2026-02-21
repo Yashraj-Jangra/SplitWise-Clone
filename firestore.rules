@@ -27,19 +27,17 @@ service cloud.firestore {
     }
     
     match /groups/{groupId} {
-      // Admins have full access. This rule is checked first.
+      // Admins have full access.
       allow read, write: if isAdmin();
       
-      // Members can read groups they belong to. 
-      // The client is responsible for filtering out archived groups from LIST views.
-      // A direct GET of an archived group will be blocked by UI logic, not this rule.
+      // Members can read groups they belong to.
       allow read: if isSignedIn() && request.auth.uid in resource.data.memberIds;
       
       // Any authenticated user can create a group.
       allow create: if isSignedIn();
       
-      // Members can update a group ONLY if it is not archived.
-      allow update: if (request.auth.uid in resource.data.memberIds) && (resource.data.archivedAt == null);
+      // Only the group creator or an admin can update group details.
+      allow update: if (request.auth.uid == resource.data.createdById || isAdmin()) && resource.data.archivedAt == null;
     }
 
     match /expenses/{expenseId} {
@@ -49,10 +47,13 @@ service cloud.firestore {
       // Members can read expenses in groups they belong to.
       allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
 
-      // Writes are only allowed if the group is active and user is a member.
-      // This requires a get() on the parent group document.
-      allow write: if get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.archivedAt == null 
-                   && (request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds);
+      // Any member can create/update an expense in an active group.
+      allow create, update: if get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.archivedAt == null 
+                         && (request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds);
+
+      // Any member can delete an expense from an active group.
+      allow delete: if get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.archivedAt == null 
+                 && (request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds);
     }
     
     match /settlements/{settlementId} {
@@ -62,9 +63,13 @@ service cloud.firestore {
       // Members can read settlements in groups they belong to.
       allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
 
-      // Writes are only allowed if the group is active and user is a member.
-      allow write: if get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.archivedAt == null
+      // Any member can create/update a settlement in an active group.
+      allow create, update: if get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.archivedAt == null
                    && (request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds);
+
+      // Any member can delete a settlement from an active group.
+      allow delete: if get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.archivedAt == null
+                   && (request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds);
     }
     
     match /history/{historyId} {
