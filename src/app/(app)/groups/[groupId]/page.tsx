@@ -54,6 +54,7 @@ export default function GroupDetailPage() {
   const [balances, setBalances] = useState<Balance[]>([]);
   const [groupHistory, setGroupHistory] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState('expenses');
   const [targetExpenseId, setTargetExpenseId] = useState<string | null>(null);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
@@ -61,6 +62,7 @@ export default function GroupDetailPage() {
   const loadGroupData = useCallback(async () => {
     if (!groupId || !userProfile) return;
     setLoading(true);
+    setError(false);
     try {
       const [
         groupData,
@@ -77,12 +79,12 @@ export default function GroupDetailPage() {
       ]);
 
       if (!groupData) {
-        notFound();
+        setError(true);
         return;
       }
       
       if (groupData.archivedAt && userProfile.role !== 'admin') {
-        notFound();
+        setError(true);
         return;
       }
 
@@ -100,10 +102,9 @@ export default function GroupDetailPage() {
       );
       setBalances(balancesData);
       setGroupHistory(historyData);
-    } catch (error) {
-      console.error('Failed to load group data', error);
-      // If there's an error (e.g., permission denied), show not found page.
-      notFound();
+    } catch (err) {
+      console.error('Failed to load group data', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -152,6 +153,10 @@ export default function GroupDetailPage() {
   const currentUserBalance = useMemo(() => {
     return balances.find(b => b.user.uid === userProfile?.uid)?.netBalance ?? 0;
   }, [balances, userProfile]);
+  
+  if (error) {
+    notFound();
+  }
 
   if (loading || !group || !userProfile) {
     return <GroupDetailLoading />;
