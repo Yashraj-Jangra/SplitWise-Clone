@@ -1,12 +1,13 @@
-
 # Welcome to SplitIt - A Full-Stack SplitWise Clone
 
-Tired of chasing friends for money or getting lost in endless spreadsheets after a trip? **SplitIt** is a full-stack SplitWise-Clone application built to eliminate the headache of managing shared expenses. Built with a powerful tech stack including Next.js, Firebase, and Tailwind CSS, it provides a beautiful and intuitive platform for tracking costs, splitting bills, and settling debts within any group.
+Ever been on a group trip where someone says "let's split everything equally" and then you spend the next three months chasing people for money? Yeah, that's what this is for. **SplitIt** is a full-stack expense-splitting app that takes the drama out of shared finances.
 
-Whether you're planning a vacation, sharing household bills, or organizing an event, SplitIt ensures fairness and clarity, letting you focus on what matters most.
+Built with Next.js, Firebase, and Tailwind CSS, it's a clean, feature-rich way to track who owes what—and make sure everyone actually pays up. Whether you're splitting rent, planning a vacation, or just tired of spreadsheet chaos, SplitIt has you covered.
+
+> **Note**: This is a public repo and may run a few versions behind the original production site. Check out the [live production version](https://split.cvweb.tech) for the latest features.
 
 ![SplitIt Dashboard Screenshot](/public/screenshots/dashboard.png)
-_A snapshot of the main dashboard, giving you a complete overview of your finances._
+_Your financial overview at a glance—see what you've spent and who owes you._
 
 ## Table of Contents
 
@@ -19,57 +20,78 @@ _A snapshot of the main dashboard, giving you a complete overview of your financ
 
 ## Key Features
 
-SplitIt is packed with features designed for a seamless user experience, from powerful core functionalities to a comprehensive admin panel.
+SplitIt is loaded with features, from the core money-splitting stuff to a full admin panel.
 
 ### Core Functionality
 
--   🔐 **Secure User Authentication**: Easy sign-up and login with Email/Password or Google OAuth, ensuring your data is always protected.
--   👨‍👩‍👧‍👦 **Flexible Group Management**: Create shared expense groups for any purpose, invite members seamlessly via email, and manage group settings with ease.
--   💸 **Advanced Expense Tracking**: Go beyond simple splits. Log detailed expenses with support for complex divisions:
-    -   **Equally**: Split the cost evenly among all or selected participants.
-    -   **Unequally**: Manually enter the exact amount each person owes.
-    -   **By Shares**: Assign shares to participants for proportional splitting (e.g., for a 2-day vs. 1-day stay).
-    -   **By Percentage**: Allocate costs based on a percentage breakdown.
--   🤝 **Multi-Payer Support**: A single expense can be paid by one or more members, accurately reflecting real-world scenarios.
--   📊 **Real-time Balances**: Instantly see who owes whom within each group and view your overall net balance across all your groups.
--   💡 **Smart Debt Settlement**: Our "Simplify Debts" algorithm calculates the most efficient payment path to clear all debts in a group, minimizing the number of transactions required.
--   🗄️ **Group Archiving**: Once all debts are settled, the group creator can archive a group, making it a read-only record of past activities.
+-   🔐 **Secure Authentication**: Sign up with email or just use Google OAuth. Your data is safe—it's all protected by Firebase.
+-   👨‍👩‍👧‍👦 **Groups**: Create a group for any occasion (road trip, roommates, etc.), invite people via email, manage members.
+-   💸 **Flexible Expense Splitting**: The bread and butter of this app. Split expenses in multiple ways:
+    -   **Equally**: Everyone pays the same amount.
+    -   **Unequally**: Manually set how much each person owes.
+    -   **By Shares**: Good for when someone stays longer or gets more. Assign shares and split proportionally.
+    -   **By Percentage**: Allocate costs based on percentages (e.g., one person pays 60%, another 40%).
+-   🤝 **Multiple Payers**: One expense can be paid by multiple people, because real life is messy.
+-   📊 **Real-time Balances**: See exactly who owes whom in each group and your overall net balance across all groups.
+-   💡 **Smart Debt Simplification**: Our algorithm figures out the minimum number of payments needed to clear all debts. Less transactions, more time for actual fun.
+-   🗄️ **Archive Groups**: Once everyone pays up, archive a group to keep it as a record.
 
 ### User Experience
 
--   🏠 **Personal Dashboard**: A centralized view of your net balance, outstanding debts, and recent spending trends to keep you informed at a glance.
--   📈 **Financial Analysis**: Visualize your personal spending patterns with interactive charts and flexible date-range filters.
--   📱 **Fully Responsive Design**: A beautiful and functional interface that works flawlessly on both desktop and mobile devices.
--   🎨 **Customizable Theming**: Personalize your experience by choosing from several pre-configured color themes.
--   🔍 **Global Search**: Instantly find any group, expense, or user with a powerful global search (`⌘K` / `Ctrl+K`).
--   🔔 **Notifications**: Receive important site-wide announcements and critical alerts directly within the app.
+-   🏠 **Personal Dashboard**: See your net balance, who owes you, and who you owe at a glance.
+-   📈 **Spending Analytics**: Check out your spending patterns with charts. Filter by date range to see trends.
+-   📱 **Mobile-Friendly**: Works great on phones, tablets, and desktops. Split bills on the go.
+-   🎨 **Custom Themes**: Pick from different color themes to personalize how the app looks.
+-   🔍 **Global Search**: Hit `Ctrl+K` (or `⌘K` on Mac) to search for groups, expenses, or people instantly.
+-   🔔 **Notifications**: Get announcements and alerts right inside the app.
 
 ### Admin Panel
 
-A dedicated, secure dashboard for administrators to manage the entire application.
+A dedicated dashboard for admins to keep things running smoothly.
 
--   📈 **Site-Wide Statistics**: View key metrics like total users, groups, and expenses.
--   🛠️ **User & Group Management**: View, edit, and manage all users and groups in the system.
--   🔄 **Advanced Data Tools**: A powerful UID replacement tool to migrate user data if necessary.
--   📢 **Broadcast System**: Send in-app announcements or broadcast emails to all registered users.
--   ⚙️ **Site Settings Customization**:
-    -   **Branding**: Change the application name and logos.
-    -   **Theming**: Create, edit, and manage themes available to users.
-    -   **Content Management**: Customize content for the landing, about, and legal pages.
-    -   **Expense Categories**: Manage the master list of expense categories and keywords for auto-categorization.
-    -   **Mail Configuration**: Configure a custom SMTP server for sending transactional emails.
+-   📈 **Site-Wide Statistics**: Get the big picture—how many users, groups, and total expenses in the system.
+-   🛠️ **User & Group Management**: Need to fix something? Edit users, manage groups, or handle user data migrations.
+-   ⚙️ **Customization Central**:
+    -   **Branding**: Change the app name, logos, and make it your own.
+    -   **Theming**: Create custom color themes that users can switch between.
+    -   **Content Management**: Update landing page content, about page, and legal pages.
+    -   **Expense Categories**: Manage the master list of categories so expenses are organized.
+    -   **Mail Configuration**: Connect your own SMTP server so transactional emails actually get sent.
+-   📢 **Broadcast System**: Send in-app announcements or email everyone at once.
+-   🎟️ **Ticket System**: Keep track of user support requests and issues.
 
 ## Live Demo & Screenshots
 
-![Group Detail View](/public/screenshots/group-detail.png)
-_The detailed group view, where all activity, balances, and settings are managed._
+### Core Features in Action
+
+![Group Dashboard](/public/screenshots/group-activity.png)
+_Group activity view—see everything happening in your shared expense groups._
+
+![Group Analytics](/public/screenshots/group-analytics.png)
+_Get insights into group spending patterns with interactive charts and breakdowns._
 
 ![Add Expense Form](/public/screenshots/expense-form.png)
-_An intuitive form for adding expenses with complex splitting options._
+_Adding an expense? Choose from equal splits, percentage-based splits, or custom amounts._
+
+### Admin Panel
+
+Got admin access? The admin panel is where the magic happens—manage users, customize settings, and configure everything about your SplitIt instance.
+
+![Admin Site Settings](/public/screenshots/admin-site-settings.png)
+_Customize branding, manage themes, and control what appears across your app._
+
+![Admin Mail Configuration](/public/screenshots/admin-mail-config.png)
+_Set up your SMTP server so the app can send actual emails (password resets, notifications, etc.)._
+
+![Admin Theme Customization](/public/screenshots/admin-theme-customization.png)
+_Create and manage custom color themes that users can pick from._
+
+![Admin Ticket System](/public/screenshots/admin-ticket-system.png)
+_Handle user support requests and keep track of issues reported by users._
 
 ## Tech Stack
 
-This project leverages a modern, robust, and scalable technology stack:
+Built with a modern, scalable stack:
 
 -   **Framework**: [Next.js](https://nextjs.org/) (with App Router)
 -   **Backend & Database**: [Firebase](https://firebase.google.com/) (Authentication, Firestore)
@@ -82,7 +104,7 @@ This project leverages a modern, robust, and scalable technology stack:
 
 ## Getting Started
 
-Follow these instructions to get a local copy of SplitIt up and running on your machine for development and testing purposes.
+Here’s the quick setup to get SplitIt running locally.
 
 ### Prerequisites
 
@@ -114,7 +136,7 @@ Follow these instructions to get a local copy of SplitIt up and running on your 
 
 1.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/your-username/settleease.git
+    git clone https://github.com/Yashraj-Jangra/SplitIt-SplitWise_Clone.git
     cd settleease
     ```
 
@@ -149,12 +171,9 @@ Follow these instructions to get a local copy of SplitIt up and running on your 
 
 ## Core Concepts
 
--   **Groups**: A group is the central container for shared activities. It holds members, expenses, and settlements. Every expense belongs to a group.
--   **Expenses**: This represents a single cost incurred by one or more members of a group. The app's strength lies in its ability to split this cost in various ways among participants.
--   **Settlements**: A settlement is a direct payment from one member to another to clear a debt. The "Simplify Debts" feature helps calculate the minimum number of payments needed to balance the group's finances.
--   **Historical Data Access**: When a user is added to a group, they will not see expenses or history that occurred before they joined. This is a deliberate design choice for two key reasons:
-    -   **Data Integrity**: To maintain accurate and fair balances, expenses are permanently tied to the members who were part of the group when the expense was created. Including new members in past transactions would incorrectly assign them debt.
-    -   **Security & Privacy**: The application's security rules are designed to protect historical data. When an expense is recorded, it captures the list of current members. Only those members are granted permission to view that specific record. This ensures that a user's financial activity within a group is only visible to those who were members at the time.
+-   **Groups**: Think of this as a container for shared activities. It has members, expenses, and eventually settlements. Everything revolves around groups.
+-   **Expenses**: A single cost that someone paid for. The cool part? You can split it between people in tons of different ways.
+-   **Settlements**: When person A pays person B to clear a debt. Our debt simplification algorithm figures out the most efficient way to settle everyone's debts.
 
 ## Project Structure
 
