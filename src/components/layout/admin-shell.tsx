@@ -159,6 +159,9 @@ function MainNav({ items, onLinkClick }: { items: NavItem[], onLinkClick?: () =>
 function MobileNav({ items }: {items: NavItem[]}) {
     const [open, setOpen] = React.useState(false);
     const { settings, loading } = useSiteSettings();
+    
+    const mainItems = items.filter(item => item.href !== '/dashboard');
+    const footerItem = items.find(item => item.href === '/dashboard');
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -182,9 +185,14 @@ function MobileNav({ items }: {items: NavItem[]}) {
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto">
                   <div className="my-4 pb-10 px-4">
-                      <MainNav items={items} onLinkClick={() => setOpen(false)} />
+                      <MainNav items={mainItems} onLinkClick={() => setOpen(false)} />
                   </div>
                 </div>
+                {footerItem && (
+                    <div className="mt-auto p-4 border-t border-border/50">
+                        <MainNav items={[footerItem]} onLinkClick={() => setOpen(false)} />
+                    </div>
+                )}
             </SheetContent>
         </Sheet>
     )
@@ -196,6 +204,8 @@ interface AdminShellProps {
 
 export function AdminShell({ children }: AdminShellProps) {
   const { settings, loading } = useSiteSettings();
+  const mainItems = adminNavItems.filter(item => item.href !== '/dashboard');
+  const footerItem = adminNavItems.find(item => item.href === '/dashboard');
   
   return (
      <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
@@ -207,13 +217,18 @@ export function AdminShell({ children }: AdminShellProps) {
               {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
             </Link>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             <div className="grid items-start px-4 text-sm font-medium">
-              <MainNav items={adminNavItems} />
+              <MainNav items={mainItems} />
             </div>
           </div>
            <div className="mt-auto p-4 border-t border-border/50">
-              <p className="text-xs text-muted-foreground text-center">
+              {footerItem && (
+                <div className="pb-2">
+                  <MainNav items={[footerItem]} />
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground text-center pt-2 border-t">
                  Admin Panel &copy; <DynamicYear/>
               </p>
            </div>
