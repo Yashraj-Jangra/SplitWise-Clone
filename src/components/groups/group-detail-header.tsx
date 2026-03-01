@@ -1,4 +1,3 @@
-
 "use client";
 import type { Group, UserProfile } from "@/types";
 import { Icons } from "@/components/icons";
@@ -11,13 +10,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
 import { updateGroup, getSiteSettings } from "@/lib/mock-data";
@@ -127,31 +119,19 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
                         <AddExpenseDialog
                             group={group}
                             trigger={
-                                <Button className="rounded-r-none">
+                                <Button className="rounded-r-none border-r border-primary/70">
                                     <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
                                 </Button>
                             }
                         />
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button size="icon" className="w-8 rounded-l-none border-l border-primary/50">
-                                    <ChevronDown className="h-4 w-4"/>
+                        <AddSettlementDialog
+                            group={group}
+                            trigger={
+                                <Button className="rounded-l-none">
+                                    <Icons.Settle className="mr-2 h-4 w-4" /> Settle
                                 </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0">
-                                    <AddSettlementDialog
-                                        group={group}
-                                        trigger={
-                                            <div className="flex items-center gap-2 cursor-pointer w-full px-2 py-1.5 text-sm">
-                                                <Icons.Settle />
-                                                <span>Record Settlement</span>
-                                            </div>
-                                        }
-                                    />
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                            }
+                        />
                     </div>
                 )}
             </div>
