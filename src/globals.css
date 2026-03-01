@@ -30,8 +30,8 @@
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 18%;
     --muted-foreground: 0 0% 63%;
-    --accent: 0 100% 71%; /* #FF6B6B */
-    --accent-foreground: 0 0% 10%;
+    --accent: 27 100% 64.5%; /* #FF9F4A */
+    --accent-foreground: 27 100% 10%;
     --destructive: 0 100% 71%;
     --destructive-foreground: 0 0% 10%;
     --border: 0 0% 20%;
@@ -63,8 +63,8 @@
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 18%;
     --muted-foreground: 0 0% 63%;
-    --accent: 0 100% 71%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 27 100% 64.5%;
+    --accent-foreground: 27 100% 10%;
     --destructive: 0 100% 71%;
     --destructive-foreground: 0 0% 10%;
     --border: 0 0% 20%;
