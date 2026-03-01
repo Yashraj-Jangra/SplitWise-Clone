@@ -11,12 +11,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
 import { updateGroup, getSiteSettings } from "@/lib/mock-data";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddExpenseDialog } from "../expenses/add-expense-dialog";
+import { AddSettlementDialog } from "../settlements/add-settlement-dialog";
 
 
 interface GroupDetailHeaderProps {
@@ -112,9 +120,40 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
               <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg truncate">{group.name}</h1>
               <p className="text-sm text-slate-200 drop-shadow-md truncate">{group.description}</p>
             </div>
-            {/* Add Expense Button */}
+            {/* Action Buttons */}
             <div className="flex-shrink-0">
-                {!group.archivedAt && <AddExpenseDialog group={group} />}
+                {!group.archivedAt && (
+                    <div className="inline-flex rounded-md shadow-sm">
+                        <AddExpenseDialog
+                            group={group}
+                            trigger={
+                                <Button className="rounded-r-none">
+                                    <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
+                                </Button>
+                            }
+                        />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="icon" className="w-8 rounded-l-none border-l border-primary/50">
+                                    <ChevronDown className="h-4 w-4"/>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0">
+                                    <AddSettlementDialog
+                                        group={group}
+                                        trigger={
+                                            <div className="flex items-center gap-2 cursor-pointer w-full px-2 py-1.5 text-sm">
+                                                <Icons.Settle />
+                                                <span>Record Settlement</span>
+                                            </div>
+                                        }
+                                    />
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )}
             </div>
           </div>
         </div>
