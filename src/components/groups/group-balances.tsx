@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -174,7 +173,6 @@ export function GroupBalances({ balances, group }: GroupBalancesProps) {
                     />
                 </div>
                 )}
-                 <AddSettlementDialog group={group} />
             </div>
         </div>
       </CardHeader>
