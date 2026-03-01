@@ -114,7 +114,7 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
   const { settings, loading } = useSiteSettings();
 
   return (
-    <div className="hidden border-r bg-background md:block">
+    <div className="hidden border-r bg-background md:block z-40">
         <TooltipProvider>
             <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
             <div className={cn(
