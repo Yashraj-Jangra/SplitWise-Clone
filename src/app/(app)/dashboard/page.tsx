@@ -8,8 +8,8 @@ import { NetBalanceCard } from '@/components/dashboard/net-balance-card';
 import { ObligationsCard } from '@/components/dashboard/obligations-card';
 import { DynamicSpendingChart } from '@/components/dashboard/dynamic-spending-chart';
 import { PredictiveInsights } from '@/components/dashboard/predictive-insights';
-import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGroupBalances } from '@/lib/mock-data';
-import type { Expense, Settlement, Group, Balance } from '@/types';
+import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/mock-data';
+import type { Expense, Settlement, Group, Balance, SimplifiedSettlement, UserProfile } from '@/types';
 import { appEventEmitter } from '@/lib/event-emitter';
 
 interface DashboardData {
@@ -41,21 +41,41 @@ function DashboardSkeleton() {
 async function getOverallBalances(userId: string): Promise<Balance[]> {
     const userGroups = await getGroupsByUserId(userId);
     if (userGroups.length === 0) return [];
-    
+
+    // 1. Get all balances for each group
     const allGroupBalancesPromises = userGroups.map(group => getGroupBalances(group.id));
-    const allGroupBalances = await Promise.all(allGroupBalancesPromises);
+    const allGroupBalancesArrays = await Promise.all(allGroupBalancesPromises);
 
-    const userBalanceMap = new Map<string, { user: any, netBalance: number }>();
+    // 2. Simplify debts for each group to get P2P transactions
+    const allSettlements: SimplifiedSettlement[] = allGroupBalancesArrays
+        .map(groupBalances => simplifyDebts(groupBalances))
+        .flat();
 
-    allGroupBalances.flat().forEach(balance => {
-        if (balance.user.uid === userId) return;
-        const existing = userBalanceMap.get(balance.user.uid) || { user: balance.user, netBalance: 0 };
-        existing.netBalance += balance.netBalance;
-        userBalanceMap.set(balance.user.uid, existing);
+    // 3. Aggregate P2P transactions to find net balance with each person
+    const userP2PBalanceMap = new Map<string, { user: UserProfile, netBalance: number }>();
+
+    allSettlements.forEach(settlement => {
+        // If I am the one who needs to pay
+        if (settlement.from.uid === userId) {
+            const otherUser = settlement.to;
+            const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
+            // I owe them, so my debt to them is a positive value in this context
+            existing.netBalance += settlement.amount;
+            userP2PBalanceMap.set(otherUser.uid, existing);
+        }
+        // If I am the one who should receive money
+        else if (settlement.to.uid === userId) {
+            const otherUser = settlement.from;
+            const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
+            // They owe me, so my "debt" to them is negative (i.e., they owe me)
+            existing.netBalance -= settlement.amount;
+            userP2PBalanceMap.set(otherUser.uid, existing);
+        }
     });
 
-    return Array.from(userBalanceMap.values());
+    return Array.from(userP2PBalanceMap.values());
 }
+
 
 export default function DashboardPage() {
   const { userProfile, loading: authLoading } = useAuth();
