@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { UserProfile, Group, Expense } from '@/types';
 import { OverviewCard } from "@/components/dashboard/overview-card";
 import { getAllUsers, getAllGroups, getAllExpenses, updateSiteSettings } from "@/lib/mock-data";
@@ -16,6 +16,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName, getInitials } from '@/lib/utils';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 interface AdminData {
     users: UserProfile[];
@@ -28,38 +29,43 @@ export default function AdminDashboardPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const [users, groups, expenses] = await Promise.all([
-                    getAllUsers(),
-                    getAllGroups(),
-                    getAllExpenses(),
-                ]);
-                setData({ users, groups, expenses });
-                
-                const newStats = {
-                    users: users.length,
-                    groups: groups.length,
-                    expenses: expenses.length,
-                };
-                await updateSiteSettings({ stats: newStats });
-                
-            } catch (error) {
-                console.error("Error fetching admin data:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Failed to load dashboard",
-                    description: "Could not fetch admin data. You might be missing permissions.",
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [users, groups, expenses] = await Promise.all([
+                getAllUsers(),
+                getAllGroups(),
+                getAllExpenses(),
+            ]);
+            setData({ users, groups, expenses });
+            
+            const newStats = {
+                users: users.length,
+                groups: groups.length,
+                expenses: expenses.length,
+            };
+            await updateSiteSettings({ stats: newStats });
+            
+        } catch (error) {
+            console.error("Error fetching admin data:", error);
+            toast({
+                variant: "destructive",
+                title: "Failed to load dashboard",
+                description: "Could not fetch admin data. You might be missing permissions.",
+            });
+        } finally {
+            setLoading(false);
+        }
     }, [toast]);
+
+    useEffect(() => {
+        fetchData();
+
+        appEventEmitter.on('data-changed', fetchData);
+        return () => {
+            appEventEmitter.off('data-changed', fetchData);
+        }
+    }, [fetchData]);
 
     if (loading) {
         return (

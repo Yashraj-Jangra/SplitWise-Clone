@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { FirebaseError } from "firebase/app";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { appEventEmitter } from "@/lib/event-emitter";
 
 function GroupActions({ group, onActionComplete }: { group: Group, onActionComplete: () => void }) {
     const { toast } = useToast();
@@ -96,6 +97,7 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
             await deleteGroupPermanently(group.id);
             toast({ title: "Group Permanently Deleted", description: `The group "${group.name}" and all associated data have been deleted.` });
             onActionComplete();
+            appEventEmitter.emit('data-changed');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             toast({ title: "Error Deleting Group", description: errorMessage, variant: "destructive" });

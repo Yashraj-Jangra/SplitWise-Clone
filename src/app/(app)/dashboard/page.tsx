@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NetBalanceCard } from '@/components/dashboard/net-balance-card';
@@ -10,6 +10,7 @@ import { DynamicSpendingChart } from '@/components/dashboard/dynamic-spending-ch
 import { PredictiveInsights } from '@/components/dashboard/predictive-insights';
 import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGroupBalances } from '@/lib/mock-data';
 import type { Expense, Settlement, Group, Balance } from '@/types';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 interface DashboardData {
   expenses: Expense[];
@@ -62,6 +63,25 @@ export default function DashboardPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
 
+  const loadDashboardData = useCallback(async () => {
+    if (!userProfile?.uid) return;
+    
+    setDataLoading(true);
+    try {
+        const [expenses, settlements, balances] = await Promise.all([
+            getExpensesByUserId(userProfile.uid),
+            getSettlementsByUserId(userProfile.uid),
+            getOverallBalances(userProfile.uid)
+        ]);
+        setDashboardData({ expenses, settlements, balances });
+    } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+        // Optionally, set an error state here
+    } finally {
+        setDataLoading(false);
+    }
+  }, [userProfile]);
+
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) {
@@ -72,29 +92,15 @@ export default function DashboardPage() {
       setGreeting('Good evening');
     }
 
-    async function loadDashboardData() {
-        if (!userProfile?.uid) return;
-        
-        setDataLoading(true);
-        try {
-            const [expenses, settlements, balances] = await Promise.all([
-                getExpensesByUserId(userProfile.uid),
-                getSettlementsByUserId(userProfile.uid),
-                getOverallBalances(userProfile.uid)
-            ]);
-            setDashboardData({ expenses, settlements, balances });
-        } catch (error) {
-            console.error("Failed to load dashboard data:", error);
-            // Optionally, set an error state here
-        } finally {
-            setDataLoading(false);
-        }
-    }
-    
     if (userProfile) {
         loadDashboardData();
     }
-  }, [userProfile]);
+
+    appEventEmitter.on('data-changed', loadDashboardData);
+    return () => {
+        appEventEmitter.off('data-changed', loadDashboardData);
+    };
+  }, [userProfile, loadDashboardData]);
 
   if (authLoading || dataLoading || !userProfile || !dashboardData) {
     return <DashboardSkeleton />;
