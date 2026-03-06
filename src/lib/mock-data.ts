@@ -285,6 +285,32 @@ export async function archiveGroup(groupId: string, actorId: string): Promise<vo
     await logHistoryEvent(groupId, 'group_updated', actorId, description, { changes: [{ field: 'Status', from: 'Active', to: 'Archived' }] });
 }
 
+export async function deleteGroupPermanently(groupId: string): Promise<void> {
+    const batch = writeBatch(db);
+
+    // 1. Delete expenses
+    const expensesQuery = query(collection(db, 'expenses'), where('groupId', '==', groupId));
+    const expensesSnapshot = await getDocs(expensesQuery);
+    expensesSnapshot.forEach(doc => batch.delete(doc.ref));
+
+    // 2. Delete settlements
+    const settlementsQuery = query(collection(db, 'settlements'), where('groupId', '==', groupId));
+    const settlementsSnapshot = await getDocs(settlementsQuery);
+    settlementsSnapshot.forEach(doc => batch.delete(doc.ref));
+
+    // 3. Delete history
+    const historyQuery = query(collection(db, 'history'), where('groupId', '==', groupId));
+    const historySnapshot = await getDocs(historyQuery);
+    historySnapshot.forEach(doc => batch.delete(doc.ref));
+
+    // 4. Delete the group itself
+    const groupDocRef = doc(db, 'groups', groupId);
+    batch.delete(groupDocRef);
+
+    await batch.commit();
+}
+
+
 export async function restoreGroup(groupId: string, actorId: string): Promise<void> {
     const groupDocRef = doc(db, 'groups', groupId);
     await updateDoc(groupDocRef, {

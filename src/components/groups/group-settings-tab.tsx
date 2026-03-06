@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Balance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { updateGroup, getGroupBalances, archiveGroup } from '@/lib/mock-data';
+import { updateGroup, getGroupBalances, archiveGroup, deleteGroupPermanently } from '@/lib/mock-data';
 import { GroupMembers } from './group-members';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -50,6 +50,8 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
   const [balances, setBalances] = useState<Balance[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPermanentlyDeleting, setIsPermanentlyDeleting] = useState(false);
+  const [isPermanentDeleteDialogOpen, setIsPermanentDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     async function fetchBalances() {
@@ -84,7 +86,6 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
 
   const handleArchiveRequest = () => {
     if (!isSettled) {
-      // This state should not be reachable if the button is disabled, but as a fallback.
       toast({
         variant: 'destructive',
         title: 'Cannot Archive Group',
@@ -100,7 +101,6 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
       });
       return;
     }
-    // If all checks pass, open the confirmation dialog
     setIsDeleteDialogOpen(true);
   };
 
@@ -119,6 +119,24 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
     setIsDeleting(false);
     setIsDeleteDialogOpen(false);
   }
+
+  const handlePermanentDeleteConfirm = async () => {
+    if (!userProfile) return;
+    setIsPermanentlyDeleting(true);
+    try {
+        await deleteGroupPermanently(group.id);
+        toast({
+            title: "Group Permanently Deleted",
+            description: `The group "${group.name}" and all its data have been deleted.`,
+        });
+        router.push('/groups');
+        appEventEmitter.emit('data-changed');
+        router.refresh();
+    } catch (error) {
+        toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to permanently delete the group.", variant: "destructive" });
+        setIsPermanentlyDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -165,36 +183,57 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
       
       <GroupMembers members={group.members} group={group} />
       
-      {!isArchived && (
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="text-destructive">Danger Zone</CardTitle>
-            <CardDescription>These actions are irreversible. Please proceed with caution.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <span tabIndex={isSettled ? -1 : 0}>
-                            <Button
-                                variant="destructive"
-                                onClick={handleArchiveRequest}
-                                disabled={!isSettled}
-                            >
-                                Archive Group
-                            </Button>
-                        </span>
-                    </TooltipTrigger>
-                    {!isSettled && (
-                        <TooltipContent>
-                            <p>All debts must be settled before this group can be archived.</p>
-                        </TooltipContent>
-                    )}
-                </Tooltip>
-            </TooltipProvider>
-          </CardContent>
-        </Card>
-      )}
+      <Card className="border-destructive">
+        <CardHeader>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <CardDescription>These actions are irreversible. Please proceed with caution.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <h4 className="font-semibold">Archive Group</h4>
+            {isArchived ? (
+                <p className="text-sm text-muted-foreground mt-1">This group is already archived and is read-only.</p>
+            ) : (
+                <>
+                <p className="text-sm text-muted-foreground mt-1 mb-3">Archiving makes the group read-only. After 30 days, it will be permanently deleted.</p>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span tabIndex={isSettled ? -1 : 0}>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleArchiveRequest}
+                                    disabled={!isSettled}
+                                >
+                                    Archive Group
+                                </Button>
+                            </span>
+                        </TooltipTrigger>
+                        {!isSettled && (
+                            <TooltipContent>
+                                <p>All debts must be settled before this group can be archived.</p>
+                            </TooltipContent>
+                        )}
+                    </Tooltip>
+                </TooltipProvider>
+                </>
+            )}
+          </div>
+          
+          {userProfile?.role === 'admin' && (
+              <div className="mt-6 pt-6 border-t border-destructive/20">
+                  <h4 className="font-semibold text-destructive">Admin Action: Permanent Deletion</h4>
+                  <p className="text-sm text-muted-foreground mt-1 mb-3">Immediately delete the group and all associated data. This action bypasses the archive period and cannot be undone.</p>
+                  <Button
+                      variant="destructive"
+                      onClick={() => setIsPermanentDeleteDialogOpen(true)}
+                  >
+                      Permanently Delete Group
+                  </Button>
+              </div>
+          )}
+        </CardContent>
+      </Card>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
@@ -209,6 +248,24 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
                   <AlertDialogAction onClick={handleArchiveConfirm} disabled={isDeleting} variant="destructive">
                       {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
                       Yes, archive it
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isPermanentDeleteDialogOpen} onOpenChange={setIsPermanentDeleteDialogOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Permanently Delete "{group.name}"?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      You are about to permanently delete this group and all its data (expenses, settlements, history). This action is irreversible and bypasses the standard archive process. Are you absolutely sure?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handlePermanentDeleteConfirm} disabled={isPermanentlyDeleting} variant="destructive">
+                      {isPermanentlyDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+                      Yes, PERMANENTLY DELETE
                   </AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
