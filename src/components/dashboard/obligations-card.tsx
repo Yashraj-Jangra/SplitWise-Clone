@@ -12,10 +12,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
 import { useAuth } from '@/contexts/auth-context';
-import { getGroupsByUserId, getGroupBalances } from '@/lib/mock-data';
+import { getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/mock-data';
 import { Icons } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 
 interface Obligation {
@@ -67,19 +68,26 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
         
         const groupsWithBalances = await Promise.all(
             groupsInCommon.map(async (group) => {
-                const balances = await getGroupBalances(group.id);
-                // Find the selected user's balance within this specific group.
-                // A positive balance for them means I owe them money.
-                const otherUserBalance = balances.find(b => b.user.uid === obligation.user.uid)?.netBalance || 0;
+                const groupBalances = await getGroupBalances(group.id);
+                const simplifiedDebtsForGroup = simplifyDebts(groupBalances);
+
+                // Find the specific debt from you to the selected user in this group
+                const debt = simplifiedDebtsForGroup.find(
+                    s => s.from.uid === userProfile.uid && s.to.uid === obligation.user.uid
+                );
                 
-                if (otherUserBalance > 0.01) { // Only show groups where I actually owe them.
-                    return { group, amountOwed: otherUserBalance };
-                }
-                return null;
+                // Also check if they owe you in this group, to calculate the net debt for just this group
+                const credit = simplifiedDebtsForGroup.find(
+                    s => s.to.uid === userProfile.uid && s.from.uid === obligation.user.uid
+                );
+
+                const amountOwed = (debt?.amount || 0) - (credit?.amount || 0);
+
+                return { group, amountOwed: amountOwed > 0.01 ? amountOwed : 0 };
             })
         );
         
-        setSharedGroupsWithBalance(groupsWithBalances.filter((g): g is { group: Group; amountOwed: number } => g !== null));
+        setSharedGroupsWithBalance(groupsWithBalances.sort((a,b) => b.amountOwed - a.amountOwed));
         
         setGroupsLoading(false);
         setView('groups');
@@ -102,6 +110,57 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
 
     const title = type === 'owed' ? 'You Are Owed' : 'You Owe';
     const totalColor = type === 'owed' ? 'text-green-500' : 'text-red-500';
+    
+    const GroupToSettleItem = ({ group, amountOwed }: { group: Group, amountOwed: number }) => {
+        const hasDebt = amountOwed > 0.01;
+
+        const itemContent = (
+            <div
+                className={cn(
+                    "flex w-full items-center justify-between gap-3 rounded-md p-3 text-left transition-colors",
+                    hasDebt ? "hover:bg-muted cursor-pointer" : "opacity-60 bg-muted/30 cursor-not-allowed"
+                )}
+            >
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                        <AvatarImage src={group.coverImageUrl} alt={group.name} />
+                        <AvatarFallback>{getInitials(group.name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="font-semibold">{group.name}</p>
+                        <p className="text-sm text-muted-foreground">{group.members.length} members</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="text-right">
+                        <p className="text-sm text-muted-foreground">You Owe</p>
+                        <p className={cn("font-bold", hasDebt ? "text-destructive" : "text-muted-foreground")}>
+                            {CURRENCY_SYMBOL}{amountOwed.toFixed(2)}
+                        </p>
+                    </div>
+                    {hasDebt && <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+                </div>
+            </div>
+        );
+
+        if (hasDebt) {
+            return (
+                <AddSettlementDialog
+                    key={group.id}
+                    group={group}
+                    initialSettlement={{
+                        paidById: userProfile!.uid,
+                        paidToId: selectedObligation!.user.uid,
+                        amount: amountOwed,
+                    }}
+                    trigger={itemContent}
+                />
+            );
+        }
+        
+        return <div key={group.id}>{itemContent}</div>;
+    };
+
 
     const SettleNowButton = (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -157,45 +216,16 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                         <>
                         {groupsLoading ? (
                              <div className="space-y-2">
-                                {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+                                {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                              </div>
                         ): sharedGroupsWithBalance.length > 0 ? (
                             <div className="space-y-2">
                                 {sharedGroupsWithBalance.map(({ group, amountOwed }) => (
-                                     <AddSettlementDialog
-                                        key={group.id}
-                                        group={group}
-                                        initialSettlement={{
-                                            paidById: userProfile!.uid,
-                                            paidToId: selectedObligation!.user.uid,
-                                            amount: amountOwed,
-                                        }}
-                                        trigger={
-                                            <div className="flex w-full items-center justify-between gap-3 rounded-md p-3 text-left transition-colors hover:bg-muted">
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar className="h-10 w-10">
-                                                        <AvatarImage src={group.coverImageUrl} alt={group.name} />
-                                                        <AvatarFallback>{getInitials(group.name)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div>
-                                                        <p className="font-semibold">{group.name}</p>
-                                                        <p className="text-sm text-muted-foreground">{group.members.length} members</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="text-right">
-                                                        <p className="text-sm text-muted-foreground">You Owe</p>
-                                                        <p className="font-bold text-destructive">{CURRENCY_SYMBOL}{amountOwed.toFixed(2)}</p>
-                                                    </div>
-                                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                                </div>
-                                            </div>
-                                        }
-                                    />
+                                    <GroupToSettleItem key={group.id} group={group} amountOwed={amountOwed} />
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-center text-muted-foreground p-4">You have a net balance with this person across all groups, but no specific debts to settle in any single group.</p>
+                            <p className="text-center text-muted-foreground p-4">You have no shared groups with this person.</p>
                         )}
                         </>
                     )}
