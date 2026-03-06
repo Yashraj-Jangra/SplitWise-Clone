@@ -59,6 +59,53 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   default: <Icons.History className="h-4 w-4 text-muted-foreground" />,
 };
 
+const ComplexChangeDetail = ({ text }: { text: string }) => {
+    // Regex for: "changed Jane's share from 1 to 2" or "changed John's payment from ₹10.00 to ₹15.00"
+    const changedMatch = text.match(/changed (.*?)(?:'s share|'s payment) from (.*?) to (.*?)$/);
+    if (changedMatch) {
+        return (
+            <div className="flex items-center gap-2 text-muted-foreground">
+                 <span className="font-semibold text-foreground/80">{changedMatch[1]}:</span>
+                <span className="text-red-500 line-through">{changedMatch[2]}</span>
+                <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
+                <span className="text-green-500">{changedMatch[3]}</span>
+            </div>
+        );
+    }
+    
+    // Regex for: "added John to split (owes ₹25.00)" or "added Jane who paid ₹50.00"
+    const addedMatch = text.match(/added (.*?) (?:to split \(owes (.*?)\)|who paid (.*?))/);
+    if (addedMatch) {
+        const detail = addedMatch[2] ? `owes ${addedMatch[2]}` : `paid ${addedMatch[3]}`;
+        return (
+             <div className="flex items-center gap-2 text-green-500">
+                <Icons.UserPlus className="h-3 w-3 flex-shrink-0" />
+                <span>Added <span className="font-semibold">{addedMatch[1]}</span> ({detail})</span>
+            </div>
+        );
+    }
+    
+    // Regex for: "removed John from split (was owing ₹20.00)" or "removed Jane (who paid ₹100.00)"
+    const removedMatch = text.match(/removed (.*?) (?:from split \(was owing (.*?)\)|\(who paid (.*?)\))/);
+    if (removedMatch) {
+        const detail = removedMatch[2] ? `was owing ${removedMatch[2]}` : `who paid ${removedMatch[3]}`;
+        return (
+             <div className="flex items-center gap-2 text-red-500">
+                <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
+                <span>Removed <span className="font-semibold">{removedMatch[1]}</span> ({detail})</span>
+            </div>
+        );
+    }
+    
+    // Fallback for any other format
+    return (
+         <div className="flex items-center gap-2 text-muted-foreground">
+            <Icons.ArrowRight className="h-3 w-3 flex-shrink-0"/>
+            <span>{text}</span>
+        </div>
+    );
+};
+
 
 function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryEvent; onViewExpense: (expenseId: string) => void; isDeleted?: boolean; }) {
     const { userProfile } = useAuth();
@@ -202,11 +249,17 @@ function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryE
                                 <span>Show details</span>
                             </AccordionTrigger>
                             <AccordionContent className="pt-2 pl-6 text-xs">
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {event.data.changes.map((change: any, index: number) => (
                                         <div key={index}>
                                             <span className="font-semibold text-foreground">{change.field}:</span>
-                                            {change.to ? (
+                                            {(change.field === 'Payers' || change.field === 'Split') && change.from ? (
+                                                <div className="space-y-1.5 mt-1 pl-2 border-l-2 ml-1">
+                                                    {change.from.split('; ').map((item: string, i: number) => (
+                                                        <ComplexChangeDetail key={i} text={item} />
+                                                    ))}
+                                                </div>
+                                            ) : change.to ? (
                                                 <div className="text-muted-foreground flex items-center gap-2">
                                                     <span className="text-red-500 line-through">{change.from}</span>
                                                     <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
