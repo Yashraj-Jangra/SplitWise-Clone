@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
 import { useAuth } from '@/contexts/auth-context';
-import { getGroupsByUserId } from '@/lib/mock-data';
+import { getGroupsByUserId, getGroupBalances } from '@/lib/mock-data';
 import { Icons } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';
@@ -53,7 +53,7 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<'list' | 'groups'>('list');
     const [selectedObligation, setSelectedObligation] = useState<Obligation | null>(null);
-    const [sharedGroups, setSharedGroups] = useState<Group[]>([]);
+    const [sharedGroupsWithBalance, setSharedGroupsWithBalance] = useState<Array<{ group: Group; amountOwed: number }>>([]);
     const [groupsLoading, setGroupsLoading] = useState(false);
     const { userProfile } = useAuth();
     
@@ -61,10 +61,25 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
         if (!userProfile) return;
         setGroupsLoading(true);
         setSelectedObligation(obligation);
-        
+
         const allUserGroups = await getGroupsByUserId(userProfile.uid);
         const groupsInCommon = allUserGroups.filter(g => g.memberIds.includes(obligation.user.uid));
-        setSharedGroups(groupsInCommon);
+        
+        const groupsWithBalances = await Promise.all(
+            groupsInCommon.map(async (group) => {
+                const balances = await getGroupBalances(group.id);
+                // Find the selected user's balance within this specific group.
+                // A positive balance for them means I owe them money.
+                const otherUserBalance = balances.find(b => b.user.uid === obligation.user.uid)?.netBalance || 0;
+                
+                if (otherUserBalance > 0.01) { // Only show groups where I actually owe them.
+                    return { group, amountOwed: otherUserBalance };
+                }
+                return null;
+            })
+        );
+        
+        setSharedGroupsWithBalance(groupsWithBalances.filter((g): g is { group: Group; amountOwed: number } => g !== null));
         
         setGroupsLoading(false);
         setView('groups');
@@ -73,7 +88,7 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
     const handleBack = () => {
         setView('list');
         setSelectedObligation(null);
-        setSharedGroups([]);
+        setSharedGroupsWithBalance([]);
     }
 
     useEffect(() => {
@@ -144,16 +159,16 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                              <div className="space-y-2">
                                 {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
                              </div>
-                        ): sharedGroups.length > 0 ? (
+                        ): sharedGroupsWithBalance.length > 0 ? (
                             <div className="space-y-2">
-                                {sharedGroups.map(group => (
+                                {sharedGroupsWithBalance.map(({ group, amountOwed }) => (
                                      <AddSettlementDialog
                                         key={group.id}
                                         group={group}
                                         initialSettlement={{
                                             paidById: userProfile!.uid,
                                             paidToId: selectedObligation!.user.uid,
-                                            amount: selectedObligation!.amount,
+                                            amount: amountOwed,
                                         }}
                                         trigger={
                                             <div className="flex w-full items-center justify-between gap-3 rounded-md p-3 text-left transition-colors hover:bg-muted">
@@ -167,14 +182,20 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                                                         <p className="text-sm text-muted-foreground">{group.members.length} members</p>
                                                     </div>
                                                 </div>
-                                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                                <div className="flex items-center gap-2">
+                                                    <div className="text-right">
+                                                        <p className="text-sm text-muted-foreground">You Owe</p>
+                                                        <p className="font-bold text-destructive">{CURRENCY_SYMBOL}{amountOwed.toFixed(2)}</p>
+                                                    </div>
+                                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                                </div>
                                             </div>
                                         }
                                     />
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-center text-muted-foreground">You don't share any groups with this person.</p>
+                            <p className="text-center text-muted-foreground p-4">You have a net balance with this person across all groups, but no specific debts to settle in any single group.</p>
                         )}
                         </>
                     )}
