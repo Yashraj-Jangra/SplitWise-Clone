@@ -60,10 +60,12 @@ const eventIcons: { [key: string]: React.ReactNode } = {
 };
 
 const ComplexChangeDetail = ({ text }: { text: string }) => {
-    // Regex for: "changed Jane's share from ₹10.00 to ₹15.00" or "changed John's payment from ₹10.00 to ₹15.00"
-    const changedMatch = text.match(/changed (.*?)'s (share|payment) from (.*?) to (.*?)$/);
+    const trimmedText = text.trim();
+
+    // Regex for: "changed Jane's share from ₹10.00 to ₹15.00"
+    const changedMatch = trimmedText.match(/changed (.*?)'s (?:share|payment) from (.*?) to (.*?)$/);
     if (changedMatch) {
-        const [, name, , from, to] = changedMatch;
+        const [, name, from, to] = changedMatch;
         return (
             <div className="flex items-center gap-2 text-muted-foreground">
                  <span className="font-semibold text-foreground/80">{name}:</span>
@@ -74,37 +76,60 @@ const ComplexChangeDetail = ({ text }: { text: string }) => {
         );
     }
     
-    // Regex for: "added John to split (owes ₹25.00)" or "added Jane who paid ₹50.00"
-    const addedMatch = text.match(/added (.*?) (?:to split \(owes (.*?)\)|who paid (.*?))/);
-    if (addedMatch) {
-        const [, name, owes, paid] = addedMatch;
-        const detail = owes ? `owes ${owes}` : (paid ? `paid ${paid}` : '');
+    // Regex for: "added John who paid ₹50.00"
+    const addedPaidMatch = trimmedText.match(/added (.*?) who paid (.*)/);
+     if (addedPaidMatch) {
+        const [, name, amount] = addedPaidMatch;
         return (
              <div className="flex items-center gap-2 text-green-500">
                 <Icons.UserPlus className="h-3 w-3 flex-shrink-0" />
-                <span>Added <span className="font-semibold">{name}</span> {detail && `(${detail})`}</span>
+                <span>Added <span className="font-semibold">{name}</span> (paid {amount})</span>
             </div>
         );
     }
     
-    // Regex for: "removed John from split (was owing ₹20.00)" or "removed Jane (who paid ₹100.00)"
-    const removedMatch = text.match(/removed (.*?) (?:from split \(was owing (.*?)\)|\(who paid (.*?)\))/);
-    if (removedMatch) {
-        const [, name, wasOwing, hadPaid] = removedMatch;
-        const detail = wasOwing ? `was owing ${wasOwing}` : (hadPaid ? `who paid ${hadPaid}`: '');
+    // Regex for: "added John to split (owes ₹25.00)"
+    const addedOwesMatch = trimmedText.match(/added (.*?) to split \(owes (.*?)\)/);
+    if (addedOwesMatch) {
+        const [, name, amount] = addedOwesMatch;
         return (
-             <div className="flex items-center gap-2 text-red-500">
-                <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
-                <span>Removed <span className="font-semibold">{name}</span> {detail && `(${detail})`}</span>
+             <div className="flex items-center gap-2 text-green-500">
+                <Icons.UserPlus className="h-3 w-3 flex-shrink-0" />
+                <span>Added <span className="font-semibold">{name}</span> (owes {amount})</span>
             </div>
         );
     }
+
+    // Regex for: "removed Jane (who paid ₹100.00)"
+    const removedPaidMatch = trimmedText.match(/removed (.*?) \(who paid (.*?)\)/);
+    if (removedPaidMatch) {
+        const [, name, amount] = removedPaidMatch;
+        return (
+             <div className="flex items-center gap-2 text-red-500">
+                <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
+                <span>Removed <span className="font-semibold">{name}</span> (paid {amount})</span>
+            </div>
+        );
+    }
+    
+    // Regex for: "removed John from split (was owing ₹20.00)"
+    const removedOwesMatch = trimmedText.match(/removed (.*?) from split \(was owing (.*?)\)/);
+    if (removedOwesMatch) {
+        const [, name, amount] = removedOwesMatch;
+        return (
+             <div className="flex items-center gap-2 text-red-500">
+                <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
+                <span>Removed <span className="font-semibold">{name}</span> (was owing {amount})</span>
+            </div>
+        );
+    }
+
     
     // Fallback for any other format
     return (
          <div className="flex items-center gap-2 text-muted-foreground">
             <Icons.ArrowRight className="h-3 w-3 flex-shrink-0"/>
-            <span>{text}</span>
+            <span>{trimmedText}</span>
         </div>
     );
 };
