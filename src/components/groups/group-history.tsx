@@ -60,15 +60,16 @@ const eventIcons: { [key: string]: React.ReactNode } = {
 };
 
 const ComplexChangeDetail = ({ text }: { text: string }) => {
-    // Regex for: "changed Jane's share from 1 to 2" or "changed John's payment from ₹10.00 to ₹15.00"
-    const changedMatch = text.match(/changed (.*?)(?:'s share|'s payment) from (.*?) to (.*?)$/);
+    // Regex for: "changed Jane's share from ₹10.00 to ₹15.00" or "changed John's payment from ₹10.00 to ₹15.00"
+    const changedMatch = text.match(/changed (.*?)'s (share|payment) from (.*?) to (.*?)$/);
     if (changedMatch) {
+        const [, name, , from, to] = changedMatch;
         return (
             <div className="flex items-center gap-2 text-muted-foreground">
-                 <span className="font-semibold text-foreground/80">{changedMatch[1]}:</span>
-                <span className="text-red-500 line-through">{changedMatch[2]}</span>
+                 <span className="font-semibold text-foreground/80">{name}:</span>
+                <span className="text-red-500 line-through">{from}</span>
                 <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
-                <span className="text-green-500">{changedMatch[3]}</span>
+                <span className="text-green-500">{to}</span>
             </div>
         );
     }
@@ -76,11 +77,12 @@ const ComplexChangeDetail = ({ text }: { text: string }) => {
     // Regex for: "added John to split (owes ₹25.00)" or "added Jane who paid ₹50.00"
     const addedMatch = text.match(/added (.*?) (?:to split \(owes (.*?)\)|who paid (.*?))/);
     if (addedMatch) {
-        const detail = addedMatch[2] ? `owes ${addedMatch[2]}` : `paid ${addedMatch[3]}`;
+        const [, name, owes, paid] = addedMatch;
+        const detail = owes ? `owes ${owes}` : (paid ? `paid ${paid}` : '');
         return (
              <div className="flex items-center gap-2 text-green-500">
                 <Icons.UserPlus className="h-3 w-3 flex-shrink-0" />
-                <span>Added <span className="font-semibold">{addedMatch[1]}</span> ({detail})</span>
+                <span>Added <span className="font-semibold">{name}</span> {detail && `(${detail})`}</span>
             </div>
         );
     }
@@ -88,11 +90,12 @@ const ComplexChangeDetail = ({ text }: { text: string }) => {
     // Regex for: "removed John from split (was owing ₹20.00)" or "removed Jane (who paid ₹100.00)"
     const removedMatch = text.match(/removed (.*?) (?:from split \(was owing (.*?)\)|\(who paid (.*?)\))/);
     if (removedMatch) {
-        const detail = removedMatch[2] ? `was owing ${removedMatch[2]}` : `who paid ${removedMatch[3]}`;
+        const [, name, wasOwing, hadPaid] = removedMatch;
+        const detail = wasOwing ? `was owing ${wasOwing}` : (hadPaid ? `who paid ${hadPaid}`: '');
         return (
              <div className="flex items-center gap-2 text-red-500">
                 <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
-                <span>Removed <span className="font-semibold">{removedMatch[1]}</span> ({detail})</span>
+                <span>Removed <span className="font-semibold">{name}</span> {detail && `(${detail})`}</span>
             </div>
         );
     }
