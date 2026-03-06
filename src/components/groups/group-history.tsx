@@ -33,6 +33,93 @@ import {
 } from "@/components/ui/accordion";
 import { appEventEmitter } from '@/lib/event-emitter';
 
+// --- Rewritten History Parsing Logic ---
+
+type ParsedChange =
+  | { type: 'changed'; name: string; from: string; to: string }
+  | { type: 'added'; name: string; detail: string }
+  | { type: 'removed'; name: string; detail: string }
+  | { type: 'unknown'; text: string };
+
+function parseComplexChange(text: string): ParsedChange {
+    const trimmedText = text.trim();
+
+    // Order is important: more specific regexes first.
+    
+    // 1. Changed: "changed [NAME]'s [share/payment] from [VALUE] to [VALUE]"
+    const changedMatch = trimmedText.match(/changed (.*?)'s (?:share|payment) from (.*?) to (.*?)$/);
+    if (changedMatch) {
+        const [, name, from, to] = changedMatch;
+        return { type: 'changed', name: name.trim(), from: from.trim(), to: to.trim() };
+    }
+    
+    // 2. Added: "added [NAME] who paid [VALUE]" OR "added [NAME] to split (owes [VALUE])"
+    const addedPaidMatch = trimmedText.match(/added (.*?) who paid (.*?)$/);
+    if (addedPaidMatch) {
+        const [, name, amount] = addedPaidMatch;
+        return { type: 'added', name: name.trim(), detail: `paid ${amount.trim()}` };
+    }
+    const addedOwesMatch = trimmedText.match(/added (.*?) to split \(owes (.*?)\)$/);
+    if (addedOwesMatch) {
+        const [, name, amount] = addedOwesMatch;
+        return { type: 'added', name: name.trim(), detail: `owes ${amount.trim()}` };
+    }
+
+    // 3. Removed: "removed [NAME] (who paid [VALUE])" OR "removed [NAME] from split (was owing [VALUE])"
+    const removedPaidMatch = trimmedText.match(/removed (.*?) \(who paid (.*?)\)$/);
+    if (removedPaidMatch) {
+        const [, name, amount] = removedPaidMatch;
+        return { type: 'removed', name: name.trim(), detail: `paid ${amount.trim()}` };
+    }
+    const removedOwesMatch = trimmedText.match(/removed (.*?) from split \(was owing (.*?)\)$/);
+    if (removedOwesMatch) {
+        const [, name, amount] = removedOwesMatch;
+        return { type: 'removed', name: name.trim(), detail: `was owing ${amount.trim()}` };
+    }
+    
+    // Fallback for any format that doesn't match
+    return { type: 'unknown', text: trimmedText };
+}
+
+
+const ComplexChangeDetail = ({ change }: { change: ParsedChange }) => {
+    switch (change.type) {
+        case 'changed':
+            return (
+                <div className="flex items-center gap-2 text-muted-foreground flex-wrap">
+                    <span className="font-semibold text-foreground/80">{change.name}:</span>
+                    <span className="text-red-500 line-through">{change.from}</span>
+                    <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
+                    <span className="text-green-500">{change.to}</span>
+                </div>
+            );
+        case 'added':
+            return (
+                 <div className="flex items-center gap-2 text-green-500">
+                    <Icons.UserPlus className="h-3 w-3 flex-shrink-0" />
+                    <span>Added <span className="font-semibold">{change.name}</span> ({change.detail})</span>
+                </div>
+            );
+        case 'removed':
+            return (
+                 <div className="flex items-center gap-2 text-red-500">
+                    <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
+                    <span>Removed <span className="font-semibold">{change.name}</span> ({change.detail})</span>
+                </div>
+            );
+        default: // 'unknown'
+            return (
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                    <Icons.ArrowRight className="h-3 w-3 flex-shrink-0"/>
+                    <span>{change.text}</span>
+                </div>
+            );
+    }
+};
+
+// --- End of new logic ---
+
+
 interface GroupHistoryTabProps {
   groupId: string;
   onViewExpense: (expenseId: string) => void;
@@ -57,81 +144,6 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   settlement_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
   // Default
   default: <Icons.History className="h-4 w-4 text-muted-foreground" />,
-};
-
-const ComplexChangeDetail = ({ text }: { text: string }) => {
-    const trimmedText = text.trim();
-
-    // Regex for: "changed Jane's share from ₹10.00 to ₹15.00"
-    const changedMatch = trimmedText.match(/changed (.*?)'s (?:share|payment) from (.*?) to (.*?)$/);
-    if (changedMatch) {
-        const [, name, from, to] = changedMatch;
-        return (
-            <div className="flex items-center gap-2 text-muted-foreground">
-                 <span className="font-semibold text-foreground/80">{name}:</span>
-                <span className="text-red-500 line-through">{from}</span>
-                <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
-                <span className="text-green-500">{to}</span>
-            </div>
-        );
-    }
-    
-    // Regex for: "added John who paid ₹50.00"
-    const addedPaidMatch = trimmedText.match(/added (.*?) who paid (.*)/);
-     if (addedPaidMatch) {
-        const [, name, amount] = addedPaidMatch;
-        return (
-             <div className="flex items-center gap-2 text-green-500">
-                <Icons.UserPlus className="h-3 w-3 flex-shrink-0" />
-                <span>Added <span className="font-semibold">{name}</span> (paid {amount})</span>
-            </div>
-        );
-    }
-    
-    // Regex for: "added John to split (owes ₹25.00)"
-    const addedOwesMatch = trimmedText.match(/added (.*?) to split \(owes (.*?)\)/);
-    if (addedOwesMatch) {
-        const [, name, amount] = addedOwesMatch;
-        return (
-             <div className="flex items-center gap-2 text-green-500">
-                <Icons.UserPlus className="h-3 w-3 flex-shrink-0" />
-                <span>Added <span className="font-semibold">{name}</span> (owes {amount})</span>
-            </div>
-        );
-    }
-
-    // Regex for: "removed Jane (who paid ₹100.00)"
-    const removedPaidMatch = trimmedText.match(/removed (.*?) \(who paid (.*?)\)/);
-    if (removedPaidMatch) {
-        const [, name, amount] = removedPaidMatch;
-        return (
-             <div className="flex items-center gap-2 text-red-500">
-                <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
-                <span>Removed <span className="font-semibold">{name}</span> (paid {amount})</span>
-            </div>
-        );
-    }
-    
-    // Regex for: "removed John from split (was owing ₹20.00)"
-    const removedOwesMatch = trimmedText.match(/removed (.*?) from split \(was owing (.*?)\)/);
-    if (removedOwesMatch) {
-        const [, name, amount] = removedOwesMatch;
-        return (
-             <div className="flex items-center gap-2 text-red-500">
-                <Icons.UserMinus className="h-3 w-3 flex-shrink-0" />
-                <span>Removed <span className="font-semibold">{name}</span> (was owing {amount})</span>
-            </div>
-        );
-    }
-
-    
-    // Fallback for any other format
-    return (
-         <div className="flex items-center gap-2 text-muted-foreground">
-            <Icons.ArrowRight className="h-3 w-3 flex-shrink-0"/>
-            <span>{trimmedText}</span>
-        </div>
-    );
 };
 
 
@@ -283,8 +295,8 @@ function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryE
                                             <span className="font-semibold text-foreground">{change.field}:</span>
                                             {(change.field === 'Payers' || change.field === 'Split') && change.from ? (
                                                 <div className="space-y-1.5 mt-1 pl-2 border-l-2 ml-1">
-                                                    {change.from.split('; ').map((item: string, i: number) => (
-                                                        <ComplexChangeDetail key={i} text={item} />
+                                                    {change.from.split('; ').filter((s: string) => s.trim()).map((item: string, i: number) => (
+                                                        <ComplexChangeDetail key={i} change={parseComplexChange(item)} />
                                                     ))}
                                                 </div>
                                             ) : change.to ? (
