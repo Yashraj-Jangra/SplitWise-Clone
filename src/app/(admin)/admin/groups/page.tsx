@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { getAllGroups, archiveGroup, restoreGroup } from "@/lib/mock-data";
+import { getAllGroups, archiveGroup, restoreGroup, deleteGroupPermanently } from "@/lib/mock-data";
 import { format, formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react';
 import type { Group } from '@/types';
@@ -38,6 +38,8 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
     const { userProfile } = useAuth();
     const [isUpdating, setIsUpdating] = useState(false);
     const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
+    const [isPermanentDeleteDialogOpen, setIsPermanentDeleteDialogOpen] = useState(false);
+    const [isDeletingPermanently, setIsDeletingPermanently] = useState(false);
 
     const handleArchive = async () => {
         if (!userProfile) return;
@@ -88,6 +90,21 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
         }
     }
 
+    const handlePermanentDelete = async () => {
+        setIsDeletingPermanently(true);
+        try {
+            await deleteGroupPermanently(group.id);
+            toast({ title: "Group Permanently Deleted", description: `The group "${group.name}" and all associated data have been deleted.` });
+            onActionComplete();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ title: "Error Deleting Group", description: errorMessage, variant: "destructive" });
+        } finally {
+            setIsDeletingPermanently(false);
+            setIsPermanentDeleteDialogOpen(false);
+        }
+    }
+
     return (
         <>
             <DropdownMenu>
@@ -113,6 +130,10 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
                             <Icons.Archive className="mr-2 h-4 w-4" /> Archive Group
                         </DropdownMenuItem>
                     )}
+                    <DropdownMenuSeparator />
+                     <DropdownMenuItem onClick={() => setIsPermanentDeleteDialogOpen(true)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Icons.Delete className="mr-2 h-4 w-4" /> Delete Permanently
+                    </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
 
@@ -129,6 +150,24 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
                         <AlertDialogAction onClick={handleArchive} disabled={isUpdating} className="bg-orange-500 hover:bg-orange-600">
                             {isUpdating && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
                             Yes, archive it
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+             <AlertDialog open={isPermanentDeleteDialogOpen} onOpenChange={setIsPermanentDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Permanently Delete "{group.name}"?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action is irreversible and will delete the group and all its expenses, settlements, and history. Are you sure you want to proceed?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handlePermanentDelete} disabled={isDeletingPermanently} variant="destructive">
+                            {isDeletingPermanently && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+                            Yes, permanently delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
