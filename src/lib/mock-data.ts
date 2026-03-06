@@ -465,14 +465,17 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
             totalExpenses: newTotal
         });
 
-        // ... history logging ...
-        const actor = await getUserProfile(actorId);
-        const actorName = getFullName(actor?.firstName, actor?.lastName);
-        
-        const changes: { field: string; from: any; to: any }[] = [];
-        const changeSummaries: string[] = [];
-
+        // --- History Logging ---
         if (oldData) {
+            const groupMembers = await hydrateUsers(groupData.memberIds);
+            const userMap = new Map(groupMembers.map(u => [u.uid, u]));
+            
+            const actor = userMap.get(actorId) || await getUserProfile(actorId); // Fallback if actor not in group
+            const actorName = getFullName(actor?.firstName, actor?.lastName);
+            
+            const changes: { field: string; from: any; to: any }[] = [];
+            const changeSummaries: string[] = [];
+
             const oldDate = (oldData.date as Timestamp).toDate();
 
             if (oldData.description !== expenseData.description) {
@@ -495,43 +498,80 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
                  changes.push({ field: 'Split Method', from: `"${oldData.splitType}"`, to: `"${expenseData.splitType}"` });
                  changeSummaries.push('split method');
             }
-            if (oldData.notes !== expenseData.notes) {
+            if (oldData.notes !== (expenseData.notes || '')) {
               changes.push({ field: 'Notes', from: `"${oldData.notes || ''}"`, to: `"${expenseData.notes || ''}"` });
               changeSummaries.push('notes');
             }
 
-            const oldPayersStr = JSON.stringify(oldData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
-            const newPayersStr = JSON.stringify(expenseData.payers.sort((a,b) => a.userId.localeCompare(b.userId)));
-            if (oldPayersStr !== newPayersStr) {
-                changes.push({ field: 'Payers', from: 'List of payers was updated.', to: '' });
+            // Payers detailed changes
+            const oldPayersMap = new Map(oldData.payers.map(p => [p.userId, p.amount]));
+            const newPayersMap = new Map(expenseData.payers.map(p => [p.userId, p.amount]));
+            const allPayerIds = new Set([...oldPayersMap.keys(), ...newPayersMap.keys()]);
+            const payerChanges: string[] = [];
+
+            allPayerIds.forEach(id => {
+                const oldAmount = oldPayersMap.get(id);
+                const newAmount = newPayersMap.get(id);
+                const userName = getFullName(userMap.get(id)?.firstName, userMap.get(id)?.lastName) || 'A user';
+
+                if (oldAmount === undefined && newAmount !== undefined) {
+                    payerChanges.push(`added ${userName} who paid ${CURRENCY_SYMBOL}${newAmount.toFixed(2)}`);
+                } else if (oldAmount !== undefined && newAmount === undefined) {
+                    payerChanges.push(`removed ${userName} (who paid ${CURRENCY_SYMBOL}${oldAmount.toFixed(2)})`);
+                } else if (oldAmount !== newAmount) {
+                    payerChanges.push(`changed ${userName}'s payment from ${CURRENCY_SYMBOL}${oldAmount!.toFixed(2)} to ${CURRENCY_SYMBOL}${newAmount!.toFixed(2)}`);
+                }
+            });
+
+            if (payerChanges.length > 0) {
+                changes.push({ field: 'Payers', from: payerChanges.join('; '), to: '' });
                 changeSummaries.push('payers');
             }
-            
-            const oldParticipantsStr = JSON.stringify(oldData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
-            const newParticipantsStr = JSON.stringify(expenseData.participants.sort((a,b) => a.userId.localeCompare(b.userId)));
-            if (oldParticipantsStr !== newParticipantsStr) {
-                changes.push({ field: 'Split', from: 'Participant split was updated.', to: '' });
+
+            // Participants detailed changes
+            const oldParticipantsMap = new Map(oldData.participants.map(p => [p.userId, p.amountOwed]));
+            const newParticipantsMap = new Map(expenseData.participants.map(p => [p.userId, p.amountOwed]));
+            const allParticipantIds = new Set([...oldParticipantsMap.keys(), ...newParticipantsMap.keys()]);
+            const splitChanges: string[] = [];
+
+            allParticipantIds.forEach(id => {
+                const oldAmount = oldParticipantsMap.get(id);
+                const newAmount = newParticipantsMap.get(id);
+                
+                if (oldAmount === undefined && newAmount !== undefined) {
+                    const userName = getFullName(userMap.get(id)?.firstName, userMap.get(id)?.lastName) || 'A user';
+                    splitChanges.push(`added ${userName} to split (owes ${CURRENCY_SYMBOL}${newAmount.toFixed(2)})`);
+                } else if (oldAmount !== undefined && newAmount === undefined) {
+                    const userName = getFullName(userMap.get(id)?.firstName, userMap.get(id)?.lastName) || 'A user';
+                    splitChanges.push(`removed ${userName} from split (was owing ${CURRENCY_SYMBOL}${oldAmount.toFixed(2)})`);
+                } else if (oldAmount !== newAmount) {
+                    const userName = getFullName(userMap.get(id)?.firstName, userMap.get(id)?.lastName) || 'A user';
+                    splitChanges.push(`changed ${userName}'s share from ${CURRENCY_SYMBOL}${oldAmount!.toFixed(2)} to ${CURRENCY_SYMBOL}${newAmount!.toFixed(2)}`);
+                }
+            });
+
+            if (splitChanges.length > 0) {
+                changes.push({ field: 'Split', from: splitChanges.join('; '), to: '' });
                 changeSummaries.push('participant split');
             }
-        }
 
-        let description: string;
-        if (changeSummaries.length > 0) {
-            const uniqueSummaries = [...new Set(changeSummaries)];
-            const summaryText = uniqueSummaries.length > 2
-                ? `${uniqueSummaries.slice(0, 2).join(', ')} and other details`
-                : uniqueSummaries.join(' and ');
-            description = `${actorName} updated the ${summaryText} for expense "${oldData?.description}".`;
-        } else {
-            description = `${actorName} re-saved expense "${oldData?.description}" with no changes.`;
+            let description: string;
+            if (changeSummaries.length > 0) {
+                const uniqueSummaries = [...new Set(changeSummaries)];
+                const summaryText = uniqueSummaries.length > 2
+                    ? `${uniqueSummaries.slice(0, 2).join(', ')} and other details`
+                    : uniqueSummaries.join(' and ');
+                description = `${actorName} updated the ${summaryText} for expense "${oldData?.description}".`;
+            } else {
+                description = `${actorName} re-saved expense "${oldData?.description}" with no changes.`;
+            }
+            
+            await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
+                expenseId,
+                changes,
+                date: expenseData.date,
+            });
         }
-        
-        await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
-            expenseId,
-            changes,
-            date: expenseData.date,
-        });
-
     } catch (serverError) {
         const permissionError = new FirestorePermissionError({
             path: expenseDocRef.path,
