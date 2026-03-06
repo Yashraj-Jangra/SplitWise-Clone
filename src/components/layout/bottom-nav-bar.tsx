@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icons, type IconName } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import type { Group } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { getGroupsByUserId } from '@/lib/mock-data';
@@ -28,6 +28,15 @@ export function BottomNavBar() {
     }
   }, [userProfile]);
 
+  const currentGroup = useMemo(() => {
+    const match = pathname.match(/^\/groups\/([^/]+)/);
+    if (match) {
+      const groupId = match[1];
+      return groups.find(g => g.id === groupId);
+    }
+    return undefined;
+  }, [pathname, groups]);
+
   return (
     <footer className="md:hidden fixed bottom-0 left-0 z-50 w-full h-16 border-t bg-background/95 backdrop-blur-sm">
         <div className="grid h-full grid-cols-5">
@@ -44,7 +53,7 @@ export function BottomNavBar() {
             
             <div className="flex items-center justify-center">
                 <div className="-mt-8">
-                    <BottomNavAddButton groups={groups} />
+                    <BottomNavAddButton groups={groups} currentGroup={currentGroup} />
                 </div>
             </div>
 

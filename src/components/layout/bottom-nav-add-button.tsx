@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -22,6 +21,7 @@ import React from 'react';
 
 interface BottomNavAddButtonProps {
   groups: Group[];
+  currentGroup?: Group;
 }
 
 const FabTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>((props, ref) => (
@@ -38,8 +38,17 @@ const FabTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttribute
 FabTrigger.displayName = 'FabTrigger';
 
 
-export function BottomNavAddButton({ groups }: BottomNavAddButtonProps) {
+export function BottomNavAddButton({ groups, currentGroup }: BottomNavAddButtonProps) {
   const [isSelectGroupOpen, setIsSelectGroupOpen] = useState(false);
+
+  if (currentGroup) {
+    return (
+      <AddExpenseDialog 
+        group={currentGroup} 
+        trigger={<FabTrigger />}
+      />
+    );
+  }
 
   if (groups.length === 0) {
     return (
