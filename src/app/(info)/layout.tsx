@@ -17,7 +17,7 @@ export default function InfoLayout({
     return (
         <div className="flex min-h-screen flex-col bg-background">
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
-                <div className="container flex h-16 items-center">
+                <div className="container flex h-16 items-center px-4">
                     <Link href="/landing" className="flex items-center space-x-2">
                         <Icons.Logo className="h-8 w-8 text-primary" />
                         {loading ? <Skeleton className="h-6 w-32" /> : <span className="inline-block font-bold text-xl">{settings.appName}</span>}
@@ -27,9 +27,9 @@ export default function InfoLayout({
             <main className="flex flex-1 flex-col items-center">
                 <div className="container w-full max-w-3xl py-8 md:py-12">{children}</div>
             </main>
-            <footer className="py-6 md:px-8 md:py-0 border-t">
-                <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
-                <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+            <footer className="border-t">
+                <div className="container flex flex-col items-center justify-between gap-4 py-8 px-4 md:h-24 md:flex-row">
+                <p className="text-sm text-muted-foreground">
                     &copy; <DynamicYear /> {settings.appName}. All rights reserved.
                 </p>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
