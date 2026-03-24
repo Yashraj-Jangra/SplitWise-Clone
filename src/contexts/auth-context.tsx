@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -41,6 +42,13 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
   const userDocSnap = await getDoc(userDocRef);
   if (userDocSnap.exists()) {
     const data = userDocSnap.data();
+    const defaultNotificationSettings = {
+        new_expense: true,
+        expense_updated: true,
+        new_settlement: true,
+        member_added: true,
+        debt_reminder: true,
+    };
     return {
       uid: userDocSnap.id,
       firstName: data.firstName,
@@ -53,6 +61,7 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
       mobileNumber: data.mobileNumber,
       dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined,
       createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+      notificationSettings: { ...defaultNotificationSettings, ...(data.notificationSettings || {}) },
     } as UserProfile;
   }
   return null;
@@ -89,8 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             const userRole = user.email === ADMIN_EMAIL ? 'admin' : 'user';
 
-            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
-                uid: user.uid,
+            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob' | 'notificationSettings'> = {
                 firstName: firstName,
                 lastName: lastName,
                 username: username,
@@ -102,6 +110,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await setDoc(doc(db, "users", user.uid), {
                 ...newUserProfile,
                 createdAt: Timestamp.now(),
+                notificationSettings: {
+                    new_expense: true,
+                    expense_updated: true,
+                    new_settlement: true,
+                    member_added: true,
+                    debt_reminder: true,
+                }
             });
 
             if (userRole === 'admin') {
@@ -153,14 +168,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userRole = data.email === ADMIN_EMAIL ? 'admin' : 'user';
 
         // 3. If username is available, create the user profile document.
-        const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> & {uid: string; createdAt: Timestamp; dob?: Timestamp} = {
-            uid: user.uid,
+        const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob' | 'notificationSettings'> = {
             ...data,
             role: userRole,
             avatarUrl: `https://placehold.co/100x100.png?text=${data.firstName.substring(0, 1).toUpperCase()}${data.lastName?.substring(0, 1).toUpperCase() || ''}`,
         };
         
-        const finalProfileData: any = { ...newUserProfile, createdAt: Timestamp.now() };
+        const finalProfileData: any = { 
+            ...newUserProfile, 
+            createdAt: Timestamp.now(),
+            notificationSettings: {
+                new_expense: true,
+                expense_updated: true,
+                new_settlement: true,
+                member_added: true,
+                debt_reminder: true,
+            }
+        };
         if (data.dob) {
             finalProfileData.dob = Timestamp.fromDate(new Date(data.dob));
         }

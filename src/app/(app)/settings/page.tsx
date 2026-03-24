@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { UserGroupsList } from "@/components/shared/user-groups-list";
+import { Switch } from "@/components/ui/switch";
 
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,7 @@ import { getFullName, getInitials } from "@/lib/utils";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { useTheme } from "@/contexts/theme-context";
 import { Check } from "lucide-react";
+import type { NotificationCategory } from "@/types";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -59,6 +61,24 @@ const passwordSchema = z.object({
 });
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
+
+const notificationSettingsSchema = z.object({
+    new_expense: z.boolean().default(true),
+    expense_updated: z.boolean().default(true),
+    new_settlement: z.boolean().default(true),
+    member_added: z.boolean().default(true),
+    debt_reminder: z.boolean().default(true),
+});
+type NotificationSettingsFormValues = z.infer<typeof notificationSettingsSchema>;
+
+const notificationCategories: { id: NotificationCategory; label: string; description: string }[] = [
+  { id: 'new_expense', label: 'New Expenses', description: 'Get notified when an expense is added to your groups.' },
+  { id: 'expense_updated', label: 'Expense Updates', description: 'Receive alerts when an expense you are part of is edited.' },
+  { id: 'new_settlement', label: 'New Settlements', description: 'Get notified when a settlement involving you is recorded.' },
+  { id: 'member_added', label: 'Group Invitations', description: 'Receive an alert when you are added to a new group.' },
+  { id: 'debt_reminder', label: 'Debt Reminders', description: 'Get periodic reminders for your outstanding debts.' },
+];
+
 
 export default function SettingsPage() {
   const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword } = useAuth();
@@ -91,6 +111,17 @@ export default function SettingsPage() {
     }
   });
 
+  const notificationsForm = useForm<NotificationSettingsFormValues>({
+    resolver: zodResolver(notificationSettingsSchema),
+    defaultValues: {
+        new_expense: true,
+        expense_updated: true,
+        new_settlement: true,
+        member_added: true,
+        debt_reminder: true,
+    }
+  });
+
   useEffect(() => {
     if (userProfile && siteSettings.countryCodes.length > 0) {
       const defaultCountry = siteSettings.countryCodes.find(c => c.code === userProfile.countryCode) || siteSettings.countryCodes[0];
@@ -104,8 +135,11 @@ export default function SettingsPage() {
         dob: userProfile.dob ? new Date(userProfile.dob).toISOString() : '',
         avatarUrl: userProfile.avatarUrl || '',
       });
+      if (userProfile.notificationSettings) {
+        notificationsForm.reset(userProfile.notificationSettings);
+      }
     }
-  }, [userProfile, profileForm, siteSettings.countryCodes]);
+  }, [userProfile, profileForm, siteSettings.countryCodes, notificationsForm]);
 
   async function onProfileSubmit(values: ProfileFormValues) {
     if (!userProfile) return;
@@ -160,6 +194,20 @@ export default function SettingsPage() {
             }
         }
         toast({ variant: "destructive", title: "Update Failed", description });
+    }
+  }
+  
+  async function onNotificationsSubmit(values: NotificationSettingsFormValues) {
+    if (!userProfile) return;
+    try {
+        await updateUser(userProfile.uid, { notificationSettings: values });
+        toast({ title: "Notification settings updated." });
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not save notification settings.",
+        });
     }
   }
 
@@ -365,6 +413,50 @@ export default function SettingsPage() {
               </div>
           </CardContent>
       </Card>
+
+      <Separator />
+
+      <Form {...notificationsForm}>
+          <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)}>
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="flex items-center">
+                          <Icons.Bell className="h-5 w-5 mr-2 text-primary" />
+                          Notifications
+                      </CardTitle>
+                      <CardDescription>Manage how you receive alerts from the application.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                      {notificationCategories.map((cat) => (
+                          <FormField
+                              key={cat.id}
+                              control={notificationsForm.control}
+                              name={cat.id}
+                              render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                      <div className="space-y-0.5">
+                                          <FormLabel className="text-base">{cat.label}</FormLabel>
+                                          <p className="text-sm text-muted-foreground">{cat.description}</p>
+                                      </div>
+                                      <FormControl>
+                                          <Switch
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                          />
+                                      </FormControl>
+                                  </FormItem>
+                              )}
+                          />
+                      ))}
+                  </CardContent>
+                  <CardFooter className="border-t px-6 py-4 flex justify-end">
+                      <Button type="submit" disabled={notificationsForm.formState.isSubmitting}>
+                          {notificationsForm.formState.isSubmitting ? "Saving..." : "Save Notification Settings"}
+                      </Button>
+                  </CardFooter>
+              </Card>
+          </form>
+      </Form>
 
 
       <Separator />

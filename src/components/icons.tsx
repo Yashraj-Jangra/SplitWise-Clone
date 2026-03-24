@@ -102,6 +102,7 @@ import {
   Bell,
   Megaphone,
   Archive,
+  BellRing,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -297,6 +298,7 @@ export const Icons = {
   Ship,
   Apple,
   Bell,
+  BellRing,
   Announcement: Megaphone,
   Google: ({ className }: { className?: string }) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className={cn("h-4 w-4", className)}>

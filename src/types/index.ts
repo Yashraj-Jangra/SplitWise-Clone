@@ -3,6 +3,8 @@
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
+export type NotificationCategory = 'new_expense' | 'expense_updated' | 'new_settlement' | 'member_added' | 'debt_reminder';
+
 // Base user profile stored in Firestore
 export interface UserProfile {
   uid: string;
@@ -16,6 +18,7 @@ export interface UserProfile {
   dob?: string; // ISO string for client
   role: 'admin' | 'user';
   createdAt?: string; // ISO string for client
+  notificationSettings?: Record<NotificationCategory, boolean>;
 }
 
 // --- Firestore Document Types ---
@@ -113,6 +116,17 @@ export interface NotificationDocument {
     readBy: string[]; // Array of user UIDs who have read it
 }
 
+export interface UserNotificationDocument {
+  userId: string;
+  type: NotificationCategory;
+  title: string;
+  body: string;
+  link: string;
+  isRead: boolean;
+  createdAt: Timestamp;
+  relatedDocId: string; // e.g., expenseId, groupId
+}
+
 
 // --- Hydrated Types for Client-side Usage ---
 // These types include the full nested objects for easier display
@@ -195,7 +209,14 @@ export interface HistoryEvent extends Omit<HistoryEventDocument, 'timestamp' | '
 export interface Notification extends Omit<NotificationDocument, 'createdAt'> {
     id: string;
     createdAt: string; // ISO string
+    isRead?: boolean; // Added for client-side state
 }
+
+export interface UserNotification extends Omit<UserNotificationDocument, 'createdAt'> {
+  id: string;
+  createdAt: string;
+}
+
 
 export interface PolicySection {
   id: string;
