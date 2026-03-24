@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -77,6 +78,15 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
   const { toast } = useToast();
+  
+  // State for browser notification permissions
+  const [permission, setPermission] = useState('default');
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+        setPermission(window.Notification.permission);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -166,6 +176,22 @@ export function NotificationBell() {
         unsubPersonal();
     };
   }, [userProfile]);
+  
+  const handleRequestPermission = async () => {
+    if (!('Notification' in window)) {
+        toast({ title: 'Unsupported Browser', description: 'This browser does not support desktop notifications.', variant: 'destructive'});
+        return;
+    }
+    const newPermission = await Notification.requestPermission();
+    setPermission(newPermission);
+    if (newPermission === 'granted') {
+        toast({ title: 'Notifications Enabled', description: 'You will now receive browser notifications.' });
+        // Later: Here we would subscribe the user to a push service (e.g., FCM)
+    } else {
+        toast({ title: 'Notifications Blocked', description: 'To enable notifications, please go to your browser settings.', variant: 'destructive' });
+    }
+  };
+
 
   const handleNotificationClick = (notif: DisplayNotification) => {
     setOpen(false);
@@ -245,6 +271,13 @@ export function NotificationBell() {
             </div>
           )}
         </ScrollArea>
+        {permission === 'default' && (
+          <div className="p-4 border-t bg-muted/50 text-center">
+            <p className="text-sm font-medium">Get alerts on your device?</p>
+            <p className="text-xs text-muted-foreground mb-3">Enable browser notifications for real-time updates.</p>
+            <Button size="sm" className="w-full" onClick={handleRequestPermission}>Enable Notifications</Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

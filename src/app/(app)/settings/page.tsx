@@ -87,6 +87,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [browserNotifPermission, setBrowserNotifPermission] = useState('default');
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -121,6 +122,12 @@ export default function SettingsPage() {
         debt_reminder: true,
     }
   });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setBrowserNotifPermission(Notification.permission);
+    }
+  }, []);
 
   useEffect(() => {
     if (userProfile && siteSettings.countryCodes.length > 0) {
@@ -241,6 +248,20 @@ export default function SettingsPage() {
       toast({ variant: 'destructive', title: 'Disconnection Failed', description: error instanceof Error ? error.message : 'An unknown error occurred.' });
     } finally {
       setIsGoogleLoading(false);
+    }
+  };
+  
+  const handleRequestPermission = async () => {
+    if (!('Notification' in window)) {
+        toast({ title: 'Unsupported Browser', description: 'This browser does not support desktop notifications.', variant: 'destructive'});
+        return;
+    }
+    const newPermission = await Notification.requestPermission();
+    setBrowserNotifPermission(newPermission);
+    if (newPermission === 'granted') {
+        toast({ title: 'Browser Notifications Enabled', description: 'You will now receive alerts on your device.' });
+    } else {
+        toast({ title: 'Notifications Blocked', description: 'To enable notifications, please update your browser settings.', variant: 'destructive' });
     }
   };
   
@@ -427,6 +448,29 @@ export default function SettingsPage() {
                       <CardDescription>Manage how you receive alerts from the application.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                      <div className="rounded-lg border p-4">
+                        <div className="flex flex-row items-center justify-between">
+                            <div className="space-y-0.5">
+                                <FormLabel className="text-base">Browser Push Notifications</FormLabel>
+                                <p className="text-sm text-muted-foreground">Receive real-time alerts directly on your device.</p>
+                            </div>
+                            {browserNotifPermission === 'default' && (
+                                <Button size="sm" type="button" onClick={handleRequestPermission}>Enable</Button>
+                            )}
+                        </div>
+                        {browserNotifPermission === 'granted' && (
+                            <div className="text-sm text-green-500 font-medium flex items-center gap-2 mt-2">
+                                <Icons.Check className="h-4 w-4" /> Enabled
+                            </div>
+                        )}
+                        {browserNotifPermission === 'denied' && (
+                            <p className="text-sm text-destructive font-medium mt-2">
+                                Disabled. Please enable notifications in your browser settings.
+                            </p>
+                        )}
+                      </div>
+
+                      <p className="text-sm font-medium text-muted-foreground pt-4 border-t">In-App Alerts</p>
                       {notificationCategories.map((cat) => (
                           <FormField
                               key={cat.id}
