@@ -1564,6 +1564,14 @@ const DEFAULT_EMAIL_SETTINGS = {
     }
 };
 
+const DEFAULT_NOTIFICATION_SETTINGS = {
+    new_expense: true,
+    expense_updated: true,
+    new_settlement: true,
+    member_added: true,
+    debt_reminder: true,
+};
+
 async function getExpenseCategories(): Promise<Record<string, MasterCategory>> {
     const docRef = doc(db, SETTINGS_COLLECTION, EXPENSE_CATEGORIES_DOC);
     const docSnap = await getDoc(docRef);
@@ -1650,6 +1658,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             maintenanceMode: { ...DEFAULT_MAINTENANCE_MODE_SETTINGS, ...(data.maintenanceMode || {}) },
             emailSettings,
             emailTemplates,
+            defaultNotificationSettings: { ...DEFAULT_NOTIFICATION_SETTINGS, ...(data.defaultNotificationSettings || {}) },
         };
     } else {
         const defaultSettings: SiteSettings = {
@@ -1673,6 +1682,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
             maintenanceMode: DEFAULT_MAINTENANCE_MODE_SETTINGS,
             emailSettings: DEFAULT_EMAIL_SETTINGS,
             emailTemplates: DEFAULT_EMAIL_TEMPLATES,
+            defaultNotificationSettings: DEFAULT_NOTIFICATION_SETTINGS,
         };
         await setDoc(generalDocRef, {
             ...defaultSettings,

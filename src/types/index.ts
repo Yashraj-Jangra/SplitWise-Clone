@@ -406,6 +406,7 @@ export interface SiteSettings {
     message: string;
     imageUrl: string;
   };
+  defaultNotificationSettings?: Record<NotificationCategory, boolean>;
 }
 
 export interface ExpenseCategory {

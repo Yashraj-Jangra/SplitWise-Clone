@@ -10,7 +10,7 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
 import { app, db, auth, firebaseError } from '@/lib/firebase';
-import { isUsernameTaken } from '@/lib/mock-data';
+import { isUsernameTaken, getSiteSettings } from '@/lib/mock-data';
 
 const ADMIN_EMAIL = 'jangrayash1505@gmail.com';
 
@@ -85,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!profile) {
             console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
+            const siteSettings = await getSiteSettings(); // FETCH SETTINGS
             let username = user.email?.split('@')[0] || `user${Date.now()}`;
             let usernameIsTaken = await isUsernameTaken(username);
             while (usernameIsTaken) {
@@ -110,13 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await setDoc(doc(db, "users", user.uid), {
                 ...newUserProfile,
                 createdAt: Timestamp.now(),
-                notificationSettings: {
-                    new_expense: true,
-                    expense_updated: true,
-                    new_settlement: true,
-                    member_added: true,
-                    debt_reminder: true,
-                }
+                notificationSettings: siteSettings.defaultNotificationSettings, // USE DEFAULTS
             });
 
             if (userRole === 'admin') {
@@ -165,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error("Username is already taken.");
         }
         
+        const siteSettings = await getSiteSettings();
         const userRole = data.email === ADMIN_EMAIL ? 'admin' : 'user';
 
         // 3. If username is available, create the user profile document.
@@ -177,13 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const finalProfileData: any = { 
             ...newUserProfile, 
             createdAt: Timestamp.now(),
-            notificationSettings: {
-                new_expense: true,
-                expense_updated: true,
-                new_settlement: true,
-                member_added: true,
-                debt_reminder: true,
-            }
+            notificationSettings: siteSettings.defaultNotificationSettings
         };
         if (data.dob) {
             finalProfileData.dob = Timestamp.fromDate(new Date(data.dob));
