@@ -5,77 +5,125 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- Helper Functions ---
-    function isAuth() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
     function isAdmin() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    // Requires a get() call, use for write/get operations, not list
-    function isGroupMember(groupId) {
-      let groupDoc = get(/databases/$(database)/documents/groups/$(groupId));
-      return isAuth() && (
-        (request.auth.uid in groupDoc.data.memberIds) || 
-        groupDoc.data.createdById == request.auth.uid
-      );
-    }
-    
-    // --- User Profiles ---
-    match /users/{userId} {
-      // Users can see their own profile, admins can see any
-      allow get: if isAuth() && (request.auth.uid == userId || isAdmin());
-      // Users can see a list of users (for adding to groups)
-      allow list: if isAuth();
-      // Users can create their own profile on signup
-      allow create: if isAuth() && request.auth.uid == userId;
-      // Users can update their own profile, admins can update any
-      allow update: if isAuth() && (request.auth.uid == userId || isAdmin());
-      // No one can delete a user profile through the app
-      allow delete: if false; 
+      // Check for the custom 'admin' claim on the user's token.
+      return isSignedIn() && request.auth.token.role == 'admin';
     }
 
-    // --- Groups ---
+    // --- Collections ---
+    
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isUser(userId) || isAdmin();
+      allow delete: if isAdmin(); 
+    }
+    
     match /groups/{groupId} {
-      // Admins can read/write anything
+      // Admins have full access.
       allow read, write: if isAdmin();
       
-      // Group members can read the group document
-      allow get: if isGroupMember(groupId);
-      // Users can list groups they are a member of
-      allow list: if isAuth() && request.auth.uid in resource.data.memberIds;
-      // Any authenticated user can create a group
-      allow create: if isAuth() && request.resource.data.createdById == request.auth.uid;
-      // Group creators can update the group (e.g. add members). Archiving is a special update.
-      allow update: if isGroupMember(groupId);
-      // Delete is handled by a special admin function, not direct client delete.
-      allow delete: if isAdmin();
-    }
-    
-    // --- Expenses ---
-    match /expenses/{expenseId} {
-       // Allow read if user is a member of the group this expense belongs to (using denormalized data), or an admin
-      allow read: if (isAuth() && request.auth.uid in resource.data.groupMemberIds) || isAdmin();
-      // Allow write if user is a member of the group (checking canonical source), or an admin
-      allow write: if isGroupMember(request.resource.data.groupId) || isAdmin();
-    }
-    
-    // --- Settlements ---
-    match /settlements/{settlementId} {
-      // Allow read if user is a member of the group this settlement belongs to (using denormalized data), or an admin
-      allow read: if (isAuth() && request.auth.uid in resource.data.groupMemberIds) || isAdmin();
-      // Allow write if user is a member of the group (checking canonical source), or an admin
-      allow write: if isGroupMember(request.resource.data.groupId) || isAdmin();
+      // Members can read groups they belong to.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      
+      // Any authenticated user can create a group.
+      allow create: if isSignedIn();
+      
+      // Update rule is more permissive for specific cases.
+      allow update: if resource.data.archivedAt == null && (
+        (
+          // Creator can update general info
+          request.auth.uid == resource.data.createdById
+        ) ||
+        (
+          // Members can ONLY update totalExpenses for expense add/delete operations
+          request.auth.uid in resource.data.memberIds &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalExpenses'])
+        )
+      );
     }
 
-    // --- History ---
+    match /expenses/{expenseId} {
+      // Admins have full access.
+      allow read, write: if isAdmin();
+      
+      // Members can read expenses in groups they belong to.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+
+      // Any member can create/update an expense in an active group.
+      allow create, update: if get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.archivedAt == null 
+                         && (request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds);
+
+      // Any member can delete an expense from an active group.
+      allow delete: if get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.archivedAt == null 
+                 && (request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds);
+    }
+    
+    match /settlements/{settlementId} {
+       // Admins have full access.
+       allow read, write: if isAdmin();
+      
+      // Members can read settlements in groups they belong to.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+
+      // Any member can create/update a settlement in an active group.
+      allow create, update: if get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.archivedAt == null
+                   && (request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds);
+
+      // Any member can delete a settlement from an active group.
+      allow delete: if get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.archivedAt == null
+                   && (request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds);
+    }
+    
     match /history/{historyId} {
-      // Allow read if user is a member of the group this event belongs to (using denormalized data), or an admin
-      allow read: if (isAuth() && request.auth.uid in resource.data.groupMemberIds) || isAdmin();
-      // History is only created/deleted on the server via actions
-      allow write: if false; 
-      allow delete: if isAdmin(); // Admin can delete history events
+        allow read, write: if isAdmin();
+        
+        // Members can read history for their groups.
+        allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
+
+        // History is mostly created on the server. Client can only update `restored` flag.
+        allow create: if isSignedIn();
+        allow update: if (request.auth.uid in resource.data.groupMemberIds)
+                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
+    }
+    
+    match /settings/{docId} {
+        allow read: if true; 
+        allow write: if isAdmin();
+    }
+    
+    match /tickets/{ticketId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isUser(resource.data.userId) || isAdmin();
+      allow update: if (isUser(resource.data.userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt', 'status'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /userNotifications/{notificationId} {
+      // Users can only read their own notifications.
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Users can create notifications for themselves (as triggered by client-side actions).
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Users can only update the 'isRead' status of their own notifications.
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false; // Deleting notifications is not a feature for now.
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isSignedIn()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+                    && request.resource.data.readBy.toSet().hasAll(resource.data.readBy.toSet());
+      allow delete: if isAdmin();
     }
   }
 }
