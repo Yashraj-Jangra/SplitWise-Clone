@@ -48,6 +48,7 @@ import type {
   MasterCategory,
   Notification,
   NotificationDocument,
+  NotificationCategory,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -271,6 +272,23 @@ export async function addMembersToGroup(groupId: string, memberIds: string[], ac
     const newMemberNames = newMembers.map(m => getFullName(m.firstName, m.lastName)).join(', ');
     const description = `${actorName} added ${newMemberNames} to the group.`;
     await logHistoryEvent(groupId, 'member_added', actorId, description, { memberIds });
+
+    // Notification Logic
+    const groupName = (await getDoc(groupDocRef)).data()?.name || 'your group';
+    for (const memberId of memberIds) {
+        const notifTitle = `You've been added to a group!`;
+        const notifBody = `${actorName} added you to the group "${groupName}".`;
+        const link = `/groups/${groupId}`;
+        // Non-blocking call
+        createNotification(
+            memberId,
+            'member_added',
+            notifTitle,
+            notifBody,
+            link,
+            groupId
+        );
+    }
 }
 
 export async function archiveGroup(groupId: string, actorId: string): Promise<void> {
@@ -438,6 +456,24 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
         const description = `${actorName} added expense "${expenseData.description}" for ${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)}.`;
         await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id, date: expenseData.date });
 
+        // Notification logic
+        const groupName = groupData.name;
+        const link = `/groups/${expenseData.groupId}`;
+        for (const participant of expenseData.participants) {
+            if (participant.userId !== actorId) { // Don't notify the person who made the change
+                const notifTitle = `New Expense in ${groupName}`;
+                const notifBody = `${actorName} added "${expenseData.description}" (${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)})`;
+                createNotification(
+                    participant.userId,
+                    'new_expense',
+                    notifTitle,
+                    notifBody,
+                    link,
+                    docRef.id
+                );
+            }
+        }
+
         return docRef.id;
     } catch (serverError) {
          const permissionError = new FirestorePermissionError({
@@ -491,7 +527,7 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
             totalExpenses: newTotal
         });
 
-        // --- History Logging ---
+        // --- History & Notification Logging ---
         if (oldData) {
             const groupMembers = await hydrateUsers(groupData.memberIds);
             const userMap = new Map(groupMembers.map(u => [u.uid, u]));
@@ -588,15 +624,36 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
                     ? `${uniqueSummaries.slice(0, 2).join(', ')} and other details`
                     : uniqueSummaries.join(' and ');
                 description = `${actorName} updated the ${summaryText} for expense "${oldData?.description}".`;
-            } else {
-                description = `${actorName} re-saved expense "${oldData?.description}" with no changes.`;
+                
+                await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
+                    expenseId,
+                    changes,
+                    date: expenseData.date,
+                });
+                
+                // Notification logic
+                const groupName = groupData.name;
+                const link = `/groups/${expenseData.groupId}`;
+                const notifiedUserIds = new Set<string>([actorId]); // Don't notify the actor
+
+                // Notify all participants about the update
+                for (const participant of expenseData.participants) {
+                    if (!notifiedUserIds.has(participant.userId)) {
+                        const notifTitle = `Expense Updated in ${groupName}`;
+                        const notifBody = `${actorName} updated "${expenseData.description}".`;
+                        // Non-blocking call
+                        createNotification(
+                            participant.userId,
+                            'expense_updated',
+                            notifTitle,
+                            notifBody,
+                            link,
+                            expenseId
+                        );
+                        notifiedUserIds.add(participant.userId);
+                    }
+                }
             }
-            
-            await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
-                expenseId,
-                changes,
-                date: expenseData.date,
-            });
         }
     } catch (serverError) {
         const permissionError = new FirestorePermissionError({
@@ -836,6 +893,23 @@ export async function addSettlement(settlementData: Omit<SettlementDocument, 'da
 
     const description = `${actorName} recorded a settlement: ${paidByName} paid ${paidToName} ${CURRENCY_SYMBOL}${settlementData.amount.toFixed(2)}.`;
     await logHistoryEvent(settlementData.groupId, 'settlement_created', actorId, description, { settlementId: docRef.id, date: settlementData.date });
+
+    // Notification Logic
+    if (settlementData.paidToId !== actorId) {
+        const groupName = groupData.name;
+        const notifTitle = `Payment Recorded in ${groupName}`;
+        const notifBody = `${paidByName} recorded a payment of ${CURRENCY_SYMBOL}${settlementData.amount.toFixed(2)} to you.`;
+        const link = `/groups/${settlementData.groupId}`;
+        
+        createNotification(
+            settlementData.paidToId,
+            'new_settlement',
+            notifTitle,
+            notifBody,
+            link,
+            docRef.id
+        );
+    }
 
     return docRef.id;
 }
@@ -1295,6 +1369,40 @@ export async function deleteHistoryEvent(historyEventId: string): Promise<void> 
     await deleteDoc(historyDocRef);
 }
 
+// --- Notification Generation ---
+
+async function createNotification(
+  userId: string,
+  type: NotificationCategory,
+  title: string,
+  body: string,
+  link: string,
+  relatedDocId: string
+) {
+  try {
+    const userProfile = await getUserProfile(userId);
+    // If user profile doesn't exist, or settings are explicitly false, do nothing.
+    // Default to true if settings are undefined.
+    if (!userProfile || userProfile.notificationSettings?.[type] === false) {
+      return;
+    }
+
+    const notificationsCol = collection(db, 'userNotifications');
+    await addDoc(notificationsCol, {
+      userId,
+      type,
+      title,
+      body,
+      link,
+      isRead: false,
+      createdAt: Timestamp.now(),
+      relatedDocId,
+    });
+  } catch (error) {
+    console.error(`Failed to create notification for user ${userId}:`, error);
+    // We don't want notification failure to break the main operation, so we just log the error.
+  }
+}
 
 // --- Site Settings ---
 const SETTINGS_COLLECTION = 'settings';
@@ -1694,7 +1802,7 @@ export async function updateTicket(ticketId: string, data: Partial<SupportTicket
     await updateDoc(ticketDocRef, updateData);
 }
 
-// --- Notification Functions ---
+// --- Admin Notification Functions ---
 
 export async function getAllNotifications(): Promise<Notification[]> {
     const notifsCol = collection(db, 'notifications');
