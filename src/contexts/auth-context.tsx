@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             const userRole = user.email === ADMIN_EMAIL ? 'admin' : 'user';
 
-            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob' | 'notificationSettings'> = {
+            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> = {
                 firstName: firstName,
                 lastName: lastName,
                 username: username,
@@ -111,7 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await setDoc(doc(db, "users", user.uid), {
                 ...newUserProfile,
                 createdAt: Timestamp.now(),
-                notificationSettings: siteSettings.defaultNotificationSettings, // USE DEFAULTS
             });
 
             if (userRole === 'admin') {
@@ -164,16 +163,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userRole = data.email === ADMIN_EMAIL ? 'admin' : 'user';
 
         // 3. If username is available, create the user profile document.
-        const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob' | 'notificationSettings'> = {
+        const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> = {
             ...data,
             role: userRole,
-            avatarUrl: `https://placehold.co/100x100.png?text=${data.firstName.substring(0, 1).toUpperCase()}${data.lastName?.substring(0, 1).toUpperCase() || ''}`,
+            avatarUrl: `https://ui-avatars.com/api/?name=${data.firstName}+${data.lastName || ''}`,
         };
         
         const finalProfileData: any = { 
             ...newUserProfile, 
             createdAt: Timestamp.now(),
-            notificationSettings: siteSettings.defaultNotificationSettings
         };
         if (data.dob) {
             finalProfileData.dob = Timestamp.fromDate(new Date(data.dob));

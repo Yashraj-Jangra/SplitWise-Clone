@@ -8,7 +8,7 @@ export function renderEmail(
 ): string {
   // Replace {variable} with its value in the body
   let renderedBody = templateBody;
-  for (const [key, value] = Object.entries(variables)) {
+  for (const [key, value] of Object.entries(variables)) {
     const regex = new RegExp(`{${key}}`, 'g');
     renderedBody = renderedBody.replace(regex, String(value));
   }

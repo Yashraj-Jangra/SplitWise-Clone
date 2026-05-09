@@ -46,9 +46,9 @@ export function QuickInsights({ currentExpenses, previousExpenses }: QuickInsigh
             return acc;
         }, {} as Record<string, number>);
 
-        const topCategory = Object.keys(expensesByCategory).length > 0
+        const topCategory = (Object.keys(expensesByCategory).length > 0
             ? Object.entries(expensesByCategory).reduce((a, b) => a[1] > b[1] ? a : b)
-            : ['N/A', 0];
+            : ['N/A', 0]) as [string, number];
 
         const dateRange = currentExpenses.length > 0 ? differenceInDays(
             new Date(Math.max(...currentExpenses.map(e => new Date(e.date).getTime()))),

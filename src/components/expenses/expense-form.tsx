@@ -866,7 +866,8 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
                 participants: finalParticipants,
                 splitType: values.splitType,
                 category: values.category,
-                expenseCreatorId: expenseToEdit.expenseCreatorId,
+                expenseCreatorId: expenseToEdit.expenseCreator.uid,
+                groupCreatorId: group.createdBy.uid,
                 createdAt: expenseToEdit.createdAt,
             }, userProfile.uid);
             toast({ title: 'Expense Updated!', description: `"${values.description}" has been successfully updated.` });

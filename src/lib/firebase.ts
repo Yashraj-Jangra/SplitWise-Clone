@@ -13,10 +13,10 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-let storage: FirebaseStorage | null = null;
+let app: FirebaseApp = null as unknown as FirebaseApp;
+let auth: Auth = null as unknown as Auth;
+let db: Firestore = null as unknown as Firestore;
+let storage: FirebaseStorage = null as unknown as FirebaseStorage;
 let firebaseError: string | null = null;
 
 try {
@@ -33,10 +33,6 @@ try {
 } catch (error: any) {
   firebaseError = error.message || "Failed to initialize Firebase. Check your .env configuration.";
   console.error("Firebase Initialization Error:", firebaseError);
-  app = null;
-  auth = null;
-  db = null;
-  storage = null;
 }
 
 export { app, auth, db, storage, firebaseError };

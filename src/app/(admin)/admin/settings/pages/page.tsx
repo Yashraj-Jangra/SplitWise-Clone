@@ -38,7 +38,7 @@ export default function AdminContentPagesPage() {
     fetchSettings();
   }, [toast]);
   
-  const handleAboutChange = (field: keyof SiteSettings['about'], value: any) => {
+  const handleAboutChange = (field: keyof NonNullable<SiteSettings['about']>, value: any) => {
     if (!settings) return;
     setSettings(prev => prev ? ({ ...prev, about: { ...prev.about!, [field]: value }}) : null);
   }

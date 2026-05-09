@@ -101,7 +101,7 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
         paidById: values.paidById,
         paidToId: values.paidToId,
         amount: values.amount,
-        date: values.date,
+        date: values.date as unknown as any,
         notes: values.notes,
     };
 

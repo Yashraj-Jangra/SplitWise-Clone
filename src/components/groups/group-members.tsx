@@ -90,7 +90,7 @@ interface GroupMembersProps {
 
 export function GroupMembers({ members, group }: GroupMembersProps) {
   const { userProfile } = useAuth();
-  const isCreator = userProfile?.uid === group.createdById;
+  const isCreator = userProfile?.uid === group.createdBy.uid;
   const isAdmin = userProfile?.role === 'admin';
 
   return (
@@ -106,7 +106,7 @@ export function GroupMembers({ members, group }: GroupMembersProps) {
         <ScrollArea className="h-[45vh] -mx-6 pr-6">
             <div className="divide-y divide-border/50">
             {members.map((member) => {
-                const canRemove = (isCreator || isAdmin) && member.uid !== group.createdById && !group.archivedAt;
+                const canRemove = (isCreator || isAdmin) && member.uid !== group.createdBy.uid && !group.archivedAt;
                 return (
                      <div key={member.uid} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
                         <Avatar className="h-9 w-9">
@@ -119,7 +119,7 @@ export function GroupMembers({ members, group }: GroupMembersProps) {
                             <p className="text-xs text-muted-foreground">{member.email}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                             {member.uid === group.createdById && (
+                             {member.uid === group.createdBy.uid && (
                                 <span className="text-xs font-semibold uppercase text-primary/80 tracking-wider">Creator</span>
                              )}
                              {canRemove && <MemberActions member={member} group={group} />}

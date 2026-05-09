@@ -400,7 +400,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     />
                     <Tooltip
                         cursor={false}
-                        content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalMemberShareAmount)} />}
+                        content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name as string, props, totalMemberShareAmount)} />}
                     />
                     <Bar dataKey="total" radius={4}>
                         {totalShareByMember.map((entry, index) => (
@@ -412,7 +412,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
              ) : (
                 <ChartContainer config={userChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalMemberShareAmount)} />} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name as string, props, totalMemberShareAmount)} />} />
                         <Pie
                             data={totalShareByMember}
                             dataKey="total"
@@ -462,7 +462,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
                     <BarChart data={expensesByCategory} layout="vertical" accessibilityLayer margin={{left: 10, right: 20}}>
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={5} width={isMobile ? 80 : 100} className="text-xs" stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => isMobile && value.length > 10 ? `${value.substring(0, 10)}...` : value} />
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalCategoryAmount)}/>} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name as string, props, totalCategoryAmount)}/>} />
                         <Bar dataKey="total" radius={4}>
                             {expensesByCategory.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
@@ -473,7 +473,7 @@ export function GroupAnalysisCharts({ expenses, members }: GroupAnalysisChartsPr
               ) : (
                 <ChartContainer config={categoryChartConfig} className="h-[220px] md:h-[250px] w-full">
                     <PieChart accessibilityLayer>
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name, props, totalCategoryAmount)} />} />
+                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => customTooltipFormatter(value as number, name as string, props, totalCategoryAmount)} />} />
                         <Pie
                             data={expensesByCategory}
                             dataKey="total"

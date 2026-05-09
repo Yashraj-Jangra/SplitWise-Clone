@@ -69,7 +69,7 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
     },
   });
   
-  const isCreator = userProfile?.uid === group.createdById;
+  const isCreator = userProfile?.uid === group.createdBy.uid;
   const isSettled = balances.every(b => Math.abs(b.netBalance) < 0.01);
   const isArchived = !!group.archivedAt;
 

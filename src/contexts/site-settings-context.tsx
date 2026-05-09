@@ -20,7 +20,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       appName: DEFAULT_APP_NAME,
       coverImages: [],
       logoUrl: '',
-  } as SiteSettings);
+  } as unknown as SiteSettings);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

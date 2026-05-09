@@ -28,10 +28,11 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
       return false;
     }
 
+    if (!app) throw new Error("Firebase app not initialized");
     const messaging = getMessaging(app);
 
     // Send config to Service Worker for background message handling
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && app) {
         const registration = await navigator.serviceWorker.ready;
         registration.active?.postMessage({
             type: 'SET_FIREBASE_CONFIG',
@@ -58,6 +59,7 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
       }
 
       // Save to Firestore: push_subscriptions/{userId}/devices/{deviceId}
+      if (!db) throw new Error("Firestore not initialized");
       const tokenDocRef = doc(db, 'push_subscriptions', userId, 'devices', deviceId);
       await setDoc(tokenDocRef, {
         userId,
@@ -83,11 +85,13 @@ export async function unsubscribeFromPush(userId: string): Promise<void> {
         const messagingSupported = await isSupported();
         if (!messagingSupported) return;
 
+        if (!app) return;
         const messaging = getMessaging(app);
         await deleteToken(messaging);
 
         const deviceId = localStorage.getItem('push_device_id');
         if (deviceId) {
+             if (!db) return;
              const tokenDocRef = doc(db, 'push_subscriptions', userId, 'devices', deviceId);
              await deleteDoc(tokenDocRef);
         }

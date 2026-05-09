@@ -6,8 +6,8 @@ export const defaultExpenseCategories: Record<string, MasterCategory> = {
   'Food and Drink': {
     subCategories: {
       'Groceries': { icon: 'ShoppingBag', keywords: ['grocery', 'market', 'supermarket', 'bigbasket', 'blinkit', 'instamart'] },
-      'Dining Out': { icon: 'UtensilsCrossed', keywords: ['restaurant', 'cafe', 'bar', 'pub', 'dining', 'dinner', 'lunch', 'breakfast'] },
-      'Takeout': { icon: 'UtensilsCrossed', keywords: ['takeout', 'swiggy', 'zomato', 'ubereats', 'food delivery'] },
+      'Dining Out': { icon: 'Food', keywords: ['restaurant', 'cafe', 'bar', 'pub', 'dining', 'dinner', 'lunch', 'breakfast'] },
+      'Takeout': { icon: 'Food', keywords: ['takeout', 'swiggy', 'zomato', 'ubereats', 'food delivery'] },
       'Coffee Shop': { icon: 'Wallet', keywords: ['coffee', 'starbucks', 'tea'] },
     },
   },
@@ -29,25 +29,25 @@ export const defaultExpenseCategories: Record<string, MasterCategory> = {
   },
   'Utilities': {
     subCategories: {
-      'Electricity': { icon: 'Bolt', keywords: ['electricity', 'power', 'bill'] },
-      'Water': { icon: 'Droplets', keywords: ['water bill'] },
+      'Electricity': { icon: 'Electricity', keywords: ['electricity', 'power', 'bill'] },
+      'Water': { icon: 'Water', keywords: ['water bill'] },
       'Internet': { icon: 'Wifi', keywords: ['internet', 'wifi', 'broadband', 'jiofiber', 'airtel'] },
-      'Phone': { icon: 'Smartphone', keywords: ['phone', 'mobile', 'recharge', 'postpaid', 'prepaid'] },
+      'Phone': { icon: 'Phone', keywords: ['phone', 'mobile', 'recharge', 'postpaid', 'prepaid'] },
     },
   },
   'Entertainment': {
     subCategories: {
-      'Movies': { icon: 'Film', keywords: ['movie', 'cinema', 'pvr', 'inox', 'bookmyshow'] },
-      'Games': { icon: 'Gamepad2', keywords: ['game', 'gaming', 'steam', 'playstation', 'xbox'] },
+      'Movies': { icon: 'Movie', keywords: ['movie', 'cinema', 'pvr', 'inox', 'bookmyshow'] },
+      'Games': { icon: 'Games', keywords: ['game', 'gaming', 'steam', 'playstation', 'xbox'] },
       'Music': { icon: 'Music', keywords: ['music', 'spotify', 'apple music', 'concert'] },
-      'TV/Streaming': { icon: 'Tv', keywords: ['netflix', 'hotstar', 'amazon prime', 'hulu', 'streaming'] },
+      'TV/Streaming': { icon: 'TV', keywords: ['netflix', 'hotstar', 'amazon prime', 'hulu', 'streaming'] },
       'Sports': { icon: 'Ticket', keywords: ['sports', 'tickets', 'match', 'ipl'] },
     },
   },
   'Shopping': {
     subCategories: {
-      'Clothing': { icon: 'Shirt', keywords: ['clothing', 'apparel', 'shirt', 'trousers', 'dress'] },
-      'Electronics': { icon: 'Laptop', keywords: ['electronics', 'gadget', 'phone', 'laptop', 'croma'] },
+      'Clothing': { icon: 'Clothing', keywords: ['clothing', 'apparel', 'shirt', 'trousers', 'dress'] },
+      'Electronics': { icon: 'Electronics', keywords: ['electronics', 'gadget', 'phone', 'laptop', 'croma'] },
       'Online': { icon: 'ShoppingBag', keywords: ['amazon', 'flipkart', 'myntra', 'online shopping'] },
     },
   },
@@ -55,7 +55,7 @@ export const defaultExpenseCategories: Record<string, MasterCategory> = {
     subCategories: {
       'Doctor': { icon: 'HeartPulse', keywords: ['doctor', 'clinic', 'consultation'] },
       'Pharmacy': { icon: 'HeartPulse', keywords: ['pharmacy', 'medicine', 'apollo'] },
-      'Gym': { icon: 'Heart', keywords: ['gym', 'fitness', 'cultfit'] },
+      'Gym': { icon: 'Health', keywords: ['gym', 'fitness', 'cultfit'] },
     },
   },
   'Personal Care': {
@@ -66,7 +66,7 @@ export const defaultExpenseCategories: Record<string, MasterCategory> = {
   },
   'Education': {
     subCategories: {
-      'Tuition/Fees': { icon: 'University', keywords: ['tuition', 'fees', 'school', 'college', 'university'] },
+      'Tuition/Fees': { icon: 'Education', keywords: ['tuition', 'fees', 'school', 'college', 'university'] },
       'Books/Supplies': { icon: 'Wallet', keywords: ['book', 'stationery'] },
     },
   },

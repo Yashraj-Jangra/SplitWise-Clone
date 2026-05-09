@@ -30,12 +30,12 @@ export async function POST(request: Request) {
 
         // If custom SMTP is not configured, use Firebase's built-in email sender
         if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail')) {
-            await getAuth(firebaseAdmin).generatePasswordResetLink(email);
+            await getAuth(firebaseAdmin.app()).generatePasswordResetLink(email);
             return NextResponse.json({ success: true, message: 'Password reset email sent successfully via Firebase.' });
         }
         
         // If using custom SMTP
-        const link = await getAuth(firebaseAdmin).generatePasswordResetLink(email);
+        const link = await getAuth(firebaseAdmin.app()).generatePasswordResetLink(email);
         const template = emailTemplates?.forgotPassword;
 
         if (!template) {

@@ -168,9 +168,6 @@ export default function SettingsPage() {
         dob: userProfile.dob ? new Date(userProfile.dob).toISOString() : '',
         avatarUrl: userProfile.avatarUrl || '',
       });
-      if (userProfile.notificationSettings) {
-        notificationsForm.reset(userProfile.notificationSettings);
-      }
     }
   }, [userProfile, profileForm, siteSettings.countryCodes, notificationsForm]);
 
@@ -290,19 +287,7 @@ export default function SettingsPage() {
     }
   };
   
-  const handleRequestPermission = async () => {
-    if (!('Notification' in window)) {
-        toast({ title: 'Unsupported Browser', description: 'This browser does not support desktop notifications.', variant: 'destructive'});
-        return;
-    }
-    const newPermission = await Notification.requestPermission();
-    setBrowserNotifPermission(newPermission);
-    if (newPermission === 'granted') {
-        toast({ title: 'Browser Notifications Enabled', description: 'You will now receive alerts on your device.' });
-    } else {
-        toast({ title: 'Notifications Blocked', description: 'To enable notifications, please update your browser settings.', variant: 'destructive' });
-    }
-  };
+
   
   const selectableThemes = allThemes.filter(t => siteSettings.userSelectableThemeIds?.includes(t.id));
 

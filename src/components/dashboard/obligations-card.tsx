@@ -64,7 +64,7 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
         setSelectedObligation(obligation);
 
         const allUserGroups = await getGroupsByUserId(userProfile.uid);
-        const groupsInCommon = allUserGroups.filter(g => g.memberIds.includes(obligation.user.uid));
+        const groupsInCommon = allUserGroups.filter(g => g.members.some(m => m.uid === obligation.user.uid));
         
         const groupsWithBalances = await Promise.all(
             groupsInCommon.map(async (group) => {

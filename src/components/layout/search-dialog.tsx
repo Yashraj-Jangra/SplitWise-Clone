@@ -53,14 +53,14 @@ export function SearchDialog() {
     setLoading(true);
 
     const userGroups = await getAllGroups();
-    const filteredGroups = userGroups.filter(g => g.memberIds.includes(userProfile.uid));
+    const filteredGroups = userGroups.filter(g => g.members.some(m => m.uid === userProfile.uid));
     
     const allExpenses = await getAllExpenses();
     const filteredExpenses = allExpenses.filter(e => e.groupMemberIds.includes(userProfile.uid));
 
     const mutualMemberIds = new Set<string>();
     filteredGroups.forEach(group => {
-        group.memberIds.forEach(id => mutualMemberIds.add(id));
+        group.members.forEach(m => mutualMemberIds.add(m.uid));
     });
     
     // Remove current user from the list of users to display

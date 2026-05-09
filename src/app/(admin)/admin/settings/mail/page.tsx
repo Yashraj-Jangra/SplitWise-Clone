@@ -30,10 +30,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAuth } from '@/contexts/auth-context';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-type EmailTemplateName = keyof SiteSettings['emailTemplates'];
-type FromAddressKey = keyof SiteSettings['emailSettings']['fromAddresses'];
+type EmailTemplateName = keyof NonNullable<SiteSettings['emailTemplates']>;
+type FromAddressKey = keyof NonNullable<SiteSettings['emailSettings']>['fromAddresses'];
 
-const templatePlaceholders: Record<EmailTemplateName, string[]> = {
+const templatePlaceholders: Partial<Record<EmailTemplateName, string[]>> = {
     registration: ['{appName}', '{userName}'],
     forgotPassword: ['{appName}', '{userName}', '{resetLink}'],
     loginNotification: ['{appName}', '{userName}'],
@@ -341,7 +341,7 @@ export default function AdminMailSettingsPage() {
                                                 <AccordionTrigger className="text-xs text-muted-foreground hover:no-underline p-0 h-auto">View available placeholders</AccordionTrigger>
                                                 <AccordionContent>
                                                     <div className="flex flex-wrap gap-2 pt-2">
-                                                        {templatePlaceholders[tKey].map(p => <Badge key={p} variant="secondary">{p}</Badge>)}
+                                                        {templatePlaceholders[tKey]?.map(p => <Badge key={p} variant="secondary">{p}</Badge>)}
                                                     </div>
                                                 </AccordionContent>
                                             </AccordionItem>

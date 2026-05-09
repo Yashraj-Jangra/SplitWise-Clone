@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
+import { Save } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
@@ -162,7 +163,7 @@ export default function AdminNotificationSettingsPage() {
                                 </CardContent>
                                 <CardFooter className="flex justify-end border-t p-4">
                                     <Button type="submit" disabled={isSaving || loading || !settings}>
-                                        {isSaving ? <Icons.Spinner className="animate-spin mr-2 h-4 w-4" /> : <Icons.Save className="mr-2 h-4 w-4" />}
+                                        {isSaving ? <Icons.AppLogo className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
                                         Save Templates
                                     </Button>
                                 </CardFooter>

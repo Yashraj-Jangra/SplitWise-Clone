@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
+import { Send } from 'lucide-react';
 
 
 const broadcastSchema = z.object({
@@ -143,12 +144,12 @@ export default function BroadcastPage() {
                 <Button type="submit" disabled={isBroadcasting}>
                   {isBroadcasting ? (
                     <>
-                      <Icons.Spinner className="mr-2 h-4 w-4 animate-spin" />
+                      <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />
                       Sending...
                     </>
                   ) : (
                     <>
-                      <Icons.Send className="mr-2 h-4 w-4" /> Send Broadcast
+                      <Send className="mr-2 h-4 w-4" /> Send Broadcast
                     </>
                   )}
                 </Button>

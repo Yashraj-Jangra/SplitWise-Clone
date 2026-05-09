@@ -153,7 +153,7 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
                         <Line
                             key={key}
                             dataKey={key}
-                            name={chartConfig[key].label}
+                            name={chartConfig[key].label as string}
                             type="monotone"
                             stroke={`var(--color-${key})`}
                             strokeWidth={2}
@@ -192,7 +192,7 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
                             dataKey={key}
                             stackId="a"
                             fill={`var(--color-${key})`}
-                            name={chartConfig[key].label}
+                            name={chartConfig[key].label as string}
                         />
                     ))}
                  </BarChart>

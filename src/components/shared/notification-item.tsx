@@ -51,7 +51,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       bgColor = 'bg-yellow-500/10';
       break;
     case 'support_reply':
-      Icon = Icons.HelpCircle;
+      Icon = Icons.Help;
       iconColor = 'text-cyan-500';
       bgColor = 'bg-cyan-500/10';
       break;

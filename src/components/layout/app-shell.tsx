@@ -256,7 +256,7 @@ export function AppShell({ children }: AppShellProps) {
         "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
         isCollapsed ? "md:grid-cols-[80px_1fr]" : "md:grid-cols-[280px_1fr]"
     )}>
-      <Sidebar isCollapsed={isCollapsed} onToggle={handleToggle} />
+      <Sidebar isCollapsed={!!isCollapsed} onToggle={handleToggle} />
        <div className="flex flex-col">
           <Header />
           <EmailVerificationBanner />

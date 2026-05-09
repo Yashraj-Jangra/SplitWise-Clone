@@ -1,5 +1,6 @@
 
 import type {NextConfig} from 'next';
+// @ts-expect-error next-pwa lacks type definitions
 import withPWA from 'next-pwa';
 
 const pwaEnabled = process.env.NODE_ENV === 'production';
