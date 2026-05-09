@@ -25,6 +25,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { UserGroupsList } from "@/components/shared/user-groups-list";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { EmailManagementSection } from "@/components/settings/email-management-section";
 
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
@@ -78,16 +80,36 @@ const notificationSettingsSchema = z.object({
 });
 type NotificationSettingsFormValues = z.infer<typeof notificationSettingsSchema>;
 
-const notificationCategories: { id: NotificationEventType; label: string; description: string }[] = [
-  { id: 'expense_added', label: 'New Expenses', description: 'When an expense is added to your groups.' },
-  { id: 'expense_updated', label: 'Expense Updates', description: 'When an expense you are part of is edited.' },
-  { id: 'expense_deleted', label: 'Expense Deleted', description: 'When an expense is deleted.' },
-  { id: 'settlement_added', label: 'New Settlements', description: 'When a settlement involving you is recorded.' },
-  { id: 'member_added', label: 'Group Invitations', description: 'When you are added to a new group.' },
-  { id: 'balance_reminder', label: 'Debt Reminders', description: 'Periodic reminders for your outstanding debts.' },
-  { id: 'support_reply', label: 'Support Ticket Replies', description: 'When an admin replies to your support ticket.' },
-  { id: 'broadcast_announcement', label: 'Announcements', description: 'General announcements from the team.' },
-  { id: 'broadcast_critical', label: 'Critical Alerts', description: 'Important system alerts.' },
+const notificationEventGroups: { label: string; events: { id: NotificationEventType; label: string; description: string }[] }[] = [
+  {
+    label: 'Expenses',
+    events: [
+      { id: 'expense_added', label: 'New Expenses', description: 'When an expense is added to your groups.' },
+      { id: 'expense_updated', label: 'Expense Updates', description: 'When an expense you are part of is edited.' },
+      { id: 'expense_deleted', label: 'Expense Deleted', description: 'When an expense is deleted.' },
+    ],
+  },
+  {
+    label: 'Payments',
+    events: [
+      { id: 'settlement_added', label: 'Settlements', description: 'When a settlement involving you is recorded.' },
+      { id: 'balance_reminder', label: 'Balance Reminders', description: 'Periodic reminders for your outstanding debts.' },
+    ],
+  },
+  {
+    label: 'Groups',
+    events: [
+      { id: 'member_added', label: 'Group Invitations', description: 'When you are added to a new group.' },
+    ],
+  },
+  {
+    label: 'System',
+    events: [
+      { id: 'support_reply', label: 'Support Replies', description: 'When an admin replies to your support ticket.' },
+      { id: 'broadcast_announcement', label: 'Announcements', description: 'General announcements from the team.' },
+      { id: 'broadcast_critical', label: 'Critical Alerts', description: 'Important system alerts.' },
+    ],
+  },
 ];
 
 
@@ -461,93 +483,113 @@ export default function SettingsPage() {
 
       <Separator />
 
+      <EmailManagementSection userProfile={userProfile} />
+
+      <Separator />
+
       <Form {...notificationsForm}>
           <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)}>
-              <Card>
-                  <CardHeader>
-                      <CardTitle className="flex items-center">
-                          <Icons.Bell className="h-5 w-5 mr-2 text-primary" />
-                          Notifications
+              <Card className="overflow-hidden">
+                  <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                              <Icons.Bell className="h-4 w-4 text-primary" />
+                          </div>
+                          Notification Preferences
                       </CardTitle>
-                      <CardDescription>Manage how you receive alerts from the application.</CardDescription>
+                      <CardDescription>Control which channels and events send you notifications.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                      <div className="rounded-lg border p-4">
-                        <div className="flex flex-row items-center justify-between">
-                            <div className="space-y-0.5">
-                                <FormLabel className="text-base">Browser Push Notifications</FormLabel>
-                                <p className="text-sm text-muted-foreground">Receive real-time alerts directly on your device.</p>
-                            </div>
-                            {browserNotifPermission === 'default' && (
-                                <Button size="sm" type="button" onClick={handleRequestPermission}>Enable</Button>
-                            )}
-                        </div>
-                        {browserNotifPermission === 'granted' && (
-                            <div className="text-sm text-green-500 font-medium flex items-center gap-2 mt-2">
-                                <Icons.Check className="h-4 w-4" /> Enabled
-                            </div>
-                        )}
-                        {browserNotifPermission === 'denied' && (
-                            <p className="text-sm text-destructive font-medium mt-2">
-                                Disabled. Please enable notifications in your browser settings.
-                            </p>
-                        )}
+
+                      {/* Browser Push Banner */}
+                      <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-4 py-3">
+                          <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                                  <Icons.Bell className="h-4 w-4" />
+                              </div>
+                              <div>
+                                  <p className="text-sm font-medium">Browser Push Notifications</p>
+                                  <p className="text-xs text-muted-foreground">Real-time alerts on this device</p>
+                              </div>
+                          </div>
+                          {browserNotifPermission === 'default' && (
+                              <Button size="sm" type="button" onClick={handleRequestPermission} className="text-xs">Enable</Button>
+                          )}
+                          {browserNotifPermission === 'granted' && (
+                              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 border text-xs">Active</Badge>
+                          )}
+                          {browserNotifPermission === 'denied' && (
+                              <Badge variant="destructive" className="text-xs">Blocked</Badge>
+                          )}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-                        <FormField control={notificationsForm.control} name="inAppEnabled" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20">
-                                <FormLabel className="text-base font-semibold">Master In-App</FormLabel>
-                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            </FormItem>
-                        )}/>
-                        <FormField control={notificationsForm.control} name="pushEnabled" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20">
-                                <FormLabel className="text-base font-semibold">Master Push</FormLabel>
-                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            </FormItem>
-                        )}/>
-                        <FormField control={notificationsForm.control} name="emailEnabled" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20">
-                                <FormLabel className="text-base font-semibold">Master Email</FormLabel>
-                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            </FormItem>
-                        )}/>
+                      {/* Master channel toggles */}
+                      <div className="space-y-2">
+                          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Master Switches</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              {[
+                                  { name: 'inAppEnabled' as const, label: 'In-App', icon: <Icons.Bell className="h-3.5 w-3.5" /> },
+                                  { name: 'pushEnabled' as const, label: 'Push', icon: <Icons.Bell className="h-3.5 w-3.5" /> },
+                                  { name: 'emailEnabled' as const, label: 'Email', icon: <Icons.Mail className="h-3.5 w-3.5" /> },
+                              ].map(({ name, label, icon }) => (
+                                  <FormField key={name} control={notificationsForm.control} name={name} render={({ field }) => (
+                                      <FormItem className="flex flex-row items-center justify-between rounded-xl border p-3 bg-muted/20 hover:bg-muted/40 transition-colors">
+                                          <div className="flex items-center gap-2">
+                                              <span className="text-muted-foreground">{icon}</span>
+                                              <FormLabel className="text-sm font-medium cursor-pointer">{label}</FormLabel>
+                                          </div>
+                                          <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                      </FormItem>
+                                  )} />
+                              ))}
+                          </div>
                       </div>
 
-                      <div className="space-y-4 pt-4 border-t overflow-x-auto">
-                        <div className="min-w-[500px]">
-                            <div className="grid grid-cols-12 gap-4 mb-2 px-2 text-sm font-medium text-muted-foreground">
-                                <div className="col-span-6">Event</div>
-                                <div className="col-span-2 text-center">In-App</div>
-                                <div className="col-span-2 text-center">Push</div>
-                                <div className="col-span-2 text-center">Email</div>
-                            </div>
-                            
-                            {notificationCategories.map((cat) => (
-                                <div key={cat.id} className="grid grid-cols-12 gap-4 items-center py-3 border-b last:border-0 hover:bg-muted/10 px-2 rounded-md transition-colors">
-                                    <div className="col-span-6 space-y-0.5">
-                                        <div className="text-sm font-medium">{cat.label}</div>
-                                        <div className="text-xs text-muted-foreground">{cat.description}</div>
-                                    </div>
-                                    <div className="col-span-2 flex justify-center">
-                                        <FormField control={notificationsForm.control} name={`events.${cat.id}.inApp`} render={({ field }) => (
-                                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                                        )} />
-                                    </div>
-                                    <div className="col-span-2 flex justify-center">
-                                        <FormField control={notificationsForm.control} name={`events.${cat.id}.push`} render={({ field }) => (
-                                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={!notificationsForm.watch('pushEnabled')} /></FormControl>
-                                        )} />
-                                    </div>
-                                    <div className="col-span-2 flex justify-center">
-                                        <FormField control={notificationsForm.control} name={`events.${cat.id}.email`} render={({ field }) => (
-                                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={!notificationsForm.watch('emailEnabled')} /></FormControl>
-                                        )} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                      {/* Per-event table grouped by category */}
+                      <div className="space-y-4 overflow-x-auto">
+                          <div className="min-w-[480px] space-y-5">
+                              {/* Column headers */}
+                              <div className="grid grid-cols-12 gap-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  <div className="col-span-6">Event</div>
+                                  <div className="col-span-2 text-center">In-App</div>
+                                  <div className="col-span-2 text-center">Push</div>
+                                  <div className="col-span-2 text-center">Email</div>
+                              </div>
+
+                              {notificationEventGroups.map((group) => (
+                                  <div key={group.label}>
+                                      <div className="flex items-center gap-2 mb-2 px-3">
+                                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{group.label}</span>
+                                          <div className="h-px flex-1 bg-border" />
+                                      </div>
+                                      <div className="rounded-xl border overflow-hidden">
+                                          {group.events.map((cat, idx) => (
+                                              <div key={cat.id} className={`grid grid-cols-12 gap-2 items-center py-3 px-3 hover:bg-muted/10 transition-colors ${idx < group.events.length - 1 ? 'border-b border-border/50' : ''}` }>
+                                                  <div className="col-span-6">
+                                                      <div className="text-sm font-medium leading-tight">{cat.label}</div>
+                                                      <div className="text-xs text-muted-foreground leading-tight mt-0.5">{cat.description}</div>
+                                                  </div>
+                                                  <div className="col-span-2 flex justify-center">
+                                                      <FormField control={notificationsForm.control} name={`events.${cat.id}.inApp`} render={({ field }) => (
+                                                          <FormControl><Switch checked={!!field.value} onCheckedChange={field.onChange} /></FormControl>
+                                                      )} />
+                                                  </div>
+                                                  <div className="col-span-2 flex justify-center">
+                                                      <FormField control={notificationsForm.control} name={`events.${cat.id}.push`} render={({ field }) => (
+                                                          <FormControl><Switch checked={!!field.value} onCheckedChange={field.onChange} disabled={!notificationsForm.watch('pushEnabled')} /></FormControl>
+                                                      )} />
+                                                  </div>
+                                                  <div className="col-span-2 flex justify-center">
+                                                      <FormField control={notificationsForm.control} name={`events.${cat.id}.email`} render={({ field }) => (
+                                                          <FormControl><Switch checked={!!field.value} onCheckedChange={field.onChange} disabled={!notificationsForm.watch('emailEnabled')} /></FormControl>
+                                                      )} />
+                                                  </div>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
                       </div>
 
                   </CardContent>

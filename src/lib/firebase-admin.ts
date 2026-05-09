@@ -76,6 +76,8 @@ const DEFAULT_EMAIL_SETTINGS = {
     sendingMethod: 'firebase' as 'firebase' | 'custom' | 'gmail',
     fromAddresses: {
         default: 'noreply@example.com',
+        auth: 'auth@example.com',
+        notifications: 'notifications@example.com',
         support: 'support@example.com',
         broadcast: 'broadcast@example.com',
     },

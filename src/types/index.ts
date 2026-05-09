@@ -400,6 +400,8 @@ export interface SiteSettings {
     sendingMethod: 'firebase' | 'custom' | 'gmail';
     fromAddresses: {
         default: string;
+        auth: string;
+        notifications: string;
         support: string;
         broadcast: string;
     };

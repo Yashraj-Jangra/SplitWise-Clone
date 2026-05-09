@@ -175,7 +175,7 @@ export async function POST(request: Request) {
 
                 try {
                     await transporter.sendMail({
-                        from: emailSettings?.fromAddresses?.default || '"App" <noreply@example.com>',
+                        from: emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || '"App" <noreply@example.com>',
                         to: user.email,
                         subject: renderEmail(template.subject, variables, settings, template.subject), // render subject too
                         html

@@ -1506,6 +1506,8 @@ const DEFAULT_EMAIL_SETTINGS = {
     sendingMethod: 'firebase' as 'firebase' | 'custom' | 'gmail',
     fromAddresses: {
         default: 'noreply@example.com',
+        auth: 'auth@example.com',
+        notifications: 'notifications@example.com',
         support: 'support@example.com',
         broadcast: 'broadcast@example.com',
     },
@@ -1565,7 +1567,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 
         const emailTemplates = { ...DEFAULT_EMAIL_TEMPLATES, ...(data.emailTemplates || {})};
         
-        // Merge fromAddresses carefully
+        // Merge fromAddresses carefully (new fields get defaults if missing)
         const defaultFrom = DEFAULT_EMAIL_SETTINGS.fromAddresses;
         const savedFrom = data.emailSettings?.fromAddresses || {};
         const fromAddresses = { ...defaultFrom, ...savedFrom };
@@ -1577,6 +1579,9 @@ export async function getSiteSettings(): Promise<SiteSettings> {
         if (data.emailSettings?.supportEmail && !savedFrom.support) {
             fromAddresses.support = data.emailSettings.supportEmail;
         }
+        // Backfill auth/notifications from default if not yet set
+        if (!fromAddresses.auth) fromAddresses.auth = fromAddresses.default;
+        if (!fromAddresses.notifications) fromAddresses.notifications = fromAddresses.default;
         
         const emailSettings = { 
             ...DEFAULT_EMAIL_SETTINGS, 
@@ -1774,7 +1779,7 @@ const DEFAULT_USER_NOTIFICATION_PREFS: Omit<UserNotificationPrefsDocument, 'user
   pushEnabled: true,
   emailEnabled: true,
   events: {
-    expense_added: { inApp: true, push: true, email: true },
+    expense_added: { inApp: true, push: true, email: false },
     expense_updated: { inApp: true, push: false, email: false },
     expense_deleted: { inApp: true, push: false, email: false },
     settlement_added: { inApp: true, push: true, email: true },
