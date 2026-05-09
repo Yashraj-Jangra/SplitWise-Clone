@@ -1,56 +1,104 @@
-importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
+// Firebase Messaging Service Worker
+// This file MUST live in /public so it's served from the root scope.
+// It cannot import from src/ or use Next.js env vars directly.
+// Instead, the NEXT_PUBLIC_ vars are injected at build time by next.config.ts
+// via the swcMinify replacements, OR we inline them here manually.
 
-// Since this is a service worker, we don't have access to process.env.
-// In a real production setup, we would inject these config values using Webpack/Vite or host the SW via a Next.js API route that populates the config.
-// For now, we will wait for the client to send the config via postMessage.
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-let messaging = null;
+// -------------------------------------------------------------------------
+// IMPORTANT: These values are read from self.__FIREBASE_CONFIG which the
+// client injects via postMessage on every page load, AND we also fall back
+// to a hardcoded config so the SW works after a cold start / cache hit.
+// -------------------------------------------------------------------------
+const FALLBACK_CONFIG = {
+  apiKey: "AIzaSyA4ti6rybteSHsgN1rhpouTsL4DO4pYQvE",
+  authDomain: "billsplitter-x6rnw.firebaseapp.com",
+  projectId: "billsplitter-x6rnw",
+  storageBucket: "billsplitter-x6rnw.firebasestorage.app",
+  messagingSenderId: "437877855174",
+  appId: "1:437877855174:web:ef46c307593da45866d8c7",
+};
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SET_FIREBASE_CONFIG') {
-    const firebaseConfig = event.data.config;
+let messagingInitialized = false;
+
+function initFirebase(config) {
+  if (messagingInitialized) return;
+  try {
     if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+      firebase.initializeApp(config);
     }
-    messaging = firebase.messaging();
+    const messaging = firebase.messaging();
 
     messaging.onBackgroundMessage((payload) => {
-      console.log('[firebase-messaging-sw.js] Received background message ', payload);
-      
-      const notificationTitle = payload.notification?.title || 'New Notification';
-      const notificationOptions = {
-        body: payload.notification?.body,
-        icon: '/icons/icon-192x192.png', // Update to your app's PWA icon
-        data: payload.data, // Custom data sent with the push
+      console.log('[SW] Background message received:', payload);
+
+      const title = payload.notification?.title || 'New Notification';
+      const options = {
+        body: payload.notification?.body || '',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/badge-72x72.png',
+        data: payload.data || {},
+        tag: payload.data?.type || 'general', // Collapse duplicate notifications
+        renotify: true,
+        actions: [
+          { action: 'open', title: 'View' },
+          { action: 'dismiss', title: 'Dismiss' },
+        ],
       };
 
-      self.registration.showNotification(notificationTitle, notificationOptions);
+      self.registration.showNotification(title, options);
     });
+
+    messagingInitialized = true;
+    console.log('[SW] Firebase Messaging initialized successfully.');
+  } catch (err) {
+    console.error('[SW] Firebase init failed:', err);
+  }
+}
+
+// Initialize immediately with fallback config so background messages work
+// even without a postMessage from the client.
+initFirebase(FALLBACK_CONFIG);
+
+// Also allow the client to update the config (e.g. after dynamic config fetch)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SET_FIREBASE_CONFIG') {
+    initFirebase(event.data.config);
   }
 });
 
+// Handle notification click
 self.addEventListener('notificationclick', (event) => {
-  console.log('[firebase-messaging-sw.js] Notification click Received.', event);
+  console.log('[SW] Notification click:', event);
   event.notification.close();
 
-  // Handle URL click if provided in data
+  const action = event.action;
+  if (action === 'dismiss') return;
+
+  // Determine the URL to open
   const urlToOpen = event.notification.data?.url || '/';
-  
+
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Check if there is already a window/tab open with the target URL
-      for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
-        // If so, just focus it.
-        if (client.url.includes(urlToOpen) && 'focus' in client) {
-          return client.focus();
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        // Focus an existing tab if one is already open
+        for (const client of windowClients) {
+          if ('focus' in client) {
+            client.focus();
+            client.postMessage({
+              type: 'NOTIFICATION_CLICK',
+              data: event.notification.data,
+            });
+            return;
+          }
         }
-      }
-      // If not, open a new window/tab.
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(urlToOpen);
-      }
-    })
+        // Otherwise open a new tab
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(urlToOpen);
+        }
+      })
   );
 });

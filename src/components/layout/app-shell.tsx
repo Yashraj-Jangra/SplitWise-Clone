@@ -21,6 +21,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { SearchDialog } from "./search-dialog";
 import { NotificationBell } from "./notification-bell";
 import { BottomNavBar } from "./bottom-nav-bar";
+import { listenForForegroundMessages } from "@/lib/push-service";
 
 
 const mainNavItems: NavItem[] = [
@@ -244,10 +245,28 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = React.useState(isMobile);
-  
+  const { toast } = useToast();
+  const { userProfile } = useAuth();
+
   React.useEffect(() => {
     setIsCollapsed(isMobile);
   }, [isMobile]);
+
+  // Listen for foreground FCM push messages and show them as toasts
+  React.useEffect(() => {
+    if (!userProfile) return;
+    let unsubscribe: (() => void) | undefined;
+
+    listenForForegroundMessages((title, body) => {
+      toast({ title, description: body });
+    }).then((fn) => {
+      unsubscribe = fn;
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [userProfile, toast]);
 
   const handleToggle = () => setIsCollapsed(prev => !prev);
 
