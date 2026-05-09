@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,26 +10,25 @@ import { Icons } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
-import type { SiteSettings, NotificationCategory } from '@/types';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
-import { Switch } from '@/components/ui/switch';
+import type { SiteSettings } from '@/types';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const notificationSettingsSchema = z.object({
-    new_expense: z.boolean().default(true),
-    expense_updated: z.boolean().default(true),
-    new_settlement: z.boolean().default(true),
-    member_added: z.boolean().default(true),
-    debt_reminder: z.boolean().default(true),
+const templateSchema = z.object({
+  subject: z.string().min(1, 'Subject is required'),
+  body: z.string().min(1, 'Body is required'),
 });
-type NotificationSettingsFormValues = z.infer<typeof notificationSettingsSchema>;
 
-const notificationCategories: { id: NotificationCategory; label: string; description: string }[] = [
-  { id: 'new_expense', label: 'New Expenses', description: 'Get notified when an expense is added to your groups.' },
-  { id: 'expense_updated', label: 'Expense Updates', description: 'Receive alerts when an expense you are part of is edited.' },
-  { id: 'new_settlement', label: 'New Settlements', description: 'Get notified when a settlement involving you is recorded.' },
-  { id: 'member_added', label: 'Group Invitations', description: 'Receive an alert when you are added to a new group.' },
-  { id: 'debt_reminder', label: 'Debt Reminders', description: 'Get periodic reminders for your outstanding debts.' },
-];
+const templatesSchema = z.object({
+  expenseAdded: templateSchema,
+  settlementAdded: templateSchema,
+  memberAdded: templateSchema,
+  balanceReminder: templateSchema,
+  broadcast: templateSchema,
+});
+type TemplatesFormValues = z.infer<typeof templatesSchema>;
 
 export default function AdminNotificationSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -38,14 +36,14 @@ export default function AdminNotificationSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<NotificationSettingsFormValues>({
-    resolver: zodResolver(notificationSettingsSchema),
+  const form = useForm<TemplatesFormValues>({
+    resolver: zodResolver(templatesSchema),
     defaultValues: {
-        new_expense: true,
-        expense_updated: true,
-        new_settlement: true,
-        member_added: true,
-        debt_reminder: true,
+        expenseAdded: { subject: '', body: '' },
+        settlementAdded: { subject: '', body: '' },
+        memberAdded: { subject: '', body: '' },
+        balanceReminder: { subject: '', body: '' },
+        broadcast: { subject: '', body: '' },
     }
   });
 
@@ -55,8 +53,14 @@ export default function AdminNotificationSettingsPage() {
       try {
         const siteSettings = await getSiteSettings();
         setSettings(siteSettings);
-        if (siteSettings.defaultNotificationSettings) {
-            form.reset(siteSettings.defaultNotificationSettings);
+        if (siteSettings.emailTemplates) {
+            form.reset({
+                expenseAdded: siteSettings.emailTemplates.expenseAdded || { subject: 'New Expense Added in {groupName}', body: 'Hi {userName},\n\n{actorName} added a new expense "{description}" for {amount} in {groupName}.\n\nLog in to see details.\n\nThanks,\nThe {appName} Team' },
+                settlementAdded: siteSettings.emailTemplates.settlementAdded || { subject: 'Payment Received in {groupName}', body: 'Hi {userName},\n\n{actorName} recorded a payment of {amount} to you in {groupName}.\n\nLog in to see details.\n\nThanks,\nThe {appName} Team' },
+                memberAdded: siteSettings.emailTemplates.memberAdded || { subject: 'You were added to {groupName}', body: 'Hi {userName},\n\nYou were added to the group "{groupName}" by {actorName}.\n\nLog in to start tracking shared expenses.\n\nThanks,\nThe {appName} Team' },
+                balanceReminder: siteSettings.emailTemplates.balanceReminder || { subject: 'Balance Reminder from {appName}', body: 'Hi {userName},\n\nYou have outstanding balances in your groups. Please log in to settle up.\n\nThanks,\nThe {appName} Team' },
+                broadcast: siteSettings.emailTemplates.broadcast || { subject: '{broadcastSubject}', body: '{broadcastBody}' },
+            });
         }
       } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not load site settings.' });
@@ -67,28 +71,36 @@ export default function AdminNotificationSettingsPage() {
     fetchSettings();
   }, [toast, form]);
 
-  const handleSaveChanges = async (values: NotificationSettingsFormValues) => {
+  const handleSaveChanges = async (values: TemplatesFormValues) => {
     setIsSaving(true);
     try {
-      await updateSiteSettings({ defaultNotificationSettings: values });
+      // Need to preserve existing templates for other events
+      const existingTemplates = settings?.emailTemplates || {};
+      const updatedTemplates = {
+          ...existingTemplates,
+          ...values
+      };
+      
+      await updateSiteSettings({ emailTemplates: updatedTemplates as any });
       toast({
-        title: 'Settings Saved',
-        description: 'Default notification settings have been updated for all new users.',
+        title: 'Templates Saved',
+        description: 'Email notification templates have been updated.',
       });
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: 'Could not save the settings.',
+        description: 'Could not save the templates.',
       });
     } finally {
       setIsSaving(false);
     }
   };
   
-  const renderContent = () => {
-    if (loading || !settings) {
-        return (
+  if (loading || !settings) {
+      return (
+          <div className="space-y-6">
+            <h1 className="text-3xl font-bold">Notification Templates</h1>
             <Card>
                 <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
                 <CardContent className="space-y-6">
@@ -97,54 +109,69 @@ export default function AdminNotificationSettingsPage() {
                     <Skeleton className="h-20 w-full" />
                 </CardContent>
             </Card>
-        )
-    }
-
-    return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSaveChanges)}>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Default Notification Settings</CardTitle>
-                        <CardDescription>
-                            Configure the default notification preferences for all new users who sign up. 
-                            Users can override these settings later in their own profile.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {notificationCategories.map((cat) => (
-                          <FormField
-                              key={cat.id}
-                              control={form.control}
-                              name={cat.id}
-                              render={({ field }) => (
-                                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                      <div className="space-y-0.5">
-                                          <FormLabel className="text-base">{cat.label}</FormLabel>
-                                          <p className="text-sm text-muted-foreground">{cat.description}</p>
-                                      </div>
-                                      <FormControl>
-                                          <Switch
-                                              checked={field.value}
-                                              onCheckedChange={field.onChange}
-                                          />
-                                      </FormControl>
-                                  </FormItem>
-                              )}
-                          />
-                      ))}
-                    </CardContent>
-                     <CardFooter className="flex justify-end">
-                        <Button type="submit" disabled={isSaving || loading || !settings} size="lg">
-                            {isSaving ? <Icons.AppLogo className="animate-spin mr-2" /> : null}
-                            Save Changes
-                        </Button>
-                    </CardFooter>
-                </Card>
-            </form>
-        </Form>
-    )
+          </div>
+      )
   }
 
-  return renderContent();
+  const templateSections = [
+      { id: 'expenseAdded', label: 'New Expense', description: 'Available variables: {appName}, {userName}, {actorName}, {amount}, {groupName}, {description}' },
+      { id: 'settlementAdded', label: 'New Settlement', description: 'Available variables: {appName}, {userName}, {actorName}, {amount}, {groupName}' },
+      { id: 'memberAdded', label: 'Group Invitation', description: 'Available variables: {appName}, {userName}, {actorName}, {groupName}' },
+      { id: 'balanceReminder', label: 'Debt Reminder', description: 'Available variables: {appName}, {userName}' },
+      { id: 'broadcast', label: 'Broadcasts', description: 'Available variables: {appName}, {userName}, {broadcastSubject}, {broadcastBody}' },
+  ] as const;
+
+  return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold font-headline">Notification Templates</h1>
+          <p className="text-muted-foreground">Customize the emails sent for various application events.</p>
+        </div>
+
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSaveChanges)}>
+                <Tabs defaultValue="expenseAdded" className="w-full">
+                    <TabsList className="mb-4 flex flex-wrap h-auto gap-2">
+                        {templateSections.map(section => (
+                            <TabsTrigger key={section.id} value={section.id}>{section.label}</TabsTrigger>
+                        ))}
+                    </TabsList>
+                    
+                    {templateSections.map(section => (
+                        <TabsContent key={section.id} value={section.id}>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>{section.label} Template</CardTitle>
+                                    <CardDescription>{section.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <FormField control={form.control} name={`${section.id}.subject`} render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Subject</FormLabel>
+                                            <FormControl><Input {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name={`${section.id}.body`} render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Body</FormLabel>
+                                            <FormControl><Textarea {...field} className="min-h-[200px]" /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </CardContent>
+                                <CardFooter className="flex justify-end border-t p-4">
+                                    <Button type="submit" disabled={isSaving || loading || !settings}>
+                                        {isSaving ? <Icons.Spinner className="animate-spin mr-2 h-4 w-4" /> : <Icons.Save className="mr-2 h-4 w-4" />}
+                                        Save Templates
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </TabsContent>
+                    ))}
+                </Tabs>
+            </form>
+        </Form>
+      </div>
+  );
 }

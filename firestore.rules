@@ -113,5 +113,22 @@ service cloud.firestore {
                     && request.resource.data.readBy == resource.data.readBy.concat([request.auth.uid]);
       allow delete: if isAdmin();
     }
+
+    match /notifications_v2/{notifId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.recipientIds;
+      allow create: if isAdmin();
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+        && request.resource.data.readBy == resource.data.readBy.concat([request.auth.uid]);
+      allow delete: if isAdmin();
+    }
+
+    match /user_notification_prefs/{userId} {
+      allow read, write: if isUser(userId) || isAdmin();
+    }
+
+    match /push_subscriptions/{userId}/devices/{deviceId} {
+      allow read, write: if isUser(userId) || isAdmin();
+    }
   }
 }

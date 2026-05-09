@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
 import { getSiteSettings } from '@/lib/mock-data';
+import { NotificationProvider } from '@/contexts/notification-context';
 import { SiteSettingsProvider } from '@/contexts/site-settings-context';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { ThemeProvider } from '@/contexts/theme-context';
@@ -46,8 +47,10 @@ export default function RootLayout({
         <SiteSettingsProvider>
           <ThemeProvider>
             <AuthProvider>
-              <FirebaseErrorListener />
-              {children}
+              <NotificationProvider>
+                <FirebaseErrorListener />
+                {children}
+              </NotificationProvider>
             </AuthProvider>
           </ThemeProvider>
           <Toaster />

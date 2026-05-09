@@ -48,7 +48,6 @@ import type {
   MasterCategory,
   Notification,
   NotificationDocument,
-  NotificationCategory,
 } from '@/types';
 import { getFullName } from './utils';
 import { CURRENCY_SYMBOL } from './constants';
@@ -57,6 +56,14 @@ import { defaultExpenseCategories, getMasterCategory } from './expense-categorie
 import { BASE_THEMES } from '@/themes';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { 
+    notifyExpenseAdded, 
+    notifyExpenseUpdated, 
+    notifyExpenseDeleted, 
+    notifySettlementAdded, 
+    notifyMemberAdded, 
+    notifyMemberRemoved 
+} from './notification-service';
 
 // --- User Functions ---
 
@@ -275,19 +282,9 @@ export async function addMembersToGroup(groupId: string, memberIds: string[], ac
 
     // Notification Logic
     const groupName = (await getDoc(groupDocRef)).data()?.name || 'your group';
-    for (const memberId of memberIds) {
-        const notifTitle = `You've been added to a group!`;
-        const notifBody = `${actorName} added you to the group "${groupName}".`;
-        const link = `/groups/${groupId}`;
-        // Non-blocking call
-        createNotification(
-            memberId,
-            'member_added',
-            notifTitle,
-            notifBody,
-            link,
-            groupId
-        );
+    const recipientIds = memberIds.filter(id => id !== actorId);
+    if (recipientIds.length > 0) {
+        await notifyMemberAdded(recipientIds, actorId, groupId, groupName);
     }
 }
 
@@ -408,6 +405,12 @@ export async function removeMemberFromGroup(groupId: string, memberIdToRemove: s
     await updateDoc(groupDocRef, {
         memberIds: arrayRemove(memberIdToRemove)
     });
+
+    // Notification Logic
+    const groupName = (await getDoc(groupDocRef)).data()?.name || 'a group';
+    if (memberIdToRemove !== actorId) {
+        await notifyMemberRemoved(memberIdToRemove, actorId, groupId, groupName);
+    }
 }
 
 
@@ -457,21 +460,16 @@ export async function addExpense(expenseData: Omit<ExpenseDocument, 'date' | 'pa
         await logHistoryEvent(expenseData.groupId, 'expense_created', actorId, description, { expenseId: docRef.id, date: expenseData.date });
 
         // Notification logic
-        const groupName = groupData.name;
-        const link = `/groups/${expenseData.groupId}`;
-        for (const participant of expenseData.participants) {
-            if (participant.userId !== actorId) { // Don't notify the person who made the change
-                const notifTitle = `New Expense in ${groupName}`;
-                const notifBody = `${actorName} added "${expenseData.description}" (${CURRENCY_SYMBOL}${expenseData.amount.toFixed(2)})`;
-                createNotification(
-                    participant.userId,
-                    'new_expense',
-                    notifTitle,
-                    notifBody,
-                    link,
-                    docRef.id
-                );
-            }
+        const recipientIds = expenseData.participants.map(p => p.userId).filter(id => id !== actorId);
+        if (recipientIds.length > 0) {
+            await notifyExpenseAdded(
+                recipientIds,
+                actorId,
+                expenseData.groupId,
+                docRef.id,
+                expenseData.description,
+                expenseData.amount
+            );
         }
 
         return docRef.id;
@@ -632,26 +630,16 @@ export async function updateExpense(expenseId: string, oldAmount: number, expens
                 });
                 
                 // Notification logic
-                const groupName = groupData.name;
-                const link = `/groups/${expenseData.groupId}`;
                 const notifiedUserIds = new Set<string>([actorId]); // Don't notify the actor
-
-                // Notify all participants about the update
-                for (const participant of expenseData.participants) {
-                    if (!notifiedUserIds.has(participant.userId)) {
-                        const notifTitle = `Expense Updated in ${groupName}`;
-                        const notifBody = `${actorName} updated "${expenseData.description}".`;
-                        // Non-blocking call
-                        createNotification(
-                            participant.userId,
-                            'expense_updated',
-                            notifTitle,
-                            notifBody,
-                            link,
-                            expenseId
-                        );
-                        notifiedUserIds.add(participant.userId);
-                    }
+                const recipientIds = expenseData.participants.map(p => p.userId).filter(id => !notifiedUserIds.has(id));
+                if (recipientIds.length > 0) {
+                    await notifyExpenseUpdated(
+                        recipientIds,
+                        actorId,
+                        expenseData.groupId,
+                        expenseId,
+                        expenseData.description
+                    );
                 }
             }
         }
@@ -697,6 +685,13 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
     }
     
     await logHistoryEvent(groupId, 'expense_deleted', actorId, description, { ...deletedExpenseData, expenseId: expenseId, date: (deletedExpenseData.date as Timestamp)?.toDate() });
+
+    // Notification logic
+    const notifiedUserIds = new Set<string>([actorId]);
+    const recipientIds = deletedExpenseData.participantIds?.filter((id: string) => !notifiedUserIds.has(id)) || [];
+    if (recipientIds.length > 0) {
+        await notifyExpenseDeleted(recipientIds, actorId, groupId, deletedExpenseData.description);
+    }
 }
 
 
@@ -896,18 +891,11 @@ export async function addSettlement(settlementData: Omit<SettlementDocument, 'da
 
     // Notification Logic
     if (settlementData.paidToId !== actorId) {
-        const groupName = groupData.name;
-        const notifTitle = `Payment Recorded in ${groupName}`;
-        const notifBody = `${paidByName} recorded a payment of ${CURRENCY_SYMBOL}${settlementData.amount.toFixed(2)} to you.`;
-        const link = `/groups/${settlementData.groupId}`;
-        
-        createNotification(
+        await notifySettlementAdded(
             settlementData.paidToId,
-            'new_settlement',
-            notifTitle,
-            notifBody,
-            link,
-            docRef.id
+            actorId,
+            settlementData.groupId,
+            settlementData.amount
         );
     }
 
@@ -1369,40 +1357,6 @@ export async function deleteHistoryEvent(historyEventId: string): Promise<void> 
     await deleteDoc(historyDocRef);
 }
 
-// --- Notification Generation ---
-
-async function createNotification(
-  userId: string,
-  type: NotificationCategory,
-  title: string,
-  body: string,
-  link: string,
-  relatedDocId: string
-) {
-  try {
-    const userProfile = await getUserProfile(userId);
-    // If user profile doesn't exist, or settings are explicitly false, do nothing.
-    // Default to true if settings are undefined.
-    if (!userProfile || userProfile.notificationSettings?.[type] === false) {
-      return;
-    }
-
-    const notificationsCol = collection(db, 'userNotifications');
-    await addDoc(notificationsCol, {
-      userId,
-      type,
-      title,
-      body,
-      link,
-      isRead: false,
-      createdAt: Timestamp.now(),
-      relatedDocId,
-    });
-  } catch (error) {
-    console.error(`Failed to create notification for user ${userId}:`, error);
-    // We don't want notification failure to break the main operation, so we just log the error.
-  }
-}
 
 // --- Site Settings ---
 const SETTINGS_COLLECTION = 'settings';
@@ -1542,7 +1496,12 @@ const DEFAULT_EMAIL_TEMPLATES: SiteSettings['emailTemplates'] = {
     paymentReminder: { subject: 'Payment Reminder from {appName}', body: 'Hi {userName},\n\nThis is a friendly reminder that you have outstanding balances in one or more of your groups. Please log in to settle your debts.\n\nThanks,\nThe {appName} Team' },
     supportTicketConfirmation: { subject: 'Your Support Ticket has been Received', body: 'Hi {userName},\n\nThank you for reaching out. We have received your support ticket (ID: {ticketId}) and a member of our team will get back to you shortly.\n\nSubject: {ticketSubject}\n\nThanks,\nThe {appName} Team'},
     supportTicketAdminNotification: { subject: '[{appName} Support] New Ticket from {userName}', body: 'A new support ticket has been created.\n\nUser: {userName} ({userEmail})\nSubject: {ticketSubject}\nCategory: {ticketCategory}\n\nMessage: {ticketMessage}\n\nView ticket here: {ticketLink}'},
-    supportTicketReply: { subject: 'Re: Your Support Ticket #{ticketId}', body: 'Hi {userName},\n\nA reply has been added to your support ticket.\n\n{replyMessage}\n\nView the full conversation here: {ticketLink}\n\nThanks,\nThe {appName} Team'}
+    supportTicketReply: { subject: 'Re: Your Support Ticket #{ticketId}', body: 'Hi {userName},\n\nA reply has been added to your support ticket.\n\n{replyMessage}\n\nView the full conversation here: {ticketLink}\n\nThanks,\nThe {appName} Team'},
+    expenseAdded: { subject: 'New Expense Added in {groupName}', body: 'Hi {userName},\n\n{actorName} added a new expense "{description}" for {amount} in {groupName}.\n\nLog in to see details.\n\nThanks,\nThe {appName} Team' },
+    settlementAdded: { subject: 'Payment Received in {groupName}', body: 'Hi {userName},\n\n{actorName} recorded a payment of {amount} to you in {groupName}.\n\nLog in to see details.\n\nThanks,\nThe {appName} Team' },
+    memberAdded: { subject: 'You were added to {groupName}', body: 'Hi {userName},\n\nYou were added to the group "{groupName}" by {actorName}.\n\nLog in to start tracking shared expenses.\n\nThanks,\nThe {appName} Team' },
+    balanceReminder: { subject: 'Balance Reminder from {appName}', body: 'Hi {userName},\n\nYou have outstanding balances in your groups. Please log in to settle up.\n\nThanks,\nThe {appName} Team' },
+    broadcast: { subject: '{broadcastSubject}', body: '{broadcastBody}' },
 };
 
 const DEFAULT_EMAIL_SETTINGS = {
@@ -1812,25 +1771,70 @@ export async function updateTicket(ticketId: string, data: Partial<SupportTicket
     await updateDoc(ticketDocRef, updateData);
 }
 
+// --- User Notification Preferences ---
+
+import type { UserNotificationPrefsDocument, NotificationV2, NotificationV2Document } from '@/types';
+
+const DEFAULT_USER_NOTIFICATION_PREFS: Omit<UserNotificationPrefsDocument, 'userId' | 'updatedAt'> = {
+  inAppEnabled: true,
+  pushEnabled: true,
+  emailEnabled: true,
+  events: {
+    expense_added: { inApp: true, push: true, email: true },
+    expense_updated: { inApp: true, push: false, email: false },
+    expense_deleted: { inApp: true, push: false, email: false },
+    settlement_added: { inApp: true, push: true, email: true },
+    member_added: { inApp: true, push: true, email: false },
+    member_removed: { inApp: true, push: false, email: false },
+    balance_reminder: { inApp: true, push: false, email: true },
+    support_reply: { inApp: true, push: true, email: true },
+    broadcast_announcement: { inApp: true, push: true, email: false },
+    broadcast_critical: { inApp: true, push: true, email: true },
+  }
+};
+
+export async function getUserNotificationPrefs(userId: string): Promise<UserNotificationPrefsDocument> {
+    const prefsDocRef = doc(db, 'user_notification_prefs', userId);
+    const prefsSnap = await getDoc(prefsDocRef);
+    if (prefsSnap.exists()) {
+        return prefsSnap.data() as UserNotificationPrefsDocument;
+    } else {
+        const defaultPrefs = {
+            userId,
+            ...DEFAULT_USER_NOTIFICATION_PREFS,
+            updatedAt: Timestamp.now(),
+        };
+        await setDoc(prefsDocRef, defaultPrefs);
+        return defaultPrefs;
+    }
+}
+
+export async function updateUserNotificationPrefs(userId: string, prefs: Partial<UserNotificationPrefsDocument>): Promise<void> {
+    const prefsDocRef = doc(db, 'user_notification_prefs', userId);
+    await updateDoc(prefsDocRef, { ...prefs, updatedAt: Timestamp.now() });
+}
+
 // --- Admin Notification Functions ---
 
-export async function getAllNotifications(): Promise<Notification[]> {
-    const notifsCol = collection(db, 'notifications');
+export async function getAllNotifications(): Promise<NotificationV2[]> {
+    const notifsCol = collection(db, 'notifications_v2');
     const notifSnapshot = await getDocs(query(notifsCol, orderBy('createdAt', 'desc')));
     
-    const notifications: Notification[] = notifSnapshot.docs.map(doc => {
-        const data = doc.data() as NotificationDocument;
+    const notifications: NotificationV2[] = notifSnapshot.docs.map(doc => {
+        const data = doc.data() as NotificationV2Document;
         return {
             id: doc.id,
             ...data,
             createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
-        } as Notification;
+            isRead: false,
+        } as NotificationV2;
     });
 
     return notifications;
 }
 
 export async function deleteNotification(notificationId: string): Promise<void> {
-    const notifDocRef = doc(db, 'notifications', notificationId);
+    const notifDocRef = doc(db, 'notifications_v2', notificationId);
     await deleteDoc(notifDocRef);
 }
+

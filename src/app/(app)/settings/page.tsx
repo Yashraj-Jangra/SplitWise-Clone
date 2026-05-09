@@ -28,12 +28,14 @@ import { Switch } from "@/components/ui/switch";
 
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
-import { updateUser, isUsernameTaken } from "@/lib/mock-data";
+import { updateUser, isUsernameTaken, getUserNotificationPrefs, updateUserNotificationPrefs } from "@/lib/mock-data";
 import { getFullName, getInitials } from "@/lib/utils";
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { useTheme } from "@/contexts/theme-context";
 import { Check } from "lucide-react";
-import type { NotificationCategory } from "@/types";
+import { requestPushPermission, subscribeToPush, unsubscribeFromPush } from '@/lib/push-service';
+import type { NotificationEventType, UserNotificationPrefsDocument } from '@/types';
+
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -62,22 +64,32 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+const notificationEventSettingsSchema = z.object({
+  inApp: z.boolean(),
+  push: z.boolean(),
+  email: z.boolean()
+});
+
 const notificationSettingsSchema = z.object({
-    new_expense: z.boolean().default(true),
-    expense_updated: z.boolean().default(true),
-    new_settlement: z.boolean().default(true),
-    member_added: z.boolean().default(true),
-    debt_reminder: z.boolean().default(true),
+    inAppEnabled: z.boolean().default(true),
+    pushEnabled: z.boolean().default(true),
+    emailEnabled: z.boolean().default(true),
+    events: z.record(z.string(), notificationEventSettingsSchema)
 });
 type NotificationSettingsFormValues = z.infer<typeof notificationSettingsSchema>;
 
-const notificationCategories: { id: NotificationCategory; label: string; description: string }[] = [
-  { id: 'new_expense', label: 'New Expenses', description: 'Get notified when an expense is added to your groups.' },
-  { id: 'expense_updated', label: 'Expense Updates', description: 'Receive alerts when an expense you are part of is edited.' },
-  { id: 'new_settlement', label: 'New Settlements', description: 'Get notified when a settlement involving you is recorded.' },
-  { id: 'member_added', label: 'Group Invitations', description: 'Receive an alert when you are added to a new group.' },
-  { id: 'debt_reminder', label: 'Debt Reminders', description: 'Get periodic reminders for your outstanding debts.' },
+const notificationCategories: { id: NotificationEventType; label: string; description: string }[] = [
+  { id: 'expense_added', label: 'New Expenses', description: 'When an expense is added to your groups.' },
+  { id: 'expense_updated', label: 'Expense Updates', description: 'When an expense you are part of is edited.' },
+  { id: 'expense_deleted', label: 'Expense Deleted', description: 'When an expense is deleted.' },
+  { id: 'settlement_added', label: 'New Settlements', description: 'When a settlement involving you is recorded.' },
+  { id: 'member_added', label: 'Group Invitations', description: 'When you are added to a new group.' },
+  { id: 'balance_reminder', label: 'Debt Reminders', description: 'Periodic reminders for your outstanding debts.' },
+  { id: 'support_reply', label: 'Support Ticket Replies', description: 'When an admin replies to your support ticket.' },
+  { id: 'broadcast_announcement', label: 'Announcements', description: 'General announcements from the team.' },
+  { id: 'broadcast_critical', label: 'Critical Alerts', description: 'Important system alerts.' },
 ];
+
 
 
 export default function SettingsPage() {
@@ -115,13 +127,27 @@ export default function SettingsPage() {
   const notificationsForm = useForm<NotificationSettingsFormValues>({
     resolver: zodResolver(notificationSettingsSchema),
     defaultValues: {
-        new_expense: true,
-        expense_updated: true,
-        new_settlement: true,
-        member_added: true,
-        debt_reminder: true,
+        inAppEnabled: true,
+        pushEnabled: true,
+        emailEnabled: true,
+        events: {}
     }
   });
+
+  useEffect(() => {
+    async function loadPrefs() {
+      if (!userProfile) return;
+      const prefs = await getUserNotificationPrefs(userProfile.uid);
+      notificationsForm.reset({
+        inAppEnabled: prefs.inAppEnabled,
+        pushEnabled: prefs.pushEnabled,
+        emailEnabled: prefs.emailEnabled,
+        events: prefs.events as any
+      });
+    }
+    loadPrefs();
+  }, [userProfile, notificationsForm]);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -207,7 +233,7 @@ export default function SettingsPage() {
   async function onNotificationsSubmit(values: NotificationSettingsFormValues) {
     if (!userProfile) return;
     try {
-        await updateUser(userProfile.uid, { notificationSettings: values });
+        await updateUserNotificationPrefs(userProfile.uid, values as unknown as UserNotificationPrefsDocument);
         toast({ title: "Notification settings updated." });
     } catch (error) {
         toast({
@@ -217,6 +243,19 @@ export default function SettingsPage() {
         });
     }
   }
+
+  const handleRequestPermission = async () => {
+    if (!userProfile) return;
+    const success = await requestPushPermission(userProfile.uid);
+    if (success) {
+      setBrowserNotifPermission('granted');
+      toast({ title: "Push Notifications Enabled", description: "You will now receive background alerts." });
+    } else {
+      setBrowserNotifPermission('denied');
+      toast({ variant: "destructive", title: "Permission Denied", description: "Please enable notifications in your browser settings." });
+    }
+  };
+
 
 
   const handleConnectGoogle = async () => {
@@ -470,28 +509,62 @@ export default function SettingsPage() {
                         )}
                       </div>
 
-                      <p className="text-sm font-medium text-muted-foreground pt-4 border-t">In-App Alerts</p>
-                      {notificationCategories.map((cat) => (
-                          <FormField
-                              key={cat.id}
-                              control={notificationsForm.control}
-                              name={cat.id}
-                              render={({ field }) => (
-                                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                      <div className="space-y-0.5">
-                                          <FormLabel className="text-base">{cat.label}</FormLabel>
-                                          <p className="text-sm text-muted-foreground">{cat.description}</p>
-                                      </div>
-                                      <FormControl>
-                                          <Switch
-                                              checked={field.value}
-                                              onCheckedChange={field.onChange}
-                                          />
-                                      </FormControl>
-                                  </FormItem>
-                              )}
-                          />
-                      ))}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                        <FormField control={notificationsForm.control} name="inAppEnabled" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20">
+                                <FormLabel className="text-base font-semibold">Master In-App</FormLabel>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            </FormItem>
+                        )}/>
+                        <FormField control={notificationsForm.control} name="pushEnabled" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20">
+                                <FormLabel className="text-base font-semibold">Master Push</FormLabel>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            </FormItem>
+                        )}/>
+                        <FormField control={notificationsForm.control} name="emailEnabled" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/20">
+                                <FormLabel className="text-base font-semibold">Master Email</FormLabel>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            </FormItem>
+                        )}/>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t overflow-x-auto">
+                        <div className="min-w-[500px]">
+                            <div className="grid grid-cols-12 gap-4 mb-2 px-2 text-sm font-medium text-muted-foreground">
+                                <div className="col-span-6">Event</div>
+                                <div className="col-span-2 text-center">In-App</div>
+                                <div className="col-span-2 text-center">Push</div>
+                                <div className="col-span-2 text-center">Email</div>
+                            </div>
+                            
+                            {notificationCategories.map((cat) => (
+                                <div key={cat.id} className="grid grid-cols-12 gap-4 items-center py-3 border-b last:border-0 hover:bg-muted/10 px-2 rounded-md transition-colors">
+                                    <div className="col-span-6 space-y-0.5">
+                                        <div className="text-sm font-medium">{cat.label}</div>
+                                        <div className="text-xs text-muted-foreground">{cat.description}</div>
+                                    </div>
+                                    <div className="col-span-2 flex justify-center">
+                                        <FormField control={notificationsForm.control} name={`events.${cat.id}.inApp`} render={({ field }) => (
+                                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                        )} />
+                                    </div>
+                                    <div className="col-span-2 flex justify-center">
+                                        <FormField control={notificationsForm.control} name={`events.${cat.id}.push`} render={({ field }) => (
+                                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={!notificationsForm.watch('pushEnabled')} /></FormControl>
+                                        )} />
+                                    </div>
+                                    <div className="col-span-2 flex justify-center">
+                                        <FormField control={notificationsForm.control} name={`events.${cat.id}.email`} render={({ field }) => (
+                                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={!notificationsForm.watch('emailEnabled')} /></FormControl>
+                                        )} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                      </div>
+
                   </CardContent>
                   <CardFooter className="border-t px-6 py-4 flex justify-end">
                       <Button type="submit" disabled={notificationsForm.formState.isSubmitting}>

@@ -3,7 +3,19 @@
 import type { IconName } from "@/components/icons";
 import { Timestamp } from "firebase/firestore";
 
-export type NotificationCategory = 'new_expense' | 'expense_updated' | 'new_settlement' | 'member_added' | 'debt_reminder';
+export type NotificationEventType =
+  | 'expense_added'
+  | 'expense_updated'
+  | 'expense_deleted'
+  | 'settlement_added'
+  | 'member_added'
+  | 'member_removed'
+  | 'balance_reminder'
+  | 'support_reply'
+  | 'broadcast_announcement'
+  | 'broadcast_critical';
+
+export type NotificationChannel = 'in_app' | 'push' | 'email';
 
 // Base user profile stored in Firestore
 export interface UserProfile {
@@ -18,7 +30,6 @@ export interface UserProfile {
   dob?: string; // ISO string for client
   role: 'admin' | 'user';
   createdAt?: string; // ISO string for client
-  notificationSettings?: Record<NotificationCategory, boolean>;
 }
 
 // --- Firestore Document Types ---
@@ -107,24 +118,46 @@ export interface SupportTicketDocument {
     assignedToId?: string; // Admin UID
 }
 
-export interface NotificationDocument {
-    type: 'announcement' | 'critical_alert';
-    title: string;
-    message: string;
-    createdAt: Timestamp;
-    target: 'all_users'; // Future can include 'group', 'user'
-    readBy: string[]; // Array of user UIDs who have read it
+// Firestore: notifications_v2/{id}
+export interface NotificationV2Document {
+  type: NotificationEventType;
+  title: string;
+  body: string;                    // Short message (for push/in-app)
+  recipientIds: string[];          // UIDs who should receive this
+  readBy: string[];                // UIDs who have read (in-app)
+  groupId?: string;                // Link to relevant group
+  expenseId?: string;              // Link to relevant expense
+  actorId?: string;                // Who triggered this (e.g. who added expense)
+  createdAt: Timestamp;
+  createdBy?: string;              // 'system' | admin UID
+  target: 'all_users' | 'specific_users' | 'group';
+  channels: NotificationChannel[]; // Which channels were used
+  imageUrl?: string;               // Optional icon override
 }
 
-export interface UserNotificationDocument {
+// Firestore: user_notification_prefs/{userId}
+export interface UserNotificationPrefsDocument {
   userId: string;
-  type: NotificationCategory;
-  title: string;
-  body: string;
-  link: string;
-  isRead: boolean;
+  // Per-channel master switches
+  inAppEnabled: boolean;
+  pushEnabled: boolean;
+  emailEnabled: boolean;
+  // Per-event granular controls
+  events: Record<NotificationEventType, {
+    inApp: boolean;
+    push: boolean;
+    email: boolean;
+  }>;
+  updatedAt: Timestamp;
+}
+
+// Firestore: push_subscriptions/{userId}/devices/{deviceId}
+export interface PushSubscriptionDocument {
+  userId: string;
+  fcmToken: string;
+  deviceName?: string;
   createdAt: Timestamp;
-  relatedDocId: string; // e.g., expenseId, groupId
+  lastSeen: Timestamp;
 }
 
 
@@ -206,15 +239,11 @@ export interface HistoryEvent extends Omit<HistoryEventDocument, 'timestamp' | '
     actor: UserProfile;
 }
 
-export interface Notification extends Omit<NotificationDocument, 'createdAt'> {
+export interface NotificationV2 extends Omit<NotificationV2Document, 'createdAt'> {
     id: string;
     createdAt: string; // ISO string
-    isRead?: boolean; // Added for client-side state
-}
-
-export interface UserNotification extends Omit<UserNotificationDocument, 'createdAt'> {
-  id: string;
-  createdAt: string;
+    isRead: boolean;
+    actor?: UserProfile;
 }
 
 
@@ -394,6 +423,11 @@ export interface SiteSettings {
     supportTicketConfirmation: EmailTemplate;
     supportTicketAdminNotification: EmailTemplate;
     supportTicketReply: EmailTemplate;
+    expenseAdded: EmailTemplate;
+    settlementAdded: EmailTemplate;
+    memberAdded: EmailTemplate;
+    balanceReminder: EmailTemplate;
+    broadcast: EmailTemplate;
   };
   stats?: {
     users: number;
@@ -406,7 +440,6 @@ export interface SiteSettings {
     message: string;
     imageUrl: string;
   };
-  defaultNotificationSettings?: Record<NotificationCategory, boolean>;
 }
 
 export interface ExpenseCategory {

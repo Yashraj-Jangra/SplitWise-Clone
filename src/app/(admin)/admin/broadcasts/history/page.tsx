@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
 import { deleteNotification, getAllNotifications } from "@/lib/mock-data";
 import { format, formatDistanceToNow } from 'date-fns';
-import type { Notification } from '@/types';
+import type { NotificationV2 } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-function NotificationActions({ notification, onActionComplete }: { notification: Notification, onActionComplete: () => void }) {
+function NotificationActions({ notification, onActionComplete }: { notification: NotificationV2, onActionComplete: () => void }) {
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -75,7 +75,7 @@ function NotificationActions({ notification, onActionComplete }: { notification:
 
 
 export default function BroadcastHistoryPage() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<NotificationV2[]>([]);
     const [loading, setLoading] = useState(true);
     
     const fetchNotifications = useCallback(async () => {
@@ -139,10 +139,10 @@ export default function BroadcastHistoryPage() {
                                 <TableRow key={notif.id}>
                                     <TableCell>
                                         <p className="font-medium truncate">{notif.title}</p>
-                                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{notif.body}</p>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={notif.type === 'critical_alert' ? 'destructive' : 'secondary'} className="capitalize">
+                                        <Badge variant={notif.type === 'broadcast_critical' ? 'destructive' : 'secondary'} className="capitalize">
                                             {notif.type.replace('_', ' ')}
                                         </Badge>
                                     </TableCell>
