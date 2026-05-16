@@ -132,7 +132,21 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
     const [showAllHistory, setShowAllHistory] = useState(false);
 
     const expenseHistory = useMemo(() => {
-        return groupHistory.filter(e => e.data?.expenseId === expense.id && e.eventType.includes('updated')).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        // If this expense was restored from a deleted one, also include history from the original
+        const restoreEvent = groupHistory.find(
+            e => e.eventType === 'expense_restored' && e.data?.newExpenseId === expense.id
+        );
+        const originalExpenseId = restoreEvent?.data?.originalExpenseId;
+
+        return groupHistory.filter(e => {
+            const relevantTypes = ['expense_updated', 'expense_deleted', 'expense_restored'];
+            if (!relevantTypes.includes(e.eventType)) return false;
+            if (e.data?.expenseId === expense.id) return true;
+            if (e.data?.newExpenseId === expense.id) return true;
+            // Include pre-deletion history of the original expense
+            if (originalExpenseId && e.data?.expenseId === originalExpenseId) return true;
+            return false;
+        }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [groupHistory, expense.id]);
 
     const visibleHistory = showAllHistory ? expenseHistory : expenseHistory.slice(0, 1);
@@ -233,38 +247,70 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
                     {expenseHistory.length > 0 ? (
                         <div className="space-y-2">
                         {visibleHistory.map(event => (
-                            <div key={event.id} className="border p-3 rounded-md bg-background/30">
-                                <p className="text-xs text-muted-foreground mb-2">
-                                    {getFullName(event.actor.firstName, event.actor.lastName)} updated on {format(new Date(event.timestamp), "MMM d, yyyy 'at' h:mm a")}
-                                </p>
-                                <div className="space-y-2">
-                                    {event.data?.changes?.map((change: any, index: number) => {
-                                        const isComplex = (change.field === 'Payers' || change.field === 'Split') && change.from;
-                                        const parsedComplexChanges = isComplex ? parseComplexChange(change.from) : [];
-                                        
-                                        return (
-                                            <div key={index} className="text-xs">
-                                                <span className="font-semibold text-foreground">{change.field}:</span>
-                                                {isComplex ? (
-                                                    <div className="space-y-1.5 mt-1 pl-2 border-l-2 ml-1">
-                                                        {parsedComplexChanges.map((parsedChange, i) => (
-                                                            <ComplexChangeDetail key={i} change={parsedChange} />
-                                                        ))}
-                                                    </div>
-                                                ) : change.to ? (
-                                                    <div className="text-muted-foreground flex items-center gap-2">
-                                                        <span className="text-red-500 line-through">{change.from}</span>
-                                                        <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
-                                                        <span className="text-green-500">{change.to}</span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-muted-foreground">{change.from}</div>
-                                                )}
+                            <div
+                                            key={event.id}
+                                            className={[
+                                                'border-l-4 p-3 rounded-md',
+                                                event.eventType === 'expense_deleted'
+                                                    ? 'border-l-red-500 bg-red-500/5'
+                                                    : event.eventType === 'expense_restored'
+                                                    ? 'border-l-purple-500 bg-purple-500/5'
+                                                    : 'border-l-blue-500 bg-blue-500/5',
+                                            ].join(' ')}
+                                        >
+                                            <div className="flex items-center justify-between mb-2 gap-2">
+                                                <span className={[
+                                                    'inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full',
+                                                    event.eventType === 'expense_deleted'
+                                                        ? 'text-red-500 bg-red-500/15'
+                                                        : event.eventType === 'expense_restored'
+                                                        ? 'text-purple-500 bg-purple-500/15'
+                                                        : 'text-blue-500 bg-blue-500/15',
+                                                ].join(' ')}>
+                                                    {event.eventType === 'expense_deleted'
+                                                        ? <><Icons.Delete className="h-3 w-3" /> Deleted</>
+                                                        : event.eventType === 'expense_restored'
+                                                        ? <><Icons.Restore className="h-3 w-3" /> Restored</>
+                                                        : <><Icons.Edit className="h-3 w-3" /> Updated</>}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {format(new Date(event.timestamp), "MMM d, yyyy 'at' h:mm a")}
+                                                </span>
                                             </div>
-                                        )
-                                    })}
-                                </div>
-                            </div>
+                                            <p className="text-xs text-muted-foreground mb-2">
+                                                by {getFullName(event.actor.firstName, event.actor.lastName)}
+                                            </p>
+                                            {event.data?.changes?.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {event.data.changes.map((change: any, index: number) => {
+                                                        const isComplex = (change.field === 'Payers' || change.field === 'Split') && change.from;
+                                                        const parsedComplexChanges = isComplex ? parseComplexChange(change.from) : [];
+                                                        return (
+                                                            <div key={index} className="text-xs">
+                                                                <span className="font-semibold text-foreground">{change.field}:</span>
+                                                                {isComplex ? (
+                                                                    <div className="space-y-1.5 mt-1 pl-2 border-l-2 ml-1">
+                                                                        {parsedComplexChanges.map((parsedChange, i) => (
+                                                                            <ComplexChangeDetail key={i} change={parsedChange} />
+                                                                        ))}
+                                                                    </div>
+                                                                ) : change.to ? (
+                                                                    <div className="text-muted-foreground flex items-center gap-2">
+                                                                        <span className="text-red-500 line-through">{change.from}</span>
+                                                                        <Icons.ArrowRight className="h-3 w-3 flex-shrink-0" />
+                                                                        <span className="text-green-500">{change.to}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="text-muted-foreground">{change.from}</div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground italic">{event.description}</p>
+                                            )}
+                                        </div>
                         ))}
                         {expenseHistory.length > 1 && (
                             <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setShowAllHistory(!showAllHistory)}>

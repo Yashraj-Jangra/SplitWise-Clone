@@ -233,6 +233,7 @@ export default function GroupDetailPage() {
                                     settlement={settlement}
                                     currentUserId={userProfile.uid}
                                     group={group}
+                                    groupHistory={groupHistory}
                                 />
                             )
                         }
@@ -270,6 +271,7 @@ export default function GroupDetailPage() {
                       settlement={settlement}
                       currentUserId={userProfile.uid}
                       group={group}
+                      groupHistory={groupHistory}
                     />
                   ))}
                 </Accordion>
