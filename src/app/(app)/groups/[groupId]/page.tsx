@@ -72,9 +72,9 @@ export default function GroupDetailPage() {
     }
   }, [activeTab, isMobile]);
 
-  const loadGroupData = useCallback(async () => {
+  const loadGroupData = useCallback(async (silent = false) => {
     if (!groupId || !userProfile) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(false);
     try {
       const [
@@ -125,11 +125,12 @@ export default function GroupDetailPage() {
 
   useEffect(() => {
     loadGroupData();
-    
-    appEventEmitter.on('data-changed', loadGroupData);
+
+    const handleDataChanged = () => loadGroupData(true);
+    appEventEmitter.on('data-changed', handleDataChanged);
 
     return () => {
-      appEventEmitter.off('data-changed', loadGroupData);
+      appEventEmitter.off('data-changed', handleDataChanged);
     };
 
   }, [loadGroupData]);

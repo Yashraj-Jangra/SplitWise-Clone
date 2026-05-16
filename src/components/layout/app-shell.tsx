@@ -280,7 +280,9 @@ export function AppShell({ children }: AppShellProps) {
           <Header />
           <EmailVerificationBanner />
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 animate-in fade-in-0 zoom-in-98 duration-300 pb-20 md:pb-4 lg:pb-6">
-            {children}
+            <div className="w-full max-w-7xl mx-auto">
+              {children}
+            </div>
           </main>
           <BottomNavBar />
       </div>

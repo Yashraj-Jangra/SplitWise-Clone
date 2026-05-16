@@ -28,6 +28,7 @@ import { getFullName } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "../ui/scroll-area";
+import { appEventEmitter } from "@/lib/event-emitter";
 
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
@@ -110,7 +111,7 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
         toast({ title: "Settlement Updated", description: "The settlement has been successfully updated." });
         onOpenChange(false);
         if (onActionComplete) onActionComplete();
-        window.dispatchEvent(new CustomEvent('data-changed'));
+        appEventEmitter.emit('data-changed');
     } catch (error) {
         toast({ title: "Error", description: "Failed to update settlement.", variant: "destructive" });
     }
