@@ -206,9 +206,9 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-[250px] p-0">
-                    <Command>
+                    <Command className="max-h-80">
                       <CommandInput placeholder="Search category..." />
-                      <CommandList className="max-h-64">
+                      <CommandList onWheel={(e) => e.stopPropagation()}>
                         <CommandEmpty>No category found.</CommandEmpty>
                         {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
                           <CommandGroup key={masterCat} heading={masterCat}>
