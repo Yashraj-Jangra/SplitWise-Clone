@@ -28,7 +28,6 @@ export async function POST(request: Request) {
                 headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
             });
         }
-
         const authHeader = request.headers.get('Authorization');
         const body = await request.json();
         const { uid, action = 'promote' } = body as { uid: string; action?: 'promote' | 'demote' };
