@@ -368,7 +368,7 @@ export default function SettingsPage() {
                                           {channel === "inApp" ? "In-App" : channel === "push" ? "Push" : "Email"}
                                         </FormLabel>
                                         <FormControl>
-                                          <Switch checked={!!field.value} onCheckedChange={field.onChange} disabled={!masterOn} size="sm" />
+                                          <Switch checked={!!field.value} onCheckedChange={field.onChange} disabled={!masterOn} className="scale-90" />
                                         </FormControl>
                                       </FormItem>
                                     )} />

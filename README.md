@@ -137,7 +137,7 @@ Here’s the quick setup to get SplitIt running locally.
 1.  **Clone the Repository**:
     ```bash
     git clone https://github.com/Yashraj-Jangra/SplitIt-SplitWise_Clone.git
-    cd settleease
+    cd SplitWise-Clone
     ```
 
 2.  **Install Dependencies**:
@@ -147,23 +147,44 @@ Here’s the quick setup to get SplitIt running locally.
 
 3.  **Create Environment File**:
     -   Create a file named `.env` in the root of your project.
-    -   Copy your Firebase web app configuration into this file. These keys are safe to expose on the client-side.
+    -   Add your Firebase **client-side** configuration (safe to expose):
     ```env
+    # --- Firebase Client SDK (public) ---
     NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
     NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123...
     NEXT_PUBLIC_FIREBASE_APP_ID=1:123...:web:...
+
+    # --- Firebase Admin SDK (server-only, never expose to client) ---
+    # Go to: Firebase Console > Project Settings > Service Accounts > Generate new private key
+    # Paste the entire JSON as a single-line string:
+    FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}'
+
+    # --- Bootstrap Admin ---
+    # The email address that gets admin privileges on first signup.
+    # Additional admins can be promoted from the Admin Panel after this.
+    ADMIN_EMAIL=your-admin-email@example.com
     ```
 
-4.  **Connect to Your Firebase Project**:
-    -   Link your local project to the Firebase project you created.
+4.  **Generate Firebase Service Account Key** (required for server-side API routes):
+    -   In Firebase Console, go to **Project Settings > Service Accounts**.
+    -   Click **Generate new private key** and download the JSON file.
+    -   Copy the entire JSON content (minified to one line) into `FIREBASE_SERVICE_ACCOUNT` in your `.env`.
+    -   **Never commit this key to version control.**
+
+5.  **Connect to Your Firebase Project**:
     ```bash
-    firebase use --add
+    npx firebase-tools use --add
     ```
 
-5.  **Run the Development Server**:
+6.  **Deploy Firestore Security Rules**:
+    ```bash
+    npx firebase-tools deploy --only firestore:rules
+    ```
+
+7.  **Run the Development Server**:
     ```bash
     npm run dev
     ```
