@@ -22,6 +22,7 @@ import { SearchDialog } from "./search-dialog";
 import { NotificationBell } from "./notification-bell";
 import { BottomNavBar } from "./bottom-nav-bar";
 import { listenForForegroundMessages } from "@/lib/push-service";
+import { UpdateBanner } from "@/components/shared/update-banner";
 
 
 const mainNavItems: NavItem[] = [
@@ -277,6 +278,7 @@ export function AppShell({ children }: AppShellProps) {
     )}>
       <Sidebar isCollapsed={!!isCollapsed} onToggle={handleToggle} />
        <div className="flex flex-col">
+          <UpdateBanner />
           <Header />
           <EmailVerificationBanner />
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 animate-in fade-in-0 zoom-in-98 duration-300 pb-20 md:pb-4 lg:pb-6">

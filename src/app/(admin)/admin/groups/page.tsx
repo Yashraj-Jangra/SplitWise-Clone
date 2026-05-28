@@ -11,6 +11,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,7 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
     const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
     const [isPermanentDeleteDialogOpen, setIsPermanentDeleteDialogOpen] = useState(false);
     const [isDeletingPermanently, setIsDeletingPermanently] = useState(false);
+    const [confirmDeleteName, setConfirmDeleteName] = useState('');
 
     const handleArchive = async () => {
         if (!userProfile) return;
@@ -157,17 +159,33 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
                 </AlertDialogContent>
             </AlertDialog>
 
-             <AlertDialog open={isPermanentDeleteDialogOpen} onOpenChange={setIsPermanentDeleteDialogOpen}>
+             <AlertDialog open={isPermanentDeleteDialogOpen} onOpenChange={(open) => { setIsPermanentDeleteDialogOpen(open); if (!open) setConfirmDeleteName(''); }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Permanently Delete "{group.name}"?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action is irreversible and will delete the group and all its expenses, settlements, and history. Are you sure you want to proceed?
+                            This action is irreversible and will delete the group and all its expenses, settlements, and history.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <div className="py-2 space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                            To confirm, type <span className="font-semibold text-foreground">{group.name}</span> below:
+                        </p>
+                        <Input
+                            id={`confirm-delete-${group.id}`}
+                            value={confirmDeleteName}
+                            onChange={(e) => setConfirmDeleteName(e.target.value)}
+                            placeholder="Type group name to confirm"
+                            className="border-destructive/50 focus-visible:ring-destructive"
+                        />
+                    </div>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handlePermanentDelete} disabled={isDeletingPermanently} variant="destructive">
+                        <AlertDialogCancel onClick={() => setConfirmDeleteName('')}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handlePermanentDelete}
+                            disabled={isDeletingPermanently || confirmDeleteName !== group.name}
+                            variant="destructive"
+                        >
                             {isDeletingPermanently && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
                             Yes, permanently delete
                         </AlertDialogAction>

@@ -17,7 +17,26 @@
     @apply border-border;
   }
 
+  /*
+   * ⚠️  CSS VARIABLE OWNERSHIP — READ BEFORE EDITING
+   * ================================================
+   * These :root and .dark blocks are SSR/hydration FALLBACK values only.
+   * They prevent a Flash of Unstyled Content (FOUC) before React mounts.
+   *
+   * The REAL source of truth for all theme variables is:
+   *   → src/themes/index.ts  (BASE_THEMES array)
+   *   → src/contexts/theme-context.tsx  (ThemeProvider)
+   *
+   * The ThemeProvider injects a <style id="themes-style"> into <head>
+   * at runtime with `.theme-{id}` CSS classes on <body>.
+   *
+   * DO NOT add new theme colors here. Add them to src/themes/index.ts instead.
+   * Chart colors (--chart-*) are defined here because they are static and
+   * not part of the dynamic theme system.
+   */
+
   :root {
+    /* --- Fallback token values (overridden at runtime by ThemeProvider) --- */
     --background: 0 0% 100%;
     --foreground: 0 0% 10%;
     --card: 0 0% 98%;
@@ -37,7 +56,9 @@
     --border: 0 0% 90%;
     --input: 0 0% 90%;
     --ring: 180 100% 40%;
-    --radius: 0.5rem; /* Edgy corners */
+    --radius: 0.5rem;
+
+    /* --- Static chart palette (not part of dynamic theme system) --- */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -51,6 +72,7 @@
   }
 
   .dark {
+    /* --- Fallback dark token values (overridden at runtime by ThemeProvider) --- */
     --background: 0 0% 10%;
     --foreground: 0 0% 98%;
     --card: 0 0% 13%;
@@ -70,6 +92,8 @@
     --border: 0 0% 20%;
     --input: 0 0% 20%;
     --ring: 180 100% 40%;
+
+    /* --- Static chart palette (same in dark mode) --- */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;

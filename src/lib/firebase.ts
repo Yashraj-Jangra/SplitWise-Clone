@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, getApp, FirebaseOptions, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import { getFirestore, Firestore, enableIndexedDbPersistence } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig: FirebaseOptions = {
@@ -30,6 +30,20 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+
+  // Enable Firestore offline persistence so the app works with cached data
+  // when the network is unavailable. Must be called before any Firestore operations.
+  if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        // Multiple tabs open — persistence can only be enabled in one tab at a time.
+        console.warn('[Firestore] Offline persistence unavailable: multiple tabs open.');
+      } else if (err.code === 'unimplemented') {
+        // The current browser does not support all of the features required.
+        console.warn('[Firestore] Offline persistence not supported in this browser.');
+      }
+    });
+  }
 } catch (error: any) {
   firebaseError = error.message || "Failed to initialize Firebase. Check your .env configuration.";
   console.error("Firebase Initialization Error:", firebaseError);
