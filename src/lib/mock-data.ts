@@ -299,29 +299,38 @@ export async function archiveGroup(groupId: string, actorId: string): Promise<vo
 }
 
 export async function deleteGroupPermanently(groupId: string): Promise<void> {
-    const batch = writeBatch(db);
+    // Firestore batches cap at 500 ops. Use chunkedBatchDelete to be safe.
+    const BATCH_SIZE = 499;
+
+    async function chunkedBatchDelete(refs: import('firebase/firestore').DocumentReference[]) {
+        for (let i = 0; i < refs.length; i += BATCH_SIZE) {
+            const chunk = refs.slice(i, i + BATCH_SIZE);
+            const batch = writeBatch(db);
+            chunk.forEach(ref => batch.delete(ref));
+            await batch.commit();
+        }
+    }
 
     // 1. Delete expenses
     const expensesQuery = query(collection(db, 'expenses'), where('groupId', '==', groupId));
     const expensesSnapshot = await getDocs(expensesQuery);
-    expensesSnapshot.forEach(doc => batch.delete(doc.ref));
+    await chunkedBatchDelete(expensesSnapshot.docs.map(d => d.ref));
 
     // 2. Delete settlements
     const settlementsQuery = query(collection(db, 'settlements'), where('groupId', '==', groupId));
     const settlementsSnapshot = await getDocs(settlementsQuery);
-    settlementsSnapshot.forEach(doc => batch.delete(doc.ref));
+    await chunkedBatchDelete(settlementsSnapshot.docs.map(d => d.ref));
 
     // 3. Delete history
     const historyQuery = query(collection(db, 'history'), where('groupId', '==', groupId));
     const historySnapshot = await getDocs(historyQuery);
-    historySnapshot.forEach(doc => batch.delete(doc.ref));
+    await chunkedBatchDelete(historySnapshot.docs.map(d => d.ref));
 
     // 4. Delete the group itself
     const groupDocRef = doc(db, 'groups', groupId);
-    batch.delete(groupDocRef);
-
-    await batch.commit();
+    await deleteDoc(groupDocRef);
 }
+
 
 
 export async function restoreGroup(groupId: string, actorId: string): Promise<void> {

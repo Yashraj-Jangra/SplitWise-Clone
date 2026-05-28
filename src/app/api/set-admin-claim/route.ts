@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { firebaseAdmin } from '@/lib/firebase-admin';
+import { rateLimitProfiles, getCallerIp } from '@/lib/rate-limit';
 
 // Bootstrap admin email — read from server env only, never exposed to client.
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
@@ -20,6 +21,14 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
  */
 export async function POST(request: Request) {
     try {
+        const rl = rateLimitProfiles.sensitive(getCallerIp(request) + ':set-admin-claim');
+        if (!rl.success) {
+            return NextResponse.json({ error: 'Too many requests.' }, {
+                status: 429,
+                headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+            });
+        }
+
         const authHeader = request.headers.get('Authorization');
         const body = await request.json();
         const { uid, action = 'promote' } = body as { uid: string; action?: 'promote' | 'demote' };

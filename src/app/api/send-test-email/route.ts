@@ -1,8 +1,9 @@
 
 import { NextResponse } from 'next/server';
-import { firebaseAdmin, getSiteSettingsAdmin } from '@/lib/firebase-admin'; // Import the initialized admin app
+import { firebaseAdmin, getSiteSettingsAdmin } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 import type { SiteSettings } from '@/types';
+import { rateLimitProfiles, getCallerIp } from '@/lib/rate-limit';
 
 type TestEmailRequestBody = {
     emailSettings: SiteSettings['emailSettings'];
@@ -11,6 +12,14 @@ type TestEmailRequestBody = {
 
 export async function POST(request: Request) {
     try {
+        const rl = rateLimitProfiles.sensitive(getCallerIp(request) + ':send-test-email');
+        if (!rl.success) {
+            return NextResponse.json({ error: 'Too many requests. Please wait before retrying.' }, {
+                status: 429,
+                headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+            });
+        }
+
         const idToken = request.headers.get('Authorization')?.split('Bearer ')[1];
         if (!idToken) {
             return NextResponse.json({ error: 'Unauthorized: No token provided.' }, { status: 401 });
