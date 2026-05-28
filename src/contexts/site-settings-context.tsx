@@ -4,6 +4,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { SiteSettings } from '@/types';
 import { getSiteSettings } from '@/lib/mock-data';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const DEFAULT_APP_NAME = 'SettleEase';
 
@@ -24,19 +26,42 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchSettings() {
+    let active = true;
+
+    async function loadSettings(isAuthenticated: boolean) {
       try {
         setLoading(true);
-        const siteSettings = await getSiteSettings();
-        setSettings(siteSettings);
+        if (isAuthenticated) {
+          const siteSettings = await getSiteSettings();
+          if (active) setSettings(siteSettings);
+        } else {
+          const res = await fetch('/api/public/settings');
+          if (res.ok) {
+            const siteSettings = await res.json();
+            if (active) setSettings(siteSettings);
+          } else {
+            throw new Error('Failed to fetch public settings');
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch site settings:", error);
-        // Keep default settings on error
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
-    fetchSettings();
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadSettings(true);
+      } else {
+        loadSettings(false);
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const updateLocalSettings = useCallback((newSettings: Partial<SiteSettings>) => {
