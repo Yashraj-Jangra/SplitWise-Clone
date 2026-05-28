@@ -1559,6 +1559,11 @@ async function getExpenseCategories(): Promise<Record<string, MasterCategory>> {
 let _settingsCache: { settings: SiteSettings; expiresAt: number } | null = null;
 
 export async function getSiteSettings(): Promise<SiteSettings> {
+    if (typeof window === 'undefined') {
+        const { getSiteSettingsAdmin } = await import('./firebase-admin');
+        return getSiteSettingsAdmin();
+    }
+
     if (_settingsCache && Date.now() < _settingsCache.expiresAt) {
         return _settingsCache.settings;
     }
