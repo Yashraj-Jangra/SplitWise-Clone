@@ -6,7 +6,7 @@ import { simplifyDebts } from "@/lib/mock-data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Icons } from "@/components/icons";
-import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { getGroupCurrencySymbol } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { AddSettlementDialog } from "@/components/settlements/add-settlement-dialog";
 import { Switch } from "@/components/ui/switch";
@@ -88,7 +88,7 @@ export function GroupBalances({ balances, group }: GroupBalancesProps) {
                     <span className="font-medium truncate hidden sm:inline">{getFullName(s.from.firstName, s.from.lastName)}</span>
                 </div>
                 <div className="flex-1 flex flex-col items-center text-sm text-muted-foreground flex-shrink-0">
-                    <span className="font-bold text-foreground text-base">{CURRENCY_SYMBOL}{s.amount.toFixed(2)}</span>
+                    <span className="font-bold text-foreground text-base">{getGroupCurrencySymbol(group)}{s.amount.toFixed(2)}</span>
                     <Icons.ArrowRight className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
@@ -140,8 +140,8 @@ export function GroupBalances({ balances, group }: GroupBalancesProps) {
                   isDebtor && "text-red-500",
                   isSettled && "text-muted-foreground"
               )}>
-                {isOwed && `Is Owed ${CURRENCY_SYMBOL}${balance.netBalance.toFixed(2)}`}
-                {isDebtor && `Owes ${CURRENCY_SYMBOL}${Math.abs(balance.netBalance).toFixed(2)}`}
+                {isOwed && `Is Owed ${getGroupCurrencySymbol(group)}${balance.netBalance.toFixed(2)}`}
+                {isDebtor && `Owes ${getGroupCurrencySymbol(group)}${Math.abs(balance.netBalance).toFixed(2)}`}
                 {isSettled && "Settled Up"}
               </div>
             </div>

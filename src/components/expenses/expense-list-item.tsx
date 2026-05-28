@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import type { Expense, Group, HistoryEvent } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { getGroupCurrencySymbol } from "@/lib/constants";
 import { format, formatDistanceToNow } from "date-fns";
 import { getFullName, getInitials, cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
@@ -216,8 +216,8 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
                                             <span className="font-medium">{getFullName(p.user.firstName, p.user.lastName)}</span>
                                         </div>
                                         <div className="text-right">
-                                            {payerInfo && <p className="text-xs text-green-500">paid {CURRENCY_SYMBOL}{payerInfo.amount.toFixed(2)}</p>}
-                                            <p className="text-sm font-medium text-foreground">owes {CURRENCY_SYMBOL}{p.amountOwed.toFixed(2)}</p>
+                                            {payerInfo && <p className="text-xs text-green-500">paid {getGroupCurrencySymbol(group)}{payerInfo.amount.toFixed(2)}</p>}
+                                            <p className="text-sm font-medium text-foreground">owes {getGroupCurrencySymbol(group)}{p.amountOwed.toFixed(2)}</p>
                                         </div>
                                     </div>
                                 )
@@ -374,10 +374,10 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
     userShare.amount = netAmount;
 
     if (netAmount > 0.01) {
-        userShare.text = `You get back ${CURRENCY_SYMBOL}${netAmount.toFixed(2)}`;
+        userShare.text = `You get back ${getGroupCurrencySymbol(group)}${netAmount.toFixed(2)}`;
         userShare.className = "text-green-500";
     } else if (netAmount < -0.01) {
-        userShare.text = `You owe ${CURRENCY_SYMBOL}${Math.abs(netAmount).toFixed(2)}`;
+        userShare.text = `You owe ${getGroupCurrencySymbol(group)}${Math.abs(netAmount).toFixed(2)}`;
         userShare.className = "text-red-500";
     }
   }
@@ -401,7 +401,7 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-base font-bold text-foreground">{CURRENCY_SYMBOL}{expense.amount.toFixed(2)}</p>
+                <p className="text-base font-bold text-foreground">{getGroupCurrencySymbol(group)}{expense.amount.toFixed(2)}</p>
                 {userShare.text && <p className={cn("text-xs font-medium", userShare.className)}>{userShare.text}</p>}
             </div>
         </AccordionTrigger>

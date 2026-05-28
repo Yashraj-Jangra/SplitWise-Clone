@@ -2,7 +2,7 @@
 import type { Group, UserProfile } from "@/types";
 import { Icons } from "@/components/icons";
 import Image from "next/image";
-import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { getGroupCurrencySymbol } from "@/lib/constants";
 import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import {
@@ -143,7 +143,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
       <div className="grid grid-cols-3 divide-x divide-border/50 bg-background/50">
         <div className="p-3 text-center">
             <p className="text-xs text-muted-foreground">Total Spent</p>
-            <p className="font-bold text-lg">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</p>
+            <p className="font-bold text-lg">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
         </div>
         <div className="p-3 text-center">
             <p className="text-xs text-muted-foreground">Members</p>
@@ -155,7 +155,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
                 "font-bold text-lg",
                 currentUserBalance > 0.01 ? 'text-green-500' : currentUserBalance < -0.01 ? 'text-red-500' : 'text-foreground'
             )}>
-                {currentUserBalance >= 0 ? '' : '-'}{CURRENCY_SYMBOL}{Math.abs(currentUserBalance).toFixed(2)}
+                {currentUserBalance >= 0 ? '' : '-'}{getGroupCurrencySymbol(group)}{Math.abs(currentUserBalance).toFixed(2)}
             </p>
         </div>
       </div>

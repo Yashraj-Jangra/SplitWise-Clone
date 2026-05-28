@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Icons } from '@/components/icons';
 import { getInitials } from '@/lib/utils';
-import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { getGroupCurrencySymbol } from '@/lib/constants';
 
 interface UserGroupsListProps {
   userId: string;
@@ -94,7 +94,7 @@ export function UserGroupsList({ userId }: UserGroupsListProps) {
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-sm font-medium">{CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)}</p>
+                <p className="text-sm font-medium">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
                  <p className="text-xs text-muted-foreground">Total Spent</p>
             </div>
         </div>

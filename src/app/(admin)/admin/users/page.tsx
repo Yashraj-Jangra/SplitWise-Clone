@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { getAllUsers } from "@/lib/mock-data";
+import { getAllUsersPaginated } from "@/lib/mock-data";
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import type { UserProfile } from '@/types';
@@ -63,22 +63,48 @@ function UserActions({ user }: { user: UserProfile }) {
                     <Icons.Delete className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
             </DropdownMenuContent>
-        </DropdownMenu>
+         </DropdownMenu>
     )
 }
 
 export default function ManageUsersPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [lastDoc, setLastDoc] = useState<any | null>(null);
+    const [hasMore, setHasMore] = useState(true);
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            const userList = await getAllUsers();
-            setUsers(userList);
+    const fetchInitialUsers = async () => {
+        setLoading(true);
+        try {
+            const result = await getAllUsersPaginated(10, null);
+            setUsers(result.users);
+            setLastDoc(result.lastDoc);
+            setHasMore(result.users.length === 10);
+        } catch (error) {
+            console.error("Failed to fetch users:", error);
+        } finally {
             setLoading(false);
         }
-        fetchUsers();
+    };
+
+    const loadMoreUsers = async () => {
+        if (!lastDoc || loadingMore) return;
+        setLoadingMore(true);
+        try {
+            const result = await getAllUsersPaginated(10, lastDoc);
+            setUsers(prev => [...prev, ...result.users]);
+            setLastDoc(result.lastDoc);
+            setHasMore(result.users.length === 10);
+        } catch (error) {
+            console.error("Failed to load more users:", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchInitialUsers();
     }, []);
 
     if (loading) {
@@ -106,7 +132,7 @@ export default function ManageUsersPage() {
              </div>
              <Card>
                 <CardHeader>
-                    <CardTitle>All Users ({users.length})</CardTitle>
+                    <CardTitle>All Users</CardTitle>
                     <CardDescription>A list of all registered users.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -153,6 +179,18 @@ export default function ManageUsersPage() {
                             ))}
                         </TableBody>
                     </Table>
+                    {hasMore && (
+                        <div className="flex justify-center mt-6">
+                            <Button
+                                variant="outline"
+                                onClick={loadMoreUsers}
+                                disabled={loadingMore}
+                                className="w-full sm:w-auto"
+                            >
+                                {loadingMore ? 'Loading...' : 'Load More Users'}
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
              </Card>
         </div>

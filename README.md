@@ -119,6 +119,14 @@ We recently completed a series of high-impact upgrades to elevate SplitIt to a p
 - **Site Settings In-Memory Cache**: Implemented a 60-second in-memory server cache for `getSiteSettings` to prevent redundant settings reads during expense creation category validations.
 - **Code Refactoring & Cleanup**: Renamed the monolithic `mock-data.ts` to `firestore.service.ts`, structuring it with clear comments and a layout for future service modules. Kept a lightweight `mock-data.ts` wrapper to maintain complete backwards compatibility.
 
+### 🔧 Code Quality, Testing & Multi-Currency (Sprint 3)
+- **Multi-Currency Support**: Added per-group dynamic currency configuration (pick ₹, $, €, £, ¥, etc.) and locale-aware number formatting, allowing dynamic currency symbols across all balances, expenses, and settlements.
+- **Robust Type-Safe Mappers**: Rewrote all Firestore data loading getters with structured, strongly-typed hydration mappers (`mapGroupDoc`, `mapExpenseDoc`, `mapSettlementDoc`, `mapHistoryDoc`, `mapSupportTicketDoc`), completely eliminating unsafe `as unknown as T` force typecasts.
+- **Isolate Component-Level Recovery**: Implemented elegant React Error Boundaries around all individual dashboard and detail cards (obligations, activity charts, spendings), so any localized data issues do not crash the entire app.
+- **Admin Cursor Pagination**: Refactored the site-wide admin users management panel to cursor-paginate users 10 at a time with query bounds, preventing full table scan performance hits.
+- **API and Storage Security**: Hardened backend endpoints with bearer authentication on notifications routes and established secure Storage rules limits for receipt images (5MB limit) and avatars (2MB limit).
+- **Automated Unit Testing Suite**: Installed and configured Vitest + JSDOM for unit testing core business algorithms, validating penny-rounding corrections on equal/shares/percentage splits, debt simplification, and balance aggregations with 100% test coverage.
+
 ## Getting Started
 
 Here’s the quick setup to get SplitIt running locally.

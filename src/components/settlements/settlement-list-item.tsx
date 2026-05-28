@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import type { Settlement, Group, HistoryEvent } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
-import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { getGroupCurrencySymbol } from "@/lib/constants";
 import { format, formatDistanceToNow } from "date-fns";
 import { getFullName, getInitials } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -241,7 +241,7 @@ export function SettlementListItem({ settlement, currentUserId, group, groupHist
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-base font-bold text-green-500">{CURRENCY_SYMBOL}{settlement.amount.toFixed(2)}</p>
+                <p className="text-base font-bold text-green-500">{getGroupCurrencySymbol(group)}{settlement.amount.toFixed(2)}</p>
             </div>
         </AccordionTrigger>
         <AccordionContent>

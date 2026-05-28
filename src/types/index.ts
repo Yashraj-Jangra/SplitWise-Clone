@@ -43,6 +43,7 @@ export interface GroupDocument {
   totalExpenses: number;
   coverImageUrl?: string;
   archivedAt?: Timestamp;
+  currency?: string; // e.g. "INR" or symbol like "₹", "$", "€"
 }
 
 export interface ExpensePayerDocument {

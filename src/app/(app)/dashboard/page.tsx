@@ -11,6 +11,7 @@ import { PredictiveInsights } from '@/components/dashboard/predictive-insights';
 import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/mock-data';
 import type { Expense, Settlement, Group, Balance, SimplifiedSettlement, UserProfile } from '@/types';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { ErrorBoundary } from '@/components/shared/error-boundary';
 
 interface DashboardData {
   expenses: Expense[];
@@ -138,14 +139,34 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-1"><NetBalanceCard expenses={expenses} settlements={settlements} currentUserId={userProfile.uid} /></div>
-            <div className="sm:col-span-1"><ObligationsCard balances={balances} type="owed" /></div>
-            <div className="sm:col-span-2"><ObligationsCard balances={balances} type="owes" /></div>
+            <div className="sm:col-span-1">
+                <ErrorBoundary>
+                    <NetBalanceCard expenses={expenses} settlements={settlements} currentUserId={userProfile.uid} />
+                </ErrorBoundary>
+            </div>
+            <div className="sm:col-span-1">
+                <ErrorBoundary>
+                    <ObligationsCard balances={balances} type="owed" />
+                </ErrorBoundary>
+            </div>
+            <div className="sm:col-span-2">
+                <ErrorBoundary>
+                    <ObligationsCard balances={balances} type="owes" />
+                </ErrorBoundary>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2"><DynamicSpendingChart expenses={expenses} /></div>
-            <div className="lg:col-span-1"><PredictiveInsights expenses={expenses} /></div>
+            <div className="lg:col-span-2">
+                <ErrorBoundary>
+                    <DynamicSpendingChart expenses={expenses} />
+                </ErrorBoundary>
+            </div>
+            <div className="lg:col-span-1">
+                <ErrorBoundary>
+                    <PredictiveInsights expenses={expenses} />
+                </ErrorBoundary>
+            </div>
         </div>
     </div>
   );

@@ -18,6 +18,9 @@ import {
   documentId,
   orderBy,
   setDoc,
+  limit,
+  startAfter,
+  DocumentSnapshot,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import type {
@@ -63,6 +66,71 @@ import {
     notifyMemberAdded, 
     notifyMemberRemoved 
 } from './notification-service';
+
+// --- Hydration Mapper Helpers ---
+function mapGroupDoc(groupDoc: GroupDocument & { id: string }, members: UserProfile[], createdBy: UserProfile): Group {
+    const { memberIds, createdById, createdAt, archivedAt, ...rest } = groupDoc;
+    return {
+        ...rest,
+        id: groupDoc.id,
+        members,
+        createdBy,
+        createdAt: (createdAt as Timestamp).toDate().toISOString(),
+        archivedAt: (archivedAt as Timestamp)?.toDate().toISOString() || undefined,
+    };
+}
+
+function mapExpenseDoc(expenseDoc: ExpenseDocument & { id: string }, payers: ExpensePayer[], participants: ExpenseParticipant[], expenseCreator: UserProfile): Expense {
+    const { date, createdAt, expenseCreatorId, ...rest } = expenseDoc;
+    return {
+        ...rest,
+        id: expenseDoc.id,
+        payers,
+        participants,
+        expenseCreator,
+        date: (date as Timestamp).toDate().toISOString(),
+        createdAt: (createdAt as Timestamp)?.toDate().toISOString(),
+    };
+}
+
+function mapSettlementDoc(settlementDoc: SettlementDocument & { id: string }, paidBy: UserProfile, paidTo: UserProfile): Settlement {
+    const { date, paidById, paidToId, ...rest } = settlementDoc;
+    return {
+        ...rest,
+        id: settlementDoc.id,
+        paidBy,
+        paidTo,
+        date: (date as Timestamp).toDate().toISOString(),
+    };
+}
+
+function mapHistoryDoc(historyDoc: HistoryEventDocument & { id: string }, actor: UserProfile): HistoryEvent {
+    const { timestamp, actorId, ...rest } = historyDoc;
+    return {
+        ...rest,
+        id: historyDoc.id,
+        actor,
+        timestamp: (timestamp as Timestamp).toDate().toISOString(),
+    };
+}
+
+function mapSupportTicketDoc(
+    ticketDoc: SupportTicketDocument & { id: string },
+    user: UserProfile,
+    messages: SupportTicketMessage[],
+    assignedTo?: UserProfile
+): SupportTicket {
+    const { createdAt, updatedAt, userId, assignedToId, messages: docMessages, ...rest } = ticketDoc;
+    return {
+        ...rest,
+        id: ticketDoc.id,
+        user,
+        assignedTo,
+        messages,
+        createdAt: (createdAt as Timestamp).toDate().toISOString(),
+        updatedAt: (updatedAt as Timestamp).toDate().toISOString(),
+    };
+}
 
 // --- User Functions ---
 
@@ -110,6 +178,40 @@ export async function getAllUsers(): Promise<UserProfile[]> {
           dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined
       } as UserProfile
   });
+}
+
+export async function getAllUsersPaginated(
+  pageSize: number = 20,
+  lastDoc: DocumentSnapshot | null = null
+): Promise<{ users: UserProfile[]; lastDoc: DocumentSnapshot | null }> {
+  const usersCol = collection(db, 'users');
+  let q;
+  if (lastDoc) {
+    q = query(
+      usersCol,
+      orderBy('createdAt', 'desc'),
+      startAfter(lastDoc),
+      limit(pageSize)
+    );
+  } else {
+    q = query(
+      usersCol,
+      orderBy('createdAt', 'desc'),
+      limit(pageSize)
+    );
+  }
+  const userSnapshot = await getDocs(q);
+  const users = userSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+          ...data,
+          uid: doc.id, 
+          createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+          dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined
+      } as UserProfile;
+  });
+  const newLastDoc = userSnapshot.docs[userSnapshot.docs.length - 1] || null;
+  return { users, lastDoc: newLastDoc };
 }
 
 export async function updateUser(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
@@ -195,14 +297,7 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
 
     if (!createdBy) throw new Error("Created by user not found for group");
 
-    return {
-        ...groupData,
-        id: groupSnap.id,
-        createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
-        archivedAt: (groupData.archivedAt as Timestamp)?.toDate().toISOString() || undefined,
-        members,
-        createdBy,
-    };
+    return mapGroupDoc({ id: groupSnap.id, ...groupData }, members, createdBy);
 }
 
 export async function getGroupsByUserId(userId: string): Promise<Group[]> {
@@ -228,14 +323,7 @@ export async function getGroupsByUserId(userId: string): Promise<Group[]> {
         if (!createdBy) return null;
         const members = groupData.memberIds.map(id => userMap.get(id)).filter((u): u is UserProfile => u !== undefined);
 
-        return {
-            ...groupData,
-            id: groupData.id,
-            createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
-            archivedAt: (groupData.archivedAt as Timestamp)?.toDate().toISOString() || undefined,
-            members,
-            createdBy
-        } as unknown as Group;
+        return mapGroupDoc(groupData, members, createdBy);
     }).filter((g): g is Group => g !== null);
 
     return groups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -254,20 +342,13 @@ export async function getAllGroups(): Promise<Group[]> {
     const allUsers = await hydrateUsers(Array.from(allUserIds));
     const userMap = new Map(allUsers.map(u => [u.uid, u]));
 
-    const groups: Group[] = groupDocs.map((groupData) => {
+    const groups = groupDocs.map((groupData) => {
             const createdBy = userMap.get(groupData.createdById);
             if (!createdBy) return null;
             const members = groupData.memberIds.map(id => userMap.get(id)).filter(u => u) as UserProfile[];
 
-            return {
-                ...groupData,
-                id: groupData.id,
-                createdAt: (groupData.createdAt as Timestamp).toDate().toISOString(),
-                archivedAt: (groupData.archivedAt as Timestamp)?.toDate().toISOString() || undefined,
-                members,
-                createdBy
-            } as unknown as Group;
-        }) as unknown as Group[];
+            return mapGroupDoc(groupData, members, createdBy);
+        });
     return groups.filter((g): g is Group => g !== null);
 }
 
@@ -732,7 +813,7 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
     
     const querySnapshot = await getDocs(q);
 
-    const expenses: Expense[] = await Promise.all(
+    const expensesRaw = await Promise.all(
         querySnapshot.docs.map(async (docSnap) => {
             const expenseData = docSnap.data() as ExpenseDocument;
             const userIds = [
@@ -746,29 +827,21 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
             
             const payers = (expenseData.payers || []).map(p => {
                 const user = userMap.get(p.userId);
-                return user ? { ...p, user } as unknown as ExpensePayer : null;
+                return user ? { amount: p.amount, user } as ExpensePayer : null;
             }).filter((p): p is ExpensePayer => p !== null);
             
             const participants = (expenseData.participants || []).map(p => {
                 const user = userMap.get(p.userId);
-                return user ? { ...p, user } as unknown as ExpenseParticipant : null;
+                return user ? { amountOwed: p.amountOwed, share: p.share, user } as ExpenseParticipant : null;
             }).filter((p): p is ExpenseParticipant => p !== null);
 
             const expenseCreator = userMap.get(expenseData.expenseCreatorId);
             if (!expenseCreator) return null; // Should not happen
 
-            return {
-                ...expenseData,
-                id: docSnap.id,
-                date: (expenseData.date as Timestamp).toDate().toISOString(),
-                createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
-                payers,
-                participants,
-                expenseCreator,
-            } as unknown as Expense;
+            return mapExpenseDoc({ id: docSnap.id, ...expenseData }, payers, participants, expenseCreator);
         })
-    ) as unknown as Expense[];
-     return expenses.filter((e): e is Expense => e !== null);
+    );
+     return expensesRaw.filter((e): e is Expense => e !== null);
 }
 
 export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
@@ -793,7 +866,7 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
       }
   });
 
-  const expenses: Expense[] = await Promise.all(
+  const expensesRaw = await Promise.all(
     Array.from(expenseMap.entries()).map(async ([id, expenseData]) => {
         const userIds = [
             expenseData.expenseCreatorId,
@@ -806,29 +879,21 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
 
         const payers = (expenseData.payers || []).map(p => {
                 const user = userMap.get(p.userId);
-                return user ? { ...p, user } as unknown as ExpensePayer : null;
+                return user ? { amount: p.amount, user } as ExpensePayer : null;
             }).filter((p): p is ExpensePayer => p !== null);
         
         const participants = (expenseData.participants || []).map((p) => {
             const user = userMap.get(p.userId);
-            return user ? { ...p, user } as unknown as ExpenseParticipant : null;
+            return user ? { amountOwed: p.amountOwed, share: p.share, user } as ExpenseParticipant : null;
         }).filter((p): p is ExpenseParticipant => p !== null);
         
         const expenseCreator = userMap.get(expenseData.expenseCreatorId);
         if (!expenseCreator) return null;
 
-        return {
-            ...expenseData,
-            id: id,
-            date: (expenseData.date as Timestamp).toDate().toISOString(),
-            createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
-            payers: payers as unknown as ExpensePayer[],
-            participants: participants as unknown as ExpenseParticipant[],
-            expenseCreator,
-        } as unknown as Expense;
+        return mapExpenseDoc({ id, ...expenseData }, payers, participants, expenseCreator);
     })
-  ) as unknown as Expense[];
-  return expenses.filter((e): e is Expense => e !== null);
+  );
+  return expensesRaw.filter((e): e is Expense => e !== null);
 }
 
 export async function getAllExpenses(): Promise<Expense[]> {
@@ -850,26 +915,18 @@ export async function getAllExpenses(): Promise<Expense[]> {
   const expenses: Expense[] = expenseDocs.map((expenseData) => {
       const payers = (expenseData.payers || []).map(p => {
           const user = userMap.get(p.userId);
-          return user ? { ...p, user } as unknown as ExpensePayer : null;
+          return user ? { amount: p.amount, user } as ExpensePayer : null;
       }).filter((p): p is ExpensePayer => p !== null);
 
       const participants = (expenseData.participants || []).map(p => {
           const user = userMap.get(p.userId);
-          return user ? { ...p, user } as unknown as ExpenseParticipant : null;
+          return user ? { amountOwed: p.amountOwed, share: p.share, user } as ExpenseParticipant : null;
       }).filter((p): p is ExpenseParticipant => p !== null);
 
       const expenseCreator = userMap.get(expenseData.expenseCreatorId);
       if (!expenseCreator) return null;
 
-      return {
-          ...expenseData,
-          id: expenseData.id,
-          date: (expenseData.date as Timestamp).toDate().toISOString(),
-          createdAt: (expenseData.createdAt as Timestamp)?.toDate().toISOString(),
-          payers: payers as unknown as ExpensePayer[],
-          participants: participants as unknown as ExpenseParticipant[],
-          expenseCreator,
-      } as unknown as Expense;
+      return mapExpenseDoc(expenseData, payers, participants, expenseCreator);
   }).filter((e): e is Expense => e !== null);
   
   return expenses;
@@ -953,13 +1010,7 @@ export async function getSettlementsByGroupId(groupId: string): Promise<Settleme
             const paidTo = userMap.get(settlementData.paidToId);
 
             if (!paidBy || !paidTo) return null;
-            return {
-                ...settlementData,
-                id: docSnap.id,
-                date: (settlementData.date as Timestamp).toDate().toISOString(),
-                paidBy,
-                paidTo
-            } as unknown as Settlement;
+            return mapSettlementDoc({ id: docSnap.id, ...settlementData }, paidBy, paidTo);
         }).filter((s): s is Settlement => s !== null);
 
     return settlements;
@@ -993,13 +1044,7 @@ export async function getSettlementsByUserId(userId: string): Promise<Settlement
         const paidTo = userMap.get(settlementData.paidToId);
         if (!paidBy || !paidTo) return null;
 
-        return {
-            ...settlementData,
-            id: id,
-            date: (settlementData.date as Timestamp).toDate().toISOString(),
-            paidBy,
-            paidTo,
-        } as unknown as Settlement;
+        return mapSettlementDoc({ id: id, ...settlementData }, paidBy, paidTo);
     }).filter((s): s is Settlement => s !== null);
 
     return settlements;
@@ -1024,13 +1069,7 @@ export async function getAllSettlements(): Promise<Settlement[]> {
             const paidTo = userMap.get(settlementData.paidToId);
             if (!paidBy || !paidTo) return null;
 
-            return {
-                ...settlementData,
-                id: settlementData.id,
-                date: (settlementData.date as Timestamp).toDate().toISOString(),
-                paidBy,
-                paidTo,
-            } as unknown as Settlement;
+            return mapSettlementDoc(settlementData, paidBy, paidTo);
         }).filter((s): s is Settlement => s !== null);
 
     return settlements;
@@ -1230,11 +1269,7 @@ export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent
   const historyEvents: HistoryEvent[] = historyDocs.map(doc => {
     const actor = actorMap.get(doc.actorId);
     if (!actor) return null; // Should not happen if data is clean
-    return {
-      ...doc,
-      timestamp: (doc.timestamp as Timestamp).toDate().toISOString(),
-      actor,
-    } as unknown as HistoryEvent;
+    return mapHistoryDoc(doc, actor);
   }).filter((h): h is HistoryEvent => h !== null);
 
   return historyEvents;
@@ -1262,11 +1297,7 @@ export async function getHistoryForExpense(expenseId: string, groupId: string): 
     const historyEvents: HistoryEvent[] = historyDocs.map(doc => {
         const actor = actorMap.get(doc.actorId);
         if (!actor) return null;
-        return {
-        ...doc,
-        timestamp: (doc.timestamp as Timestamp).toDate().toISOString(),
-        actor,
-        } as unknown as HistoryEvent;
+        return mapHistoryDoc(doc, actor);
     }).filter((h): h is HistoryEvent => h !== null);
 
     return historyEvents;
@@ -1731,22 +1762,14 @@ export async function getTicketsByUserId(userId: string): Promise<SupportTicket[
             const sentBy = userMap.get(msg.sentById);
             if (!sentBy) return null;
             return {
-                ...msg,
+                message: msg.message,
                 sentAt: (msg.sentAt as Timestamp).toDate().toISOString(),
                 sentBy: sentBy,
             };
         }).filter((m): m is SupportTicketMessage => m !== null);
 
-        const { userId, assignedToId, createdAt, updatedAt, messages: _m, ...rest } = doc;
-        const ticket: SupportTicket = {
-            ...rest,
-            createdAt: (doc.createdAt as Timestamp).toDate().toISOString(),
-            updatedAt: (doc.updatedAt as Timestamp).toDate().toISOString(),
-            user,
-            assignedTo: doc.assignedToId ? userMap.get(doc.assignedToId) : undefined,
-            messages,
-        } as unknown as SupportTicket;
-        return ticket;
+        const assignedTo = doc.assignedToId ? userMap.get(doc.assignedToId) : undefined;
+        return mapSupportTicketDoc(doc, user, messages, assignedTo);
     }).filter((t): t is SupportTicket => t !== null);
 
     return tickets;
@@ -1777,22 +1800,14 @@ export async function getAllTickets(): Promise<SupportTicket[]> {
             const sentBy = userMap.get(msg.sentById);
             if (!sentBy) return null;
             return {
-                ...msg,
+                message: msg.message,
                 sentAt: (msg.sentAt as Timestamp).toDate().toISOString(),
                 sentBy: sentBy,
             };
         }).filter((m): m is SupportTicketMessage => m !== null);
 
-        const { userId, assignedToId, createdAt, updatedAt, messages: _m, ...rest } = doc;
-        const ticket: SupportTicket = {
-            ...rest,
-            createdAt: (doc.createdAt as Timestamp).toDate().toISOString(),
-            updatedAt: (doc.updatedAt as Timestamp).toDate().toISOString(),
-            user,
-            assignedTo: doc.assignedToId ? userMap.get(doc.assignedToId) : undefined,
-            messages,
-        } as unknown as SupportTicket;
-        return ticket;
+        const assignedTo = doc.assignedToId ? userMap.get(doc.assignedToId) : undefined;
+        return mapSupportTicketDoc(doc, user, messages, assignedTo);
     }).filter((t): t is SupportTicket => t !== null);
 
     return tickets;

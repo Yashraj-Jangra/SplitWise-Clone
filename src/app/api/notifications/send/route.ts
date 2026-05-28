@@ -8,12 +8,17 @@ import { FieldValue } from 'firebase-admin/firestore';
 export async function POST(request: Request) {
     try {
         const idToken = request.headers.get('Authorization')?.split('Bearer ')[1];
-        let authUid: string | undefined;
+        if (!idToken) {
+            return NextResponse.json({ error: 'Unauthorized: Missing authorization token' }, { status: 401 });
+        }
 
-        if (idToken) {
+        let authUid: string;
+        try {
             const adminAuth = firebaseAdmin.auth();
             const decodedToken = await adminAuth.verifyIdToken(idToken);
             authUid = decodedToken.uid;
+        } catch (err) {
+            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
         }
 
         const body = await request.json();

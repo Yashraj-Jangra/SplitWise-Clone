@@ -21,6 +21,7 @@ import {
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { createGroup, getAllUsers, getSiteSettings } from "@/lib/mock-data";
@@ -35,6 +36,7 @@ const createGroupSchema = z.object({
   name: z.string().min(3, { message: "Group name must be at least 3 characters." }).max(50, { message: "Group name must be less than 50 characters."}),
   description: z.string().max(200, {message: "Description must be less than 200 characters."}).optional(),
   memberIds: z.array(z.string()).min(1, { message: "Select at least one member (yourself)." }),
+  currency: z.string().min(1, { message: "Please select a currency." }),
 });
 
 type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
@@ -64,6 +66,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
       name: "",
       description: "",
       memberIds: userProfile ? [userProfile.uid] : [],
+      currency: "₹",
     },
   });
 
@@ -74,6 +77,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
         name: "",
         description: "",
         memberIds: [userProfile.uid],
+        currency: "₹",
       });
       setSearchTerm("");
       setSelectedMembers([]);
@@ -150,6 +154,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
         memberIds: values.memberIds,
         createdById: userProfile.uid,
         coverImageUrl: randomCoverImage,
+        currency: values.currency,
     };
 
     try {
@@ -204,6 +209,33 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
                   <FormControl>
                     <Textarea placeholder="A brief description of the group's purpose." {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="currency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Group Currency</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency symbol" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="₹">INR (₹)</SelectItem>
+                      <SelectItem value="$">USD ($)</SelectItem>
+                      <SelectItem value="€">EUR (€)</SelectItem>
+                      <SelectItem value="£">GBP (£)</SelectItem>
+                      <SelectItem value="¥">JPY/CNY (¥)</SelectItem>
+                      <SelectItem value="₩">KRW (₩)</SelectItem>
+                      <SelectItem value="A$">AUD (A$)</SelectItem>
+                      <SelectItem value="C$">CAD (C$)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
