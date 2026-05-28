@@ -101,6 +101,23 @@ Built with a modern, scalable stack:
 -   **Forms**: [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/)
 -   **Charts**: [Recharts](https://recharts.org/)
 -   **AI (Optional)**: [Genkit](https://firebase.google.com/docs/genkit)
+-   **Caching Layer**: [TanStack Query](https://tanstack.com/query/latest)
+
+## Security, Performance & Architecture Hardening
+
+We recently completed a series of high-impact upgrades to elevate SplitIt to a production-grade, highly secure, and optimized application.
+
+### 🔒 Security Hardening (Sprint 1)
+- **Server-Side Route Protection**: Implemented Next.js Edge Middleware to intercept routes (`/app/*` and `/admin/*`) server-side via httpOnly session cookies. This completely eliminates the "client-side redirect flash".
+- **Tamper-Proof Admin Claims**: Decoupled the admin role check from Firestore reads. The frontend now verifies admin status via the cryptographically signed ID Token claim (`role === 'admin'`).
+- **Endpoint Rate Limiting**: Added in-memory rate-limiting algorithms to protect sensitive API routes (e.g., SMTP test mail sender, admin promotion API) from automated abuse.
+- **Firebase Secret Management**: Moved all API keys and service account private credentials from local files into Firebase Secret Manager, referenced through `apphosting.yaml`.
+
+### ⚡ Performance & Architecture (Sprint 2)
+- **TanStack Caching Layer**: Configured a global QueryClient and custom queries (`useGroups`, `useExpenses`, `useGroupBalances`, `useSiteSettings`) with aggressive caching (30s stale time for transactional data, 5-minute stale time for site settings) to minimize Firestore reads.
+- **Batched Member Hydration**: Resolved the N+1 database querying issue in `getGroupsByUserId` by collecting all user IDs first and hydrating them in a single, batched Firestore operation.
+- **Site Settings In-Memory Cache**: Implemented a 60-second in-memory server cache for `getSiteSettings` to prevent redundant settings reads during expense creation category validations.
+- **Code Refactoring & Cleanup**: Renamed the monolithic `mock-data.ts` to `firestore.service.ts`, structuring it with clear comments and a layout for future service modules. Kept a lightweight `mock-data.ts` wrapper to maintain complete backwards compatibility.
 
 ## Getting Started
 

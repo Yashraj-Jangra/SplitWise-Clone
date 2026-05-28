@@ -10,6 +10,7 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { ThemeProvider } from '@/contexts/theme-context';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import QueryProvider from '@/components/providers/QueryProvider';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
@@ -45,15 +46,17 @@ export default function RootLayout({
       </head>
       <body>
         <SiteSettingsProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <NotificationProvider>
-                <FirebaseErrorListener />
-                {children}
-              </NotificationProvider>
-            </AuthProvider>
-          </ThemeProvider>
-          <Toaster />
+          <QueryProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <NotificationProvider>
+                  <FirebaseErrorListener />
+                  {children}
+                </NotificationProvider>
+              </AuthProvider>
+            </ThemeProvider>
+            <Toaster />
+          </QueryProvider>
         </SiteSettingsProvider>
         <Analytics />
         <SpeedInsights />

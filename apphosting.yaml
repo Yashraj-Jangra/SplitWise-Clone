@@ -5,3 +5,18 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+  # Caching and injecting sensitive env variables via Firebase Secret Manager.
+  # Use these commands to configure them:
+  #   firebase apphosting:secrets:set firebase-service-account
+  #   firebase apphosting:secrets:set google-client-secret
+  #   firebase apphosting:secrets:set admin-email
+  #
+  # Firebase App Hosting will automatically bind them to these environment variables.
+  secrets:
+    - variable: FIREBASE_SERVICE_ACCOUNT
+      secret: firebase-service-account
+    - variable: GOOGLE_CLIENT_SECRET
+      secret: google-client-secret
+    - variable: ADMIN_EMAIL
+      secret: admin-email
