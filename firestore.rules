@@ -96,14 +96,22 @@ service cloud.firestore {
         // Members can read history for their groups.
         allow read: if isSignedIn() && request.auth.uid in resource.data.groupMemberIds;
 
-        // History is mostly created on the server. Client can only update `restored` flag.
-        allow create: if isSignedIn();
+        // History creates must come from an actual group member acting as themselves.
+        // This prevents fake audit log injection.
+        allow create: if isSignedIn()
+            && request.auth.uid in request.resource.data.groupMemberIds
+            && request.resource.data.actorId == request.auth.uid;
+
+        // Members can only update the `restored` flag (for expense/settlement restore).
         allow update: if (request.auth.uid in resource.data.groupMemberIds)
                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['restored']);
     }
     
     match /settings/{docId} {
-        allow read: if true; 
+        // Settings are readable by authenticated users only.
+        // Sensitive fields (SMTP passwords, email credentials) are stripped
+        // by the /api/public/settings route before reaching unauthenticated clients.
+        allow read: if isSignedIn();
         allow write: if isAdmin();
     }
     

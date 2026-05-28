@@ -1,0 +1,18 @@
+diff --git a/node_modules/firebase/auth/package.json b/node_modules/firebase/auth/package.json
+index 03081d6..eb51a87 100644
+--- a/node_modules/firebase/auth/package.json
++++ b/node_modules/firebase/auth/package.json
+@@ -1,7 +1,8 @@
+ {
+-  "name": "firebase/auth",
+-  "main": "dist/index.cjs.js",
+-  "browser": "dist/esm/index.esm.js",
+-  "module": "dist/esm/index.esm.js",
+-  "typings": "dist/auth/index.d.ts"
++    "name":  "firebase/auth",
++    "main":  "dist/index.cjs.js",
++    "browser":  "dist/esm/index.esm.js",
++    "module":  "dist/esm/index.esm.js",
++    "typings":  "dist/auth/index.d.ts",
++    "types":  "dist/auth/index.d.ts"
+ }

@@ -111,7 +111,7 @@ const AnimatedHamburgerIcon = ({ open }: { open: boolean }) => (
 
 
 function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void; }) {
-  const { userProfile } = useAuth();
+  const { userProfile, isAdmin } = useAuth();
   const { settings, loading } = useSiteSettings();
 
   return (
@@ -140,7 +140,7 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
             </div>
             <div className="mt-auto p-4 border-t">
                 <nav className={cn("grid items-start text-sm font-medium", isCollapsed ? "px-2" : "px-4")}>
-                    {userProfile?.role === 'admin' && (
+                    {isAdmin && (
                         <MainNav items={[{ title: "Admin Panel", href: "/admin/dashboard", icon: "ShieldCheck" }]} isCollapsed={isCollapsed} />
                     )}
                     <MainNav items={[settingsNavItem]} isCollapsed={isCollapsed} />

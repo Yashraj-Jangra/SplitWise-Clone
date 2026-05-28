@@ -10,9 +10,11 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 import type { UserProfile } from '@/types';
 import { app, db, auth, firebaseError } from '@/lib/firebase';
-import { isUsernameTaken, getSiteSettings } from '@/lib/mock-data';
+import { isUsernameTaken } from '@/lib/mock-data';
 
-const ADMIN_EMAIL = 'jangrayash1505@gmail.com';
+// Admin email is intentionally NOT hardcoded here.
+// The bootstrap admin is configured via the ADMIN_EMAIL server environment variable.
+// Admin status is granted server-side in /api/set-admin-claim and confirmed via ID token claims.
 
 type SignupData = Omit<UserProfile, 'uid' | 'role' | 'createdAt' | 'avatarUrl'>;
 
@@ -21,6 +23,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   firebaseError: string | null;
+  /** Derived from the Firebase ID token custom claim — tamper-proof, server-set. Prefer this over userProfile.role. */
+  isAdmin: boolean;
   hasPassword?: boolean;
   isGoogleLinked?: boolean;
   login: (email: string, pass: string) => Promise<void>;
@@ -70,6 +74,7 @@ const fetchUserProfile = async (uid: string): Promise<UserProfile | null> => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,15 +82,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         return;
     }
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user: import('firebase/auth').User | null) => {
       setLoading(true);
       if (user) {
         setFirebaseUser(user);
+        // Derive admin status from the ID token claim — set server-side, cannot be spoofed.
+        const tokenResult = await user.getIdTokenResult();
+        setIsAdmin(tokenResult.claims?.['role'] === 'admin');
         let profile = await fetchUserProfile(user.uid);
         
         if (!profile) {
             console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
-            const siteSettings = await getSiteSettings(); // FETCH SETTINGS
             let username = user.email?.split('@')[0] || `user${Date.now()}`;
             let usernameIsTaken = await isUsernameTaken(username);
             while (usernameIsTaken) {
@@ -97,14 +104,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const firstName = nameParts[0] || user.email?.split('@')[0] || 'New';
             const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-            const userRole = user.email === ADMIN_EMAIL ? 'admin' : 'user';
-
+            // Default to 'user' role. The /api/set-admin-claim route will promote
+            // this account to admin if it matches the ADMIN_EMAIL env var (server-side check).
             const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> = {
                 firstName: firstName,
                 lastName: lastName,
                 username: username,
                 email: user.email!,
-                role: userRole,
+                role: 'user', // Always start as user; server promotes if eligible
                 avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(firstName)?.substring(0, 1).toUpperCase()}${lastName?.substring(0,1).toUpperCase() || ''}`,
             };
             
@@ -113,16 +120,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 createdAt: Timestamp.now(),
             });
 
-            if (userRole === 'admin') {
-                try {
-                    await fetch('/api/set-admin-claim', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ uid: user.uid }),
-                    });
-                } catch (e) {
-                    console.error("Failed to set admin claim:", e);
-                }
+            // Ask the server to check if this email matches ADMIN_EMAIL and promote if so.
+            // The API route handles the authorization check — no email logic on the client.
+            try {
+                await fetch('/api/set-admin-claim', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // No auth token for bootstrap scenario — API allows unauthenticated
+                    // self-promotion only when the email matches ADMIN_EMAIL server-side.
+                    body: JSON.stringify({ uid: user.uid, action: 'promote' }),
+                });
+                // Force token refresh so the new claim is picked up immediately
+                await user.getIdToken(true);
+            } catch (e) {
+                console.error("Failed to check/set admin claim:", e);
             }
 
             await sendEmailVerification(user); // Send verification email for new Google users
@@ -133,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setFirebaseUser(null);
         setUserProfile(null);
+        setIsAdmin(false);
       }
       setLoading(false);
     });
@@ -153,19 +165,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = userCredential.user;
 
     try {
-        // 2. Now that user is authenticated, check if username is taken.
+        // 2. Check if username is taken.
         const usernameTaken = await isUsernameTaken(data.username, user.uid);
         if (usernameTaken) {
             throw new Error("Username is already taken.");
         }
         
-        const siteSettings = await getSiteSettings();
-        const userRole = data.email === ADMIN_EMAIL ? 'admin' : 'user';
-
-        // 3. If username is available, create the user profile document.
+        // 3. Create the user profile — always start as 'user'.
+        // The server will promote to admin if the email matches ADMIN_EMAIL.
         const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> = {
             ...data,
-            role: userRole,
+            role: 'user',
             avatarUrl: `https://ui-avatars.com/api/?name=${data.firstName}+${data.lastName || ''}`,
         };
         
@@ -179,20 +189,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         await setDoc(doc(db, "users", user.uid), finalProfileData);
         
-        if (userRole === 'admin') {
+        // Ask the server to promote to admin if eligible (server checks ADMIN_EMAIL).
+        // Pass the ID token so the server can verify identity.
+        try {
+            const idToken = await user.getIdToken();
             await fetch('/api/set-admin-claim', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: user.uid }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({ uid: user.uid, action: 'promote' }),
             });
+            // Force token refresh so any new claim is active immediately
+            await user.getIdToken(true);
+        } catch (e) {
+            console.error("Failed to check/set admin claim on signup:", e);
         }
 
-        await sendEmailVerification(user); // Send verification email on signup
+        await sendEmailVerification(user);
 
     } catch (error) {
-        // 4. If profile creation fails (e.g. username taken), delete the auth user to prevent orphans.
+        // If profile creation fails (e.g. username taken), delete the auth user.
         await deleteUser(user);
-        // Re-throw the original error to be caught by the form's onSubmit handler.
         throw error;
     }
   }, []);
@@ -263,11 +282,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const hasPassword = useMemo(() => {
-    return firebaseUser?.providerData.some(p => p.providerId === 'password');
+    return firebaseUser?.providerData.some((p: import('firebase/auth').UserInfo) => p.providerId === 'password');
   }, [firebaseUser]);
 
   const isGoogleLinked = useMemo(() => {
-    return firebaseUser?.providerData.some(p => p.providerId === 'google.com');
+    return firebaseUser?.providerData.some((p: import('firebase/auth').UserInfo) => p.providerId === 'google.com');
   }, [firebaseUser]);
 
 
@@ -276,6 +295,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userProfile,
     loading,
     firebaseError,
+    isAdmin,
     hasPassword,
     isGoogleLinked,
     login,
@@ -287,7 +307,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     linkWithGoogle,
     unlinkFromGoogle,
     updateUserPassword,
-  }), [firebaseUser, userProfile, loading, firebaseError, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle, updateUserPassword]);
+  }), [firebaseUser, userProfile, loading, firebaseError, isAdmin, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle, updateUserPassword]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');
