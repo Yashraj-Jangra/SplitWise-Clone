@@ -131,20 +131,11 @@ service cloud.firestore {
     }
 
     match /notifications_v2/{notifId} {
-      // Allow reads if:
-      // 1. User is in the recipientIds list (specific notification), OR
-      // 2. target == 'all_users' (broadcast to everyone)
-      allow read: if isSignedIn() && (
-        request.auth.uid in resource.data.recipientIds ||
-        resource.data.target == 'all_users'
-      );
-      // Only the server (Admin SDK via API route) can create notifications
-      allow create: if isAdmin();
-      // Any signed-in user can mark a notification as read
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin();
       allow update: if isSignedIn()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
         && request.resource.data.readBy == resource.data.readBy.concat([request.auth.uid]);
-      allow delete: if isAdmin();
     }
 
     match /user_notification_prefs/{userId} {
