@@ -99,7 +99,7 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
                 <CardTitle>Spending Over Time</CardTitle>
                 <CardDescription>Daily spending across different categories.</CardDescription>
@@ -110,7 +110,7 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
                     <ToggleGroupItem value="bar" aria-label="Bar chart"><Icons.Analysis className="h-4 w-4" /></ToggleGroupItem>
                 </ToggleGroup>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
+                    <SelectTrigger className="w-[160px] flex-shrink-0 h-9 text-xs">
                         <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>

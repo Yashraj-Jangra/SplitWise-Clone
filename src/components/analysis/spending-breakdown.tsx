@@ -130,7 +130,7 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
           </div>
         ) : (
           <>
-            <div className="w-full h-[250px] md:w-1/2 flex-shrink-0 relative">
+            <div className="w-full h-[220px] md:h-[250px] md:w-1/2 flex-shrink-0 relative">
               <ChartContainer config={chartConfig} className="h-full w-full">
                 <ResponsiveContainer>
                   <PieChart>
@@ -158,7 +158,7 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
             </div>
             
             <div className="w-full md:w-1/2 h-full flex flex-col">
-                <ScrollArea className="flex-1 pr-4 -mr-4">
+                <ScrollArea className="flex-1 min-h-[150px] pr-4 -mr-4">
                     <div className="space-y-2">
                         {expensesByMasterCategory.map((category, index) => {
                             const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;

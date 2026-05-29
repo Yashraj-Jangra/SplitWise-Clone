@@ -4,10 +4,6 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    @apply text-[90%];
-  }
-
   body {
     font-family: 'Inter', sans-serif;
     @apply bg-background text-foreground;
@@ -110,5 +106,22 @@
 @layer utilities {
   .glass-pane {
     @apply bg-card/50 backdrop-blur-sm border-border/50;
+  }
+
+  /* Hide scrollbar cross-browser while keeping scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;             /* Chrome, Safari, Opera */
+  }
+
+  /* iOS safe-area padding utilities */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 }

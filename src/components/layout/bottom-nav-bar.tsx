@@ -38,8 +38,8 @@ export function BottomNavBar() {
   }, [pathname, groups]);
 
   return (
-    <footer className="md:hidden fixed bottom-0 left-0 z-50 w-full h-16 border-t bg-background/95 backdrop-blur-sm">
-        <div className="grid h-full grid-cols-5">
+    <footer className="md:hidden fixed bottom-0 left-0 z-50 w-full border-t bg-background/95 backdrop-blur-sm pb-safe">
+        <div className="grid h-16 grid-cols-5">
             {navItems.slice(0, 2).map((item) => {
                 const Icon = Icons[item.icon];
                 const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard');

@@ -14,7 +14,6 @@ import { BudgetPerformance } from '@/components/analysis/budget-performance';
 import { SpendingOverTime } from '@/components/analysis/spending-over-time';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Icons } from '@/components/icons';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 function DashboardSkeleton() {
     return (
@@ -35,8 +34,7 @@ export default function AnalysisPage() {
   const [allExpenses, setAllExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
-  const [showHeadsUp, setShowHeadsUp] = useState(true);
-
+  const [mobileHintDismissed, setMobileHintDismissed] = useState(false);
 
   const [dateRange, setDateRange] = useState<DateRangePreset>({
     id: 'last30',
@@ -46,19 +44,6 @@ export default function AnalysisPage() {
       to: endOfDay(new Date()),
     },
   });
-
-  useEffect(() => {
-    // When isMobile is determined, decide whether to show the heads-up.
-    if (isMobile === false) {
-      setShowHeadsUp(false);
-    } else if (isMobile === true) {
-      // It is mobile, show the message then hide it.
-      const timer = setTimeout(() => {
-        setShowHeadsUp(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile]);
 
   useEffect(() => {
     if (userProfile?.uid) {
@@ -91,27 +76,6 @@ export default function AnalysisPage() {
 
   }, [allExpenses, dateRange]);
 
-  if (isMobile && showHeadsUp) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-10rem)] p-6 animate-in fade-in-0 duration-500">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <Icons.Analysis className="h-16 w-16 text-primary" />
-            </div>
-            <CardTitle className="text-2xl font-headline">Better on Desktop</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              For the best experience with charts and data, we recommend viewing this page on a larger screen.
-            </p>
-            <p className="text-xs text-muted-foreground mt-4">Loading analytics...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   if (authLoading || loading) {
     return <DashboardSkeleton />;
   }
@@ -119,14 +83,32 @@ export default function AnalysisPage() {
   return (
     <div className="space-y-6">
         <div>
-            <h1 className="text-3xl font-bold font-headline text-foreground">Financial Health Dashboard</h1>
-            <p className="text-muted-foreground">An overview of your personal spending and budgets.</p>
+            <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground">Financial Health Dashboard</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">An overview of your personal spending and budgets.</p>
         </div>
+
+        {/* Mobile landscape hint — dismissible, non-blocking */}
+        {isMobile && !mobileHintDismissed && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 min-w-0">
+              <Icons.Analysis className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="truncate">Charts look best in landscape mode.</span>
+            </div>
+            <button
+              onClick={() => setMobileHintDismissed(true)}
+              className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Dismiss hint"
+            >
+              <Icons.Close className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         <TimelineFilter
             selectedRange={dateRange}
             onRangeChange={setDateRange}
             allExpenses={allExpenses}
+            isMobile={!!isMobile}
         />
 
         <SpendingOverTime expenses={filteredExpenses} />

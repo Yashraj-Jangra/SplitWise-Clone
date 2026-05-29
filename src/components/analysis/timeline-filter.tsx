@@ -30,9 +30,10 @@ interface TimelineFilterProps {
   selectedRange: DateRangePreset;
   onRangeChange: (range: DateRangePreset) => void;
   allExpenses: Expense[];
+  isMobile?: boolean;
 }
 
-export function TimelineFilter({ selectedRange, onRangeChange, allExpenses }: TimelineFilterProps) {
+export function TimelineFilter({ selectedRange, onRangeChange, allExpenses, isMobile = false }: TimelineFilterProps) {
   const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
 
   const getRangeForPreset = (id: string): DateRange => {
@@ -113,7 +114,7 @@ export function TimelineFilter({ selectedRange, onRangeChange, allExpenses }: Ti
                     defaultMonth={selectedRange.range?.from}
                     selected={selectedRange.range}
                     onSelect={handleCustomDateChange}
-                    numberOfMonths={2}
+                    numberOfMonths={isMobile ? 1 : 2}
                 />
             </PopoverContent>
         </Popover>

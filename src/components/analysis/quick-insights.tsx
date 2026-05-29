@@ -113,7 +113,7 @@ export function QuickInsights({ currentExpenses, previousExpenses }: QuickInsigh
 
     if (currentExpenses.length === 0) {
       return (
-        <Card className="h-full">
+        <Card className="h-full min-h-[200px]">
             <CardHeader>
                 <CardTitle>Quick Insights</CardTitle>
                 <CardDescription>Actionable summaries of your spending.</CardDescription>
@@ -129,7 +129,7 @@ export function QuickInsights({ currentExpenses, previousExpenses }: QuickInsigh
     const Icon = Icons[activeInsight.icon];
 
     return (
-        <Card className="h-full flex flex-col">
+        <Card className="h-full flex flex-col min-h-[280px] max-h-[420px] md:max-h-none">
             <CardHeader>
                 <CardTitle>Quick Insights</CardTitle>
                 <CardDescription>Actionable summaries of your spending.</CardDescription>

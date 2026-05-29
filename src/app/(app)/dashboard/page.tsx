@@ -132,10 +132,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
         <div>
-            <h1 className="text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
             {greeting}, {userProfile.firstName}!
             </h1>
-            <p className="text-muted-foreground">Here's what's happening with your finances today.</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your finances today.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -149,7 +149,7 @@ export default function DashboardPage() {
                     <ObligationsCard balances={balances} type="owed" />
                 </ErrorBoundary>
             </div>
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-2">
                 <ErrorBoundary>
                     <ObligationsCard balances={balances} type="owes" />
                 </ErrorBoundary>

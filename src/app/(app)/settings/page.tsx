@@ -221,7 +221,7 @@ export default function SettingsPage() {
                     <FormLabel>Mobile Number</FormLabel>
                     <div className="flex gap-2">
                       <FormField control={profileForm.control} name="countryCode" render={({ field }) => (
-                        <FormItem className="w-[120px] shrink-0">
+                        <FormItem className="w-[100px] sm:w-[120px] shrink-0">
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Code" /></SelectTrigger></FormControl>
                             <SelectContent>
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                                 <p className="text-sm font-medium">{ev.label}</p>
                                 <p className="text-xs text-muted-foreground">{ev.description}</p>
                               </div>
-                              <div className="flex flex-wrap gap-4 md:grid md:grid-cols-3 md:gap-8 md:w-[240px] md:justify-items-center">
+                              <div className="grid grid-cols-3 gap-2 md:grid md:grid-cols-3 md:gap-8 md:w-[240px] md:justify-items-center">
                                 {(["inApp", "push", "email"] as const).map(channel => {
                                   const masterKey = channel === "inApp" ? "inAppEnabled" : channel === "push" ? "pushEnabled" : "emailEnabled";
                                   const masterOn = notifForm.watch(masterKey);
