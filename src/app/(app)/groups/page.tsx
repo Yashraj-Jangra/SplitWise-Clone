@@ -100,8 +100,8 @@ export default function GroupsPage() {
                         <div className="absolute top-4 right-4">
                             <div className={cn(
                                 "px-2.5 py-1 rounded-full text-xs font-bold shadow-sm backdrop-blur-md",
-                                isOwed ? "bg-money-positive/90 text-white" : 
-                                isDebtor ? "bg-money-negative/90 text-white" : 
+                                isOwed ? "bg-green-500/90 text-white" : 
+                                isDebtor ? "bg-red-500/90 text-white" : 
                                 "bg-black/50 text-white/90"
                             )}>
                                 {isOwed && `You're owed ${CURRENCY_SYMBOL}${net.toFixed(2)}`}

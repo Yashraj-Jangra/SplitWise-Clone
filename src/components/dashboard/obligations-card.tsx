@@ -270,8 +270,8 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                     </ScrollArea>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-center space-y-2 animate-in fade-in zoom-in duration-500">
-                        <div className="h-12 w-12 rounded-full bg-money-positive/10 flex items-center justify-center mb-1">
-                            <Icons.ShieldCheck className="h-6 w-6 text-money-positive" />
+                        <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center mb-1">
+                            <Icons.ShieldCheck className="h-6 w-6 text-green-500" />
                         </div>
                         <p className="text-sm font-semibold text-foreground">All settled up!</p>
                         <p className="text-xs text-muted-foreground">No outstanding balances here.</p>

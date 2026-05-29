@@ -1,15 +1,13 @@
 # Current Working State
 
 ## What work has been done (Recent Session)
-* Created animated-number and haptics utility for dynamic UI.
-* Polished dashboard with net balance trend chips and obligation progress bars.
-* Improved groups page with active balances and status badges.
-* Overhauled expense list items with context menus and semantic category colors.
-* Optimized forms for mobile with `inputMode="decimal"`, fluid typography, and horizontal avatar selectors.
-* Integrated Drawer for mobile popovers in forms.
-* Added sticky header and unsaved changes indicator to Settings page.
-* Built structured skeleton loading screens for group details.
-* Implemented Recent Searches stored in `localStorage` for the global search dialog.
+* Checked out to `dev` branch to keep progress unified.
+* Reverted Expense Record action buttons back to explicit Edit/Delete buttons (removed the inconsistent dropdown).
+* Restored standard green and red text coloring (`text-green-500` and `text-red-500`) for positive and negative balances across dashboard, group lists, and animations.
+* Fixed "Advanced Split" button hover color to be neutral (changed from `ghost` to `secondary` variant to avoid destructive accent).
+* Refined Drawer fields in `expense-form.tsx` for Date and Category on mobile, adding proper padding, `DrawerHeader`, and `DrawerTitle`.
+* Prevented the login form container from stretching when initiating Google login by replacing `AppLoading` with an inline loader.
+* Rewrote the `GroupDetailLoading` skeleton in `groups/[groupId]/loading.tsx` to exactly match the new Tabs-based layout (removing the outdated sidebar structure).
 
 ## What's planned next
 * Review backend integration patterns when transitioning off mock data.

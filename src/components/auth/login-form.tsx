@@ -108,7 +108,11 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
 
   // Show a loading state while we check for an active session.
   if (loading || userProfile) {
-    return <AppLoading />;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full">
+        <Icons.AppLogo className="h-10 w-10 text-primary animate-spin" />
+      </div>
+    );
   }
 
   return (

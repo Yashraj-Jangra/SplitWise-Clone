@@ -127,7 +127,7 @@ export function NetBalanceCard({ expenses, settlements, currentUserId }: NetBala
     }, [expenses, settlements, currentUserId]);
 
     const isNegative = netBalance < -0.01;
-    const finalColor = isNegative ? 'text-money-negative' : netBalance > 0.01 ? 'text-money-positive' : 'text-foreground';
+    const finalColor = isNegative ? 'text-red-500' : netBalance > 0.01 ? 'text-green-500' : 'text-foreground';
 
     return (
         <Card className="h-full flex flex-col">
@@ -140,7 +140,7 @@ export function NetBalanceCard({ expenses, settlements, currentUserId }: NetBala
                     {Math.abs(trendPercentage) > 0 && (
                         <div className={cn(
                             "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm",
-                            trendPercentage > 0 ? "bg-money-positive/10 text-money-positive border border-money-positive/20" : "bg-money-negative/10 text-money-negative border border-money-negative/20"
+                            trendPercentage > 0 ? "bg-green-500/10 text-green-500 border border-green-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"
                         )}>
                             {trendPercentage > 0 ? <Icons.TrendingUp className="mr-1 h-3 w-3" /> : <Icons.TrendingDown className="mr-1 h-3 w-3" />}
                             {Math.abs(trendPercentage).toFixed(0)}%

@@ -44,7 +44,7 @@ export function AnimatedNumber({ value, className, prefix = '', isCurrency = tru
   });
 
   // Use semantic color classes based on the actual value (not the spring value, to avoid color flickering during transition to zero)
-  const colorClass = value > 0.01 ? 'text-money-positive' : value < -0.01 ? 'text-money-negative' : 'text-foreground';
+  const colorClass = value > 0.01 ? 'text-green-500' : value < -0.01 ? 'text-red-500' : 'text-foreground';
 
   if (!hasMounted) {
     // Initial server render

@@ -43,6 +43,8 @@ import {
   Drawer,
   DrawerContent,
   DrawerTrigger,
+  DrawerHeader,
+  DrawerTitle,
 } from '@/components/ui/drawer';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -243,8 +245,11 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                 {isMobile ? (
                   <Drawer>
                     <DrawerTrigger asChild>{triggerContent}</DrawerTrigger>
-                    <DrawerContent className="p-0">
-                        {dropdownContent}
+                    <DrawerContent className="px-4 pb-8 pt-2 max-h-[85vh]">
+                        <DrawerHeader className="px-0 pt-0 text-left">
+                           <DrawerTitle>Select Category</DrawerTitle>
+                        </DrawerHeader>
+                        <div className="overflow-hidden rounded-md border bg-popover/50">{dropdownContent}</div>
                     </DrawerContent>
                   </Drawer>
                 ) : (
@@ -309,7 +314,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Split with</p>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setView('split')} className="h-8 text-muted-foreground">Advanced Split</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setView('split')} className="h-8 text-muted-foreground bg-transparent hover:bg-muted">Advanced Split</Button>
         </div>
         <ScrollArea className="w-full whitespace-nowrap pb-4" type="scroll">
             <div className="flex w-max space-x-4">
@@ -375,8 +380,11 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                 {isMobile ? (
                   <Drawer>
                     <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
-                    <DrawerContent className="p-4 flex flex-col items-center">
-                        {calendarContent}
+                    <DrawerContent className="px-4 pb-8 pt-2 flex flex-col items-center">
+                        <DrawerHeader className="w-full text-center pt-0">
+                           <DrawerTitle>Pick a date</DrawerTitle>
+                        </DrawerHeader>
+                        <div className="pb-4 bg-popover/50 rounded-xl border p-1">{calendarContent}</div>
                     </DrawerContent>
                   </Drawer>
                 ) : (

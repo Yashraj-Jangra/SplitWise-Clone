@@ -26,12 +26,6 @@ import { deleteExpense } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { appEventEmitter } from '@/lib/event-emitter';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 
 // --- Rewritten History Parsing Logic ---
@@ -130,7 +124,11 @@ interface ExpenseListItemProps {
   groupHistory: HistoryEvent[];
 }
 
-function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: ExpenseListItemProps) {
+function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: Omit<ExpenseListItemProps, ''>) {
+    const { toast } = useToast();
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [showAllHistory, setShowAllHistory] = useState(false);
 
     const expenseHistory = useMemo(() => {
@@ -154,6 +152,24 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: E
     const visibleHistory = showAllHistory ? expenseHistory : expenseHistory.slice(0, 1);
     const lastUpdatedEvent = expenseHistory.length > 0 ? expenseHistory[0] : null;
 
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            await deleteExpense(expense.id, expense.groupId, expense.amount, currentUserId);
+            toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
+            setIsDeleteDialogOpen(false);
+            appEventEmitter.emit('data-changed');
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error Deleting Expense",
+                description: "Failed to delete the expense. Please try again.",
+            });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <>
             <div className="p-4 space-y-4 bg-muted/30">
@@ -162,10 +178,22 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: E
                         <p className="text-muted-foreground text-sm">
                             Added by {getFullName(expense.expenseCreator.firstName, expense.expenseCreator.lastName)} on {format(new Date(expense.date), "MMMM d, yyyy")}
                         </p>
-                        {lastUpdatedEvent && (
+                         {lastUpdatedEvent && (
                             <p className="text-muted-foreground text-xs mt-0.5">
                                 Last updated {formatDistanceToNow(new Date(lastUpdatedEvent.timestamp), { addSuffix: true })} by {getFullName(lastUpdatedEvent.actor.firstName, lastUpdatedEvent.actor.lastName)}
                             </p>
+                         )}
+                    </div>
+                     <div className="flex gap-2">
+                        {(!group || !group.archivedAt) && (
+                            <>
+                                <Button variant="outline" size="sm" onClick={() => setIsEditDialogOpen(true)}>
+                                    <Icons.Edit className="mr-2 h-4 w-4" /> Edit
+                                </Button>
+                                <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                                    <Icons.Delete className="mr-2 h-4 w-4" /> Delete
+                                </Button>
+                            </>
                         )}
                     </div>
                 </div>
@@ -198,15 +226,11 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: E
                     </div>
                     
                     <div className="space-y-4">
-                        {expense.receiptImageUrl && (
-                            <div>
-                                <h3 className="text-sm font-semibold text-muted-foreground mb-1">Receipt</h3>
-                                <div className="relative h-32 w-24 rounded-md overflow-hidden border">
-                                    {/* Using a placeholder since we don't have next/image imported here for receipts */}
-                                    <img src={expense.receiptImageUrl} alt="Receipt" className="object-cover w-full h-full" />
-                                </div>
-                            </div>
-                        )}
+                        <div className="p-4 border-2 border-dashed rounded-lg bg-background/30 text-center flex flex-col items-center justify-center min-h-[120px]">
+                           <Icons.AppLogo className="h-8 w-8 text-primary/50 mb-2" />
+                           <p className="text-sm font-semibold text-muted-foreground">Widget Coming Soon</p>
+                           <p className="text-xs text-muted-foreground/80">A new insight will appear here.</p>
+                        </div>
                         {expense.notes && (
                             <div>
                                 <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
@@ -300,7 +324,35 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: E
                         </div>
                     )}
                 </div>
+
             </div>
+
+             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the expense "{expense.description}" and recalculate group balances.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} variant="destructive">
+                    {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
+                    Delete Expense
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            
+            {isEditDialogOpen && (
+                <EditExpenseDialog
+                    open={isEditDialogOpen}
+                    onOpenChange={setIsEditDialogOpen}
+                    expense={expense}
+                    group={group}
+                />
+            )}
         </>
     )
 }
@@ -308,10 +360,6 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: E
 
 export function ExpenseListItem({ expense, currentUserId, group, groupHistory }: ExpenseListItemProps) {
   const { settings } = useSiteSettings();
-  const { toast } = useToast();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
   const userShare = {
@@ -336,111 +384,30 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
 
   const categoryIconName = settings.expenseCategories[expense.masterCategory || 'Uncategorized']?.subCategories[expense.category || 'Other']?.icon || 'Wallet';
   const CategoryIcon = Icons[categoryIconName];
-  
-  const getCategoryColor = (masterCategory: string) => {
-      switch(masterCategory) {
-          case 'Food & Drink': return 'text-orange-500 bg-orange-500/10';
-          case 'Home': return 'text-blue-500 bg-blue-500/10';
-          case 'Transportation': return 'text-teal-500 bg-teal-500/10';
-          case 'Entertainment': return 'text-purple-500 bg-purple-500/10';
-          case 'Utilities': return 'text-yellow-500 bg-yellow-500/10';
-          default: return 'text-muted-foreground bg-muted';
-      }
-  };
-  const categoryColorClass = getCategoryColor(expense.masterCategory || 'Other');
-
-  const handleDelete = async () => {
-      setIsDeleting(true);
-      try {
-          await deleteExpense(expense.id, expense.groupId, expense.amount, currentUserId);
-          toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
-          setIsDeleteDialogOpen(false);
-          appEventEmitter.emit('data-changed');
-      } catch (error) {
-          toast({
-              variant: "destructive",
-              title: "Error Deleting Expense",
-              description: "Failed to delete the expense. Please try again.",
-          });
-      } finally {
-          setIsDeleting(false);
-      }
-  };
 
   return (
-    <>
-      <AccordionItem value={`exp-${expense.id}`} className="border-b border-border/50 group relative">
-          <div className="flex items-center w-full">
-              <AccordionTrigger className="flex-1 p-3 hover:bg-muted/50 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50 text-left">
-                  <div className="flex items-center gap-4 flex-1">
-                      <div className="text-center w-12 flex-shrink-0">
-                          <div className={cn("rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-1", categoryColorClass)}>
-                              <CategoryIcon className="h-5 w-5" />
-                          </div>
-                          <p className="text-xs text-muted-foreground">{format(new Date(expense.date), 'MMM dd')}</p>
-                      </div>
-                      <div className="grid gap-0.5 text-left">
-                          <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
-                          <p className="text-xs text-muted-foreground">{expense.category}</p>
-                      </div>
-                  </div>
-                  <div className="text-right pr-2">
-                      <p className="text-base font-bold text-foreground">{getGroupCurrencySymbol(group)}{expense.amount.toFixed(2)}</p>
-                      {userShare.text && <p className={cn("text-xs font-medium", userShare.className)}>{userShare.text}</p>}
-                  </div>
-              </AccordionTrigger>
-              
-              {(!group || !group.archivedAt) && (
-                  <div className="pr-3 flex-shrink-0 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                  <Icons.MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
-                                  <Icons.Edit className="mr-2 h-4 w-4" /> Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-money-negative focus:text-money-negative" onClick={() => setIsDeleteDialogOpen(true)}>
-                                  <Icons.Delete className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
-                          </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
-              )}
-          </div>
-          <AccordionContent>
-              <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} groupHistory={groupHistory} />
-          </AccordionContent>
-      </AccordionItem>
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-          <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the expense "{expense.description}" and recalculate group balances.
-              </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} disabled={isDeleting} variant="destructive">
-              {isDeleting && <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Expense
-              </AlertDialogAction>
-          </AlertDialogFooter>
-          </AlertDialogContent>
-      </AlertDialog>
-      
-      {isEditDialogOpen && (
-          <EditExpenseDialog
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              expense={expense}
-              group={group}
-          />
-      )}
-    </>
+    <AccordionItem value={`exp-${expense.id}`} className="border-b border-border/50">
+        <AccordionTrigger className="p-3 hover:bg-muted/50 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50">
+            <div className="flex items-center gap-4 flex-1">
+                <div className="text-center w-12 flex-shrink-0">
+                    <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-1">
+                        <CategoryIcon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">{format(new Date(expense.date), 'MMM dd')}</p>
+                </div>
+                <div className="grid gap-0.5 text-left">
+                    <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
+                    <p className="text-xs text-muted-foreground">{expense.category}</p>
+                </div>
+            </div>
+            <div className="text-right">
+                <p className="text-base font-bold text-foreground">{getGroupCurrencySymbol(group)}{expense.amount.toFixed(2)}</p>
+                {userShare.text && <p className={cn("text-xs font-medium", userShare.className)}>{userShare.text}</p>}
+            </div>
+        </AccordionTrigger>
+        <AccordionContent>
+            <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} groupHistory={groupHistory} />
+        </AccordionContent>
+    </AccordionItem>
   );
 }
