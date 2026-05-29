@@ -12,6 +12,8 @@ import { CURRENCY_SYMBOL } from '@/lib/constants';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { AnimatedNumber } from '@/components/ui/animated-number';
+import { Icons } from '@/components/icons';
 
 const chartConfig = {
   balance: {
@@ -34,7 +36,7 @@ interface NetBalanceCardProps {
 }
 
 export function NetBalanceCard({ expenses, settlements, currentUserId }: NetBalanceCardProps) {
-    const { netBalance, chartData, domain, gradientOffset } = useMemo(() => {
+    const { netBalance, chartData, domain, gradientOffset, trendPercentage } = useMemo(() => {
         // 1. Consolidate all transactions into a single array
         const allTransactions: { date: Date, amount: number }[] = [];
         expenses.forEach(expense => {
@@ -100,27 +102,57 @@ export function NetBalanceCard({ expenses, settlements, currentUserId }: NetBala
         }
         offset = Math.max(0, Math.min(1, offset)); // Clamp between 0 and 1
 
+        // 5. Calculate Trend Percentage
+        const current30DaysBalance = allTransactions
+            .filter(t => t.date >= startDate && t.date <= endDate)
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const previous30DaysStartDate = subDays(startDate, 30);
+        const previous30DaysBalance = allTransactions
+            .filter(t => t.date >= previous30DaysStartDate && t.date < startDate)
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        let trendPercentage = 0;
+        if (Math.abs(previous30DaysBalance) > 0) {
+            trendPercentage = ((current30DaysBalance - previous30DaysBalance) / Math.abs(previous30DaysBalance)) * 100;
+        }
+
         return {
             netBalance: overallNetBalance,
             chartData: historicalChartData,
             domain: finalDomain,
             gradientOffset: offset,
+            trendPercentage,
         };
     }, [expenses, settlements, currentUserId]);
 
-    const isNegative = netBalance < 0;
-    const finalColor = isNegative ? 'text-red-500' : 'text-green-500';
+    const isNegative = netBalance < -0.01;
+    const finalColor = isNegative ? 'text-money-negative' : netBalance > 0.01 ? 'text-money-positive' : 'text-foreground';
 
     return (
         <Card className="h-full flex flex-col">
-            <CardHeader>
-                <CardTitle className="text-muted-foreground">Net Balance</CardTitle>
-                <CardDescription>Your overall financial position</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-end">
-                <div className={cn("text-3xl font-bold mb-2", finalColor)}>
-                    {netBalance >= 0 ? '+' : '−'}{CURRENCY_SYMBOL}{Math.abs(netBalance).toFixed(2)}
+            <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle className="text-muted-foreground">Net Balance</CardTitle>
+                        <CardDescription>Your overall financial position</CardDescription>
+                    </div>
+                    {Math.abs(trendPercentage) > 0 && (
+                        <div className={cn(
+                            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm",
+                            trendPercentage > 0 ? "bg-money-positive/10 text-money-positive border border-money-positive/20" : "bg-money-negative/10 text-money-negative border border-money-negative/20"
+                        )}>
+                            {trendPercentage > 0 ? <Icons.TrendingUp className="mr-1 h-3 w-3" /> : <Icons.TrendingDown className="mr-1 h-3 w-3" />}
+                            {Math.abs(trendPercentage).toFixed(0)}%
+                        </div>
+                    )}
                 </div>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col justify-end pt-0">
+                <AnimatedNumber 
+                    value={netBalance} 
+                    className="text-3xl font-bold mb-2 tracking-tight"
+                />
                 <div className="h-[60px] -ml-6 -mr-2">
                     <ChartContainer config={chartConfig} className="w-full h-full">
                         <AreaChart 

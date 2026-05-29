@@ -39,6 +39,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -100,6 +105,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
   const { control, watch, formState: { dirtyFields } } = useFormContext<ExpenseFormValues>();
   const { userProfile } = useAuth();
   const { settings } = useSiteSettings();
+  const isMobile = useIsMobile();
 
   const watchAmount = watch('amount');
   const watchPayerType = watch('payerType');
@@ -192,52 +198,65 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
         <FormField
           control={control}
           name="category"
-          render={({ field }) => (
-            <FormItem className="flex flex-col items-center">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <button tabIndex={-1} type="button" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 group focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md">
-                      <div className="flex-shrink-0 p-3 bg-muted rounded-lg group-hover:bg-primary/10 transition-colors">
-                        <CategoryIcon className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                      <span className="text-xs text-muted-foreground">{field.value}</span>
-                    </button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[250px] p-0">
-                  <Command className="max-h-80">
-                    <CommandInput placeholder="Search category..." />
-                    <CommandList onWheel={(e) => e.stopPropagation()}>
-                      <CommandEmpty>No category found.</CommandEmpty>
-                      {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
-                        <CommandGroup key={masterCat} heading={masterCat}>
-                          {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
-                            const subDetails = details.subCategories[subCat];
-                            const Icon = subDetails?.icon ? (Icons[subDetails.icon] || Icons.Wallet) : Icons.Wallet;
-                            return (
-                              <CommandItem
-                                value={subCat}
-                                key={subCat}
-                                onSelect={() => {
-                                  setValue('category', subCat);
-                                  setUserOverriddenCategory(true);
-                                }}
-                              >
-                                <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
-                                {subCat}
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      ))}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const triggerContent = (
+              <button tabIndex={-1} type="button" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 group focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md">
+                <div className="flex-shrink-0 p-3 bg-muted rounded-lg group-hover:bg-primary/10 transition-colors">
+                  <CategoryIcon className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <span className="text-xs text-muted-foreground">{field.value}</span>
+              </button>
+            );
+
+            const dropdownContent = (
+              <Command className="max-h-80 md:max-h-96">
+                <CommandInput placeholder="Search category..." />
+                <CommandList onWheel={(e) => e.stopPropagation()}>
+                  <CommandEmpty>No category found.</CommandEmpty>
+                  {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
+                    <CommandGroup key={masterCat} heading={masterCat}>
+                      {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
+                        const subDetails = details.subCategories[subCat];
+                        const Icon = subDetails?.icon ? (Icons[subDetails.icon] || Icons.Wallet) : Icons.Wallet;
+                        return (
+                          <CommandItem
+                            value={subCat}
+                            key={subCat}
+                            onSelect={() => {
+                              setValue('category', subCat);
+                              setUserOverriddenCategory(true);
+                            }}
+                          >
+                            <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
+                            {subCat}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  ))}
+                </CommandList>
+              </Command>
+            );
+
+            return (
+              <FormItem className="flex flex-col items-center">
+                {isMobile ? (
+                  <Drawer>
+                    <DrawerTrigger asChild>{triggerContent}</DrawerTrigger>
+                    <DrawerContent className="p-0">
+                        {dropdownContent}
+                    </DrawerContent>
+                  </Drawer>
+                ) : (
+                  <Popover>
+                    <PopoverTrigger asChild>{triggerContent}</PopoverTrigger>
+                    <PopoverContent className="w-[250px] p-0">{dropdownContent}</PopoverContent>
+                  </Popover>
+                )}
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
         <div className="w-full">
           <FormField
@@ -259,17 +278,19 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
               <FormItem>
                 <FormControl>
                   <div className="relative flex items-baseline">
-                    <span className="text-4xl font-bold text-muted-foreground align-baseline">
+                    <span className="text-[clamp(2rem,8vw,3rem)] font-bold text-muted-foreground align-baseline leading-none">
                       {CURRENCY_SYMBOL}
                     </span>
                     <Input
                       type="number"
                       step="0.01"
+                      inputMode="decimal"
+                      pattern="[0-9]*"
                       placeholder="0.00"
                       {...field}
                       value={field.value ?? ''}
                       onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                      className="pl-2 text-4xl font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
+                      className="pl-2 text-[clamp(2rem,8vw,3rem)] leading-none font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
                     />
                   </div>
                 </FormControl>
@@ -285,19 +306,39 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
         <p className="text-xs text-muted-foreground">({getSummaryText()})</p>
       </div>
 
-      <div className="flex flex-row items-start gap-2">
-        <p className="text-sm mt-1.5 flex-shrink-0">With:</p>
-        <div className="flex-1 flex flex-wrap items-center gap-1">
-          {selectedParticipants.map((p: any) => (
-            <Badge key={p.userId} variant="secondary" className="pl-2 pr-1">
-              {p.name}
-              <button type="button" onClick={() => handleParticipantSelection(p.userId, false)} className="ml-1 rounded-full hover:bg-destructive/20">
-                <X className="h-3 w-3 text-destructive" />
-              </button>
-            </Badge>
-          ))}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Split with</p>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setView('split')} className="h-8 text-muted-foreground">Advanced Split</Button>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => setView('split')} className="flex-shrink-0">Edit</Button>
+        <ScrollArea className="w-full whitespace-nowrap pb-4" type="scroll">
+            <div className="flex w-max space-x-4">
+            {watchParticipants?.map((p: any) => (
+                <button
+                    key={p.userId}
+                    type="button"
+                    onClick={() => handleParticipantSelection(p.userId, !p.selected)}
+                    className={cn(
+                        "flex flex-col items-center gap-1.5 transition-opacity",
+                        p.selected ? "opacity-100" : "opacity-40 hover:opacity-70"
+                    )}
+                >
+                    <div className={cn(
+                        "rounded-full p-0.5 border-2",
+                        p.selected ? "border-primary" : "border-transparent"
+                    )}>
+                        <Avatar className="h-12 w-12 border bg-background">
+                            <AvatarImage src={p.avatarUrl} />
+                            <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
+                        </Avatar>
+                    </div>
+                    <span className="text-xs font-medium truncate w-14 text-center">
+                        {p.name.split(' ')[0]}
+                    </span>
+                </button>
+            ))}
+            </div>
+        </ScrollArea>
       </div>
 
 
@@ -305,36 +346,51 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
         <FormField
           control={control}
           name="date"
-          render={({ field }) => (
-            <FormItem>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      type="button"
-                      variant={'outline'}
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !field.value && 'text-muted-foreground'
-                      )}
-                    >
-                      <Icons.Calendar className="mr-2 h-4 w-4" />
-                      {field.value ? format(new Date(field.value), 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={field.onChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const triggerButton = (
+              <Button
+                type="button"
+                variant={'outline'}
+                className={cn(
+                  'w-full justify-start text-left font-normal',
+                  !field.value && 'text-muted-foreground'
+                )}
+              >
+                <Icons.Calendar className="mr-2 h-4 w-4" />
+                {field.value ? format(new Date(field.value), 'PPP') : <span>Pick a date</span>}
+              </Button>
+            );
+
+            const calendarContent = (
+              <Calendar
+                mode="single"
+                selected={field.value ? new Date(field.value) : undefined}
+                onSelect={field.onChange}
+                initialFocus
+              />
+            );
+
+            return (
+              <FormItem>
+                {isMobile ? (
+                  <Drawer>
+                    <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+                    <DrawerContent className="p-4 flex flex-col items-center">
+                        {calendarContent}
+                    </DrawerContent>
+                  </Drawer>
+                ) : (
+                  <Popover>
+                    <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        {calendarContent}
+                    </PopoverContent>
+                  </Popover>
+                )}
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
         <FormField
           control={control}
@@ -461,7 +517,7 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
                   </Avatar>
                   <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
                   <div className="w-28">
-                    <FormField control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (<Input type="number" {...field} placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
+                    <FormField control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
                   </div>
                 </div>
               ))}
@@ -563,17 +619,17 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                 {p.selected && (
                   <div className="w-32 relative">
                     {watchSplitType === 'equally' && (
-                      <Input type="number" disabled value={(p.amountOwed || 0).toFixed(2)} />
+                      <Input type="number" inputMode="decimal" pattern="[0-9]*" disabled value={(p.amountOwed || 0).toFixed(2)} />
                     )}
                     {watchSplitType === 'unequally' && (
-                      <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" {...field} className="hide-number-arrows" placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
+                      <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} className="hide-number-arrows" placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
                     )}
                     {watchSplitType === 'by_shares' && (
-                      <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" {...field} placeholder="1" className="hide-number-arrows" value={field.value === undefined ? '' : field.value} />)} />
+                      <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} placeholder="1" className="hide-number-arrows" value={field.value === undefined ? '' : field.value} />)} />
                     )}
                     {watchSplitType === 'by_percentage' && (
                       <div className="relative">
-                        <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" {...field} className="pr-8 hide-number-arrows" placeholder="0" value={field.value === undefined ? '' : field.value} />)} />
+                        <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} className="pr-8 hide-number-arrows" placeholder="0" value={field.value === undefined ? '' : field.value} />)} />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                       </div>
                     )}

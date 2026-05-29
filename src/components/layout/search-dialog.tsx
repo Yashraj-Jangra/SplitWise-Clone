@@ -24,6 +24,14 @@ type SearchResult =
   | { type: 'expense'; data: Expense }
   | { type: 'user'; data: UserProfile };
 
+interface RecentSearch {
+  id: string;
+  type: 'group' | 'expense' | 'user';
+  title: string;
+  subtitle?: string;
+  url: string;
+}
+
 export function SearchDialog() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -33,6 +41,7 @@ export function SearchDialog() {
     expenses: Expense[];
     users: UserProfile[];
   } | null>(null);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
 
   const { userProfile } = useAuth();
   const router = useRouter();
@@ -46,6 +55,17 @@ export function SearchDialog() {
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('recentSearches');
+      if (saved) {
+        setRecentSearches(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Failed to load recent searches', e);
+    }
   }, []);
 
   const loadAllData = useCallback(async () => {
@@ -135,8 +155,39 @@ export function SearchDialog() {
     }, {} as Record<SearchResult['type'], SearchResult[]>);
   }, [searchResults]);
 
-  const handleSelect = (path: string) => {
+  const handleSelectResult = (result: SearchResult, path: string) => {
+    let title = '';
+    let subtitle = '';
+    let id = '';
+    
+    if (result.type === 'group') {
+       title = result.data.name;
+       id = result.data.id;
+    } else if (result.type === 'expense') {
+       title = result.data.description;
+       subtitle = allData?.groups.find(g => g.id === result.data.groupId)?.name || '';
+       id = result.data.id;
+    } else if (result.type === 'user') {
+       title = getFullName(result.data.firstName, result.data.lastName);
+       subtitle = result.data.email;
+       id = result.data.uid;
+    }
+
+    const newRecent: RecentSearch = { id, type: result.type, title, subtitle, url: path };
+
+    setRecentSearches(prev => {
+       const filtered = prev.filter(r => r.id !== newRecent.id);
+       const next = [newRecent, ...filtered].slice(0, 5);
+       localStorage.setItem('recentSearches', JSON.stringify(next));
+       return next;
+    });
+
     router.push(path);
+    setOpen(false);
+  };
+
+  const handleRecentClick = (recent: RecentSearch) => {
+    router.push(recent.url);
     setOpen(false);
   };
 
@@ -176,10 +227,29 @@ export function SearchDialog() {
                 </div>
               )}
                {!loading && !query && (
-                 <div className="text-center py-8 text-muted-foreground">
-                    <Icons.Search className="mx-auto h-12 w-12" />
-                    <p className="mt-2 font-semibold">Start typing to search</p>
-                    <p className="text-sm">Find anything in your workspace instantly.</p>
+                 <div className="py-4">
+                    {recentSearches.length > 0 ? (
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-semibold uppercase text-muted-foreground px-2">Recent Searches</h3>
+                            <div className="space-y-1">
+                                {recentSearches.map(recent => (
+                                    <div key={recent.id} onClick={() => handleRecentClick(recent)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                                        <Icons.History className="h-4 w-4 text-muted-foreground ml-1" />
+                                        <div>
+                                            <p className="font-medium text-sm leading-none mb-1">{recent.title}</p>
+                                            {recent.subtitle && <p className="text-xs text-muted-foreground">{recent.subtitle}</p>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <Icons.Search className="mx-auto h-12 w-12 opacity-50" />
+                            <p className="mt-2 font-semibold">Start typing to search</p>
+                            <p className="text-sm">Find anything in your workspace instantly.</p>
+                        </div>
+                    )}
                 </div>
               )}
               {!loading && query && searchResults.length === 0 && (
@@ -199,7 +269,7 @@ export function SearchDialog() {
                                 if (result.type === 'group') {
                                     const { data: group } = result;
                                     return (
-                                        <div key={group.id} onClick={() => handleSelect(`/groups/${group.id}`)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                                        <div key={group.id} onClick={() => handleSelectResult(result, `/groups/${group.id}`)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
                                             <Avatar className="h-8 w-8"><AvatarImage src={group.coverImageUrl}/><AvatarFallback>{getInitials(group.name)}</AvatarFallback></Avatar>
                                             <p className="font-medium text-sm">{group.name}</p>
                                         </div>
@@ -208,7 +278,7 @@ export function SearchDialog() {
                                 if (result.type === 'expense') {
                                     const { data: expense } = result;
                                     return (
-                                        <div key={expense.id} onClick={() => handleSelect(`/groups/${expense.groupId}`)} className="flex items-center justify-between p-2 rounded-md hover:bg-muted cursor-pointer">
+                                        <div key={expense.id} onClick={() => handleSelectResult(result, `/groups/${expense.groupId}`)} className="flex items-center justify-between p-2 rounded-md hover:bg-muted cursor-pointer">
                                             <div className="flex items-center gap-3">
                                                  <Icons.Expense className="h-6 w-6 text-muted-foreground"/>
                                                  <div>
@@ -224,7 +294,7 @@ export function SearchDialog() {
                                     const { data: user } = result;
                                     const link = userProfile?.role === 'admin' ? `/admin/users/${user.uid}/edit` : '#';
                                     return (
-                                         <div key={user.uid} onClick={() => link !== '#' && handleSelect(link)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                                         <div key={user.uid} onClick={() => link !== '#' && handleSelectResult(result, link)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
                                             <Avatar className="h-8 w-8"><AvatarImage src={user.avatarUrl}/><AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback></Avatar>
                                             <div>
                                                 <p className="font-medium text-sm">{getFullName(user.firstName, user.lastName)}</p>

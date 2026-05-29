@@ -17,6 +17,8 @@ import { Icons } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AnimatedNumber } from '@/components/ui/animated-number';
+import { Progress } from '@/components/ui/progress';
 
 
 interface Obligation {
@@ -109,7 +111,6 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
 
 
     const title = type === 'owed' ? 'You Are Owed' : 'You Owe';
-    const totalColor = type === 'owed' ? 'text-green-500' : 'text-red-500';
     
     const GroupToSettleItem = ({ group, amountOwed }: { group: Group, amountOwed: number }) => {
         const hasDebt = amountOwed > 0.01;
@@ -238,32 +239,42 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
         <Card className="h-full flex flex-col">
             <CardHeader className="pb-2">
                 <CardTitle className="text-muted-foreground">{title}</CardTitle>
-                <div className={`text-3xl font-bold ${totalColor}`}>
-                    {CURRENCY_SYMBOL}{total.toFixed(2)}
-                </div>
+                <AnimatedNumber 
+                    value={type === 'owed' ? total : -total} 
+                    className="text-3xl font-bold tracking-tight"
+                    isCurrency={true}
+                    prefix={type === 'owes' && total > 0 ? '' : ''} // AnimatedNumber handles signs
+                />
             </CardHeader>
             <CardContent className="flex-1 flex flex-col gap-2 pt-0">
-                <p className="text-xs text-muted-foreground">From {obligations.length} people</p>
+                <p className="text-xs text-muted-foreground">From {obligations.length} {obligations.length === 1 ? 'person' : 'people'}</p>
                 {obligations.length > 0 ? (
                     <ScrollArea className="flex-1">
-                        <div className="space-y-2 pr-4">
-                            {obligations.slice(0,2).map(item => (
-                                <div key={item.user.uid} className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 truncate">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={item.user.avatarUrl} />
-                                            <AvatarFallback>{getInitials(item.user.firstName, item.user.lastName)}</AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-sm font-medium truncate">{getFullName(item.user.firstName, item.user.lastName)}</span>
+                        <div className="space-y-3 pr-4 mt-2">
+                            {obligations.slice(0, 3).map(item => (
+                                <div key={item.user.uid} className="flex flex-col gap-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 truncate">
+                                            <Avatar className="h-7 w-7">
+                                                <AvatarImage src={item.user.avatarUrl} />
+                                                <AvatarFallback>{getInitials(item.user.firstName, item.user.lastName)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-sm font-medium truncate">{getFullName(item.user.firstName, item.user.lastName)}</span>
+                                        </div>
+                                        <div className="text-sm font-semibold">{CURRENCY_SYMBOL}{item.amount.toFixed(2)}</div>
                                     </div>
-                                    <div className="text-sm font-semibold">{CURRENCY_SYMBOL}{item.amount.toFixed(2)}</div>
+                                    <Progress value={(item.amount / total) * 100} className="h-1.5" />
                                 </div>
                             ))}
                         </div>
                     </ScrollArea>
                 ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                        <p className="text-sm text-muted-foreground">All settled up!</p>
+                    <div className="flex-1 flex flex-col items-center justify-center text-center space-y-2 animate-in fade-in zoom-in duration-500">
+                        <div className="h-12 w-12 rounded-full bg-money-positive/10 flex items-center justify-center mb-1">
+                            <Icons.ShieldCheck className="h-6 w-6 text-money-positive" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">All settled up!</p>
+                        <p className="text-xs text-muted-foreground">No outstanding balances here.</p>
                     </div>
                 )}
                  {type === 'owed' 

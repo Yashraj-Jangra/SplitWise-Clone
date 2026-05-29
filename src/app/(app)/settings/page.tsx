@@ -189,6 +189,18 @@ export default function SettingsPage() {
 
   const selectableThemes = allThemes.filter(t => siteSettings.userSelectableThemeIds?.includes(t.id));
 
+  const isProfileDirty = Object.keys(profileForm.formState.dirtyFields).length > 0;
+  const isPasswordDirty = Object.keys(passwordForm.formState.dirtyFields).length > 0;
+  const isNotifDirty = Object.keys(notifForm.formState.dirtyFields).length > 0;
+  
+  const hasUnsavedChanges = isProfileDirty || isPasswordDirty || isNotifDirty;
+
+  const handleSaveAll = async () => {
+      if (isProfileDirty) await profileForm.handleSubmit(onProfileSubmit)();
+      if (isPasswordDirty) await passwordForm.handleSubmit(onPasswordSubmit)();
+      if (isNotifDirty) await notifForm.handleSubmit(onNotifSubmit)();
+  };
+
   if (loading || !userProfile || siteSettingsLoading) {
     return <div className="space-y-4 max-w-4xl mx-auto p-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64 w-full" /><Skeleton className="h-48 w-full" /></div>;
   }
@@ -447,10 +459,22 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold font-headline">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your account preferences.</p>
+    <div className="max-w-5xl mx-auto w-full pb-20 md:pb-6 relative">
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-4 pb-4 mb-6 border-b flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold font-headline tracking-tight">Settings</h1>
+          <p className="text-sm text-muted-foreground hidden sm:block">Manage your account preferences.</p>
+        </div>
+        
+        {hasUnsavedChanges && (
+            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <span className="text-xs font-medium text-amber-500 hidden sm:inline-flex items-center gap-1.5 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Unsaved changes
+                </span>
+                <Button size="sm" onClick={handleSaveAll} className="shadow-sm">Save All</Button>
+            </div>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-6">
