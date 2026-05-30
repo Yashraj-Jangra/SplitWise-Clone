@@ -45,3 +45,7 @@ PROJECT_KNOWLEDGE.md
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# local session tracking files
+todo.md
+progress.md
