@@ -226,10 +226,33 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
                     </div>
                     
                     <div className="space-y-4">
-                        <div className="p-4 border-2 border-dashed rounded-lg bg-background/30 text-center flex flex-col items-center justify-center min-h-[120px]">
-                           <Icons.AppLogo className="h-8 w-8 text-primary/50 mb-2" />
-                           <p className="text-sm font-semibold text-muted-foreground">Widget Coming Soon</p>
-                           <p className="text-xs text-muted-foreground/80">A new insight will appear here.</p>
+                        <div>
+                           {expense.receiptImageUrl ? (
+                               <div>
+                                   <h3 className="text-sm font-semibold text-muted-foreground mb-2">Receipt</h3>
+                                   <a href={expense.receiptImageUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border hover:opacity-90 transition-opacity">
+                                       <img src={expense.receiptImageUrl} alt="Receipt" className="w-full object-cover max-h-40" />
+                                   </a>
+                               </div>
+                           ) : (
+                               <div className="space-y-2">
+                                   <h3 className="text-sm font-semibold text-muted-foreground">Split Info</h3>
+                                   <div className="rounded-lg border bg-background/30 px-3 py-2.5 flex items-center gap-3">
+                                       <Icons.Expense className="h-4 w-4 text-muted-foreground shrink-0" />
+                                       <div>
+                                           <p className="text-xs text-muted-foreground">Split method</p>
+                                           <p className="text-sm font-medium capitalize">{expense.splitType.replace(/_/g, ' ')}</p>
+                                       </div>
+                                   </div>
+                                   <div className="rounded-lg border bg-background/30 px-3 py-2.5 flex items-center gap-3">
+                                       <Icons.Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                                       <div>
+                                           <p className="text-xs text-muted-foreground">Paid by</p>
+                                           <p className="text-sm font-medium">{expense.payers.map(p => getFullName(p.user.firstName, p.user.lastName)).join(', ')}</p>
+                                       </div>
+                                   </div>
+                               </div>
+                           )}
                         </div>
                         {expense.notes && (
                             <div>
