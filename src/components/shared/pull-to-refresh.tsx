@@ -47,7 +47,7 @@ export function PullToRefresh({ onRefresh, children, className, threshold = 80 }
 
   return (
     <div
-      className={cn('relative overflow-y-auto scroll-momentum', className)}
+      className={cn('relative', className)}
       {...handlers}
     >
       {/* Pull indicator */}

@@ -321,7 +321,6 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Split with</p>
-            <Button type="button" variant="secondary" size="sm" onClick={() => setView('split')} className="h-8 text-muted-foreground bg-transparent hover:bg-muted">Advanced Split</Button>
         </div>
         <ScrollArea className="w-full whitespace-nowrap pb-4" type="scroll">
             <div className="flex w-max space-x-4">
@@ -1036,7 +1035,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
   return (
     <DialogContent
       className={cn(
-        "p-0 gap-0 transition-all duration-300 w-auto max-w-none",
+        "p-0 gap-0 transition-all duration-300 w-auto max-w-none sm:max-w-none",
         view !== 'main' ? "sm:w-[900px]" : "sm:w-[480px]"
       )}
       onInteractOutside={(e) => {
