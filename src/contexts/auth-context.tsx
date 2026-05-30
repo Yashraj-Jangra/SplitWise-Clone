@@ -36,6 +36,7 @@ interface AuthContextType {
   linkWithGoogle: () => Promise<void>;
   unlinkFromGoogle: () => Promise<void>;
   updateUserPassword: (newPassword: string, currentPassword?: string) => Promise<void>;
+  deleteAccount: (currentPassword?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -277,6 +278,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // After unlinking, the onAuthStateChanged listener will automatically update the user state.
   }, []);
   
+  const deleteAccount = useCallback(async (currentPassword?: string) => {
+    if (!auth?.currentUser) throw new Error('You must be logged in to delete your account.');
+    const user = auth.currentUser;
+
+    // Re-authenticate before destructive action
+    if (currentPassword && user.email) {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+    }
+
+    const idToken = await user.getIdToken();
+    const response = await fetch('/api/user/delete-account', {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${idToken}` },
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to delete account. Please try again.');
+    }
+
+    // Auth account is now deleted on the server — sign out client-side
+    await signOut(auth);
+  }, []);
+
   const updateUserPassword = useCallback(async (newPassword: string, currentPassword?: string) => {
     if (!auth?.currentUser) throw new Error("You must be logged in to update your password.");
 
@@ -320,7 +346,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     linkWithGoogle,
     unlinkFromGoogle,
     updateUserPassword,
-  }), [firebaseUser, userProfile, loading, firebaseError, isAdmin, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle, updateUserPassword]);
+    deleteAccount,
+  }), [firebaseUser, userProfile, loading, firebaseError, isAdmin, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle, updateUserPassword, deleteAccount]);
   
   if (firebaseError) {
       const isConfigNotFoundError = firebaseError.includes('auth/configuration-not-found');

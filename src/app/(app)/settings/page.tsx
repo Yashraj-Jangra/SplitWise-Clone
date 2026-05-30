@@ -25,6 +25,16 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { EmailManagementSection } from "@/components/settings/email-management-section";
 import { UserGroupsList } from "@/components/shared/user-groups-list";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -94,7 +104,7 @@ const SECTIONS = [
 type SectionId = typeof SECTIONS[number]["id"];
 
 export default function SettingsPage() {
-  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword } = useAuth();
+  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword, deleteAccount } = useAuth();
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const { theme: currentTheme, setTheme, allThemes } = useTheme();
   const { toast } = useToast();
@@ -102,6 +112,10 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SectionId>("profile");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [browserNotifPermission, setBrowserNotifPermission] = useState("default");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const profileForm = useForm<ProfileFormValues>({ resolver: zodResolver(profileSchema), defaultValues: { firstName: "", lastName: "", username: "", email: "", countryCode: "+91", mobileNumber: "", dob: "", avatarUrl: "" } });
   const passwordForm = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema), defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" } });
@@ -199,6 +213,25 @@ export default function SettingsPage() {
       if (isProfileDirty) await profileForm.handleSubmit(onProfileSubmit)();
       if (isPasswordDirty) await passwordForm.handleSubmit(onPasswordSubmit)();
       if (isNotifDirty) await notifForm.handleSubmit(onNotifSubmit)();
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteError("");
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount(hasPassword ? deletePassword : undefined);
+      toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
+      router.push("/auth?mode=login");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "An error occurred.";
+      if (msg.toLowerCase().includes("wrong-password") || msg.toLowerCase().includes("invalid-credential")) {
+        setDeleteError("Incorrect password. Please try again.");
+      } else {
+        setDeleteError(msg);
+      }
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   if (loading || !userProfile || siteSettingsLoading) {
@@ -448,9 +481,11 @@ export default function SettingsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
               <div>
                 <p className="font-medium text-sm">Delete Account</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Permanently removes all your data, groups, and expenses.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Permanently removes your profile. You will be removed from all groups.</p>
               </div>
-              <Button variant="destructive" className="shrink-0">Delete My Account</Button>
+              <Button variant="destructive" className="shrink-0" onClick={() => { setDeletePassword(""); setDeleteError(""); setShowDeleteDialog(true); }}>
+                Delete My Account
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -460,6 +495,51 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-5xl mx-auto w-full pb-20 md:pb-6 relative">
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <Icons.Delete className="h-5 w-5" /> Delete Account
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                This is permanent and cannot be undone. Your profile will be deleted and you will be removed from all groups.
+              </span>
+              {hasPassword && (
+                <span className="block">
+                  Please enter your password to confirm.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {hasPassword && (
+            <div className="py-2 space-y-1">
+              <Input
+                type="password"
+                placeholder="Enter your password"
+                value={deletePassword}
+                onChange={e => { setDeletePassword(e.target.value); setDeleteError(""); }}
+                onKeyDown={e => { if (e.key === "Enter" && deletePassword) handleDeleteAccount(); }}
+                autoFocus
+              />
+              {deleteError && <p className="text-xs text-destructive">{deleteError}</p>}
+            </div>
+          )}
+          {!hasPassword && deleteError && <p className="text-xs text-destructive pb-2">{deleteError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={e => { e.preventDefault(); handleDeleteAccount(); }}
+              disabled={isDeletingAccount || (hasPassword ? !deletePassword : false)}
+            >
+              {isDeletingAccount ? "Deleting..." : "Yes, Delete My Account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-4 pb-4 mb-6 border-b flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-headline tracking-tight">Settings</h1>
