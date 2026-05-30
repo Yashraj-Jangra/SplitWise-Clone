@@ -12,6 +12,7 @@ import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGrou
 import type { Expense, Settlement, Group, Balance, SimplifiedSettlement, UserProfile } from '@/types';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
+import { PullToRefresh } from '@/components/shared/pull-to-refresh';
 
 interface DashboardData {
   expenses: Expense[];
@@ -130,44 +131,46 @@ export default function DashboardPage() {
   const { expenses, settlements, balances } = dashboardData;
 
   return (
-    <div className="space-y-8">
-        <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {greeting}, {userProfile.firstName}!
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your finances today.</p>
-        </div>
+    <PullToRefresh onRefresh={loadDashboardData} className="min-h-screen">
+      <div className="space-y-8 p-1">
+          <div>
+              <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
+              {greeting}, {userProfile.firstName}!
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your finances today.</p>
+          </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-1">
-                <ErrorBoundary>
-                    <NetBalanceCard expenses={expenses} settlements={settlements} currentUserId={userProfile.uid} />
-                </ErrorBoundary>
-            </div>
-            <div className="sm:col-span-1">
-                <ErrorBoundary>
-                    <ObligationsCard balances={balances} type="owed" />
-                </ErrorBoundary>
-            </div>
-            <div className="sm:col-span-2 lg:col-span-2">
-                <ErrorBoundary>
-                    <ObligationsCard balances={balances} type="owes" />
-                </ErrorBoundary>
-            </div>
-        </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="sm:col-span-1">
+                  <ErrorBoundary>
+                      <NetBalanceCard expenses={expenses} settlements={settlements} currentUserId={userProfile.uid} />
+                  </ErrorBoundary>
+              </div>
+              <div className="sm:col-span-1">
+                  <ErrorBoundary>
+                      <ObligationsCard balances={balances} type="owed" />
+                  </ErrorBoundary>
+              </div>
+              <div className="sm:col-span-2 lg:col-span-2">
+                  <ErrorBoundary>
+                      <ObligationsCard balances={balances} type="owes" />
+                  </ErrorBoundary>
+              </div>
+          </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-                <ErrorBoundary>
-                    <DynamicSpendingChart expenses={expenses} />
-                </ErrorBoundary>
-            </div>
-            <div className="lg:col-span-1">
-                <ErrorBoundary>
-                    <PredictiveInsights expenses={expenses} />
-                </ErrorBoundary>
-            </div>
-        </div>
-    </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                  <ErrorBoundary>
+                      <DynamicSpendingChart expenses={expenses} />
+                  </ErrorBoundary>
+              </div>
+              <div className="lg:col-span-1">
+                  <ErrorBoundary>
+                      <PredictiveInsights expenses={expenses} />
+                  </ErrorBoundary>
+              </div>
+          </div>
+      </div>
+    </PullToRefresh>
   );
 }

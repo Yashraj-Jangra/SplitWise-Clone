@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Expense, Group, HistoryEvent } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getGroupCurrencySymbol } from "@/lib/constants";
@@ -26,6 +26,15 @@ import { deleteExpense } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { useHaptics } from '@/hooks/use-haptics';
+import { useLongPress } from '@/hooks/use-long-press';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 // --- Rewritten History Parsing Logic ---
@@ -126,6 +135,7 @@ interface ExpenseListItemProps {
 
 function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: Omit<ExpenseListItemProps, ''>) {
     const { toast } = useToast();
+    const haptic = useHaptics();
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -153,13 +163,16 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
     const lastUpdatedEvent = expenseHistory.length > 0 ? expenseHistory[0] : null;
 
     const handleDelete = async () => {
+        haptic.warning();
         setIsDeleting(true);
         try {
             await deleteExpense(expense.id, expense.groupId, expense.amount, currentUserId);
+            haptic.success();
             toast({ title: "Expense Deleted", description: `"${expense.description}" has been removed.` });
             setIsDeleteDialogOpen(false);
             appEventEmitter.emit('data-changed');
         } catch (error) {
+            haptic.error();
             toast({
                 variant: "destructive",
                 title: "Error Deleting Expense",
@@ -383,6 +396,10 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
 
 export function ExpenseListItem({ expense, currentUserId, group, groupHistory }: ExpenseListItemProps) {
   const { settings } = useSiteSettings();
+  const haptic = useHaptics();
+  const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+  const [isEditDialogOpenFromMenu, setIsEditDialogOpenFromMenu] = useState(false);
+  const [isDeleteDialogOpenFromMenu, setIsDeleteDialogOpenFromMenu] = useState(false);
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
   const userShare = {
@@ -407,30 +424,112 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
 
   const categoryIconName = settings.expenseCategories[expense.masterCategory || 'Uncategorized']?.subCategories[expense.category || 'Other']?.icon || 'Wallet';
   const CategoryIcon = Icons[categoryIconName];
+  const canEdit = !group?.archivedAt;
+
+  const longPress = useLongPress({
+    onLongPress: useCallback(() => {
+      if (!canEdit) return;
+      haptic.medium();
+      setIsQuickMenuOpen(true);
+    }, [canEdit, haptic]),
+  });
+
+  const handleAccordionTriggerClick = () => {
+    haptic.light();
+  };
+
+  const handleQuickDelete = async () => {
+    haptic.warning();
+    try {
+      await deleteExpense(expense.id, expense.groupId, expense.amount, currentUserId);
+      haptic.success();
+      appEventEmitter.emit('data-changed');
+    } catch {
+      haptic.error();
+    }
+  };
 
   return (
-    <AccordionItem value={`exp-${expense.id}`} className="border-b border-border/50">
-        <AccordionTrigger className="p-3 hover:bg-muted/50 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50">
-            <div className="flex items-center gap-4 flex-1">
-                <div className="text-center w-12 flex-shrink-0">
-                    <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-1">
-                        <CategoryIcon className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">{format(new Date(expense.date), 'MMM dd')}</p>
-                </div>
-                <div className="grid gap-0.5 text-left">
-                    <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
-                    <p className="text-xs text-muted-foreground">{expense.category}</p>
-                </div>
+    <>
+      <AccordionItem value={`exp-${expense.id}`} className="border-b border-border/50">
+          <AccordionTrigger
+            className="p-3 hover:bg-muted/50 active:bg-muted/70 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50 select-none"
+            onClick={handleAccordionTriggerClick}
+            {...longPress.handlers}
+          >
+              <div className="flex items-center gap-4 flex-1">
+                  <div className="text-center w-12 flex-shrink-0">
+                      <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-1 transition-transform duration-150 active:scale-90">
+                          <CategoryIcon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">{format(new Date(expense.date), 'MMM dd')}</p>
+                  </div>
+                  <div className="grid gap-0.5 text-left">
+                      <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
+                      <p className="text-xs text-muted-foreground">{expense.category}</p>
+                  </div>
+              </div>
+              <div className="text-right">
+                  <p className="text-base font-bold text-foreground">{getGroupCurrencySymbol(group)}{expense.amount.toFixed(2)}</p>
+                  {userShare.text && <p className={cn("text-xs font-medium", userShare.className)}>{userShare.text}</p>}
+              </div>
+          </AccordionTrigger>
+          <AccordionContent>
+              <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} groupHistory={groupHistory} />
+          </AccordionContent>
+      </AccordionItem>
+
+      {/* Long-press quick-action menu */}
+      {canEdit && (
+        <DropdownMenu open={isQuickMenuOpen} onOpenChange={setIsQuickMenuOpen}>
+          <DropdownMenuTrigger className="hidden" />
+          <DropdownMenuContent align="end" className="w-48" onCloseAutoFocus={e => e.preventDefault()}>
+            <div className="px-2 py-1.5">
+              <p className="text-xs font-semibold truncate">{expense.description}</p>
+              <p className="text-xs text-muted-foreground">{getGroupCurrencySymbol(group)}{expense.amount.toFixed(2)}</p>
             </div>
-            <div className="text-right">
-                <p className="text-base font-bold text-foreground">{getGroupCurrencySymbol(group)}{expense.amount.toFixed(2)}</p>
-                {userShare.text && <p className={cn("text-xs font-medium", userShare.className)}>{userShare.text}</p>}
-            </div>
-        </AccordionTrigger>
-        <AccordionContent>
-            <ExpenseDetailContent expense={expense} currentUserId={currentUserId} group={group} groupHistory={groupHistory} />
-        </AccordionContent>
-    </AccordionItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => { haptic.light(); setIsEditDialogOpenFromMenu(true); setIsQuickMenuOpen(false); }}
+              className="gap-2"
+            >
+              <Icons.Edit className="h-4 w-4" /> Edit Expense
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => { setIsDeleteDialogOpenFromMenu(true); setIsQuickMenuOpen(false); }}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <Icons.Delete className="h-4 w-4" /> Delete Expense
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      {isEditDialogOpenFromMenu && (
+        <EditExpenseDialog
+          open={isEditDialogOpenFromMenu}
+          onOpenChange={setIsEditDialogOpenFromMenu}
+          expense={expense}
+          group={group}
+        />
+      )}
+
+      <AlertDialog open={isDeleteDialogOpenFromMenu} onOpenChange={setIsDeleteDialogOpenFromMenu}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove "{expense.description}" and recalculate group balances.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleQuickDelete} variant="destructive">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

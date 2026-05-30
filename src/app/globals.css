@@ -136,3 +136,95 @@
     @apply bg-card/50 backdrop-blur-sm border-border/50;
   }
 }
+
+/* ============================================================
+   MOBILE UX FOUNDATION
+   ============================================================ */
+
+/* Safe-area CSS custom properties for notched devices */
+:root {
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sat: env(safe-area-inset-top, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+/* Remove iOS blue tap-highlight flash on all interactive elements */
+button,
+a,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+label {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Eliminate 300ms click delay — safe for all modern browsers */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+
+/* Prevent accidental text selection on UI chrome */
+nav,
+footer,
+header,
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Native-feeling momentum scroll in overflow containers */
+.scroll-momentum {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Contain overscroll on the page body (prevents pull-to-refresh browser default) */
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.08) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Pull-to-refresh indicator */
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ptr-spinner {
+  animation: ptr-spin 0.8s linear infinite;
+}
+
+/* Reduced-motion: cut all non-essential motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

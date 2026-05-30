@@ -1,12 +1,19 @@
-
 {
-  "name": "SplitIt",
+  "name": "SplitIt – Group Expense Manager",
   "short_name": "SplitIt",
-  "description": "Effortless Group Expense Management",
-  "start_url": "/",
+  "description": "Track, split, and settle shared expenses effortlessly with your groups.",
+  "start_url": "/dashboard",
+  "id": "/dashboard",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
   "background_color": "#1a1a1a",
   "theme_color": "#00C4CC",
+  "categories": ["finance", "utilities", "productivity"],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -31,6 +38,20 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Groups",
+      "short_name": "Groups",
+      "url": "/groups",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

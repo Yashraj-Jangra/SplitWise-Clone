@@ -32,6 +32,7 @@ import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { PullToRefresh } from '@/components/shared/pull-to-refresh';
 
 const TABS: { value: string; label: string; icon: IconName }[] = [
     { value: 'expenses', label: 'Activity', icon: 'History' },
@@ -177,156 +178,157 @@ export default function GroupDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <GroupDetailHeader
-        group={group}
-        user={userProfile}
-        currentUserBalance={currentUserBalance}
-      />
+    <PullToRefresh onRefresh={() => loadGroupData(true)} className="min-h-screen">
+      <div className="space-y-6 p-1">
+        <GroupDetailHeader
+          group={group}
+          user={userProfile}
+          currentUserBalance={currentUserBalance}
+        />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex md:justify-start">
-          {TABS.map((tab) => {
-            const Icon = Icons[tab.icon];
-            return (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="gap-2 px-2 md:px-4"
-                title={tab.label}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="hidden md:inline">{tab.label}</span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex md:justify-start">
+            {TABS.map((tab) => {
+              const Icon = Icons[tab.icon];
+              return (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="gap-2 px-2 md:px-4"
+                  title={tab.label}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="hidden md:inline">{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-        <TabsContent value="expenses" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity Log</CardTitle>
-              <CardDescription>
-                A chronological log of all expenses and settlements in this group.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {activityItems.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
-                    {activityItems.map((item) => {
-                        if (item.type === 'expense') {
-                            const expense = item.data as Expense;
-                            return (
-                               <ExpenseListItem
-                                  key={item.id}
-                                  expense={expense}
-                                  currentUserId={userProfile.uid}
-                                  group={group}
-                                  groupHistory={groupHistory}
-                                />
-                            )
-                        } else {
-                            const settlement = item.data as Settlement;
-                            return (
-                                 <SettlementListItem
+          <TabsContent value="expenses" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Activity Log</CardTitle>
+                <CardDescription>
+                  A chronological log of all expenses and settlements in this group.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {activityItems.length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
+                      {activityItems.map((item) => {
+                          if (item.type === 'expense') {
+                              const expense = item.data as Expense;
+                              return (
+                                 <ExpenseListItem
                                     key={item.id}
-                                    settlement={settlement}
+                                    expense={expense}
                                     currentUserId={userProfile.uid}
                                     group={group}
                                     groupHistory={groupHistory}
-                                />
-                            )
-                        }
-                    })}
-                 </Accordion>
-              ) : (
-                <div className="text-center p-8 text-muted-foreground">
-                  <Icons.History className="h-12 w-12 mx-auto mb-2" />
-                  No activity recorded yet.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                                  />
+                              )
+                          } else {
+                              const settlement = item.data as Settlement;
+                              return (
+                                   <SettlementListItem
+                                      key={item.id}
+                                      settlement={settlement}
+                                      currentUserId={userProfile.uid}
+                                      group={group}
+                                      groupHistory={groupHistory}
+                                  />
+                              )
+                          }
+                      })}
+                   </Accordion>
+                ) : (
+                  <div className="text-center p-8 text-muted-foreground">
+                    <Icons.History className="h-12 w-12 mx-auto mb-2" />
+                    No activity recorded yet.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="settlements" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row justify-between items-center">
-              <div>
-                <CardTitle>Settlements Log</CardTitle>
-                <CardDescription>
-                  All settlements made in this group.
-                </CardDescription>
+          <TabsContent value="settlements" className="mt-4">
+            <Card>
+              <CardHeader className="flex flex-row justify-between items-center">
+                <div>
+                  <CardTitle>Settlements Log</CardTitle>
+                  <CardDescription>
+                    All settlements made in this group.
+                  </CardDescription>
+                </div>
+                {!group.archivedAt && <AddSettlementDialog
+                  group={group}
+                />}
+              </CardHeader>
+              <CardContent className="p-0">
+                {settlements.length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full">
+                    {settlements.map((settlement) => (
+                      <SettlementListItem
+                        key={settlement.id}
+                        settlement={settlement}
+                        currentUserId={userProfile.uid}
+                        group={group}
+                        groupHistory={groupHistory}
+                      />
+                    ))}
+                  </Accordion>
+                ) : (
+                  <div className="text-center p-8 text-muted-foreground">
+                    <Icons.Settle className="h-12 w-12 mx-auto mb-2" />
+                    No settlements recorded yet.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="balances" className="mt-4">
+            <GroupBalances
+              balances={balances}
+              group={group}
+            />
+          </TabsContent>
+
+          <TabsContent value="analysis" className="mt-4">
+            {showAnalysisHeadsUp ? (
+              <div className="flex items-center justify-center min-h-[400px] p-6 animate-in fade-in-0 duration-500">
+                  <Card className="w-full max-w-md text-center">
+                      <CardHeader>
+                          <div className="flex justify-center mb-4">
+                              <Icons.Analysis className="h-16 w-16 text-primary" />
+                          </div>
+                          <CardTitle className="text-2xl font-headline">Better on Desktop</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          <p className="text-muted-foreground">
+                              For the best experience with charts and data, we recommend viewing this page on a larger screen.
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-4">Loading analytics...</p>
+                      </CardContent>
+                  </Card>
               </div>
-              {!group.archivedAt && <AddSettlementDialog
-                group={group}
-              />}
-            </CardHeader>
-            <CardContent className="p-0">
-              {settlements.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full">
-                  {settlements.map((settlement) => (
-                    <SettlementListItem
-                      key={settlement.id}
-                      settlement={settlement}
-                      currentUserId={userProfile.uid}
-                      group={group}
-                      groupHistory={groupHistory}
-                    />
-                  ))}
-                </Accordion>
-              ) : (
-                <div className="text-center p-8 text-muted-foreground">
-                  <Icons.Settle className="h-12 w-12 mx-auto mb-2" />
-                  No settlements recorded yet.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            ) : (
+              <GroupAnalysisCharts expenses={expenses} members={group.members} />
+            )}
+          </TabsContent>
 
-        <TabsContent value="balances" className="mt-4">
-          <GroupBalances
-            balances={balances}
-            group={group}
-          />
-        </TabsContent>
+          <TabsContent value="history" className="mt-4">
+            <GroupHistoryTab
+              groupId={group.id}
+              onViewExpense={handleViewExpense}
+            />
+          </TabsContent>
 
-        <TabsContent value="analysis" className="mt-4">
-          {showAnalysisHeadsUp ? (
-            <div className="flex items-center justify-center min-h-[400px] p-6 animate-in fade-in-0 duration-500">
-                <Card className="w-full max-w-md text-center">
-                    <CardHeader>
-                        <div className="flex justify-center mb-4">
-                            <Icons.Analysis className="h-16 w-16 text-primary" />
-                        </div>
-                        <CardTitle className="text-2xl font-headline">Better on Desktop</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">
-                            For the best experience with charts and data, we recommend viewing this page on a larger screen.
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-4">Loading analytics...</p>
-                    </CardContent>
-                </Card>
-            </div>
-          ) : (
-            <GroupAnalysisCharts expenses={expenses} members={group.members} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-4">
-          <GroupHistoryTab
-            groupId={group.id}
-            onViewExpense={handleViewExpense}
-          />
-        </TabsContent>
-
-         <TabsContent value="settings" className="mt-4">
-            <GroupSettingsTab group={group} />
-        </TabsContent>
-      </Tabs>
-    </div>
+           <TabsContent value="settings" className="mt-4">
+              <GroupSettingsTab group={group} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </PullToRefresh>
   );
 }

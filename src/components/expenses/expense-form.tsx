@@ -270,7 +270,14 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
             render={({ field }) => (
               <FormItem>
                 <FormControl>
-                  <Input placeholder="Description" {...field} className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input
+                    placeholder="Description"
+                    {...field}
+                    autoCapitalize="sentences"
+                    autoCorrect="on"
+                    enterKeyHint="next"
+                    className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
