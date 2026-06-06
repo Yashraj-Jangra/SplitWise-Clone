@@ -153,8 +153,11 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
     setValue('participants', updatedParticipants, { shouldValidate: true });
   };
 
+  const hasSelectedParticipants = watchParticipants?.some((p: any) => p.selected) ?? false;
+
   const getSummaryText = () => {
     if (!userProfile || !watchAmount || isNaN(Number(watchAmount))) return 'Enter an amount to see your share.';
+    if (!hasSelectedParticipants) return 'Select a person to split.';
     const userPaid = watchPayerType === 'single'
       ? (watchSinglePayerId === userProfile.uid ? watchAmount : 0)
       : watchMultiPayers?.find((p: any) => p.userId === userProfile.uid)?.amount || 0;
@@ -246,10 +249,10 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                   <Drawer>
                     <DrawerTrigger asChild>{triggerContent}</DrawerTrigger>
                     <DrawerContent className="px-4 pb-8 pt-2 max-h-[85vh]">
-                        <DrawerHeader className="px-0 pt-0 text-left">
-                           <DrawerTitle>Select Category</DrawerTitle>
-                        </DrawerHeader>
-                        <div className="overflow-hidden rounded-md border bg-popover/50">{dropdownContent}</div>
+                      <DrawerHeader className="px-0 pt-0 text-left">
+                        <DrawerTitle>Select Category</DrawerTitle>
+                      </DrawerHeader>
+                      <div className="overflow-hidden rounded-md border bg-popover/50">{dropdownContent}</div>
                     </DrawerContent>
                   </Drawer>
                 ) : (
@@ -320,35 +323,35 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Split with</p>
+          <p className="text-sm font-medium">Split with</p>
         </div>
         <ScrollArea className="w-full whitespace-nowrap pb-4" type="scroll">
-            <div className="flex w-max space-x-4">
+          <div className="flex w-max space-x-4">
             {watchParticipants?.map((p: any) => (
-                <button
-                    key={p.userId}
-                    type="button"
-                    onClick={() => handleParticipantSelection(p.userId, !p.selected)}
-                    className={cn(
-                        "flex flex-col items-center gap-1.5 transition-opacity",
-                        p.selected ? "opacity-100" : "opacity-40 hover:opacity-70"
-                    )}
-                >
-                    <div className={cn(
-                        "rounded-full p-0.5 border-2",
-                        p.selected ? "border-primary" : "border-transparent"
-                    )}>
-                        <Avatar className="h-12 w-12 border bg-background">
-                            <AvatarImage src={p.avatarUrl} />
-                            <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
-                        </Avatar>
-                    </div>
-                    <span className="text-xs font-medium truncate w-14 text-center">
-                        {p.name.split(' ')[0]}
-                    </span>
-                </button>
+              <button
+                key={p.userId}
+                type="button"
+                onClick={() => handleParticipantSelection(p.userId, !p.selected)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 transition-opacity",
+                  p.selected ? "opacity-100" : "opacity-40 hover:opacity-70"
+                )}
+              >
+                <div className={cn(
+                  "rounded-full p-0.5 border-2",
+                  p.selected ? "border-primary" : "border-transparent"
+                )}>
+                  <Avatar className="h-12 w-12 border bg-background">
+                    <AvatarImage src={p.avatarUrl} />
+                    <AvatarFallback>{getInitials(p.name)}</AvatarFallback>
+                  </Avatar>
+                </div>
+                <span className="text-xs font-medium truncate w-14 text-center">
+                  {p.name.split(' ')[0]}
+                </span>
+              </button>
             ))}
-            </div>
+          </div>
         </ScrollArea>
       </div>
 
@@ -387,17 +390,17 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                   <Drawer>
                     <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
                     <DrawerContent className="px-4 pb-8 pt-2 flex flex-col items-center">
-                        <DrawerHeader className="w-full text-center pt-0">
-                           <DrawerTitle>Pick a date</DrawerTitle>
-                        </DrawerHeader>
-                        <div className="pb-4 bg-popover/50 rounded-xl border p-1">{calendarContent}</div>
+                      <DrawerHeader className="w-full text-center pt-0">
+                        <DrawerTitle>Pick a date</DrawerTitle>
+                      </DrawerHeader>
+                      <div className="pb-4 bg-popover/50 rounded-xl border p-1">{calendarContent}</div>
                     </DrawerContent>
                   </Drawer>
                 ) : (
                   <Popover>
                     <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                        {calendarContent}
+                      {calendarContent}
                     </PopoverContent>
                   </Popover>
                 )}
@@ -553,11 +556,28 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
 
 export function SplitView({ setView }: { setView: (view: 'main') => void }) {
   const { control, watch, formState: { errors } } = useFormContext();
+  const { userProfile } = useAuth();
   const watchSplitType = watch('splitType');
   const watchParticipants = watch('participants');
   const watchAmount = watch('amount');
+  const watchPayerType = watch('payerType');
+  const watchSinglePayerId = watch('singlePayerId');
+  const watchMultiPayers = watch('multiPayers');
 
   const totalAmount = parseFloat(watchAmount) || 0;
+
+  // Compute what the current user paid vs owes in this split panel
+  const splitViewNetText = React.useMemo(() => {
+    if (!userProfile || totalAmount <= 0) return null;
+    const userPaid = watchPayerType === 'single'
+      ? (watchSinglePayerId === userProfile.uid ? totalAmount : 0)
+      : (watchMultiPayers?.find((p: any) => p.userId === userProfile.uid)?.amount || 0);
+    const userOwed = watchParticipants?.find((p: any) => p.userId === userProfile.uid)?.amountOwed || 0;
+    const net = (Number(userPaid) || 0) - (Number(userOwed) || 0);
+    if (isNaN(net) || Math.abs(net) < 0.01) return null;
+    if (net > 0) return `You get back ${CURRENCY_SYMBOL}${net.toFixed(2)}`;
+    return `You owe ${CURRENCY_SYMBOL}${Math.abs(net).toFixed(2)}`;
+  }, [userProfile, totalAmount, watchPayerType, watchSinglePayerId, watchMultiPayers, watchParticipants]);
 
   let sumOfSplit = 0;
   if (watchSplitType === 'unequally') {
@@ -662,6 +682,9 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
           {watchSplitType !== 'by_percentage' ? (
             <>
               <p>{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+              {watchSplitType === 'equally' && splitViewNetText && (
+                <p className="text-xs font-normal text-right text-muted-foreground">{splitViewNetText}</p>
+              )}
               {watchSplitType === 'unequally' && (
                 <p className={cn("text-xs font-normal text-right", Math.abs(remaining) > 0.01 ? 'text-destructive' : 'text-green-500')}>{CURRENCY_SYMBOL}{Math.abs(remaining).toFixed(2)} {remaining > 0 ? 'left' : 'over'}</p>
               )}
@@ -975,7 +998,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
           </div>
           <DialogFooter className="p-6 pt-0">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" form={formId} disabled={formState.isSubmitting}>
+            <Button type="submit" form={formId} disabled={formState.isSubmitting || !hasSelectedParticipants}>
               {formState.isSubmitting ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Expense')}
             </Button>
           </DialogFooter>
@@ -1022,7 +1045,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
           </ScrollArea>
           {view === 'main' && (
             <SheetFooter className="p-4 bg-background/50 border-t">
-              <Button form={formId} type="submit" disabled={formState.isSubmitting} className="w-full" size="lg">
+              <Button form={formId} type="submit" disabled={formState.isSubmitting || !hasSelectedParticipants} className="w-full" size="lg">
                 {formState.isSubmitting ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Expense')}
               </Button>
             </SheetFooter>
