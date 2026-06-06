@@ -727,6 +727,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
   const watchedAmount = watch('amount');
   const watchedSplitType = watch('splitType');
   const watchedParticipants = watch('participants');
+  const hasSelectedParticipants = watchedParticipants?.some((p: any) => p.selected) ?? false;
 
   const participantDeps = React.useMemo(() => {
     if (!watchedParticipants) return null;
