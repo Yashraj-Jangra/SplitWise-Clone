@@ -104,39 +104,43 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
         </div>
 
 
-        <div className="absolute inset-0 flex flex-col justify-end p-4">
-          {/* Bottom Content */}
-          <div className="flex flex-row justify-between items-end text-white gap-2">
-            {/* Title and Description */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold font-headline drop-shadow-lg truncate">{group.name}</h1>
-              <p className="text-sm text-slate-200 drop-shadow-md truncate">{group.description}</p>
-            </div>
-            {/* Action Buttons */}
-            <div className="flex-shrink-0">
-                {!group.archivedAt && (
-                    <div className="inline-flex rounded-md shadow-sm">
-                        <AddExpenseDialog
-                            group={group}
-                            trigger={
-                                <Button className="rounded-r-none border-r border-primary/70">
-                                    <Icons.Add className="mr-2 h-4 w-4" /> Add Expense
-                                </Button>
-                            }
-                        />
-                        <AddSettlementDialog
-                            group={group}
-                            trigger={
-                                <Button className="rounded-l-none">
-                                    <Icons.Settle className="mr-2 h-4 w-4" /> Settle
-                                </Button>
-                            }
-                        />
-                    </div>
-                )}
+        {/* Group name + description — top-left, always visible */}
+        <div className="absolute top-2 left-2 right-16 z-10">
+          <h1 className="text-xl md:text-3xl font-bold font-headline drop-shadow-lg truncate text-white leading-tight">
+            {group.name}
+          </h1>
+          {group.description && (
+            <p className="text-xs md:text-sm text-slate-200 drop-shadow-md truncate mt-0.5">{group.description}</p>
+          )}
+        </div>
+
+        {/* Action Buttons — bottom-right */}
+        {!group.archivedAt && (
+          <div className="absolute bottom-3 right-3 z-10">
+            <div className="inline-flex rounded-md shadow-sm">
+              <AddExpenseDialog
+                group={group}
+                trigger={
+                  <Button size="sm" className="rounded-r-none border-r border-primary/70">
+                    <Icons.Add className="mr-1 h-4 w-4" />
+                    <span className="hidden sm:inline">Add Expense</span>
+                    <span className="sm:hidden">Add</span>
+                  </Button>
+                }
+              />
+              <AddSettlementDialog
+                group={group}
+                trigger={
+                  <Button size="sm" className="rounded-l-none">
+                    <Icons.Settle className="mr-1 h-4 w-4" />
+                    <span className="hidden sm:inline">Settle</span>
+                    <span className="sm:hidden">Settle</span>
+                  </Button>
+                }
+              />
             </div>
           </div>
-        </div>
+        )}
       </div>
       
       {/* Compact Stats Bar */}
