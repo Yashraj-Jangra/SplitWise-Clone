@@ -402,19 +402,23 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
   const [isDeleteDialogOpenFromMenu, setIsDeleteDialogOpenFromMenu] = useState(false);
 
   const currentUserParticipation = expense.participants.find(p => p.user.uid === currentUserId);
+  const currentUserPaidAmount = expense.payers.find(p => p.user.uid === currentUserId)?.amount || 0;
   const userShare = {
     amount: 0,
     text: "",
     className: ""
   };
 
-  if (currentUserParticipation) {
-    const userPaidAmount = expense.payers.find(p => p.user.uid === currentUserId)?.amount || 0;
-    const netAmount = userPaidAmount - currentUserParticipation.amountOwed;
+  // Compute net whether or not the user is in the participants list.
+  // A user can be a payer but not in the split (they lent money but owe nothing).
+  const userAmountOwed = currentUserParticipation?.amountOwed ?? 0;
+  const netAmount = currentUserPaidAmount - userAmountOwed;
+
+  if (currentUserParticipation || currentUserPaidAmount > 0) {
     userShare.amount = netAmount;
 
     if (netAmount > 0.01) {
-        userShare.text = `You get back ${getGroupCurrencySymbol(group)}${netAmount.toFixed(2)}`;
+        userShare.text = `You lent ${getGroupCurrencySymbol(group)}${netAmount.toFixed(2)}`;
         userShare.className = "text-green-500";
     } else if (netAmount < -0.01) {
         userShare.text = `You owe ${getGroupCurrencySymbol(group)}${Math.abs(netAmount).toFixed(2)}`;
