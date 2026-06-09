@@ -59,11 +59,33 @@ jobs:
     steps:
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          envs: |
+            FIREBASE_SERVICE_ACCOUNT
+            ADMIN_EMAIL
+            GOOGLE_CLIENT_ID
+            GOOGLE_CLIENT_SECRET
+            NEXT_PUBLIC_FIREBASE_API_KEY
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+            NEXT_PUBLIC_FIREBASE_APP_ID
           script: |
             # Navigate to/create app directory
             mkdir -p ~/app
@@ -71,6 +93,20 @@ jobs:
             
             # Log in to GitHub Container Registry on your VPS using a token
             echo "${{ secrets.DEPLOY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Dynamically recreate the .env file from secrets passed by GitHub Actions
+            cat << EOF > .env
+            FIREBASE_SERVICE_ACCOUNT='${FIREBASE_SERVICE_ACCOUNT}'
+            ADMIN_EMAIL='${ADMIN_EMAIL}'
+            GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'
+            GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'
+            NEXT_PUBLIC_FIREBASE_API_KEY='${NEXT_PUBLIC_FIREBASE_API_KEY}'
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN='${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}'
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID='${NEXT_PUBLIC_FIREBASE_PROJECT_ID}'
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET='${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}'
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID='${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}'
+            NEXT_PUBLIC_FIREBASE_APP_ID='${NEXT_PUBLIC_FIREBASE_APP_ID}'
+            EOF
             
             # Recreate docker-compose.yml to use the GHCR package image
             cat << 'EOF' > docker-compose.yml
@@ -91,3 +127,4 @@ jobs:
             # Pull the latest image and recreate the container
             docker compose pull
             docker compose up -d --remove-orphans
+
