@@ -3,7 +3,7 @@ name: CI/CD Deploy
 on:
   push:
     branches:
-      - dev # Trigger deployment when pushing to the dev branch (adjust if using main)
+      - master
 
 jobs:
   build-and-push:
