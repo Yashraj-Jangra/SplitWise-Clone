@@ -4,8 +4,6 @@ import type { SiteSettings, PolicyPage } from '@/types';
 import { Timestamp } from 'firebase-admin/firestore';
 import { defaultExpenseCategories } from './expense-categories';
 
-// Explicitly load environment variables from .env file
-require('dotenv').config();
 
 let initializedApp: typeof admin | null = null;
 
