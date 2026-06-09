@@ -101,9 +101,12 @@ jobs:
             # Log in to GitHub Container Registry on your VPS using a token
             echo "${{ secrets.DEPLOY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
+            # Minify the service account JSON to a single line to ensure correct .env parsing
+            CLEAN_FIREBASE_SERVICE_ACCOUNT=$(echo "${FIREBASE_SERVICE_ACCOUNT}" | tr -d '\r\n')
+
             # Dynamically recreate the .env file from secrets passed by GitHub Actions
             cat << EOF > .env
-            FIREBASE_SERVICE_ACCOUNT='${FIREBASE_SERVICE_ACCOUNT}'
+            FIREBASE_SERVICE_ACCOUNT='${CLEAN_FIREBASE_SERVICE_ACCOUNT}'
             ADMIN_EMAIL='${ADMIN_EMAIL}'
             GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'
             GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'
