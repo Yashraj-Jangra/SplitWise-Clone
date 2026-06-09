@@ -97,45 +97,43 @@ jobs:
             # Navigate to/create app directory
             mkdir -p ~/app
             cd ~/app
-            
+
             # Log in to GitHub Container Registry on your VPS using a token
             echo "${{ secrets.DEPLOY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
+
             # Base64-encode the service account JSON to avoid all quoting/newline issues in .env
             FIREBASE_SERVICE_ACCOUNT_B64=$(echo "${FIREBASE_SERVICE_ACCOUNT}" | tr -d '\r\n' | base64 -w 0)
 
-            # Dynamically recreate the .env file from secrets passed by GitHub Actions
-            # DO NOT wrap values in quotes - dotenv treats them as literal characters
-            cat <<EOF > .env
-FIREBASE_SERVICE_ACCOUNT_B64=${FIREBASE_SERVICE_ACCOUNT_B64}
-ADMIN_EMAIL=${ADMIN_EMAIL}
-GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY}
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
-NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}
-EOF
-            
+            # Dynamically recreate the .env file using echo (no heredoc - heredocs break YAML parsing)
+            {
+              echo "FIREBASE_SERVICE_ACCOUNT_B64=${FIREBASE_SERVICE_ACCOUNT_B64}"
+              echo "ADMIN_EMAIL=${ADMIN_EMAIL}"
+              echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}"
+              echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
+              echo "NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY}"
+              echo "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}"
+              echo "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID}"
+              echo "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}"
+              echo "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}"
+              echo "NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}"
+            } > .env
+
             # Recreate docker-compose.yml to use the GHCR package image
-            cat <<'COMPOSEEOF' > docker-compose.yml
-services:
-  web:
-    image: ghcr.io/${{ env.IMAGE_NAME }}:latest
-    ports:
-      - "3231:3231"
-    volumes:
-      - ./.env:/app/.env
-    environment:
-      - PORT=3231
-      - NODE_ENV=production
-    restart: always
-COMPOSEEOF
+            {
+              echo "services:"
+              echo "  web:"
+              echo "    image: ghcr.io/${{ env.IMAGE_NAME }}:latest"
+              echo "    ports:"
+              echo "      - \"3231:3231\""
+              echo "    volumes:"
+              echo "      - ./.env:/app/.env"
+              echo "    environment:"
+              echo "      - PORT=3231"
+              echo "      - NODE_ENV=production"
+              echo "    restart: always"
+            } > docker-compose.yml
 
             # Pull the latest image, stop existing containers, and recreate
             docker compose pull
             docker compose down
             docker compose up -d --remove-orphans
-
