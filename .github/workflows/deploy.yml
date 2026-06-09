@@ -89,22 +89,11 @@ jobs:
 
             echo "${{ secrets.DEPLOY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Use Python to safely strip surrounding quotes, parse + re-serialize the JSON
-            # (compact single line), then base64 encode. This handles ALL edge cases:
-            # multiline JSON, surrounding single quotes from .env format, CRLF line endings.
-            # sed was WRONG here - without -z it strips leading " from every line of the JSON.
-            SA_B64=$(printf '%s' "${FIREBASE_SERVICE_ACCOUNT}" | python3 -c "
-import sys, json, base64
-raw = sys.stdin.read().strip()
-# Strip surrounding single or double quotes (from .env file format)
-if (raw.startswith(\"'\") and raw.endswith(\"'\")):
-    raw = raw[1:-1]
-elif (raw.startswith('\"') and raw.endswith('\"')):
-    raw = raw[1:-1]
-obj = json.loads(raw)
-compact = json.dumps(obj, separators=(',', ':'))
-print(base64.b64encode(compact.encode()).decode(), end='')
-")
+            # Use Python to safely strip surrounding quotes, parse + re-serialize as compact JSON,
+            # then base64 encode. Single line to stay within YAML indentation (multiline Python
+            # at column 0 would terminate the YAML block scalar, same issue as heredocs).
+            # Uses chr() for quote/separator chars to avoid shell quoting conflicts.
+            SA_B64=$(printf '%s' "${FIREBASE_SERVICE_ACCOUNT}" | python3 -c "import sys,json,base64; raw=sys.stdin.read().strip(); raw=raw[1:-1] if len(raw)>=2 and raw[0]==raw[-1] and raw[0] in (chr(39),chr(34)) else raw; obj=json.loads(raw); print(base64.b64encode(json.dumps(obj,separators=(chr(44),chr(58))).encode()).decode(),end=str())")
 
             # Write docker-compose.yml with ALL env vars baked in directly.
             # No .env file, no volume mount, no dotenv needed - vars go straight into process.env.
