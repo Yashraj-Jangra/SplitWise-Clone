@@ -89,11 +89,22 @@ jobs:
 
             echo "${{ secrets.DEPLOY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Strip any surrounding quotes/whitespace from the secret (the GitHub secret
-            # may have been stored with the single-quote wrapper from the .env file),
-            # then base64-encode to guarantee a safe single-line value with no quoting issues.
-            SA_CLEAN=$(printf '%s' "${FIREBASE_SERVICE_ACCOUNT}" | sed "s/^[[:space:]'\"]*//;s/[[:space:]'\"]*$//")
-            SA_B64=$(printf '%s' "${SA_CLEAN}" | base64 -w 0)
+            # Use Python to safely strip surrounding quotes, parse + re-serialize the JSON
+            # (compact single line), then base64 encode. This handles ALL edge cases:
+            # multiline JSON, surrounding single quotes from .env format, CRLF line endings.
+            # sed was WRONG here - without -z it strips leading " from every line of the JSON.
+            SA_B64=$(printf '%s' "${FIREBASE_SERVICE_ACCOUNT}" | python3 -c "
+import sys, json, base64
+raw = sys.stdin.read().strip()
+# Strip surrounding single or double quotes (from .env file format)
+if (raw.startswith(\"'\") and raw.endswith(\"'\")):
+    raw = raw[1:-1]
+elif (raw.startswith('\"') and raw.endswith('\"')):
+    raw = raw[1:-1]
+obj = json.loads(raw)
+compact = json.dumps(obj, separators=(',', ':'))
+print(base64.b64encode(compact.encode()).decode(), end='')
+")
 
             # Write docker-compose.yml with ALL env vars baked in directly.
             # No .env file, no volume mount, no dotenv needed - vars go straight into process.env.
