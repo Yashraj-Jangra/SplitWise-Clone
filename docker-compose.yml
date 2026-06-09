@@ -14,9 +14,9 @@ services:
         - NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}
     ports:
       - "3231:3231"
+    env_file:
+      - .env
     environment:
       - PORT=3231
       - NODE_ENV=production
-      - FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
     restart: always
