@@ -1,0 +1,230 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply text-[90%];
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  /*
+   * ⚠️  CSS VARIABLE OWNERSHIP — READ BEFORE EDITING
+   * ================================================
+   * These :root and .dark blocks are SSR/hydration FALLBACK values only.
+   * They prevent a Flash of Unstyled Content (FOUC) before React mounts.
+   *
+   * The REAL source of truth for all theme variables is:
+   *   → src/themes/index.ts  (BASE_THEMES array)
+   *   → src/contexts/theme-context.tsx  (ThemeProvider)
+   *
+   * The ThemeProvider injects a <style id="themes-style"> into <head>
+   * at runtime with `.theme-{id}` CSS classes on <body>.
+   *
+   * DO NOT add new theme colors here. Add them to src/themes/index.ts instead.
+   * Chart colors (--chart-*) are defined here because they are static and
+   * not part of the dynamic theme system.
+   */
+
+  :root {
+    /* --- Fallback token values (overridden at runtime by ThemeProvider) --- */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 180 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 100% 71%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 180 100% 40%;
+    --radius: 0.5rem;
+
+    /* --- Static chart palette (not part of dynamic theme system) --- */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 45 90% 50%;
+    --chart-7: 200 80% 55%;
+    --chart-8: 300 50% 50%;
+    --chart-9: 80 60% 45%;
+    --chart-10: 0 70% 60%;
+  }
+
+  .dark {
+    /* --- Fallback dark token values (overridden at runtime by ThemeProvider) --- */
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 180 100% 40%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 0 100% 71%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 100% 71%;
+    --destructive-foreground: 0 0% 10%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 180 100% 40%;
+
+    /* --- Static chart palette (same in dark mode) --- */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 45 90% 50%;
+    --chart-7: 200 80% 55%;
+    --chart-8: 300 50% 50%;
+    --chart-9: 80 60% 45%;
+    --chart-10: 0 70% 60%;
+  }
+
+  /* Custom Scrollbar Styles */
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--secondary)) hsl(var(--background));
+  }
+  
+  body::-webkit-scrollbar {
+    width: 12px;
+  }
+  
+  body::-webkit-scrollbar-track {
+    background-color: hsl(var(--background));
+  }
+  
+  body::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--secondary));
+    border-radius: 10px;
+    border: 3px solid hsl(var(--background));
+  }
+
+  body::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary));
+  }
+}
+
+@layer utilities {
+  .glass-pane {
+    @apply bg-card/50 backdrop-blur-sm border-border/50;
+  }
+}
+
+/* ============================================================
+   MOBILE UX FOUNDATION
+   ============================================================ */
+
+/* Safe-area CSS custom properties for notched devices */
+:root {
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sat: env(safe-area-inset-top, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+/* Remove iOS blue tap-highlight flash on all interactive elements */
+button,
+a,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+label {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Eliminate 300ms click delay — safe for all modern browsers */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+
+/* Prevent accidental text selection on UI chrome */
+nav,
+footer,
+header,
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Native-feeling momentum scroll in overflow containers */
+.scroll-momentum {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Contain overscroll on the page body (prevents pull-to-refresh browser default) */
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.08) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Pull-to-refresh indicator */
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ptr-spinner {
+  animation: ptr-spin 0.8s linear infinite;
+}
+
+/* Reduced-motion: cut all non-essential motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

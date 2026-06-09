@@ -1,0 +1,168 @@
+"use client";
+import type { Group, UserProfile } from "@/types";
+import { Icons } from "@/components/icons";
+import Image from "next/image";
+import { getGroupCurrencySymbol } from "@/lib/constants";
+import { useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import { useToast } from "@/hooks/use-toast";
+import { updateGroup, getSiteSettings } from "@/lib/mock-data";
+import { Skeleton } from "../ui/skeleton";
+import { cn } from "@/lib/utils";
+import { AddExpenseDialog } from "../expenses/add-expense-dialog";
+import { AddSettlementDialog } from "../settlements/add-settlement-dialog";
+
+
+interface GroupDetailHeaderProps {
+  group: Group;
+  user: UserProfile;
+  currentUserBalance: number;
+}
+
+export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDetailHeaderProps) {
+  const { toast } = useToast();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [coverImages, setCoverImages] = useState<string[]>([]);
+  const [coversLoading, setCoversLoading] = useState(true);
+
+  // Fetch cover images only when the popover is about to open
+  useEffect(() => {
+    async function loadCovers() {
+        if (isPopoverOpen) {
+            setCoversLoading(true);
+            try {
+                const settings = await getSiteSettings();
+                setCoverImages(settings.coverImages);
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not load cover images.' });
+            } finally {
+                setCoversLoading(false);
+            }
+        }
+    }
+    loadCovers();
+  }, [isPopoverOpen, toast]);
+
+  const handleCoverChange = async (imageUrl: string) => {
+    try {
+        await updateGroup(group.id, { coverImageUrl: imageUrl }, user.uid);
+        toast({ title: "Cover Image Updated" });
+        setIsPopoverOpen(false); // Close popover on selection
+    } catch(e) {
+        toast({ title: "Error", description: "Failed to update cover image", variant: "destructive"});
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-border/50 overflow-hidden">
+      {/* Cover Image and Overlay Content */}
+      <div className="relative h-32 md:h-40 w-full">
+        <Image
+          src={group.coverImageUrl || 'https://placehold.co/1200x300.png'}
+          alt={`${group.name} cover image`}
+          fill
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+        
+        {/* Actions - Always visible for mobile-friendliness */}
+        <div className="absolute top-2 right-2 flex items-center gap-2 z-10">
+            {!group.archivedAt && (
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-white bg-black/30 hover:bg-black/50 hover:text-white">
+                        <Icons.Edit className="h-4 w-4" />
+                        <span className="sr-only">Change Cover</span>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2">
+                    {coversLoading ? (
+                        <div className="grid grid-cols-3 gap-2">
+                            {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-sm" />)}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                            {coverImages.map((url, i) => (
+                                <button key={i} className="aspect-video relative rounded-sm overflow-hidden group/image focus:ring-2 focus:ring-primary focus:outline-none" onClick={() => handleCoverChange(url)}>
+                                    <Image src={url} alt={`Cover option ${i+1}`} fill className="object-cover" />
+                                    {url === group.coverImageUrl && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center"><Icons.ShieldCheck className="text-white h-6 w-6"/></div>}
+                                    <div className="absolute inset-0 bg-black/20 group-hover/image:bg-black/40 transition-colors"/>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </PopoverContent>
+            </Popover>
+            )}
+        </div>
+
+
+        {/* Group name + description — top-left, always visible */}
+        <div className="absolute top-2 left-2 right-16 z-10">
+          <h1 className="text-xl md:text-3xl font-bold font-headline drop-shadow-lg truncate text-white leading-tight">
+            {group.name}
+          </h1>
+          {group.description && (
+            <p className="text-xs md:text-sm text-slate-200 drop-shadow-md truncate mt-0.5">{group.description}</p>
+          )}
+        </div>
+
+        {/* Action Buttons — bottom-right */}
+        {!group.archivedAt && (
+          <div className="absolute bottom-3 right-3 z-10">
+            <div className="inline-flex rounded-md shadow-sm">
+              <AddExpenseDialog
+                group={group}
+                trigger={
+                  <Button size="sm" className="rounded-r-none border-r border-primary/70">
+                    <Icons.Add className="mr-1 h-4 w-4" />
+                    <span className="hidden sm:inline">Add Expense</span>
+                    <span className="sm:hidden">Add</span>
+                  </Button>
+                }
+              />
+              <AddSettlementDialog
+                group={group}
+                trigger={
+                  <Button size="sm" className="rounded-l-none">
+                    <Icons.Settle className="mr-1 h-4 w-4" />
+                    <span className="hidden sm:inline">Settle</span>
+                    <span className="sm:hidden">Settle</span>
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Compact Stats Bar */}
+      <div className="grid grid-cols-3 divide-x divide-border/50 bg-background/50">
+        <div className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Total Spent</p>
+            <p className="font-bold text-lg">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
+        </div>
+        <div className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Members</p>
+            <p className="font-bold text-lg">{group.members.length}</p>
+        </div>
+        <div className="p-3 text-center">
+            <p className="text-xs text-muted-foreground">Your Balance</p>
+            <p className={cn(
+                "font-bold text-lg",
+                currentUserBalance > 0.01 ? 'text-green-500' : currentUserBalance < -0.01 ? 'text-red-500' : 'text-foreground'
+            )}>
+                {currentUserBalance >= 0 ? '' : '-'}{getGroupCurrencySymbol(group)}{Math.abs(currentUserBalance).toFixed(2)}
+            </p>
+        </div>
+      </div>
+    </div>
+  );
+}

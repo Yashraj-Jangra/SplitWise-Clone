@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "skipLibCheck": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "firebase/auth": ["./node_modules/firebase/auth/dist/auth/index.d.ts"],
+      "firebase/firestore": ["./node_modules/firebase/firestore/dist/firestore/index.d.ts"],
+      "firebase/storage": ["./node_modules/firebase/storage/dist/storage/index.d.ts"],
+      "firebase/messaging": ["./node_modules/firebase/messaging/dist/messaging/index.d.ts"],
+      "firebase/app": ["./node_modules/firebase/app/dist/app/index.d.ts"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
