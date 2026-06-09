@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.vscode
+.idx
+out
+build
+npm-debug.log
+.env
+.env*.local
+todo.md
+progress.md
+README.md
+Dockerfile
+docker-compose.yml
