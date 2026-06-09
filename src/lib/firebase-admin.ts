@@ -11,10 +11,15 @@ let initializedApp: typeof admin | null = null;
 
 function getFirebaseAdmin(): typeof admin {
   if (!initializedApp) {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-      throw new Error('Firebase service account credentials are not set in the environment variables. Please set FIREBASE_SERVICE_ACCOUNT.');
+    // Support both base64-encoded (Docker/VPS) and raw JSON (local dev) formats
+    const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_B64
+      ? Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_B64, 'base64').toString('utf-8')
+      : process.env.FIREBASE_SERVICE_ACCOUNT;
+
+    if (!rawServiceAccount) {
+      throw new Error('Firebase service account credentials are not set. Set FIREBASE_SERVICE_ACCOUNT_B64 (base64) or FIREBASE_SERVICE_ACCOUNT (raw JSON).');
     }
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    const serviceAccount = JSON.parse(rawServiceAccount);
     if (admin.apps.length === 0) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
@@ -183,7 +188,7 @@ const DEFAULT_EMAIL_SETTINGS = {
  * This should be used in API routes.
  */
 export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_B64 && !process.env.FIREBASE_SERVICE_ACCOUNT) {
         console.warn('[Firebase Admin] FIREBASE_SERVICE_ACCOUNT is not defined. Returning fallback site settings for static build.');
         return {
             appName: DEFAULT_APP_NAME,
