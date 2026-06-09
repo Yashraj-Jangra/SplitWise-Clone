@@ -130,7 +130,8 @@ jobs:
                 restart: always
             EOF
 
-            # Pull the latest image and recreate the container
+            # Pull the latest image, stop existing containers, and recreate
             docker compose pull
+            docker compose down
             docker compose up -d --remove-orphans
 
