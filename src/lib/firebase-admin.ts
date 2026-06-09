@@ -7,29 +7,36 @@ import { defaultExpenseCategories } from './expense-categories';
 // Explicitly load environment variables from .env file
 require('dotenv').config();
 
-// Check if the service account JSON is provided in the environment variables
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  throw new Error('Firebase service account credentials are not set in the environment variables. Please set FIREBASE_SERVICE_ACCOUNT.');
-}
+let initializedApp: typeof admin | null = null;
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
-/**
- * Initializes the Firebase Admin SDK, ensuring it's only done once.
- * This is the "singleton" pattern for Firebase Admin initialization.
- */
-function initializeAdminApp() {
-  if (admin.apps.length === 0) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
+function getFirebaseAdmin(): typeof admin {
+  if (!initializedApp) {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      throw new Error('Firebase service account credentials are not set in the environment variables. Please set FIREBASE_SERVICE_ACCOUNT.');
+    }
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    if (admin.apps.length === 0) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    }
+    initializedApp = admin;
   }
-  return admin;
+  return initializedApp;
 }
 
-// Immediately initialize and export the admin instance.
-// Other files will import this directly.
-export const firebaseAdmin = initializeAdminApp();
+// Export a Proxy that intercepts all property access and forwards it to the initialized admin instance.
+// This prevents initialization and environment validation crashes during static build/compile time.
+export const firebaseAdmin = new Proxy({} as typeof admin, {
+  get(target, prop, receiver) {
+    const adminInstance = getFirebaseAdmin();
+    const value = Reflect.get(adminInstance, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(adminInstance);
+    }
+    return value;
+  },
+});
 
 
 const SETTINGS_COLLECTION = 'settings';
@@ -72,6 +79,84 @@ const DEFAULT_TERMS_AND_CONDITIONS: PolicyPage = {
     ]
 };
 
+const DEFAULT_LANDING_PAGE_SETTINGS = {
+    headline: 'Manage Your Shared Expenses',
+    subheadline: 'The quantum leap in managing shared expenses. Track, split, and settle your group costs with futuristic ease.',
+    ctaButtonText: 'Enter the Grid',
+    imageRotationInterval: 1,
+    featuresTitle: "Everything You Need to Settle Up",
+    featuresSubtitle: "From weekend trips to monthly bills, {appName} handles the math so you don't have to.",
+    features: [
+        { icon: 'Users', title: "Group Management", description: "Create shared expense groups, invite members via email, and manage group settings." },
+        { icon: 'Expense', title: "Complex Expense Tracking", description: "Add detailed expenses with complex splits (equal, unequal, by shares, by percentage)." },
+        { icon: 'Wallet', title: "Real-time Balances", description: "Instantly see who owes whom within each group with a clear and concise balance sheet." },
+        { icon: 'Settle', title: "Simplified Settlements", description: "A smart algorithm calculates the most efficient way to settle all debts in the group." },
+    ] as any[],
+    howItWorksTitle: "Split Expenses in a Snap",
+    howItWorksSubtitle: "Get started in three simple steps. Spend more time making memories, less time on math.",
+    howItWorksSteps: [
+        { title: 'Create a Group', description: 'Start a new group for any occasion and invite your friends, family, or roommates.' },
+        { title: 'Add Expenses', description: 'Log expenses as they happen. Our flexible splitting options handle any scenario.' },
+        { title: 'Settle Up', description: 'View balances and settle debts with the minimal number of payments. Everyone is happy!' },
+    ] as any[],
+    howItWorksImageUrl: 'https://placehold.co/800x600.png',
+    finalCtaTitle: "Ready to Simplify Your Shared Expenses?",
+    finalCtaSubtitle: "Create an account for free and say goodbye to awkward money conversations.",
+    finalCtaButtonText: "Sign Up Now - It's Free"
+};
+
+const DEFAULT_AUTH_PAGE_SETTINGS = {
+    imageUrl: 'https://images.unsplash.com/photo-1549880338-65ddcdfd017b?q=80&w=2070&auto=format&fit=crop',
+    loginTitle: 'Welcome Back',
+    loginSubtitle: 'Enter your credentials to access your account.',
+    signupTitle: 'Create an Account',
+    signupSubtitle: 'Join {appName} to simplify your group expenses.',
+    forgotPasswordTitle: 'Forgot Password',
+    forgotPasswordSubtitle: 'Enter your email to receive a reset link.',
+    loginEmailPlaceholder: 'elon@x.com',
+    loginPasswordPlaceholder: 'it\'s a secret...',
+    signupFirstNamePlaceholder: 'Bartholomew',
+    signupLastNamePlaceholder: 'Cubbins',
+    signupUsernamePlaceholder: 'the_real_slim_shady',
+    signupEmailPlaceholder: 'also.elon@x.com',
+    signupPasswordPlaceholder: 'at_least_6_characters',
+};
+
+const DEFAULT_ABOUT_SETTINGS = {
+    title: 'About {appName}',
+    subtitle: 'Simplifying shared expenses for everyone, everywhere.',
+    mainContent: 'Welcome to {appName}, the ultimate solution for managing group expenses without the hassle. Born from the common frustration of tracking who paid for what during trips, shared housing, and group events, {appName} was designed to be intuitive, powerful, and transparent.',
+    team: [
+        {
+            id: 'tm-1',
+            name: 'Yashraj Jangra',
+            title: 'Full-Stack Developer & Project Lead',
+            bio: 'Yashraj is a passionate developer who built this application to solve a real-world problem. He specializes in creating modern, user-friendly web applications with a focus on clean code and great user experience.',
+            avatarUrl: 'https://github.com/Yashraj-Jangra.png',
+            githubUrl: 'https://github.com/Yashraj-Jangra',
+            linkedinUrl: 'https://www.linkedin.com/in/yashraj-jangra-24016a213/',
+            portfolioUrl: 'https://yashraj-jangra.netlify.app/',
+        }
+    ]
+};
+
+const DEFAULT_NOT_FOUND_PAGE_SETTINGS = {
+    title: "404 - Page Not Found",
+    heading: "Lost in the Cosmos?",
+    mainContent: "It seems you've drifted into uncharted territory. The page you're looking for might have been moved to another galaxy or never existed in the first place.",
+    helpfulHint: "Try checking the URL for typos or navigate back to a known constellation.",
+    supportNote: "If you believe this is a black hole in our system, please contact support.",
+    buttonText: "Return to Home Base",
+    imageUrl: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?q=80&w=1974&auto=format&fit=crop",
+};
+
+const DEFAULT_MAINTENANCE_MODE_SETTINGS = {
+  enabled: false,
+  title: 'Under Maintenance',
+  message: "We're currently performing some scheduled maintenance. We'll be back online shortly!",
+  imageUrl: 'https://images.unsplash.com/photo-1589998059171-988d887df646?q=80&w=2070&auto=format&fit=crop'
+};
+
 const DEFAULT_EMAIL_SETTINGS = {
     sendingMethod: 'firebase' as 'firebase' | 'custom' | 'gmail',
     fromAddresses: {
@@ -98,6 +183,24 @@ const DEFAULT_EMAIL_SETTINGS = {
  * This should be used in API routes.
  */
 export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+        console.warn('[Firebase Admin] FIREBASE_SERVICE_ACCOUNT is not defined. Returning fallback site settings for static build.');
+        return {
+            appName: DEFAULT_APP_NAME,
+            coverImages: FALLBACK_GROUP_COVER_IMAGES,
+            landingImages: FALLBACK_LANDING_IMAGES,
+            expenseCategories: defaultExpenseCategories,
+            privacyPolicy: DEFAULT_PRIVACY_POLICY,
+            termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS,
+            emailSettings: DEFAULT_EMAIL_SETTINGS,
+            landingPage: DEFAULT_LANDING_PAGE_SETTINGS,
+            authPage: DEFAULT_AUTH_PAGE_SETTINGS,
+            about: DEFAULT_ABOUT_SETTINGS,
+            notFoundPage: DEFAULT_NOT_FOUND_PAGE_SETTINGS,
+            maintenanceMode: DEFAULT_MAINTENANCE_MODE_SETTINGS,
+        } as SiteSettings;
+    }
+
     const db = firebaseAdmin.firestore();
     const docRef = db.collection(SETTINGS_COLLECTION).doc(GENERAL_SETTINGS_DOC);
     const docSnap = await docRef.get();
