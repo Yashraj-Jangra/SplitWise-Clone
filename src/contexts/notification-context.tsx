@@ -90,13 +90,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUnreadCount(hydratedNotifications.filter(n => !n.isRead).length);
         setLoading(false);
       },
-      (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'notifications_v2',
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+      (error: any) => {
         console.error("Error fetching notifications:", error);
+        
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: 'notifications_v2',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } else if (error.code === 'failed-precondition') {
+            // This is usually a missing index error
+            errorEmitter.emit('permission-error', new Error("Firestore Index Missing: " + error.message));
+        }
+        
         setLoading(false);
       }
     );

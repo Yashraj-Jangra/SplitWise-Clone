@@ -131,7 +131,8 @@ service cloud.firestore {
     }
 
     match /notifications_v2/{notifId} {
-      allow read: if isSignedIn();
+      // Allow reading only if the user is in the recipientIds array
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.recipientIds);
       allow create, delete: if isAdmin();
       allow update: if isSignedIn()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])

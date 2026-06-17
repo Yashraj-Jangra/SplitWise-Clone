@@ -68,7 +68,7 @@ export function NotificationBell() {
             )}
         </ScrollArea>
         <div className="border-t p-2">
-            <Button asChild variant="ghost" className="w-full justify-center text-sm" onClick={() => setOpen(false)}>
+            <Button asChild variant="ghost" className="w-full justify-center text-sm text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setOpen(false)}>
                 <Link href="/notifications">View all notifications</Link>
             </Button>
         </div>

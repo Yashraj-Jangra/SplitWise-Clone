@@ -19,7 +19,7 @@ export default function NotificationsPage() {
 
   if (loading) {
       return (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="w-full space-y-6">
               <Skeleton className="h-10 w-48" />
               <Card>
                   <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
@@ -40,7 +40,7 @@ export default function NotificationsPage() {
   const otherNotifs = notifications.filter(n => !n.type.includes('expense') && !n.type.includes('settlement'));
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-headline">Notifications</h1>

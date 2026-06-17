@@ -85,82 +85,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     const unsubscribe = onAuthStateChanged(auth, async (user: import('firebase/auth').User | null) => {
       setLoading(true);
-      if (user) {
-        setFirebaseUser(user);
-        // Derive admin status from the ID token claim — set server-side, cannot be spoofed.
-        const tokenResult = await user.getIdTokenResult();
-        setIsAdmin(tokenResult.claims?.['role'] === 'admin');
-        let profile = await fetchUserProfile(user.uid);
-        
-        if (!profile) {
-            console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
-            let username = user.email?.split('@')[0] || `user${Date.now()}`;
-            let usernameIsTaken = await isUsernameTaken(username);
-            while (usernameIsTaken) {
-                username = `${user.email?.split('@')[0]}${Math.floor(Math.random() * 1000)}`;
-                usernameIsTaken = await isUsernameTaken(username);
-            }
-            
-            const nameParts = user.displayName?.split(' ') || [];
-            const firstName = nameParts[0] || user.email?.split('@')[0] || 'New';
-            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      try {
+        if (user) {
+          setFirebaseUser(user);
+          // Derive admin status from the ID token claim — set server-side, cannot be spoofed.
+          const tokenResult = await user.getIdTokenResult();
+          setIsAdmin(tokenResult.claims?.['role'] === 'admin');
+          let profile = await fetchUserProfile(user.uid);
+          
+          if (!profile) {
+              console.warn(`User profile not found for uid: ${user.uid}. Creating a new one.`);
+              let username = user.email?.split('@')[0] || `user${Date.now()}`;
+              let usernameIsTaken = await isUsernameTaken(username);
+              while (usernameIsTaken) {
+                  username = `${user.email?.split('@')[0]}${Math.floor(Math.random() * 1000)}`;
+                  usernameIsTaken = await isUsernameTaken(username);
+              }
+              
+              const nameParts = user.displayName?.split(' ') || [];
+              const firstName = nameParts[0] || user.email?.split('@')[0] || 'New';
+              const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-            // Default to 'user' role. The /api/set-admin-claim route will promote
-            // this account to admin if it matches the ADMIN_EMAIL env var (server-side check).
-            const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> = {
-                firstName: firstName,
-                lastName: lastName,
-                username: username,
-                email: user.email!,
-                role: 'user', // Always start as user; server promotes if eligible
-                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(firstName)?.substring(0, 1).toUpperCase()}${lastName?.substring(0,1).toUpperCase() || ''}`,
-            };
-            
-            await setDoc(doc(db, "users", user.uid), {
-                ...newUserProfile,
-                createdAt: Timestamp.now(),
-            });
+              // Default to 'user' role. The /api/set-admin-claim route will promote
+              // this account to admin if it matches the ADMIN_EMAIL env var (server-side check).
+              const newUserProfile: Omit<UserProfile, 'uid' | 'createdAt' | 'dob'> = {
+                  firstName: firstName,
+                  lastName: lastName,
+                  username: username,
+                  email: user.email!,
+                  role: 'user', // Always start as user; server promotes if eligible
+                  avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(firstName)?.substring(0, 1).toUpperCase()}${lastName?.substring(0,1).toUpperCase() || ''}`,
+              };
+              
+              await setDoc(doc(db, "users", user.uid), {
+                  ...newUserProfile,
+                  createdAt: Timestamp.now(),
+              });
 
-            // Ask the server to check if this email matches ADMIN_EMAIL and promote if so.
-            // The API route handles the authorization check — no email logic on the client.
-            try {
-                await fetch('/api/set-admin-claim', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    // No auth token for bootstrap scenario — API allows unauthenticated
-                    // self-promotion only when the email matches ADMIN_EMAIL server-side.
-                    body: JSON.stringify({ uid: user.uid, action: 'promote' }),
-                });
-                // Force token refresh so the new claim is picked up immediately
-                await user.getIdToken(true);
-            } catch (e) {
-                console.error("Failed to check/set admin claim:", e);
-            }
+              // Ask the server to check if this email matches ADMIN_EMAIL and promote if so.
+              // The API route handles the authorization check — no email logic on the client.
+              try {
+                  await fetch('/api/set-admin-claim', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      // No auth token for bootstrap scenario — API allows unauthenticated
+                      // self-promotion only when the email matches ADMIN_EMAIL server-side.
+                      body: JSON.stringify({ uid: user.uid, action: 'promote' }),
+                  });
+                  // Force token refresh so the new claim is picked up immediately
+                  await user.getIdToken(true);
+              } catch (e) {
+                  console.error("Failed to check/set admin claim:", e);
+              }
 
-            await sendEmailVerification(user); // Send verification email for new Google users
-            profile = await fetchUserProfile(user.uid);
+              if (!user.emailVerified) {
+                  try {
+                      await sendEmailVerification(user); // Send verification email for new users
+                  } catch (e) {
+                      console.error("Failed to send verification email:", e);
+                  }
+              }
+              profile = await fetchUserProfile(user.uid);
+          }
+          
+          setUserProfile(profile);
+
+          // Set the session cookie so middleware can protect routes server-side.
+          // Fire-and-forget — don't block the UI on this.
+          user.getIdToken().then(idToken => {
+            fetch('/api/auth/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken }),
+            }).catch(e => console.error('Failed to set session cookie:', e));
+          });
+        } else {
+          setFirebaseUser(null);
+          setUserProfile(null);
+          setIsAdmin(false);
+          // Clear the session cookie on logout.
+          fetch('/api/auth/session', { method: 'DELETE' })
+            .catch(e => console.error('Failed to clear session cookie:', e));
         }
-        
-        setUserProfile(profile);
-
-        // Set the session cookie so middleware can protect routes server-side.
-        // Fire-and-forget — don't block the UI on this.
-        user.getIdToken().then(idToken => {
-          fetch('/api/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
-          }).catch(e => console.error('Failed to set session cookie:', e));
-        });
-      } else {
-        setFirebaseUser(null);
-        setUserProfile(null);
-        setIsAdmin(false);
-        // Clear the session cookie on logout.
-        fetch('/api/auth/session', { method: 'DELETE' })
-          .catch(e => console.error('Failed to clear session cookie:', e));
+      } catch (error) {
+        console.error("Error in onAuthStateChanged:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
