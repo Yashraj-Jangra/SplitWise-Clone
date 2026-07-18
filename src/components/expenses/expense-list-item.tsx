@@ -485,16 +485,23 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory, i
                           {group && (
                               <>
                                   <span className="text-[10px] text-muted-foreground/60 select-none">•</span>
-                                  <button
-                                      type="button"
+                                  <span
+                                      role="button"
+                                      tabIndex={0}
                                       onClick={(e) => {
                                           e.stopPropagation();
                                           router.push(`/groups/${group.id}`);
                                       }}
-                                      className="text-[11px] font-semibold text-primary hover:underline hover:text-primary/80 transition-colors"
+                                      onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                              e.stopPropagation();
+                                              router.push(`/groups/${group.id}`);
+                                          }
+                                      }}
+                                      className="text-[11px] font-semibold text-primary hover:underline hover:text-primary/80 transition-colors cursor-pointer"
                                   >
                                       {group.name}
-                                  </button>
+                                  </span>
                               </>
                           )}
                       </div>
