@@ -10,6 +10,7 @@ export interface DispatchNotificationParams {
   actorId?: string;
   groupId?: string;
   expenseId?: string;
+  settlementId?: string;
   target?: 'all_users' | 'specific_users' | 'group';
 }
 
@@ -103,7 +104,8 @@ export const notifySettlementAdded = async (
     recipientId: string, 
     actorId: string, 
     groupId: string, 
-    amount: number
+    amount: number,
+    settlementId?: string
 ) => {
     await dispatchNotification({
         type: 'settlement_added',
@@ -112,6 +114,7 @@ export const notifySettlementAdded = async (
         body: `You received a payment of ${amount}.`,
         actorId,
         groupId,
+        settlementId,
         target: 'specific_users'
     });
 };

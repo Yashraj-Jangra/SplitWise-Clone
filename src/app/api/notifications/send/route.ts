@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, target = 'specific_users', imageUrl } = body as {
+        const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, settlementId, target = 'specific_users', imageUrl } = body as {
             type: NotificationEventType;
             recipientIds: string[];
             title: string;
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
             actorId?: string;
             groupId?: string;
             expenseId?: string;
+            settlementId?: string;
             target?: 'all_users' | 'specific_users' | 'group';
             imageUrl?: string;
         };
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
                 actorId: actorId || null,
                 groupId: groupId || null,
                 expenseId: expenseId || null,
+                settlementId: settlementId || null,
                 createdAt: FieldValue.serverTimestamp(),
                 createdBy: authUid || 'system',
                 target,
@@ -132,6 +134,7 @@ export async function POST(request: Request) {
                     type,
                     groupId: groupId || '',
                     expenseId: expenseId || '',
+                    settlementId: settlementId || '',
                     url: '/' // Can be dynamic
                 }
             };

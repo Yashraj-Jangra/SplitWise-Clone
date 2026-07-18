@@ -128,6 +128,7 @@ export interface NotificationV2Document {
   readBy: string[];                // UIDs who have read (in-app)
   groupId?: string;                // Link to relevant group
   expenseId?: string;              // Link to relevant expense
+  settlementId?: string;           // Link to relevant settlement
   actorId?: string;                // Who triggered this (e.g. who added expense)
   createdAt: Timestamp;
   createdBy?: string;              // 'system' | admin UID

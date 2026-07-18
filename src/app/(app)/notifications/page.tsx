@@ -7,26 +7,48 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
+import type { NotificationV2 } from '@/types';
 
 export default function NotificationsPage() {
   const { notifications, loading, markAllRead, markRead } = useNotifications();
+  const router = useRouter();
 
-  const handleNotificationClick = async (id: string, isRead: boolean) => {
-    if (!isRead) {
-        await markRead(id);
+  const handleNotificationClick = async (notif: NotificationV2) => {
+    // Mark as read immediately if it's unread
+    if (!notif.isRead) {
+        await markRead(notif.id);
+    }
+    
+    // Navigate based on type
+    if (notif.type === 'support_reply') {
+      router.push('/support');
+    } else if (notif.groupId) {
+      if (notif.expenseId) {
+        router.push(`/groups/${notif.groupId}?expenseId=${notif.expenseId}`);
+      } else if (notif.settlementId) {
+        router.push(`/groups/${notif.groupId}?settlementId=${notif.settlementId}`);
+      } else {
+        router.push(`/groups/${notif.groupId}`);
+      }
     }
   };
 
   if (loading) {
       return (
-          <div className="w-full space-y-6">
-              <Skeleton className="h-10 w-48" />
+          <div className="w-full space-y-6 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-4 w-72" />
+                </div>
+                <Skeleton className="h-10 w-36" />
+              </div>
               <Card>
-                  <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
-                  <CardContent className="space-y-4">
-                      <Skeleton className="h-20 w-full" />
-                      <Skeleton className="h-20 w-full" />
-                      <Skeleton className="h-20 w-full" />
+                  <CardContent className="space-y-4 p-6">
+                      <Skeleton className="h-20 w-full rounded-xl" />
+                      <Skeleton className="h-20 w-full rounded-xl" />
+                      <Skeleton className="h-20 w-full rounded-xl" />
                   </CardContent>
               </Card>
           </div>
@@ -39,37 +61,72 @@ export default function NotificationsPage() {
   const settlementsNotifs = notifications.filter(n => n.type.includes('settlement'));
   const otherNotifs = notifications.filter(n => !n.type.includes('expense') && !n.type.includes('settlement'));
 
+  // Calculate tab unread counts
+  const unreadExpenses = expensesNotifs.filter(n => !n.isRead).length;
+  const unreadSettlements = settlementsNotifs.filter(n => !n.isRead).length;
+  const unreadOther = otherNotifs.filter(n => !n.isRead).length;
+
   return (
-    <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-5xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Notifications</h1>
-          <p className="text-muted-foreground">Stay updated with activity in your groups.</p>
+          <h1 className="text-3xl font-bold font-headline tracking-tight text-foreground flex items-center gap-2">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-bold shadow-sm animate-pulse shrink-0">
+                {unreadCount} unread
+              </span>
+            )}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">Stay updated with activity across your shared groups.</p>
         </div>
         {unreadCount > 0 && (
-            <Button onClick={markAllRead} variant="outline">
-                <Icons.Check className="mr-2 h-4 w-4" /> Mark all as read
+            <Button onClick={markAllRead} variant="outline" className="shadow-sm gap-2 shrink-0 hover:bg-green-500/10 hover:text-green-500 hover:border-green-500/30 transition-all duration-200">
+                <Icons.Check className="h-4 w-4" /> Mark all as read
             </Button>
         )}
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="settlements">Settlements</TabsTrigger>
-            <TabsTrigger value="other">Other</TabsTrigger>
+        <TabsList className="mb-6 p-1 bg-muted/60 border rounded-xl w-full sm:w-auto inline-flex justify-start">
+            <TabsTrigger value="all" className="rounded-lg gap-2 text-sm">
+              All
+              {unreadCount > 0 && (
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-semibold">{unreadCount}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="expenses" className="rounded-lg gap-2 text-sm">
+              Expenses
+              {unreadExpenses > 0 && (
+                <span className="text-[10px] bg-blue-500/20 text-blue-500 px-1.5 py-0.5 rounded-full font-semibold">{unreadExpenses}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="settlements" className="rounded-lg gap-2 text-sm">
+              Payments
+              {unreadSettlements > 0 && (
+                <span className="text-[10px] bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-full font-semibold">{unreadSettlements}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="other" className="rounded-lg gap-2 text-sm">
+              System & Help
+              {unreadOther > 0 && (
+                <span className="text-[10px] bg-purple-500/20 text-purple-500 px-1.5 py-0.5 rounded-full font-semibold">{unreadOther}</span>
+              )}
+            </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all">
-            <Card>
-                <CardContent className="p-0">
+            <Card className="border-border/60 shadow-sm overflow-hidden rounded-2xl">
+                <CardContent className="p-0 divide-y divide-border/50">
                     {notifications.length > 0 ? (
-                        <div className="divide-y">
-                            {notifications.map(notif => (
-                                <NotificationItem key={notif.id} notification={notif} onClick={() => handleNotificationClick(notif.id, notif.isRead)} />
-                            ))}
-                        </div>
+                        notifications.map(notif => (
+                            <NotificationItem 
+                              key={notif.id} 
+                              notification={notif} 
+                              onClick={() => handleNotificationClick(notif)} 
+                              onMarkRead={() => markRead(notif.id)}
+                            />
+                        ))
                     ) : (
                         <EmptyState />
                     )}
@@ -78,14 +135,17 @@ export default function NotificationsPage() {
         </TabsContent>
 
         <TabsContent value="expenses">
-            <Card>
-                <CardContent className="p-0">
+            <Card className="border-border/60 shadow-sm overflow-hidden rounded-2xl">
+                <CardContent className="p-0 divide-y divide-border/50">
                     {expensesNotifs.length > 0 ? (
-                        <div className="divide-y">
-                            {expensesNotifs.map(notif => (
-                                <NotificationItem key={notif.id} notification={notif} onClick={() => handleNotificationClick(notif.id, notif.isRead)} />
-                            ))}
-                        </div>
+                        expensesNotifs.map(notif => (
+                            <NotificationItem 
+                              key={notif.id} 
+                              notification={notif} 
+                              onClick={() => handleNotificationClick(notif)}
+                              onMarkRead={() => markRead(notif.id)}
+                            />
+                        ))
                     ) : (
                         <EmptyState message="No expense notifications yet." />
                     )}
@@ -94,30 +154,36 @@ export default function NotificationsPage() {
         </TabsContent>
 
         <TabsContent value="settlements">
-            <Card>
-                <CardContent className="p-0">
+            <Card className="border-border/60 shadow-sm overflow-hidden rounded-2xl">
+                <CardContent className="p-0 divide-y divide-border/50">
                     {settlementsNotifs.length > 0 ? (
-                        <div className="divide-y">
-                            {settlementsNotifs.map(notif => (
-                                <NotificationItem key={notif.id} notification={notif} onClick={() => handleNotificationClick(notif.id, notif.isRead)} />
-                            ))}
-                        </div>
+                        settlementsNotifs.map(notif => (
+                            <NotificationItem 
+                              key={notif.id} 
+                              notification={notif} 
+                              onClick={() => handleNotificationClick(notif)}
+                              onMarkRead={() => markRead(notif.id)}
+                            />
+                        ))
                     ) : (
-                        <EmptyState message="No settlement notifications yet." />
+                        <EmptyState message="No payment notifications yet." />
                     )}
                 </CardContent>
             </Card>
         </TabsContent>
 
         <TabsContent value="other">
-             <Card>
-                <CardContent className="p-0">
+             <Card className="border-border/60 shadow-sm overflow-hidden rounded-2xl">
+                <CardContent className="p-0 divide-y divide-border/50">
                     {otherNotifs.length > 0 ? (
-                        <div className="divide-y">
-                            {otherNotifs.map(notif => (
-                                <NotificationItem key={notif.id} notification={notif} onClick={() => handleNotificationClick(notif.id, notif.isRead)} />
-                            ))}
-                        </div>
+                        otherNotifs.map(notif => (
+                            <NotificationItem 
+                              key={notif.id} 
+                              notification={notif} 
+                              onClick={() => handleNotificationClick(notif)}
+                              onMarkRead={() => markRead(notif.id)}
+                            />
+                        ))
                     ) : (
                         <EmptyState message="No other notifications yet." />
                     )}
@@ -131,12 +197,12 @@ export default function NotificationsPage() {
 
 function EmptyState({ message = "You're all caught up!" }: { message?: string }) {
     return (
-        <div className="p-12 text-center flex flex-col items-center justify-center">
-            <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                <Icons.Bell className="h-8 w-8 text-muted-foreground" />
+        <div className="p-16 text-center flex flex-col items-center justify-center bg-card/40">
+            <div className="h-16 w-16 bg-muted/60 border rounded-2xl flex items-center justify-center mb-5 shadow-sm">
+                <Icons.Bell className="h-8 w-8 text-muted-foreground/80" />
             </div>
-            <h3 className="text-lg font-medium">{message}</h3>
-            <p className="text-muted-foreground mt-1 text-sm">No notifications to show here right now.</p>
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">{message}</h3>
+            <p className="text-muted-foreground mt-1 text-sm max-w-xs mx-auto">No notifications to show here right now.</p>
         </div>
     );
 }

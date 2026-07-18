@@ -967,7 +967,8 @@ export async function addSettlement(settlementData: Omit<SettlementDocument, 'da
             settlementData.paidToId,
             actorId,
             settlementData.groupId,
-            settlementData.amount
+            settlementData.amount,
+            docRef.id
         );
     }
 

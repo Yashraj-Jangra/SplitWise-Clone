@@ -131,6 +131,7 @@ interface ExpenseListItemProps {
   currentUserId: string;
   group?: Group;
   groupHistory: HistoryEvent[];
+  isHighlighted?: boolean;
 }
 
 function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: Omit<ExpenseListItemProps, ''>) {
@@ -394,7 +395,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
 }
 
 
-export function ExpenseListItem({ expense, currentUserId, group, groupHistory }: ExpenseListItemProps) {
+export function ExpenseListItem({ expense, currentUserId, group, groupHistory, isHighlighted }: ExpenseListItemProps) {
   const { settings } = useSiteSettings();
   const haptic = useHaptics();
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
@@ -455,7 +456,14 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
 
   return (
     <>
-      <AccordionItem value={`exp-${expense.id}`} className="border-b border-border/50">
+      <AccordionItem
+        id={`exp-${expense.id}`}
+        value={`exp-${expense.id}`}
+        className={cn(
+          "border-b border-border/50 transition-colors duration-1000",
+          isHighlighted && "bg-primary/10 dark:bg-primary/20"
+        )}
+      >
           <AccordionTrigger
             className="p-3 hover:bg-muted/50 active:bg-muted/70 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50 select-none"
             onClick={handleAccordionTriggerClick}

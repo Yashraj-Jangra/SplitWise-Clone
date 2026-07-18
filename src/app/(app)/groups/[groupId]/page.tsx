@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GroupDetailHeader } from '@/components/groups/group-detail-header';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
@@ -47,6 +47,7 @@ type ActivityItem = { id: string; type: 'expense' | 'settlement'; date: string; 
 
 export default function GroupDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const groupId = params.groupId as string;
   const { userProfile } = useAuth();
 
@@ -60,6 +61,7 @@ export default function GroupDetailPage() {
   const [activeTab, setActiveTab] = useState('expenses');
   const [targetExpenseId, setTargetExpenseId] = useState<string | null>(null);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const [showAnalysisHeadsUp, setShowAnalysisHeadsUp] = useState(false);
 
@@ -160,6 +162,42 @@ export default function GroupDetailPage() {
     }
   }, [activeTab, targetExpenseId]);
 
+  useEffect(() => {
+    if (!searchParams) return;
+    const expId = searchParams.get('expenseId');
+    const setDocId = searchParams.get('settlementId');
+
+    if (expId) {
+      setHighlightedItemId(`exp-${expId}`);
+      setTargetExpenseId(expId);
+      setActiveTab('expenses');
+      const timer = setTimeout(() => {
+        setHighlightedItemId(null);
+      }, 2500);
+      return () => clearTimeout(timer);
+    } else if (setDocId) {
+      setHighlightedItemId(`set-${setDocId}`);
+      setActiveAccordionItem(`set-${setDocId}`);
+      setActiveTab('expenses');
+      
+      const scrollTimer = setTimeout(() => {
+        const element = document.getElementById(`set-${setDocId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+
+      const highlightTimer = setTimeout(() => {
+        setHighlightedItemId(null);
+      }, 2500);
+
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(highlightTimer);
+      };
+    }
+  }, [searchParams]);
+
   const handleViewExpense = (expenseId: string) => {
     setTargetExpenseId(expenseId);
     setActiveTab('expenses');
@@ -225,6 +263,7 @@ export default function GroupDetailPage() {
                                     currentUserId={userProfile.uid}
                                     group={group}
                                     groupHistory={groupHistory}
+                                    isHighlighted={highlightedItemId === `exp-${expense.id}`}
                                   />
                               )
                           } else {
@@ -236,6 +275,7 @@ export default function GroupDetailPage() {
                                       currentUserId={userProfile.uid}
                                       group={group}
                                       groupHistory={groupHistory}
+                                      isHighlighted={highlightedItemId === `set-${settlement.id}`}
                                   />
                               )
                           }
