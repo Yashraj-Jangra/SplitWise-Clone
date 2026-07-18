@@ -13,6 +13,7 @@ import { deleteSettlement } from '@/lib/mock-data';
 import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
+import { useRouter } from 'next/navigation';
 import { EditSettlementDialog } from './edit-settlement-dialog';
 import {
   AlertDialog,
@@ -219,6 +220,7 @@ function SettlementDetailContent({ settlement, group, groupHistory = [] }: Omit<
 
 
 export function SettlementListItem({ settlement, currentUserId, group, groupHistory, isHighlighted }: SettlementListItemProps) {
+  const router = useRouter();
   const isPayer = settlement.paidBy.uid === currentUserId;
   const isPayee = settlement.paidTo.uid === currentUserId;
 
@@ -245,7 +247,24 @@ export function SettlementListItem({ settlement, currentUserId, group, groupHist
                         <Icons.ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         <span>{isPayee ? 'you' : getFullName(settlement.paidTo.firstName, settlement.paidTo.lastName)}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Settlement</p>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        <p className="text-xs text-muted-foreground">Settlement</p>
+                        {group && (
+                            <>
+                                <span className="text-[10px] text-muted-foreground/60 select-none">•</span>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push(`/groups/${group.id}`);
+                                    }}
+                                    className="text-[11px] font-semibold text-primary hover:underline hover:text-primary/80 transition-colors"
+                                >
+                                    {group.name}
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
             <div className="text-right">

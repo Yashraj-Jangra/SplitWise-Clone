@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { deleteExpense } from '@/lib/mock-data';
+import { useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { appEventEmitter } from '@/lib/event-emitter';
@@ -396,6 +397,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
 
 
 export function ExpenseListItem({ expense, currentUserId, group, groupHistory, isHighlighted }: ExpenseListItemProps) {
+  const router = useRouter();
   const { settings } = useSiteSettings();
   const haptic = useHaptics();
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
@@ -478,7 +480,24 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory, i
                   </div>
                   <div className="grid gap-0.5 text-left">
                       <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
-                      <p className="text-xs text-muted-foreground">{expense.category}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          <p className="text-xs text-muted-foreground">{expense.category}</p>
+                          {group && (
+                              <>
+                                  <span className="text-[10px] text-muted-foreground/60 select-none">•</span>
+                                  <button
+                                      type="button"
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          router.push(`/groups/${group.id}`);
+                                      }}
+                                      className="text-[11px] font-semibold text-primary hover:underline hover:text-primary/80 transition-colors"
+                                  >
+                                      {group.name}
+                                  </button>
+                              </>
+                          )}
+                      </div>
                   </div>
               </div>
               <div className="text-right">
