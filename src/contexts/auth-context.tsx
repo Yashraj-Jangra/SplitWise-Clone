@@ -149,23 +149,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           setUserProfile(profile);
-
+          
           // Set the session cookie so middleware can protect routes server-side.
-          // Fire-and-forget — don't block the UI on this.
-          user.getIdToken().then(idToken => {
-            fetch('/api/auth/session', {
+          // Block loading transition until cookie is successfully written.
+          const idToken = await user.getIdToken();
+          try {
+            await fetch('/api/auth/session', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ idToken }),
-            }).catch(e => console.error('Failed to set session cookie:', e));
-          });
+            });
+          } catch (e) {
+            console.error('Failed to set session cookie:', e);
+          }
         } else {
           setFirebaseUser(null);
           setUserProfile(null);
           setIsAdmin(false);
           // Clear the session cookie on logout.
-          fetch('/api/auth/session', { method: 'DELETE' })
-            .catch(e => console.error('Failed to clear session cookie:', e));
+          try {
+            await fetch('/api/auth/session', { method: 'DELETE' });
+          } catch (e) {
+            console.error('Failed to clear session cookie:', e);
+          }
         }
       } catch (error) {
         console.error("Error in onAuthStateChanged:", error);

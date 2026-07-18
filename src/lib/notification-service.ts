@@ -26,7 +26,11 @@ export async function dispatchNotification(params: DispatchNotificationParams): 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch('/api/notifications/send', {
+  const baseUrl = typeof window === 'undefined'
+    ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231')
+    : '';
+
+  const response = await fetch(`${baseUrl}/api/notifications/send`, {
     method: 'POST',
     headers,
     body: JSON.stringify(params),
