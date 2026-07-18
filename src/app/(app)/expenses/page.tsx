@@ -161,77 +161,77 @@ export default function AllExpensesPage() {
   const hasActiveFilters = searchQuery !== '' || selectedGroupId !== 'all' || selectedCategory !== 'all' || selectedRole !== 'all' || sortBy !== 'date_desc';
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-8">
+    <div className="space-y-5 max-w-6xl mx-auto pb-6 px-2 sm:px-4">
       {/* Header Area */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-row justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">My Expenses</h1>
-          <p className="text-muted-foreground text-sm mt-1">A consolidated breakdown of all transactions across your groups.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight">My Expenses</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 hidden sm:block">A consolidated breakdown of all transactions across your groups.</p>
         </div>
-        <Button asChild className="shadow-md shrink-0">
+        <Button asChild size="sm" className="shadow-md shrink-0 sm:h-10 sm:px-4">
           <Link href="/groups">
-            <Icons.Add className="mr-2 h-4 w-4" /> Record Expense
+            <Icons.Add className="mr-1.5 sm:mr-2 h-4 w-4" /> <span className="text-xs sm:text-sm">Record Expense</span>
           </Link>
         </Button>
       </div>
 
       {/* Stats Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-border/60 shadow-sm relative overflow-hidden bg-card/40">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total You Paid</p>
-              <h3 className="text-2xl font-bold font-sans text-foreground">{CURRENCY_SYMBOL}{stats.totalMyPaid.toFixed(2)}</h3>
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+        <Card className="border-border/60 shadow-sm relative overflow-hidden bg-card/45 backdrop-blur-md">
+          <CardContent className="p-3 sm:p-5 flex items-center justify-between">
+            <div className="space-y-0.5 sm:space-y-1">
+              <p className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground/90 uppercase tracking-wider">Total Paid</p>
+              <h3 className="text-sm sm:text-lg md:text-2xl font-bold font-sans text-foreground truncate">{CURRENCY_SYMBOL}{stats.totalMyPaid.toFixed(0)}</h3>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner">
-              <Icons.TrendingUp className="h-6 w-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 shadow-sm relative overflow-hidden bg-card/40">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">You Are Owed</p>
-              <h3 className="text-2xl font-bold font-sans text-green-500">{CURRENCY_SYMBOL}{stats.totalOwed.toFixed(2)}</h3>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 shadow-inner">
-              <Icons.Wallet className="h-6 w-6" />
+            <div className="hidden sm:flex h-9 w-9 md:h-12 md:w-12 rounded-xl bg-blue-500/10 items-center justify-center text-blue-500 shadow-inner">
+              <Icons.TrendingUp className="h-5 w-5 md:h-6 md:w-6" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm relative overflow-hidden bg-card/40">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">You Owe</p>
-              <h3 className="text-2xl font-bold font-sans text-red-500">{CURRENCY_SYMBOL}{stats.totalOwe.toFixed(2)}</h3>
+        <Card className="border-border/60 shadow-sm relative overflow-hidden bg-card/45 backdrop-blur-md">
+          <CardContent className="p-3 sm:p-5 flex items-center justify-between">
+            <div className="space-y-0.5 sm:space-y-1">
+              <p className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground/90 uppercase tracking-wider">Owed To You</p>
+              <h3 className="text-sm sm:text-lg md:text-2xl font-bold font-sans text-green-500 truncate">{CURRENCY_SYMBOL}{stats.totalOwed.toFixed(0)}</h3>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shadow-inner">
-              <Icons.TrendingDown className="h-6 w-6" />
+            <div className="hidden sm:flex h-9 w-9 md:h-12 md:w-12 rounded-xl bg-green-500/10 items-center justify-center text-green-500 shadow-inner">
+              <Icons.Wallet className="h-5 w-5 md:h-6 md:w-6" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm relative overflow-hidden bg-card/45 backdrop-blur-md">
+          <CardContent className="p-3 sm:p-5 flex items-center justify-between">
+            <div className="space-y-0.5 sm:space-y-1">
+              <p className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground/90 uppercase tracking-wider">You Owe</p>
+              <h3 className="text-sm sm:text-lg md:text-2xl font-bold font-sans text-red-500 truncate">{CURRENCY_SYMBOL}{stats.totalOwe.toFixed(0)}</h3>
+            </div>
+            <div className="hidden sm:flex h-9 w-9 md:h-12 md:w-12 rounded-xl bg-red-500/10 items-center justify-center text-red-500 shadow-inner">
+              <Icons.TrendingDown className="h-5 w-5 md:h-6 md:w-6" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filter and Search Bar */}
-      <Card className="border-border/60 shadow-sm bg-card/30">
-        <CardContent className="p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <Card className="border-border/60 shadow-sm bg-card/30 backdrop-blur-sm">
+        <CardContent className="p-3 sm:p-4 space-y-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
             {/* Search Input */}
-            <div className="relative">
-              <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
+            <div className="relative col-span-2 lg:col-span-1">
+              <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
               <Input
                 placeholder="Search description..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 text-sm"
+                className="pl-9 h-9 sm:h-10 text-xs sm:text-sm bg-background/50"
               />
             </div>
 
             {/* Filter by Group */}
             <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-              <SelectTrigger className="h-10 text-sm">
+              <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm bg-background/50">
                 <SelectValue placeholder="All Groups" />
               </SelectTrigger>
               <SelectContent>
@@ -244,7 +244,7 @@ export default function AllExpensesPage() {
 
             {/* Filter by Category */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="h-10 text-sm">
+              <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm bg-background/50">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
@@ -257,7 +257,7 @@ export default function AllExpensesPage() {
 
             {/* Filter by User Role */}
             <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger className="h-10 text-sm">
+              <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm bg-background/50">
                 <SelectValue placeholder="All Roles" />
               </SelectTrigger>
               <SelectContent>
@@ -269,7 +269,7 @@ export default function AllExpensesPage() {
 
             {/* Sorting */}
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-10 text-sm">
+              <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm bg-background/50 col-span-2 lg:col-span-1">
                 <SelectValue placeholder="Sort Order" />
               </SelectTrigger>
               <SelectContent>
@@ -282,9 +282,9 @@ export default function AllExpensesPage() {
           </div>
 
           {hasActiveFilters && (
-            <div className="flex justify-end pt-1">
-              <Button onClick={clearFilters} variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
-                <Icons.Close className="mr-1.5 h-3.5 w-3.5" /> Clear Filters
+            <div className="flex justify-end pt-0.5">
+              <Button onClick={clearFilters} variant="ghost" size="sm" className="h-7 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground">
+                <Icons.Close className="mr-1 h-3 w-3" /> Clear Filters
               </Button>
             </div>
           )}
@@ -293,37 +293,40 @@ export default function AllExpensesPage() {
 
       {/* Main Expense History List */}
       <Card className="border-border/60 shadow-sm overflow-hidden bg-card/20 rounded-2xl">
-        <CardHeader className="border-b border-border/50 bg-muted/20 py-4 px-6 flex flex-row items-center justify-between">
+        <CardHeader className="border-b border-border/50 bg-muted/20 py-3.5 px-4 sm:px-6 flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Expense History</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Expense History</CardTitle>
             {!loading && (
-              <CardDescription className="text-xs">
+              <CardDescription className="text-[10px] sm:text-xs">
                 Showing {groupedExpenses.reduce((sum, g) => sum + g.items.length, 0)} expenses.
               </CardDescription>
             )}
           </div>
-          <Icons.History className="h-5 w-5 text-muted-foreground/60" />
+          <Icons.History className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground/60" />
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="space-y-2">
-                  <Skeleton className="h-5 w-24 rounded" />
-                  <Skeleton className="h-16 w-full rounded-xl" />
+                  <Skeleton className="h-4 w-20 rounded" />
+                  <Skeleton className="h-14 w-full rounded-xl" />
                 </div>
               ))}
             </div>
           ) : groupedExpenses.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-25rem)]">
-              <div className="space-y-6 p-6">
+            <ScrollArea className="h-[calc(100vh-21rem)] sm:h-[calc(100vh-23rem)]">
+              <div className="space-y-5 p-4 sm:p-6">
                 {groupedExpenses.map(group => (
-                  <div key={group.monthYear} className="space-y-3">
+                  <div key={group.monthYear} className="space-y-2.5">
                     {/* Month Section Header */}
-                    <div className="flex justify-between items-center border-b border-border/40 pb-1 px-1">
-                      <h4 className="text-sm font-semibold text-muted-foreground">{group.monthYear}</h4>
-                      <span className="text-xs font-semibold text-muted-foreground/80 font-sans">
-                        Month Total: {CURRENCY_SYMBOL}{group.total.toFixed(2)}
+                    <div className="flex justify-between items-center border-b border-border/40 pb-1 px-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Icons.Calendar className="h-3.5 w-3.5 text-muted-foreground/75" />
+                        <h4 className="text-xs sm:text-sm font-semibold text-muted-foreground">{group.monthYear}</h4>
+                      </div>
+                      <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 font-sans">
+                        Spent: {CURRENCY_SYMBOL}{group.total.toFixed(0)}
                       </span>
                     </div>
 
@@ -344,18 +347,18 @@ export default function AllExpensesPage() {
               </div>
             </ScrollArea>
           ) : (
-            <div className="text-center p-16 text-muted-foreground">
-              <div className="h-14 w-14 bg-muted border rounded-xl flex items-center justify-center mx-auto mb-5 shadow-sm">
-                <Icons.Expense className="h-7 w-7 text-muted-foreground/80" />
+            <div className="text-center p-12 sm:p-16 text-muted-foreground">
+              <div className="h-12 w-12 bg-muted border rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <Icons.Expense className="h-6 w-6 text-muted-foreground/80" />
               </div>
-              <h3 className="text-lg font-semibold tracking-tight text-foreground">No expenses found</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+              <h3 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">No expenses found</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 max-w-xs mx-auto">
                 {hasActiveFilters
                   ? "Try resetting your search query or modifying filters."
                   : "You are not involved in any recorded expenses yet."}
               </p>
               {hasActiveFilters && (
-                <Button onClick={clearFilters} variant="outline" size="sm" className="mt-4 shadow-sm">
+                <Button onClick={clearFilters} variant="outline" size="sm" className="mt-3.5 shadow-sm text-xs h-8">
                   Clear Filters
                 </Button>
               )}
