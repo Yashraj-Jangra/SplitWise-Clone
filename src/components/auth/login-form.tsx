@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
-import { FirebaseError } from "firebase/app";
 import type { SiteSettings } from "@/types";
 import AppLoading from "@/app/(app)/loading";
 
@@ -59,18 +58,10 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
         description: "Welcome back!",
       });
       router.push("/dashboard");
-    } catch (error) {
-      let description = "An unknown error occurred. Please try again.";
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-          case 'auth/invalid-credential':
-            description = "Invalid email or password. Please try again.";
-            break;
-          default:
-            description = `Login failed: ${error.message}`;
-        }
+    } catch (error: any) {
+      let description = error.message || "Invalid email or password. Please try again.";
+      if (description.includes("credential") || description.includes("password") || description.includes("user")) {
+        description = "Invalid email or password. Please try again.";
       }
       toast({
         variant: "destructive",
@@ -91,11 +82,8 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
         description: "Welcome!",
       });
       router.push("/dashboard");
-    } catch (error) {
-       let description = "An unknown error occurred. Please try again.";
-      if (error instanceof FirebaseError) {
-        description = `Login failed: ${error.message}`;
-      }
+    } catch (error: any) {
+       let description = error.message || "An unknown error occurred. Please try again.";
       toast({
         variant: "destructive",
         title: "Google Login Failed",

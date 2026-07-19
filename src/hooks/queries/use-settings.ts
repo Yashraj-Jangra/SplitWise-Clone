@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSiteSettings, updateSiteSettings } from '@/lib/firestore.service';
+import { getSiteSettings, updateSiteSettings } from '@/lib/services/settings.service';
 import type { SiteSettings } from '@/types';
 
 export function useSiteSettings() {

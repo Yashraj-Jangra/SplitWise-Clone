@@ -1,11 +1,9 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { SiteSettings } from '@/types';
-import { getSiteSettings } from '@/lib/mock-data';
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { getSiteSettings } from '@/lib/firestore.service';
+import { useAuth } from '@/contexts/auth-context';
 
 const DEFAULT_APP_NAME = 'SettleEase';
 
@@ -18,6 +16,7 @@ interface SiteSettingsContextType {
 const SiteSettingsContext = createContext<SiteSettingsContextType | undefined>(undefined);
 
 export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { userProfile, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<SiteSettings>({
       appName: DEFAULT_APP_NAME,
       coverImages: [],
@@ -27,6 +26,7 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     let active = true;
+    if (authLoading) return;
 
     async function loadSettings(isAuthenticated: boolean) {
       try {
@@ -50,19 +50,12 @@ export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadSettings(true);
-      } else {
-        loadSettings(false);
-      }
-    });
+    loadSettings(!!userProfile);
 
     return () => {
       active = false;
-      unsubscribe();
     };
-  }, []);
+  }, [userProfile, authLoading]);
 
   const updateLocalSettings = useCallback((newSettings: Partial<SiteSettings>) => {
     setSettings(prev => ({...prev, ...newSettings}));

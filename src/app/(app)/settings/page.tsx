@@ -7,7 +7,6 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { FirebaseError } from "firebase/app";
 import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -166,8 +165,10 @@ export default function SettingsPage() {
       await updateUserPassword(values.newPassword, hasPassword ? values.currentPassword : undefined);
       toast({ title: "Password Updated" });
       passwordForm.reset();
-    } catch (e) {
-      if (e instanceof FirebaseError && e.code === "auth/wrong-password") passwordForm.setError("currentPassword", { type: "manual", message: "Incorrect current password." });
+    } catch (e: any) {
+      if (e.message?.includes("wrong") || e.message?.includes("password") || e.message?.includes("MISMATCH")) {
+        passwordForm.setError("currentPassword", { type: "manual", message: "Incorrect current password." });
+      }
       toast({ variant: "destructive", title: "Update Failed", description: e instanceof Error ? e.message : "An unknown error occurred." });
     }
   }

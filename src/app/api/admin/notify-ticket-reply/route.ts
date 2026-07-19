@@ -1,44 +1,9 @@
-
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { getSiteSettings } from '@/lib/services/settings.service';
+import { getUserProfile } from '@/lib/services/user.service';
 import nodemailer from 'nodemailer';
-import { getUserProfile } from '@/lib/mock-data';
-import { getSiteSettingsAdmin } from '@/lib/firebase-admin';
-import { getDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { SupportTicket, UserProfile } from '@/types';
 import { getFullName } from '@/lib/utils';
-import { Timestamp } from 'firebase/firestore';
-
-async function getTicketById(ticketId: string): Promise<SupportTicket | null> {
-    const ticketDocRef = doc(db, 'tickets', ticketId);
-    const ticketSnap = await getDoc(ticketDocRef);
-
-    if (!ticketSnap.exists()) {
-        return null;
-    }
-
-    const ticketData = ticketSnap.data();
-    if (!ticketData) return null;
-
-    const user = await getUserProfile(ticketData.userId);
-    if (!user) return null;
-    
-    // This is simplified for the email; we don't need to hydrate every single message sender.
-    const messages = ticketData.messages.map((msg: any) => ({
-        ...msg,
-        sentAt: (msg.sentAt as Timestamp).toDate().toISOString(),
-    }));
-
-    return {
-        id: ticketSnap.id,
-        ...ticketData,
-        createdAt: (ticketData.createdAt as Timestamp).toDate().toISOString(),
-        updatedAt: (ticketData.updatedAt as Timestamp).toDate().toISOString(),
-        user,
-        messages,
-    } as SupportTicket;
-}
-
 
 export async function POST(request: Request) {
     try {
@@ -48,8 +13,11 @@ export async function POST(request: Request) {
         }
 
         const [siteSettings, ticket, replier] = await Promise.all([
-            getSiteSettingsAdmin(),
-            getTicketById(ticketId),
+            getSiteSettings(),
+            prisma.supportTicket.findUnique({
+                where: { id: ticketId },
+                include: { user: true }
+            }),
             getUserProfile(replierId)
         ]);
 
@@ -62,9 +30,9 @@ export async function POST(request: Request) {
 
         const isAdminReply = replier.role === 'admin';
         const recipientEmail = isAdminReply ? ticket.user.email : emailSettings?.fromAddresses.support;
-        const recipientName = isAdminReply ? getFullName(ticket.user.firstName, ticket.user.lastName) : 'Support Team';
+        const recipientName = isAdminReply ? getFullName(ticket.user.firstName || undefined, ticket.user.lastName || undefined) : 'Support Team';
 
-        if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail') || !recipientEmail || !template) {
+        if (!emailSettings || !emailSettings.smtpSettings || !recipientEmail || !template) {
             console.log("Email notification skipped: Mail sending is not configured or recipient/template is missing.");
             return NextResponse.json({ success: true, message: 'Email notification skipped; mail not configured.' });
         }
@@ -72,7 +40,7 @@ export async function POST(request: Request) {
         const transporter = nodemailer.createTransport({
             host: emailSettings.smtpSettings.host,
             port: emailSettings.smtpSettings.port,
-            secure: emailSettings.smtpSettings.port === 465, // Use true for 465, false for other ports
+            secure: emailSettings.smtpSettings.port === 465,
             auth: {
                 user: emailSettings.smtpSettings.user,
                 pass: emailSettings.smtpSettings.pass,
@@ -83,7 +51,7 @@ export async function POST(request: Request) {
 
         const subject = template.subject.replace(/{appName}/g, appName).replace(/{ticketId}/g, ticket.id.slice(0, 8));
         
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235';
         const ticketLink = isAdminReply ? `${appUrl}/support` : `${appUrl}/admin/support/${ticket.id}`;
 
         const body = template.body

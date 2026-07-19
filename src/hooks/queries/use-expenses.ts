@@ -5,7 +5,7 @@ import {
   addExpense, 
   updateExpense, 
   deleteExpense 
-} from '@/lib/firestore.service';
+} from '@/lib/services/expense.service';
 import type { ExpenseDocument } from '@/types';
 
 export function useExpenses(groupId: string | undefined) {

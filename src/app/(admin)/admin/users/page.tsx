@@ -71,15 +71,15 @@ export default function ManageUsersPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [lastDoc, setLastDoc] = useState<any | null>(null);
+    const [pageIndex, setPageIndex] = useState<number>(0);
     const [hasMore, setHasMore] = useState(true);
 
     const fetchInitialUsers = async () => {
         setLoading(true);
         try {
-            const result = await getAllUsersPaginated(10, null);
+            const result = await getAllUsersPaginated(10, 0);
             setUsers(result.users);
-            setLastDoc(result.lastDoc);
+            setPageIndex(0);
             setHasMore(result.users.length === 10);
         } catch (error) {
             console.error("Failed to fetch users:", error);
@@ -89,12 +89,12 @@ export default function ManageUsersPage() {
     };
 
     const loadMoreUsers = async () => {
-        if (!lastDoc || loadingMore) return;
+        if (!hasMore || loadingMore) return;
         setLoadingMore(true);
         try {
-            const result = await getAllUsersPaginated(10, lastDoc);
+            const result = await getAllUsersPaginated(10, pageIndex + 1);
             setUsers(prev => [...prev, ...result.users]);
-            setLastDoc(result.lastDoc);
+            setPageIndex(prev => prev + 1);
             setHasMore(result.users.length === 10);
         } catch (error) {
             console.error("Failed to load more users:", error);

@@ -1,5 +1,3 @@
-import { getAuth } from 'firebase/auth';
-import { app } from './firebase';
 import type { NotificationEventType } from '@/types';
 
 export interface DispatchNotificationParams {
@@ -14,21 +12,11 @@ export interface DispatchNotificationParams {
 }
 
 export async function dispatchNotification(params: DispatchNotificationParams): Promise<void> {
-  const auth = getAuth(app);
-  const user = auth.currentUser;
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
-  if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
   const response = await fetch('/api/notifications/send', {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(params),
   });
 

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getGroupBalances, getAllUserBalances } from '@/lib/firestore.service';
+import { getGroupBalances, getAllUserBalances } from '@/lib/services/balance.service';
 
 export function useGroupBalances(groupId: string | undefined) {
   return useQuery({

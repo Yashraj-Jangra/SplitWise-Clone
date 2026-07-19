@@ -1,65 +1,7 @@
-
 import { NextResponse } from 'next/server';
-import { firebaseAdmin } from '@/lib/firebase-admin';
+import { prisma } from '@/lib/db';
+import { getSiteSettings } from '@/lib/services/settings.service';
 import nodemailer from 'nodemailer';
-import type { SiteSettings, SupportTicket, UserProfile } from '@/types';
-import { getSiteSettings } from '@/lib/mock-data';
-import { Timestamp } from 'firebase-admin/firestore';
-
-async function getAdminUserProfile(uid: string): Promise<UserProfile | null> {
-  const db = firebaseAdmin.firestore();
-  const docRef = db.collection('users').doc(uid);
-  const docSnap = await docRef.get();
-  if (docSnap.exists) {
-    const data = docSnap.data();
-    if (!data) return null;
-    return { 
-        ...data, 
-        uid: docSnap.id, 
-        createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
-        dob: data.dob ? (data.dob as Timestamp)?.toDate().toISOString() : undefined
-    } as UserProfile;
-  }
-  return null;
-}
-
-
-async function getTicketById(ticketId: string): Promise<SupportTicket | null> {
-    const db = firebaseAdmin.firestore();
-    const ticketDocRef = db.collection('tickets').doc(ticketId);
-    const ticketSnap = await ticketDocRef.get();
-
-    if (!ticketSnap.exists) {
-        return null;
-    }
-
-    const ticketData = ticketSnap.data();
-    if (!ticketData) return null;
-
-    const user = await getAdminUserProfile(ticketData.userId);
-    if (!user) return null;
-
-    const messages = await Promise.all(
-        ticketData.messages.map(async (msg: any) => {
-            const sentBy = await getAdminUserProfile(msg.sentById);
-            if (!sentBy) return null;
-            return {
-                ...msg,
-                sentAt: (msg.sentAt as Timestamp).toDate().toISOString(),
-                sentBy,
-            };
-        })
-    );
-
-    return {
-        id: ticketSnap.id,
-        ...ticketData,
-        createdAt: (ticketData.createdAt as Timestamp).toDate().toISOString(),
-        updatedAt: (ticketData.updatedAt as Timestamp).toDate().toISOString(),
-        user,
-        messages: messages.filter(m => m !== null),
-    } as SupportTicket;
-}
 
 export async function POST(request: Request) {
     try {
@@ -72,12 +14,22 @@ export async function POST(request: Request) {
         const { emailSettings, appName } = siteSettings;
         const supportEmail = emailSettings?.fromAddresses.support;
 
-        if (!emailSettings || (emailSettings.sendingMethod !== 'custom' && emailSettings.sendingMethod !== 'gmail') || !supportEmail) {
+        if (!emailSettings || !emailSettings.smtpSettings || !supportEmail) {
             console.log("Admin notification skipped: Custom mail sending or support email is not configured.");
             return NextResponse.json({ success: true, message: 'Admin notification skipped; mail not configured.' });
         }
         
-        const ticket = await getTicketById(ticketId);
+        const ticket = await prisma.supportTicket.findUnique({
+            where: { id: ticketId },
+            include: {
+                messages: {
+                    orderBy: { sentAt: 'asc' },
+                    take: 1
+                },
+                user: true
+            }
+        });
+
         if (!ticket) {
             return NextResponse.json({ error: 'Ticket not found.' }, { status: 404 });
         }
@@ -85,7 +37,7 @@ export async function POST(request: Request) {
         const transporter = nodemailer.createTransport({
             host: emailSettings.smtpSettings.host,
             port: emailSettings.smtpSettings.port,
-            secure: emailSettings.smtpSettings.port === 465, // true for 465, false for other ports
+            secure: emailSettings.smtpSettings.port === 465,
             auth: {
                 user: emailSettings.smtpSettings.user,
                 pass: emailSettings.smtpSettings.pass,
@@ -93,6 +45,8 @@ export async function POST(request: Request) {
         });
         
         await transporter.verify();
+
+        const firstMessage = ticket.messages[0]?.message || 'No message content';
 
         const mailOptions = {
             from: supportEmail,
@@ -107,9 +61,9 @@ export async function POST(request: Request) {
                     <li><strong>Category:</strong> ${ticket.category}</li>
                 </ul>
                 <p><strong>Message:</strong></p>
-                <p style="white-space: pre-wrap; background-color: #f5f5f5; padding: 10px; border-radius: 5px;">${ticket.messages[0].message}</p>
+                <p style="white-space: pre-wrap; background-color: #f5f5f5; padding: 10px; border-radius: 5px;">${firstMessage}</p>
                 <p><a href="[APP_URL]/admin/support/${ticket.id}">Click here to view and reply to the ticket.</a></p>
-            `.replace('[APP_URL]', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231'), // Replace with your app's actual URL
+            `.replace('[APP_URL]', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235'),
         };
 
         await transporter.sendMail(mailOptions);

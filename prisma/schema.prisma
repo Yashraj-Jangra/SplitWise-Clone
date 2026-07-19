@@ -1,0 +1,292 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── AUTH (Better Auth managed tables) ──────────────────
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          String    @default("user")  // "admin" | "user"
+
+  // Profile fields (merged from Firestore `users` collection)
+  firstName     String?
+  lastName      String?
+  username      String?   @unique
+  avatarUrl     String?
+  countryCode   String?
+  mobileNumber  String?
+  dob           DateTime?
+
+  // Relations
+  sessions        Session[]
+  accounts        Account[]
+  verifications   Verification[]
+  groupsCreated   Group[]        @relation("GroupCreator")
+  groupMemberships GroupMember[]
+  expensesCreated  Expense[]     @relation("ExpenseCreator")
+  expensePayers    ExpensePayer[]
+  expenseParticipants ExpenseParticipant[]
+  settlementsPaid  Settlement[]  @relation("SettlementPaidBy")
+  settlementsReceived Settlement[] @relation("SettlementPaidTo")
+  historyEvents    HistoryEvent[]
+  tickets          SupportTicket[]
+  ticketMessages   TicketMessage[]
+  notificationPrefs UserNotificationPrefs?
+  pushSubscriptions PushSubscription[]
+  notificationsCreated Notification[]    @relation("NotificationCreator")
+  notificationReads NotificationRead[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User?    @relation(fields: [identifier], references: [email])
+}
+
+// ── GROUPS ─────────────────────────────────────────────
+model Group {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  coverImageUrl String?
+  currency      String?
+  totalExpenses Float     @default(0)
+  createdById   String
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  createdBy    User          @relation("GroupCreator", fields: [createdById], references: [id])
+  members      GroupMember[]
+  expenses     Expense[]
+  settlements  Settlement[]
+  historyEvents HistoryEvent[]
+}
+
+model GroupMember {
+  groupId   String
+  userId    String
+  joinedAt  DateTime @default(now())
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([groupId, userId])
+}
+
+// ── EXPENSES ───────────────────────────────────────────
+model Expense {
+  id               String    @id @default(cuid())
+  groupId          String
+  description      String
+  amount           Float
+  splitType        String    // "equally"|"unequally"|"by_shares"|"by_percentage"
+  category         String?
+  masterCategory   String?
+  notes            String?
+  receiptImageUrl  String?
+  expenseCreatorId String
+  groupCreatorId   String
+  date             DateTime
+  createdAt        DateTime  @default(now())
+
+  group           Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  expenseCreator  User                @relation("ExpenseCreator", fields: [expenseCreatorId], references: [id])
+  payers          ExpensePayer[]
+  participants    ExpenseParticipant[]
+  historyEvents   HistoryEvent[]      @relation("ExpenseHistory")
+}
+
+model ExpensePayer {
+  id        String  @id @default(cuid())
+  expenseId String
+  userId    String
+  amount    Float
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+  @@unique([expenseId, userId])
+}
+
+model ExpenseParticipant {
+  id          String  @id @default(cuid())
+  expenseId   String
+  userId      String
+  amountOwed  Float
+  share       Float?
+  expense     Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user        User    @relation(fields: [userId], references: [id])
+  @@unique([expenseId, userId])
+}
+
+// ── SETTLEMENTS ────────────────────────────────────────
+model Settlement {
+  id        String   @id @default(cuid())
+  groupId   String
+  paidById  String
+  paidToId  String
+  amount    Float
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy  User  @relation("SettlementPaidBy", fields: [paidById], references: [id])
+  paidTo  User  @relation("SettlementPaidTo", fields: [paidToId], references: [id])
+}
+
+// ── HISTORY / AUDIT LOG ────────────────────────────────
+model HistoryEvent {
+  id          String   @id @default(cuid())
+  groupId     String
+  eventType   String
+  actorId     String
+  description String
+  data        Json?
+  restored    Boolean  @default(false)
+  expenseId   String?
+  timestamp   DateTime @default(now())
+
+  group   Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  actor   User     @relation(fields: [actorId], references: [id])
+  expense Expense? @relation("ExpenseHistory", fields: [expenseId], references: [id], onDelete: SetNull)
+}
+
+// ── SETTINGS ───────────────────────────────────────────
+model Settings {
+  id      String @id @default("general")  // Single-row table
+  data    Json   // Stores the full SiteSettings object as JSONB
+  updatedAt DateTime @updatedAt
+}
+
+// ── SUPPORT TICKETS ────────────────────────────────────
+model SupportTicket {
+  id         String   @id @default(cuid())
+  userId     String
+  userName   String
+  userEmail  String
+  subject    String
+  category   String
+  status     String   @default("open")
+  assignedToId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User            @relation(fields: [userId], references: [id])
+  messages   TicketMessage[]
+}
+
+model TicketMessage {
+  id       String   @id @default(cuid())
+  ticketId String
+  sentById String
+  message  String
+  sentAt   DateTime @default(now())
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sentBy   User          @relation(fields: [sentById], references: [id])
+}
+
+// ── NOTIFICATIONS ──────────────────────────────────────
+model Notification {
+  id            String   @id @default(cuid())
+  type          String
+  title         String
+  body          String
+  actorId       String?
+  groupId       String?
+  expenseId     String?
+  settlementId  String?
+  target        String   @default("specific_users")
+  channels      String[] // ["in_app", "push", "email"]
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+  createdBy     String?
+
+  actor     User?              @relation("NotificationCreator", fields: [actorId], references: [id])
+  recipients NotificationRecipient[]
+  reads      NotificationRead[]
+}
+
+// Recipients join table (replaces Firestore `recipientIds` array)
+model NotificationRecipient {
+  notificationId String
+  userId         String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  @@id([notificationId, userId])
+}
+
+// Replaces Firestore `readBy` array
+model NotificationRead {
+  notificationId String
+  userId         String
+  readAt         DateTime @default(now())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([notificationId, userId])
+}
+
+// ── PUSH SUBSCRIPTIONS ─────────────────────────────────
+// Stores VAPID PushSubscription objects (replaces FCM tokens)
+model PushSubscription {
+  id           String   @id @default(cuid())
+  userId       String
+  deviceId     String   @unique  // localStorage-persisted UUID
+  endpoint     String   @unique  // Browser push endpoint URL
+  p256dh       String            // Public key for encryption
+  auth         String            // Auth secret
+  deviceName   String?
+  createdAt    DateTime @default(now())
+  lastSeen     DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── USER NOTIFICATION PREFS ────────────────────────────
+model UserNotificationPrefs {
+  userId       String  @id
+  inAppEnabled Boolean @default(true)
+  pushEnabled  Boolean @default(true)
+  emailEnabled Boolean @default(true)
+  events       Json    // Record<NotificationEventType, {inApp, push, email}>
+  updatedAt    DateTime @updatedAt
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

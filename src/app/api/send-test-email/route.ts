@@ -1,6 +1,6 @@
-
 import { NextResponse } from 'next/server';
-import { firebaseAdmin, getSiteSettingsAdmin } from '@/lib/firebase-admin';
+import { auth } from '@/lib/auth.server';
+import { getSiteSettings } from '@/lib/services/settings.service';
 import nodemailer from 'nodemailer';
 import type { SiteSettings } from '@/types';
 import { rateLimitProfiles, getCallerIp } from '@/lib/rate-limit';
@@ -20,32 +20,25 @@ export async function POST(request: Request) {
             });
         }
 
-        const idToken = request.headers.get('Authorization')?.split('Bearer ')[1];
-        if (!idToken) {
-            return NextResponse.json({ error: 'Unauthorized: No token provided.' }, { status: 401 });
+        const session = await auth.api.getSession({ headers: request.headers });
+        if (!session?.user) {
+            return NextResponse.json({ error: 'Unauthorized: No session found.' }, { status: 401 });
         }
         
-        const adminAuth = firebaseAdmin.auth();
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
-        
-        if (decodedToken.role !== 'admin') {
+        if (session.user.role !== 'admin') {
              return NextResponse.json({ error: 'Forbidden: User is not an admin.' }, { status: 403 });
         }
 
-        const user = await adminAuth.getUser(decodedToken.uid);
-        if (!user.email) {
-            return NextResponse.json({ error: 'User does not have an email address.' }, { status: 400 });
-        }
-
         const { emailSettings, testTarget }: TestEmailRequestBody = await request.json();
-        const { appName } = await getSiteSettingsAdmin();
+        const settings = await getSiteSettings();
+        const { appName } = settings;
 
         if (!emailSettings || !emailSettings.smtpSettings) {
              return NextResponse.json({ error: 'Bad Request: Missing email settings.' }, { status: 400 });
         }
 
         const { smtpSettings, fromAddresses } = emailSettings;
-        const fromAddress = fromAddresses[testTarget];
+        const fromAddress = (fromAddresses as any)[testTarget];
 
         if (!fromAddress) {
              return NextResponse.json({ error: `Bad Request: Missing 'from' address for target '${testTarget}'.`}, { status: 400 });
@@ -54,7 +47,7 @@ export async function POST(request: Request) {
         const transporter = nodemailer.createTransport({
             host: smtpSettings.host,
             port: smtpSettings.port,
-            secure: smtpSettings.port === 465, // Use true for 465, false for other ports
+            secure: smtpSettings.port === 465,
             auth: {
                 user: smtpSettings.user,
                 pass: smtpSettings.pass,
@@ -65,7 +58,7 @@ export async function POST(request: Request) {
 
         const mailOptions = {
             from: fromAddress,
-            to: user.email, 
+            to: session.user.email, 
             subject: `${appName} SMTP Test (${testTarget})`,
             text: `This is a test email from your ${appName} application for the '${testTarget}' address. Your SMTP settings are working correctly!`,
             html: `<b>This is a test email from your ${appName} application for the '${testTarget}' address.</b><p>Your SMTP settings are working correctly!</p>`,

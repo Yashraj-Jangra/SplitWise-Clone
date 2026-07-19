@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { FirebaseError } from 'firebase/app';
 import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -69,22 +68,13 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
         description: "You can now log in with your new account.",
       });
       router.push("/auth/login");
-    } catch (error) {
-      let description = "An unknown error occurred.";
-      if (error instanceof FirebaseError) {
-        if (error.code === 'auth/email-already-in-use') {
-          description = "This email address is already in use.";
-           form.setError("email", { type: "manual", message: description });
-        } else {
-          description = `Signup failed: ${error.message}`;
-        }
-      } else if (error instanceof Error) {
-        if (error.message.toLowerCase().includes("username")) {
-            description = error.message;
-            form.setError("username", { type: "manual", message: description });
-        } else {
-            description = error.message;
-        }
+    } catch (error: any) {
+      let description = error.message || "An unknown error occurred.";
+      if (description.includes("email") || description.includes("use")) {
+        description = "This email address is already in use.";
+        form.setError("email", { type: "manual", message: description });
+      } else if (description.toLowerCase().includes("username")) {
+        form.setError("username", { type: "manual", message: description });
       }
       toast({
         variant: "destructive",
@@ -103,11 +93,8 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
         description: "Welcome!",
       });
       router.push("/dashboard");
-    } catch (error) {
-      let description = "An unknown error occurred. Please try again.";
-      if (error instanceof FirebaseError) {
-        description = `Sign up failed: ${error.message}`;
-      }
+    } catch (error: any) {
+      let description = error.message || "An unknown error occurred. Please try again.";
       toast({
         variant: "destructive",
         title: "Google Sign-Up Failed",

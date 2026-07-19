@@ -2,8 +2,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { errorEmitter } from '@/firebase/error-emitter';
-import type { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/lib/error-emitter';
+import type { FirestorePermissionError } from '@/lib/errors';
 
 // This is a client-side component that should be placed high up in your
 // component tree (e.g., in your root layout). It listens for custom

@@ -11,7 +11,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { FirebaseError } from "firebase/app";
 import type { SiteSettings } from "@/types";
 
 const forgotPasswordSchema = z.object({

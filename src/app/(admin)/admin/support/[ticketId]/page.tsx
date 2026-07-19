@@ -8,10 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { getDoc, doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import type { SupportTicket, SupportTicketMessage } from '@/types';
-import { getSiteSettings, getUserProfile } from '@/lib/mock-data';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -42,38 +39,9 @@ const statusStyles: { [key: string]: string } = {
 };
 
 async function getTicketById(ticketId: string): Promise<SupportTicket | null> {
-    const ticketDocRef = doc(db, 'tickets', ticketId);
-    const ticketSnap = await getDoc(ticketDocRef);
-
-    if (!ticketSnap.exists()) {
-        return null;
-    }
-
-    const ticketData = ticketSnap.data();
-
-    const user = await getUserProfile(ticketData.userId);
-    if (!user) return null;
-
-    const messages: SupportTicketMessage[] = await Promise.all(
-        ticketData.messages.map(async (msg: any) => {
-            const sentBy = await getUserProfile(msg.sentById);
-            if (!sentBy) return null;
-            return {
-                ...msg,
-                sentAt: (msg.sentAt as Timestamp).toDate().toISOString(),
-                sentBy,
-            };
-        })
-    );
-
-    return {
-        id: ticketSnap.id,
-        ...ticketData,
-        createdAt: (ticketData.createdAt as Timestamp).toDate().toISOString(),
-        updatedAt: (ticketData.updatedAt as Timestamp).toDate().toISOString(),
-        user,
-        messages: messages.filter(m => m !== null) as SupportTicketMessage[],
-    } as SupportTicket;
+  const res = await fetch(`/api/admin/tickets?ticketId=${ticketId}`);
+  if (!res.ok) return null;
+  return res.json();
 }
 
 
@@ -110,34 +78,23 @@ export default function TicketDetailPage() {
     const handleReplySubmit = async (values: ReplyFormValues, sendEmail: boolean) => {
         if (!adminProfile || !ticket) return;
 
-        const ticketDocRef = doc(db, 'tickets', ticket.id);
-        const newMessage = {
-            sentAt: Timestamp.now(),
-            sentById: adminProfile.uid,
-            message: values.message,
-        };
-
         try {
-            await updateDoc(ticketDocRef, {
-                messages: arrayUnion(newMessage),
-                updatedAt: Timestamp.now(),
-                status: 'in-progress',
+            const res = await fetch('/api/support/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticketId: ticket.id,
+                    replyMessage: values.message
+                })
             });
-            
-            if (sendEmail) {
-                await fetch('/api/admin/notify-ticket-reply', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketId: ticket.id, replyMessage: values.message, replierId: adminProfile.uid }),
-                });
-            }
-            
+
+            if (!res.ok) throw new Error('Failed to send reply');
+
             // Re-fetch ticket to show new message
             const updatedTicket = await getTicketById(ticketId);
             setTicket(updatedTicket);
             replyForm.reset();
             toast({ title: "Reply Sent", description: "Your reply has been added to the ticket." });
-            
         } catch (error) {
              toast({ variant: 'destructive', title: 'Error', description: 'Failed to send reply.' });
         }
@@ -145,9 +102,14 @@ export default function TicketDetailPage() {
     
     const handleStatusChange = async (newStatus: SupportTicket['status']) => {
         if (!ticket) return;
-        const ticketDocRef = doc(db, 'tickets', ticket.id);
         try {
-            await updateDoc(ticketDocRef, { status: newStatus, updatedAt: Timestamp.now() });
+            const res = await fetch('/api/admin/tickets', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketId: ticket.id, status: newStatus }),
+            });
+            if (!res.ok) throw new Error('Failed to update status');
+
             setTicket(prev => prev ? {...prev, status: newStatus} : null);
             toast({ title: 'Status Updated' });
         } catch (error) {

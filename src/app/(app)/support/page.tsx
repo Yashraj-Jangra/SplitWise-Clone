@@ -25,11 +25,8 @@ import { getInitials, getFullName, cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 
 import type { SupportTicket } from '@/types';
-import { addDoc, collection, Timestamp, updateDoc, doc, arrayUnion } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getTicketsByUserId } from '@/lib/mock-data';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
+import { DatabasePermissionError } from '@/lib/errors';
+import { errorEmitter } from '@/lib/error-emitter';
 
 const supportTicketSchema = z.object({
   subject: z.string().min(5, "Subject must be at least 5 characters long.").max(100),
@@ -69,9 +66,17 @@ function TicketHistory() {
     async function loadTickets() {
       if (!userProfile) return;
       setLoading(true);
-      const userTickets = await getTicketsByUserId(userProfile.uid);
-      setAllTickets(userTickets);
-      setLoading(false);
+      try {
+        const response = await fetch('/api/support');
+        if (response.ok) {
+          const userTickets = await response.json();
+          setAllTickets(userTickets);
+        }
+      } catch (error) {
+        console.error("Error loading tickets:", error);
+      } finally {
+        setLoading(false);
+      }
     }
     if (userProfile) {
       loadTickets();
@@ -82,48 +87,38 @@ function TicketHistory() {
     if (!userProfile) return;
     setIsReplying(ticketId);
 
-    const ticketDocRef = doc(db, 'tickets', ticketId);
-    const newMessage = {
-        sentAt: Timestamp.now(),
-        sentById: userProfile.uid,
-        message: values.replyMessage,
-    };
-    
-    updateDoc(ticketDocRef, {
-        messages: arrayUnion(newMessage),
-        updatedAt: Timestamp.now(),
-        status: 'in-progress'
-    })
-    .then(async () => {
-        toast({ title: 'Reply Sent' });
-        replyForm.reset();
-        
-        // Fetch updated tickets to show new message immediately
-        const updatedTickets = await getTicketsByUserId(userProfile.uid);
-        setAllTickets(updatedTickets);
+    try {
+      const res = await fetch('/api/support/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId,
+          replyMessage: values.replyMessage
+        })
+      });
 
-        // Trigger email notification
-        try {
-            await fetch('/api/admin/notify-ticket-reply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticketId: ticketId, replyMessage: values.replyMessage, replierId: userProfile.uid }),
-            });
-        } catch (emailError) {
-            console.error("Failed to trigger reply notification email:", emailError);
-        }
-    })
-    .catch((error) => {
-        const permissionError = new FirestorePermissionError({
-            path: ticketDocRef.path,
-            operation: 'update',
-            requestResourceData: { messages: arrayUnion(newMessage) },
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-    })
-    .finally(() => {
-        setIsReplying(null);
-    });
+      if (!res.ok) {
+        throw new Error('Failed to send reply');
+      }
+
+      toast({ title: 'Reply Sent' });
+      replyForm.reset();
+      
+      // Fetch updated tickets
+      const response = await fetch('/api/support');
+      if (response.ok) {
+        const updatedTickets = await response.json();
+        setAllTickets(updatedTickets);
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to submit reply.'
+      });
+    } finally {
+      setIsReplying(null);
+    }
   }
 
   if (loading || authLoading) {
@@ -239,6 +234,7 @@ export default function SupportPage() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const form = useForm<SupportTicketFormValues>({
     resolver: zodResolver(supportTicketSchema),
@@ -255,57 +251,38 @@ export default function SupportPage() {
       return;
     }
 
-    const ticketsCollection = collection(db, 'tickets');
-
-    const newTicketData = {
-      userId: userProfile.uid,
-      userName: `${userProfile.firstName} ${userProfile.lastName || ''}`.trim(),
-      userEmail: userProfile.email,
-      subject: values.subject,
-      category: values.category,
-      status: 'open' as 'open' | 'in-progress' | 'closed',
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-      messages: [
-        {
-          sentAt: Timestamp.now(),
-          sentById: userProfile.uid,
-          message: values.message,
-        },
-      ],
-    };
-
-    addDoc(ticketsCollection, newTicketData)
-      .then(async (docRef) => {
-        toast({
-          title: 'Support Ticket Submitted',
-          description: `Your ticket (ID: ${docRef.id.slice(0, 8)}) has been received.`,
-        });
-        
-        form.reset();
-
-        // Trigger admin email notification
-        try {
-          await fetch('/api/admin/notify-new-ticket', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ticketId: docRef.id })
-          });
-        } catch(e) {
-          console.error("Failed to trigger admin notification but ticket was created.", e);
-        }
-
-        router.refresh();
-      })
-      .catch((serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: ticketsCollection.path,
-            operation: 'create',
-            requestResourceData: newTicketData,
-          } satisfies SecurityRuleContext);
-
-          errorEmitter.emit('permission-error', permissionError);
+    try {
+      const res = await fetch('/api/support/ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: values.subject,
+          category: values.category,
+          message: values.message
+        })
       });
+
+      if (!res.ok) {
+        throw new Error('Failed to submit ticket');
+      }
+
+      const data = await res.json();
+      toast({
+        title: 'Support Ticket Submitted',
+        description: `Your ticket (ID: ${data.ticketId.slice(0, 8)}) has been received.`,
+      });
+      
+      form.reset();
+
+      // Trigger refresh of history list
+      setRefreshKey(prev => prev + 1);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to submit support ticket.'
+      });
+    }
   }
 
   return (
@@ -315,7 +292,7 @@ export default function SupportPage() {
         <p className="text-muted-foreground">Track your support requests or submit a new one.</p>
       </div>
 
-      <TicketHistory />
+      <TicketHistory key={refreshKey} />
 
       <Card>
         <CardHeader>

@@ -49,3 +49,7 @@ firestore-debug.log
 # local session tracking files
 todo.md
 progress.md
+
+# secrets and data exports
+service-account.json
+scripts/exports/

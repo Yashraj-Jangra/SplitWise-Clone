@@ -76,7 +76,7 @@ export function SearchDialog() {
     const filteredGroups = userGroups.filter(g => g.members.some(m => m.uid === userProfile.uid));
     
     const allExpenses = await getAllExpenses();
-    const filteredExpenses = allExpenses.filter(e => e.groupMemberIds.includes(userProfile.uid));
+    const filteredExpenses = allExpenses.filter(e => e.groupMemberIds?.includes(userProfile.uid));
 
     const mutualMemberIds = new Set<string>();
     filteredGroups.forEach(group => {

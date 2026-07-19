@@ -1,29 +1,15 @@
-
 import { NextResponse } from 'next/server';
-import { firebaseAdmin } from '@/lib/firebase-admin';
-import type { CollectionReference } from 'firebase-admin/firestore';
-
-// WARNING: This is a powerful and destructive API. Ensure it is properly secured.
-
-// Define collections and the fields within them that might contain a UID.
-const COLLECTIONS_AND_FIELDS: { [key: string]: string[] } = {
-    'groups': ['memberIds', 'createdById'],
-    'expenses': ['payerIds', 'participantIds', 'expenseCreatorId', 'groupMemberIds'],
-    'settlements': ['paidById', 'paidToId', 'groupMemberIds'],
-    'history': ['actorId', 'data.paidById', 'data.paidToId', 'groupMemberIds'], 
-};
+import { auth } from '@/lib/auth.server';
+import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
     try {
-        const idToken = request.headers.get('Authorization')?.split('Bearer ')[1];
-        if (!idToken) {
+        const session = await auth.api.getSession({ headers: request.headers });
+        if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized: No token provided.' }, { status: 401 });
         }
         
-        const adminAuth = firebaseAdmin.auth();
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
-        
-        if (decodedToken.role !== 'admin') {
+        if (session.user.role !== 'admin') {
             return NextResponse.json({ error: 'Forbidden: User is not an admin.' }, { status: 403 });
         }
 
@@ -32,122 +18,170 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Bad Request: oldUid and newUid are required.' }, { status: 400 });
         }
 
-        const db = firebaseAdmin.firestore();
-        const batch = db.batch();
-        let changesCount = 0;
+        const oldUser = await prisma.user.findUnique({ where: { id: oldUid } });
+        const newUser = await prisma.user.findUnique({ where: { id: newUid } });
+
+        if (!newUser) {
+            return NextResponse.json({ error: `New user with UID ${newUid} does not exist.` }, { status: 404 });
+        }
+
         const summary: string[] = [];
 
-        // --- Core User Document Update ---
-        const oldUserDocRef = db.collection('users').doc(oldUid);
-        const newUserDocRef = db.collection('users').doc(newUid);
+        await prisma.$transaction(async (tx) => {
+            if (oldUser) {
+                // Merge old user details to new user if missing
+                await tx.user.update({
+                  where: { id: newUid },
+                  data: {
+                    firstName: newUser.firstName || oldUser.firstName,
+                    lastName: newUser.lastName || oldUser.lastName,
+                    username: newUser.username || oldUser.username,
+                    avatarUrl: newUser.avatarUrl || oldUser.avatarUrl,
+                    countryCode: newUser.countryCode || oldUser.countryCode,
+                    mobileNumber: newUser.mobileNumber || oldUser.mobileNumber,
+                    dob: newUser.dob || oldUser.dob,
+                  }
+                });
+                summary.push(`Merged profile metadata from user ${oldUid} to user ${newUid}.`);
+            }
 
-        const [oldUserSnap, newUserSnap] = await Promise.all([oldUserDocRef.get(), newUserDocRef.get()]);
+            // 1. Update session/account/verifications
+            await tx.session.updateMany({ where: { userId: oldUid }, data: { userId: newUid } });
+            await tx.account.updateMany({ where: { userId: oldUid }, data: { userId: newUid } });
+            summary.push(`Updated Better Auth sessions and accounts.`);
 
-        if (!newUserSnap.exists) {
-            return NextResponse.json({ error: `New user with UID ${newUid} does not exist in Firestore.` }, { status: 404 });
-        }
-        
-        if (oldUserSnap.exists) {
-            const oldUserData = oldUserSnap.data()!;
-            const newUserData = newUserSnap.data()!;
-            
-            // Merge profile data, preferring new user's core data
-            const mergedData = {
-                ...oldUserData,
-                ...newUserData,
-                uid: newUid,
-                email: newUserData.email, 
-                createdAt: newUserData.createdAt || oldUserData.createdAt,
-                role: newUserData.role || oldUserData.role,
-            };
+            // 2. Groups where oldUid is creator
+            await tx.group.updateMany({ where: { createdById: oldUid }, data: { createdById: newUid } });
 
-            batch.set(newUserDocRef, mergedData, { merge: true });
-            changesCount++;
-            summary.push(`Merged data from users/${oldUid} into users/${newUid}`);
-        }
-        
-        // --- Update Collections ---
-        for (const collectionName of Object.keys(COLLECTIONS_AND_FIELDS)) {
-            const collectionRef = db.collection(collectionName) as CollectionReference;
-
-            // Check array fields (e.g., memberIds)
-            const arrayFields = ['memberIds', 'payerIds', 'participantIds', 'groupMemberIds'];
-            for (const field of arrayFields) {
-                if (COLLECTIONS_AND_FIELDS[collectionName].includes(field)) {
-                    const querySnapshot = await collectionRef.where(field, 'array-contains', oldUid).get();
-                    querySnapshot.forEach(doc => {
-                        batch.update(doc.ref, {
-                            [field]: firebaseAdmin.firestore.FieldValue.arrayRemove(oldUid)
-                        });
-                        batch.update(doc.ref, {
-                            [field]: firebaseAdmin.firestore.FieldValue.arrayUnion(newUid)
-                        });
-                        changesCount++;
-                        summary.push(`Updated array field '${field}' in ${collectionName}/${doc.id}`);
+            // 3. Group memberships (GroupMember)
+            // Delete memberships for newUid if they already exist, to avoid duplicates on update
+            const oldMemberships = await tx.groupMember.findMany({ where: { userId: oldUid } });
+            for (const membership of oldMemberships) {
+                const newExists = await tx.groupMember.findUnique({
+                    where: { groupId_userId: { groupId: membership.groupId, userId: newUid } }
+                });
+                if (newExists) {
+                    await tx.groupMember.delete({
+                        where: { groupId_userId: { groupId: membership.groupId, userId: oldUid } }
+                    });
+                } else {
+                    await tx.groupMember.update({
+                        where: { groupId_userId: { groupId: membership.groupId, userId: oldUid } },
+                        data: { userId: newUid }
                     });
                 }
             }
-            
-            // Check direct string fields (e.g., createdById)
-            const stringFields = ['createdById', 'expenseCreatorId', 'paidById', 'paidToId', 'actorId'];
-            for (const field of stringFields) {
-                 if (COLLECTIONS_AND_FIELDS[collectionName].includes(field)) {
-                    const querySnapshot = await collectionRef.where(field, '==', oldUid).get();
-                    querySnapshot.forEach(doc => {
-                        batch.update(doc.ref, { [field]: newUid });
-                        changesCount++;
-                        summary.push(`Updated field '${field}' in ${collectionName}/${doc.id}`);
-                    });
-                 }
-            }
-        }
-        
-        // --- CORRECTLY handle complex nested fields ---
+            summary.push(`Merged group memberships.`);
 
-        // Expenses: payers and participants arrays of objects
-        const expensesSnap = await db.collection('expenses').get();
-        expensesSnap.forEach(doc => {
-            const expense = doc.data();
-            let updated = false;
-            
-            const newPayers = expense.payers.map((payer: any) => {
-                if (payer.userId === oldUid) {
-                    updated = true;
-                    return { ...payer, userId: newUid };
+            // 4. Expenses created by oldUid
+            await tx.expense.updateMany({ where: { expenseCreatorId: oldUid }, data: { expenseCreatorId: newUid } });
+            await tx.expense.updateMany({ where: { groupCreatorId: oldUid }, data: { groupCreatorId: newUid } });
+
+            // 5. Expense Payers
+            const payers = await tx.expensePayer.findMany({ where: { userId: oldUid } });
+            for (const payer of payers) {
+                const newExists = await tx.expensePayer.findUnique({
+                    where: { expenseId_userId: { expenseId: payer.expenseId, userId: newUid } }
+                });
+                if (newExists) {
+                    // Combine amounts if both paid
+                    await tx.expensePayer.update({
+                        where: { id: newExists.id },
+                        data: { amount: newExists.amount + payer.amount }
+                    });
+                    await tx.expensePayer.delete({ where: { id: payer.id } });
+                } else {
+                    await tx.expensePayer.update({
+                        where: { id: payer.id },
+                        data: { userId: newUid }
+                    });
                 }
-                return payer;
-            });
-            
-            const newParticipants = expense.participants.map((p: any) => {
-                if (p.userId === oldUid) {
-                    updated = true;
-                    return { ...p, userId: newUid };
+            }
+
+            // 6. Expense Participants
+            const participants = await tx.expenseParticipant.findMany({ where: { userId: oldUid } });
+            for (const p of participants) {
+                const newExists = await tx.expenseParticipant.findUnique({
+                    where: { expenseId_userId: { expenseId: p.expenseId, userId: newUid } }
+                });
+                if (newExists) {
+                    await tx.expenseParticipant.update({
+                        where: { id: newExists.id },
+                        data: { amountOwed: newExists.amountOwed + p.amountOwed }
+                    });
+                    await tx.expenseParticipant.delete({ where: { id: p.id } });
+                } else {
+                    await tx.expenseParticipant.update({
+                        where: { id: p.id },
+                        data: { userId: newUid }
+                    });
                 }
-                return p;
-            });
+            }
+            summary.push(`Merged expense payers and participants.`);
+
+            // 7. Settlements
+            await tx.settlement.updateMany({ where: { paidById: oldUid }, data: { paidById: newUid } });
+            await tx.settlement.updateMany({ where: { paidToId: oldUid }, data: { paidToId: newUid } });
+
+            // 8. History events
+            await tx.historyEvent.updateMany({ where: { actorId: oldUid }, data: { actorId: newUid } });
+
+            // 9. Support tickets and messages
+            await tx.supportTicket.updateMany({ where: { userId: oldUid }, data: { userId: newUid } });
+            await tx.supportTicket.updateMany({ where: { assignedToId: oldUid }, data: { assignedToId: newUid } });
+            await tx.ticketMessage.updateMany({ where: { sentById: oldUid }, data: { sentById: newUid } });
+
+            // 10. Push subscriptions & prefs
+            await tx.pushSubscription.updateMany({ where: { userId: oldUid }, data: { userId: newUid } });
             
-            if (updated) {
-                batch.update(doc.ref, { payers: newPayers, participants: newParticipants });
-                changesCount++;
-                 summary.push(`Updated nested user ID in expense document: expenses/${doc.id}`);
+            // Delete old prefs, keep new one
+            await tx.userNotificationPrefs.deleteMany({ where: { userId: oldUid } });
+
+            // 11. Notifications recipient & read records
+            const oldRecipients = await tx.notificationRecipient.findMany({ where: { userId: oldUid } });
+            for (const rec of oldRecipients) {
+                const exists = await tx.notificationRecipient.findUnique({
+                    where: { notificationId_userId: { notificationId: rec.notificationId, userId: newUid } }
+                });
+                if (exists) {
+                    await tx.notificationRecipient.delete({
+                        where: { notificationId_userId: { notificationId: rec.notificationId, userId: oldUid } }
+                    });
+                } else {
+                    await tx.notificationRecipient.update({
+                        where: { notificationId_userId: { notificationId: rec.notificationId, userId: oldUid } },
+                        data: { userId: newUid }
+                    });
+                }
+            }
+
+            const oldReads = await tx.notificationRead.findMany({ where: { userId: oldUid } });
+            for (const r of oldReads) {
+                const exists = await tx.notificationRead.findUnique({
+                    where: { notificationId_userId: { notificationId: r.notificationId, userId: newUid } }
+                });
+                if (exists) {
+                    await tx.notificationRead.delete({
+                        where: { notificationId_userId: { notificationId: r.notificationId, userId: oldUid } }
+                    });
+                } else {
+                    await tx.notificationRead.update({
+                        where: { notificationId_userId: { notificationId: r.notificationId, userId: oldUid } },
+                        data: { userId: newUid }
+                    });
+                }
+            }
+
+            // 12. Delete old user doc
+            if (oldUser) {
+                await tx.user.delete({ where: { id: oldUid } });
+                summary.push(`Deleted old user account ${oldUid}.`);
             }
         });
 
-        // --- Finally, delete the old user document AFTER all other operations are staged
-        if(oldUserSnap.exists) {
-            batch.delete(oldUserDocRef);
-            changesCount++;
-            summary.push(`Deleted user document: users/${oldUid}`);
-        }
-
-        // --- Commit changes ---
-        if (changesCount > 0) {
-            await batch.commit();
-        }
-
         return NextResponse.json({
             success: true,
-            message: `Successfully processed UID replacement. ${changesCount} modifications were made.`,
+            message: `Successfully processed UID replacement.`,
             summary: summary,
         });
 

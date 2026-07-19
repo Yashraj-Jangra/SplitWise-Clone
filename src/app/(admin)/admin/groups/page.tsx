@@ -30,9 +30,8 @@ import { getFullName, getInitials } from '@/lib/utils';
 import { useAuth } from "@/contexts/auth-context";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { FirebaseError } from "firebase/app";
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
+import { errorEmitter } from "@/lib/error-emitter";
 import { appEventEmitter } from "@/lib/event-emitter";
 
 function GroupActions({ group, onActionComplete }: { group: Group, onActionComplete: () => void }) {
@@ -51,8 +50,8 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
             await archiveGroup(group.id, userProfile.uid);
             toast({ title: "Group Archived", description: `The group "${group.name}" has been archived.`});
             onActionComplete();
-        } catch (error) {
-             if (error instanceof FirebaseError && error.code === 'permission-denied') {
+         } catch (error: any) {
+             if (error.message?.includes('permission') || error.message?.includes('insufficient')) {
                 const permissionError = new FirestorePermissionError({
                     path: `/groups/${group.id}`,
                     operation: 'update',
@@ -76,8 +75,8 @@ function GroupActions({ group, onActionComplete }: { group: Group, onActionCompl
             await restoreGroup(group.id, userProfile.uid);
             toast({ title: "Group Restored", description: `The group "${group.name}" has been restored.`});
             onActionComplete();
-        } catch (error) {
-            if (error instanceof FirebaseError && error.code === 'permission-denied') {
+         } catch (error: any) {
+            if (error.message?.includes('permission') || error.message?.includes('insufficient')) {
                 const permissionError = new FirestorePermissionError({
                     path: `/groups/${group.id}`,
                     operation: 'update',

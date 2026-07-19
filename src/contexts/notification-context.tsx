@@ -2,25 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  updateDoc,
-  arrayUnion,
-  Timestamp,
-  orderBy,
-  limit,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { NotificationV2, NotificationV2Document } from '@/types';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import type { NotificationV2 } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { hydrateUsers } from '@/lib/mock-data';
 
 interface NotificationContextType {
   notifications: NotificationV2[];
@@ -40,6 +23,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const fetchInitialNotifications = useCallback(async () => {
+    try {
+      const response = await fetch('/api/notifications?limit=50');
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data);
+        setUnreadCount(data.filter((n: NotificationV2) => !n.isRead).length);
+      }
+    } catch (error) {
+      console.error("Error loading initial notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!userProfile) {
       setNotifications([]);
@@ -49,110 +47,93 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     setLoading(true);
-    
-    // We only fetch notifications targeted at this user or 'all_users'
-    // Usually 'all_users' are duplicated by adding everyone to recipientIds, or the client handles it.
-    // For simplicity and scale, recipientIds will contain all target userIds.
-    const q = query(
-      collection(db, 'notifications_v2'),
-      where('recipientIds', 'array-contains', userProfile.uid),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
+    fetchInitialNotifications();
 
-    const unsubscribe = onSnapshot(q, 
-      async (snapshot) => {
-        const fetchedDocs = snapshot.docs.map(doc => ({
-            id: doc.id,
-            data: doc.data() as NotificationV2Document,
-        }));
-        
-        // Hydrate actors
-        const actorIds = [...new Set(fetchedDocs.map(d => d.data.actorId).filter(Boolean) as string[])];
-        let userMap = new Map();
-        if (actorIds.length > 0) {
-            const users = await hydrateUsers(actorIds);
-            userMap = new Map(users.map(u => [u.uid, u]));
+    // Setup SSE EventSource connection
+    const eventSource = new EventSource('/api/notifications/stream');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const newNotifs = JSON.parse(event.data) as NotificationV2[];
+        if (newNotifs.length > 0) {
+          setNotifications(prev => {
+            const merged = [...newNotifs, ...prev];
+            // Deduplicate
+            const unique = merged.filter((item, index, self) => 
+              self.findIndex(t => t.id === item.id) === index
+            );
+            // Cap at 50
+            const finalNotifs = unique.slice(0, 50);
+            setUnreadCount(finalNotifs.filter(n => !n.isRead).length);
+            return finalNotifs;
+          });
         }
-
-        const hydratedNotifications: NotificationV2[] = fetchedDocs.map(doc => {
-            const data = doc.data;
-            return {
-                id: doc.id,
-                ...data,
-                createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
-                isRead: data.readBy?.includes(userProfile.uid) || false,
-                actor: data.actorId ? userMap.get(data.actorId) : undefined,
-            } as NotificationV2;
-        });
-        
-        setNotifications(hydratedNotifications);
-        setUnreadCount(hydratedNotifications.filter(n => !n.isRead).length);
-        setLoading(false);
-      },
-      (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'notifications_v2',
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        console.error("Error fetching notifications:", error);
-        setLoading(false);
+      } catch (err) {
+        console.error("Error parsing notification stream data:", err);
       }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [userProfile]);
+    eventSource.onerror = (error) => {
+      console.error("EventSource connection error:", error);
+      // Let EventSource auto-retry in the background
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [userProfile, fetchInitialNotifications]);
 
   const markRead = useCallback(async (notificationId: string) => {
     if (!userProfile) return;
     try {
-        const notifDocRef = doc(db, 'notifications_v2', notificationId);
-        await updateDoc(notifDocRef, {
-            readBy: arrayUnion(userProfile.uid),
-        });
+      // Optimitic UI update
+      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PATCH'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status on server');
+      }
     } catch (error) {
-        console.error("Error marking notification as read:", error);
+      console.error("Error marking notification as read:", error);
+      // Revert optimistic update on failure
+      fetchInitialNotifications();
     }
-  }, [userProfile]);
+  }, [userProfile, fetchInitialNotifications]);
 
   const markAllRead = useCallback(async () => {
     if (!userProfile || unreadCount === 0) return;
     
-    const unreadNotifications = notifications.filter(n => !n.isRead);
-    const batch = writeBatch(db);
-
-    unreadNotifications.forEach(notif => {
-        const notifDocRef = doc(db, 'notifications_v2', notif.id);
-        batch.update(notifDocRef, {
-            readBy: arrayUnion(userProfile.uid),
-        });
-    });
-
     try {
-        await batch.commit();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+
+      const response = await fetch('/api/notifications/mark-all-read', {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark all read on server');
+      }
     } catch (error) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not mark notifications as read."
-        });
-        console.error("Error marking all notifications as read:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not mark notifications as read."
+      });
+      console.error("Error marking all notifications as read:", error);
+      fetchInitialNotifications();
     }
-  }, [userProfile, unreadCount, notifications, toast]);
+  }, [userProfile, unreadCount, toast, fetchInitialNotifications]);
 
   const clearAll = useCallback(async () => {
-      // Typically, users only hide them or remove themselves from recipientIds, 
-      // but if we do a true delete, they are gone. Let's just remove user from recipientIds
-      if (!userProfile) return;
-      const batch = writeBatch(db);
-      
-      notifications.forEach(notif => {
-        const notifDocRef = doc(db, 'notifications_v2', notif.id);
-        // Instead of removing from recipientIds, we might just not have clearAll, or mark them soft-deleted.
-        // For now, let's omit the actual implementation or do a removal from recipientIds.
-      });
-  }, [userProfile, notifications]);
+      // Simplified clear all for local UI
+      setNotifications([]);
+      setUnreadCount(0);
+  }, []);
 
   const value = useMemo(() => ({
     notifications,

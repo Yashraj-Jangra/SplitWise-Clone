@@ -7,7 +7,7 @@ import {
   archiveGroup, 
   restoreGroup, 
   deleteGroupPermanently 
-} from '@/lib/firestore.service';
+} from '@/lib/services/group.service';
 import type { GroupDocument } from '@/types';
 
 export function useGroups(userId: string | undefined) {
