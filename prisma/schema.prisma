@@ -30,7 +30,6 @@ model User {
   // Relations
   sessions        Session[]
   accounts        Account[]
-  verifications   Verification[]
   groupsCreated   Group[]        @relation("GroupCreator")
   groupMemberships GroupMember[]
   expensesCreated  Expense[]     @relation("ExpenseCreator")
@@ -78,13 +77,12 @@ model Account {
 }
 
 model Verification {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User?    @relation(fields: [identifier], references: [email])
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
 }
 
 // ── GROUPS ─────────────────────────────────────────────
