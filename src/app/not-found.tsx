@@ -8,16 +8,30 @@ import { Lightbulb, Mail } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
-  const pageContent = settings.notFoundPage!;
-  return {
-    title: pageContent.title,
-  };
+  try {
+    const settings = await getSiteSettings();
+    const pageContent = settings.notFoundPage;
+    return {
+      title: pageContent?.title || '404 - Page Not Found',
+    };
+  } catch {
+    return { title: '404 - Page Not Found' };
+  }
 }
 
 export default async function NotFound() {
-  const settings = await getSiteSettings();
-  const pageContent = settings.notFoundPage!;
+  let pageContent = {
+    heading: 'Page Not Found',
+    mainContent: "The page you're looking for doesn't exist or has been moved.",
+    helpfulHint: 'Check the URL for typos, or navigate back to the homepage.',
+    supportNote: 'If you believe this is an error, open a support ticket.',
+    buttonText: 'Go Home',
+    imageUrl: 'https://images.unsplash.com/photo-1462332420958-a05d1e002413?w=800',
+  };
+  try {
+    const settings = await getSiteSettings();
+    if (settings.notFoundPage) pageContent = { ...pageContent, ...settings.notFoundPage };
+  } catch { /* use defaults */ }
 
   return (
     <div className="min-h-screen w-full lg:grid lg:grid-cols-2">

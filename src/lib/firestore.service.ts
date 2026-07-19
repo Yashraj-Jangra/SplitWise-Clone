@@ -1,8 +1,12 @@
 import type { UserProfile, Group, Expense, Settlement, Balance, HistoryEvent, SiteSettings, UserNotificationPrefsDocument } from '@/types';
 
-// Helper for making fetch requests
+// Helper for making fetch requests — resolves relative URLs on the server
 async function fetchApi(url: string, options?: RequestInit) {
-  const res = await fetch(url, options);
+  const base = typeof window === 'undefined'
+    ? (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231')
+    : '';
+  const fullUrl = url.startsWith('/') ? `${base}${url}` : url;
+  const res = await fetch(fullUrl, options);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `HTTP error! status: ${res.status}`);

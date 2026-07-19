@@ -1,0 +1,4 @@
+services:
+  minio:
+    ports:
+      - "127.0.0.1:9002:9000"   # Expose MinIO API locally for dev server

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
-import { getSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/services/settings.service';
 import { NotificationProvider } from '@/contexts/notification-context';
 import { SiteSettingsProvider } from '@/contexts/site-settings-context';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
@@ -48,19 +48,19 @@ export default function RootLayout({
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
       </head>
       <body>
-        <SiteSettingsProvider>
-          <QueryProvider>
-            <ThemeProvider>
-              <AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <SiteSettingsProvider>
+              <ThemeProvider>
                 <NotificationProvider>
                   <FirebaseErrorListener />
                   {children}
                 </NotificationProvider>
-              </AuthProvider>
-            </ThemeProvider>
-            <Toaster />
-          </QueryProvider>
-        </SiteSettingsProvider>
+              </ThemeProvider>
+            </SiteSettingsProvider>
+          </AuthProvider>
+          <Toaster />
+        </QueryProvider>
         <Analytics />
         <SpeedInsights />
       </body>

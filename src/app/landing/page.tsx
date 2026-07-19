@@ -9,18 +9,40 @@ import { CheckCircle2 } from 'lucide-react';
 
 export default async function LandingPage() {
   const settings = await getSiteSettings();
-  const lp = settings.landingPage!;
+  const _lp = settings.landingPage ?? {};
+  const lp = {
+    headline: 'Split Expenses,\nNot Friendships',
+    subheadline: 'The easiest way to track shared expenses and settle up with friends, family, or roommates.',
+    ctaButtonText: 'Get Started for Free',
+    featuresTitle: 'Everything you need to manage group expenses',
+    featuresSubtitle: 'Powerful tools to track, split, and settle shared costs with anyone.',
+    features: [] as any[],
+    howItWorksTitle: 'Simple by design',
+    howItWorksSubtitle: 'Get started in seconds — no complicated setup required.',
+    howItWorksSteps: [] as any[],
+    howItWorksImageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800',
+    finalCtaTitle: 'Ready to simplify your shared expenses?',
+    finalCtaSubtitle: 'Join thousands of people already using {appName} to manage their group finances.',
+    finalCtaButtonText: 'Sign Up Free',
+    imageRotationInterval: 1,
+    ..._lp,
+  };
+
   
   const now = new Date();
   const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60));
   const rotationInterval = lp.imageRotationInterval || 1;
-  const imageIndex = (Math.floor(hoursSinceEpoch / rotationInterval)) % settings.landingImages.length;
+  const landingImages = settings.landingImages ?? [];
+  const imageIndex = landingImages.length > 0
+    ? (Math.floor(hoursSinceEpoch / rotationInterval)) % landingImages.length
+    : 0;
   
-  const timedImage = settings.landingImages?.length > 0
-    ? settings.landingImages[imageIndex]
-    : 'https://placehold.co/1920x1080.png';
+  const timedImage = landingImages.length > 0
+    ? landingImages[imageIndex]
+    : 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920';
 
-  const replaceAppName = (text: string) => text.replace(/{appName}/g, settings.appName);
+
+  const replaceAppName = (text: string | undefined) => (text ?? '').replace(/{appName}/g, settings.appName ?? 'SplitWise Clone');
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
