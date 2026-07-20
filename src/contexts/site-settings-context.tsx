@@ -5,7 +5,7 @@ import type { SiteSettings } from '@/types';
 import { getSiteSettings } from '@/lib/firestore.service';
 import { useAuth } from '@/contexts/auth-context';
 
-const DEFAULT_APP_NAME = 'SettleEase';
+const DEFAULT_APP_NAME = 'SplitIt';
 
 interface SiteSettingsContextType {
   settings: SiteSettings;

@@ -21,7 +21,7 @@ export const auth = betterAuth({
         });
         const settings = (settingsDoc?.data as any) || {};
         const emailSettings = settings.emailSettings || {};
-        const appName = settings.appName || 'SplitWise Clone';
+        const appName = settings.appName || 'SplitIt';
 
         const resetTemplate = settings.emailTemplates?.forgotPassword || {
           subject: 'Password Reset Request for {appName}',
@@ -83,7 +83,7 @@ export const auth = betterAuth({
         });
         const settings = (settingsDoc?.data as any) || {};
         const emailSettings = settings.emailSettings || {};
-        const appName = settings.appName || 'SplitWise Clone';
+        const appName = settings.appName || 'SplitIt';
 
         const template = settings.emailTemplates?.registration || {
           subject: 'Welcome to {appName} - Verify Your Email',

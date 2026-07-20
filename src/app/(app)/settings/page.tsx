@@ -1,49 +1,54 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { cn, getFullName, getInitials } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { EmailManagementSection } from "@/components/settings/email-management-section";
-import { UserGroupsList } from "@/components/shared/user-groups-list";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { updateUser, isUsernameTaken, getUserNotificationPrefs, updateUserNotificationPrefs } from "@/lib/mock-data";
-import { getFullName, getInitials } from "@/lib/utils";
+import { updateUser } from "@/lib/firestore.service";
+import { getUserNotificationPrefs, updateUserNotificationPrefs } from "@/lib/mock-data";
+
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { useTheme } from "@/contexts/theme-context";
 import { requestPushPermission } from "@/lib/push-service";
 import type { NotificationEventType, UserNotificationPrefsDocument } from "@/types";
+import {
+  AlertCircle,
+  Bell,
+  Check,
+  ChevronRight,
+  Globe,
+  Key,
+  Lock,
+  Mail,
+  Palette,
 
+
+  Save,
+  ShieldCheck,
+  Smartphone,
+  User,
+} from "lucide-react";
+
+// --- Validation Schemas ---
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
   lastName: z.string().optional(),
@@ -51,6 +56,7 @@ const profileSchema = z.object({
   email: z.string().email(),
   countryCode: z.string().optional(),
   mobileNumber: z.string().optional(),
+  upiId: z.string().optional(),
   dob: z.string().optional(),
   avatarUrl: z.string().url("Please enter a valid URL.").or(z.literal("")).optional(),
 });
@@ -71,526 +77,837 @@ const notifSchema = z.object({
 });
 type NotifFormValues = z.infer<typeof notifSchema>;
 
-const EVENT_GROUPS: { label: string; events: { id: NotificationEventType; label: string; description: string }[] }[] = [
-  { label: "Expenses", events: [
-    { id: "expense_added", label: "New Expense", description: "When an expense is added to your groups." },
-    { id: "expense_updated", label: "Expense Updated", description: "When an expense you are part of is edited." },
-    { id: "expense_deleted", label: "Expense Deleted", description: "When an expense is deleted." },
-  ]},
-  { label: "Payments", events: [
-    { id: "settlement_added", label: "Settlement Recorded", description: "When a settlement involving you is logged." },
-    { id: "balance_reminder", label: "Balance Reminder", description: "Periodic reminders for outstanding debts." },
-  ]},
-  { label: "Groups", events: [
-    { id: "member_added", label: "Group Invitation", description: "When you are added to a new group." },
-  ]},
-  { label: "System", events: [
-    { id: "support_reply", label: "Support Reply", description: "When an admin replies to your support ticket." },
-    { id: "broadcast_announcement", label: "Announcement", description: "General announcements from the team." },
-    { id: "broadcast_critical", label: "Critical Alert", description: "Important system alerts." },
-  ]},
-];
-
 const SECTIONS = [
-  { id: "profile", label: "Profile", icon: "Users" },
-  { id: "appearance", label: "Appearance", icon: "PieChart" },
-  { id: "notifications", label: "Notifications", icon: "Bell" },
-  { id: "security", label: "Security", icon: "ShieldCheck" },
-  { id: "groups", label: "My Groups", icon: "Users" },
-  { id: "danger", label: "Danger Zone", icon: "Delete" },
+  { id: "profile", label: "Profile & Payment", icon: User, description: "Personal details and UPI QR setup" },
+  { id: "security", label: "Security & Login", icon: Lock, description: "Password & account authentication" },
+  { id: "notifications", label: "Notifications", icon: Bell, description: "In-app, push & email alerts" },
+  { id: "appearance", label: "Appearance", icon: Palette, description: "Themes & visual preferences" },
 ] as const;
 
 type SectionId = typeof SECTIONS[number]["id"];
 
 export default function SettingsPage() {
-  const { userProfile, loading, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword, deleteAccount } = useAuth();
-  const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
+  const { userProfile, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword } = useAuth();
+  const { settings: siteSettings } = useSiteSettings();
   const { theme: currentTheme, setTheme, allThemes } = useTheme();
   const { toast } = useToast();
-  const router = useRouter();
-  const [activeSection, setActiveSection] = useState<SectionId>("profile");
+  const searchParams = useSearchParams();
+
+
+  const initialTab = (searchParams.get("tab") as SectionId) || "profile";
+  const [activeTab, setActiveTab] = useState<SectionId>(initialTab);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [browserNotifPermission, setBrowserNotifPermission] = useState("default");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
+  // Full profile loaded from API (includes upiId which Better Auth session omits)
+  const [apiProfile, setApiProfile] = useState<import("@/types").UserProfile | null>(null);
 
-  const profileForm = useForm<ProfileFormValues>({ resolver: zodResolver(profileSchema), defaultValues: { firstName: "", lastName: "", username: "", email: "", countryCode: "+91", mobileNumber: "", dob: "", avatarUrl: "" } });
-  const passwordForm = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema), defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" } });
-  const notifForm = useForm<NotifFormValues>({ resolver: zodResolver(notifSchema), defaultValues: { inAppEnabled: true, pushEnabled: true, emailEnabled: true, events: {} } });
 
-  useEffect(() => { if (typeof window !== "undefined" && "Notification" in window) setBrowserNotifPermission(Notification.permission); }, []);
+  // Country Code List Memoization to prevent infinite effect triggers
+  const countryCodesList = useMemo(() => {
+    const raw = siteSettings?.countryCodes?.length
+      ? siteSettings.countryCodes
+      : [
+          { name: 'India', code: '+91', flag: '🇮🇳' },
+          { name: 'United States', code: '+1', flag: '🇺🇸' },
+          { name: 'United Kingdom', code: '+44', flag: '🇬🇧' },
+          { name: 'Australia', code: '+61', flag: '🇦🇺' },
+          { name: 'UAE', code: '+971', flag: '🇦🇪' },
+          { name: 'Canada', code: '+1-CA', flag: '🇨🇦' },
+        ];
+    // Deduplicate by code so SelectItem values are always unique
+    const seen = new Set<string>();
+    return raw.filter((cc) => {
+      if (seen.has(cc.code)) return false;
+      seen.add(cc.code);
+      return true;
+    });
+  }, [siteSettings?.countryCodes]);
+
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      username: "",
+      email: "",
+      countryCode: "+91",
+      mobileNumber: "",
+      upiId: "",
+      dob: "",
+      avatarUrl: "",
+    },
+  });
+
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
+  });
+
+  const notifForm = useForm<NotifFormValues>({
+    resolver: zodResolver(notifSchema),
+    defaultValues: { inAppEnabled: true, pushEnabled: true, emailEnabled: true, events: {} },
+  });
+
+  // Load User Notifications Preferences
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setBrowserNotifPermission(Notification.permission);
+    }
+  }, []);
 
   useEffect(() => {
     async function loadPrefs() {
       if (!userProfile) return;
-      const prefs = await getUserNotificationPrefs(userProfile.uid);
-      notifForm.reset({ inAppEnabled: prefs.inAppEnabled, pushEnabled: prefs.pushEnabled, emailEnabled: prefs.emailEnabled, events: prefs.events as any });
+      try {
+        const prefs = await getUserNotificationPrefs(userProfile.uid);
+        notifForm.reset({
+          inAppEnabled: prefs.inAppEnabled,
+          pushEnabled: prefs.pushEnabled,
+          emailEnabled: prefs.emailEnabled,
+          events: prefs.events as any,
+        });
+      } catch (err) {
+        console.error("Failed to load user notification prefs:", err);
+      }
     }
     loadPrefs();
   }, [userProfile]);
 
+  // Sync profileForm with userProfile — runs ONLY on initial load (uid change).
+  // We load the full profile from the API because the Better Auth session
+  // deliberately omits custom fields like upiId.
   useEffect(() => {
-    if (userProfile && siteSettings.countryCodes.length > 0) {
-      const match = siteSettings.countryCodes.find(c => c.code === userProfile.countryCode) || siteSettings.countryCodes[0];
-      profileForm.reset({
-        firstName: userProfile.firstName, lastName: userProfile.lastName || "", username: userProfile.username,
-        email: userProfile.email, countryCode: `${match.name}-${match.code}`,
-        mobileNumber: userProfile.mobileNumber || "", dob: userProfile.dob ? new Date(userProfile.dob).toISOString() : "", avatarUrl: userProfile.avatarUrl || "",
-      });
-    }
-  }, [userProfile, siteSettings.countryCodes]);
+    if (!userProfile?.uid) return;
+    let cancelled = false;
+    fetch(`/api/user/profile?userId=${userProfile.uid}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        setApiProfile(profile);
+        profileForm.reset({
+          firstName: profile.firstName || "",
+          lastName: profile.lastName || "",
+          username: profile.username || "",
+          email: profile.email || "",
+          countryCode: profile.countryCode || "+91",
+          mobileNumber: profile.mobileNumber || "",
+          upiId: profile.upiId || "",
+          dob: profile.dob ? new Date(profile.dob).toISOString() : "",
+          avatarUrl: profile.avatarUrl || "",
+        });
+      })
+      .catch(console.error);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid]);
 
-  async function onProfileSubmit(values: ProfileFormValues) {
+
+  // Track Unsaved Dirty States
+  const isProfileDirty = profileForm.formState.isDirty;
+  const isPasswordDirty = passwordForm.formState.isDirty;
+  const isNotifDirty = notifForm.formState.isDirty;
+
+  // Form Submissions
+  const onProfileSubmit = async (values: ProfileFormValues) => {
     if (!userProfile) return;
     try {
-      if (values.username.toLowerCase() !== userProfile.username.toLowerCase()) {
-        const taken = await isUsernameTaken(values.username, userProfile.uid);
-        if (taken) { profileForm.setError("username", { type: "manual", message: "This username is already taken." }); return; }
-      }
-      // Fix: always take the last segment after '-' to handle country names with hyphens
-      const parts = values.countryCode?.split("-") ?? [];
-      const countryCodeValue = parts.length > 1 ? parts[parts.length - 1] : values.countryCode;
-      await updateUser(userProfile.uid, { ...values, countryCode: countryCodeValue || undefined, lastName: values.lastName || undefined, mobileNumber: values.mobileNumber || undefined, dob: values.dob || undefined, avatarUrl: values.avatarUrl || undefined });
-      toast({ title: "Profile Updated", description: "Your changes have been saved." });
-      router.refresh();
-    } catch (e) {
-      toast({ variant: "destructive", title: "Update Failed", description: e instanceof Error ? e.message : "An unknown error occurred." });
-    }
-  }
+      const updated = await updateUser(userProfile.uid, {
+        firstName: values.firstName,
+        lastName: values.lastName || undefined,
+        username: values.username,
+        email: values.email,
+        countryCode: values.countryCode || undefined,
+        mobileNumber: values.mobileNumber || undefined,
+        upiId: values.upiId ?? "",   // send "" to allow clearing; service maps "" → null
+        dob: values.dob || undefined,
+        avatarUrl: values.avatarUrl || undefined,
+      });
 
-  async function onPasswordSubmit(values: PasswordFormValues) {
+      // Keep apiProfile in sync so the uid-only useEffect doesn't re-fetch stale data
+      setApiProfile(updated);
+
+      profileForm.reset({
+        firstName: updated.firstName || "",
+        lastName: updated.lastName || "",
+        username: updated.username || "",
+        email: updated.email || "",
+        countryCode: updated.countryCode || "+91",
+        mobileNumber: updated.mobileNumber || "",
+        upiId: updated.upiId || "",
+        dob: updated.dob ? new Date(updated.dob).toISOString() : "",
+        avatarUrl: updated.avatarUrl || "",
+      });
+
+      toast({
+        title: "Profile & Payment Details Saved",
+        description: "Your changes have been updated successfully.",
+      });
+
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: e.message || "An unknown error occurred.",
+      });
+    }
+  };
+
+
+  const onPasswordSubmit = async (values: PasswordFormValues) => {
     try {
       await updateUserPassword(values.newPassword, hasPassword ? values.currentPassword : undefined);
-      toast({ title: "Password Updated" });
+      toast({ title: "Password Updated Successfully" });
       passwordForm.reset();
     } catch (e: any) {
       if (e.message?.includes("wrong") || e.message?.includes("password") || e.message?.includes("MISMATCH")) {
         passwordForm.setError("currentPassword", { type: "manual", message: "Incorrect current password." });
       }
-      toast({ variant: "destructive", title: "Update Failed", description: e instanceof Error ? e.message : "An unknown error occurred." });
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: e.message || "An unknown error occurred.",
+      });
     }
-  }
+  };
 
-  async function onNotifSubmit(values: NotifFormValues) {
+  const onNotifSubmit = async (values: NotifFormValues) => {
     if (!userProfile) return;
     try {
       await updateUserNotificationPrefs(userProfile.uid, values as unknown as UserNotificationPrefsDocument);
-      toast({ title: "Notification settings saved." });
-    } catch { toast({ variant: "destructive", title: "Update Failed" }); }
-  }
+      notifForm.reset(values);
+      toast({ title: "Notification Preferences Saved" });
+    } catch {
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not save notification preferences." });
+    }
+  };
 
   const handleRequestPermission = async () => {
     if (!userProfile) return;
     const ok = await requestPushPermission(userProfile.uid);
     setBrowserNotifPermission(ok ? "granted" : "denied");
-    toast(ok ? { title: "Push Notifications Enabled" } : { variant: "destructive", title: "Permission Denied", description: "Enable notifications in your browser settings." });
+    toast(
+      ok
+        ? { title: "Push Notifications Enabled" }
+        : { variant: "destructive", title: "Permission Denied", description: "Enable notifications in browser settings." }
+    );
   };
 
   const handleConnectGoogle = async () => {
     setIsGoogleLoading(true);
-    try { await linkWithGoogle(); toast({ title: "Google Account Connected" }); }
-    catch (e) { toast({ variant: "destructive", title: "Connection Failed", description: e instanceof Error ? e.message : "An error occurred." }); }
-    finally { setIsGoogleLoading(false); }
+    try {
+      await linkWithGoogle();
+      toast({ title: "Google Account Connected" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Connection Failed", description: e.message || "An error occurred." });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const handleDisconnectGoogle = async () => {
     setIsGoogleLoading(true);
-    try { await unlinkFromGoogle(); toast({ title: "Google Account Disconnected" }); }
-    catch (e) { toast({ variant: "destructive", title: "Failed", description: e instanceof Error ? e.message : "An error occurred." }); }
-    finally { setIsGoogleLoading(false); }
+    try {
+      await unlinkFromGoogle();
+      toast({ title: "Google Account Disconnected" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed", description: e.message || "An error occurred." });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const selectableThemes = allThemes.filter(t => siteSettings.userSelectableThemeIds?.includes(t.id));
 
-  const isProfileDirty = Object.keys(profileForm.formState.dirtyFields).length > 0;
-  const isPasswordDirty = Object.keys(passwordForm.formState.dirtyFields).length > 0;
-  const isNotifDirty = Object.keys(notifForm.formState.dirtyFields).length > 0;
-  
-  const hasUnsavedChanges = isProfileDirty || isPasswordDirty || isNotifDirty;
-
-  const handleSaveAll = async () => {
-      if (isProfileDirty) await profileForm.handleSubmit(onProfileSubmit)();
-      if (isPasswordDirty) await passwordForm.handleSubmit(onPasswordSubmit)();
-      if (isNotifDirty) await notifForm.handleSubmit(onNotifSubmit)();
-  };
-
-  const handleDeleteAccount = async () => {
-    setDeleteError("");
-    setIsDeletingAccount(true);
-    try {
-      await deleteAccount(hasPassword ? deletePassword : undefined);
-      toast({ title: "Account Deleted", description: "Your account has been permanently deleted." });
-      router.push("/auth?mode=login");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "An error occurred.";
-      if (msg.toLowerCase().includes("wrong-password") || msg.toLowerCase().includes("invalid-credential")) {
-        setDeleteError("Incorrect password. Please try again.");
-      } else {
-        setDeleteError(msg);
-      }
-    } finally {
-      setIsDeletingAccount(false);
-    }
-  };
-
-  if (loading || !userProfile || siteSettingsLoading) {
-    return <div className="space-y-4 max-w-4xl mx-auto p-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-64 w-full" /><Skeleton className="h-48 w-full" /></div>;
-  }
-
-  const renderSection = () => {
-    switch (activeSection) {
-      case "profile": return (
-        <Form {...profileForm}>
-          <form onSubmit={profileForm.handleSubmit(onProfileSubmit)}>
-            <Card>
-              <CardHeader><CardTitle>Profile Information</CardTitle><CardDescription>Update your personal details and avatar.</CardDescription></CardHeader>
-              <CardContent className="space-y-5">
-                <div className="flex flex-col sm:flex-row items-start gap-5">
-                  <Avatar className="h-20 w-20 shrink-0">
-                    <AvatarImage src={profileForm.watch("avatarUrl") || userProfile.avatarUrl} />
-                    <AvatarFallback className="text-2xl">{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
-                  </Avatar>
-                  <div className="w-full space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <FormField control={profileForm.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={profileForm.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    </div>
-                    <FormField control={profileForm.control} name="username" render={({ field }) => (<FormItem><FormLabel>Username</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  </div>
-                </div>
-                <FormField control={profileForm.control} name="avatarUrl" render={({ field }) => (<FormItem><FormLabel>Avatar URL</FormLabel><FormControl><Input placeholder="https://example.com/avatar.png" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <FormField control={profileForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} disabled /></FormControl><FormMessage /></FormItem>)} />
-                  <FormItem>
-                    <FormLabel>Mobile Number</FormLabel>
-                    <div className="flex gap-2">
-                      <FormField control={profileForm.control} name="countryCode" render={({ field }) => (
-                        <FormItem className="w-[100px] sm:w-[120px] shrink-0">
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Code" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {siteSettings.countryCodes.map(cc => (<SelectItem key={`${cc.name}-${cc.code}`} value={`${cc.name}-${cc.code}`}>{cc.flag} {cc.code}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={profileForm.control} name="mobileNumber" render={({ field }) => (<FormItem className="flex-1"><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    </div>
-                  </FormItem>
-                </div>
-                <FormField control={profileForm.control} name="dob" render={({ field }) => (
-                  <FormItem className="flex flex-col"><FormLabel className="mb-1">Date of Birth</FormLabel>
-                    <Popover><PopoverTrigger asChild><FormControl>
-                      <Button variant="outline" className={cn("w-full sm:w-64 justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
-                        <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} selected={field.value ? new Date(field.value) : undefined} onSelect={d => field.onChange(d?.toISOString())} disabled={d => d > new Date() || d < new Date("1900-01-01")} initialFocus />
-                    </PopoverContent></Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </CardContent>
-              <CardFooter className="border-t px-6 py-4 flex justify-end">
-                <Button type="submit" disabled={profileForm.formState.isSubmitting}>{profileForm.formState.isSubmitting ? "Saving..." : "Save Profile"}</Button>
-              </CardFooter>
-            </Card>
-          </form>
-        </Form>
-      );
-
-      case "appearance": return (
-        <Card>
-          <CardHeader><CardTitle>Appearance</CardTitle><CardDescription>Choose your preferred theme.</CardDescription></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {selectableThemes.map(theme => (
-                <div key={theme.id} className="space-y-2 cursor-pointer" onClick={() => setTheme(theme.id)}>
-                  <div className={cn("aspect-video rounded-md border-2 p-2 flex items-center justify-center transition-all", currentTheme === theme.id ? "border-primary ring-2 ring-primary" : "border-muted hover:border-primary/50")}>
-                    <div className="flex gap-1">
-                      <div className="h-8 w-4 rounded-sm" style={{ backgroundColor: `hsl(${theme.primary})` }} />
-                      <div className="h-8 w-4 rounded-sm" style={{ backgroundColor: `hsl(${theme.secondary})` }} />
-                      <div className="h-8 w-4 rounded-sm" style={{ backgroundColor: `hsl(${theme.accent})` }} />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-1 text-sm font-medium">
-                    {currentTheme === theme.id && <Check className="h-3.5 w-3.5 text-primary" />}
-                    <span>{theme.name}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      );
-
-      case "notifications": return (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Settings</CardTitle>
-              <CardDescription>Your account email and where system emails come from.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EmailManagementSection userProfile={userProfile} />
-            </CardContent>
-          </Card>
-
-          <Form {...notifForm}>
-            <form onSubmit={notifForm.handleSubmit(onNotifSubmit)}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notification Preferences</CardTitle>
-                  <CardDescription>Control which channels and events alert you.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Browser push banner */}
-                  <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-4 py-3 gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted"><Icons.Bell className="h-4 w-4" /></div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">Browser Push</p>
-                        <p className="text-xs text-muted-foreground truncate">Real-time alerts on this device</p>
-                      </div>
-                    </div>
-                    {browserNotifPermission === "default" && <Button size="sm" type="button" onClick={handleRequestPermission} className="shrink-0 text-xs">Enable</Button>}
-                    {browserNotifPermission === "granted" && <Badge className="shrink-0 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-xs">Active</Badge>}
-                    {browserNotifPermission === "denied" && <Badge variant="destructive" className="shrink-0 text-xs">Blocked</Badge>}
-                  </div>
-
-                  {/* Master toggles */}
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Master Switches</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {([["inAppEnabled", "In-App"], ["pushEnabled", "Push"], ["emailEnabled", "Email"]] as const).map(([name, label]) => (
-                        <FormField key={name} control={notifForm.control} name={name} render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-xl border p-3 bg-muted/20">
-                            <FormLabel className="text-sm font-medium cursor-pointer">{label}</FormLabel>
-                            <FormControl><Switch checked={!!field.value} onCheckedChange={field.onChange} /></FormControl>
-                          </FormItem>
-                        )} />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Per-event sections */}
-                  <div className="space-y-6">
-                    {EVENT_GROUPS.map(group => (
-                      <div key={group.label}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{group.label}</span>
-                          <div className="h-px flex-1 bg-border" />
-                        </div>
-                        <div className="rounded-xl border overflow-hidden divide-y">
-                          {/* Desktop Header */}
-                          <div className="hidden md:grid grid-cols-[1fr_auto] items-center px-4 py-2 bg-muted/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            <span>Event</span>
-                            <div className="grid grid-cols-3 gap-8 text-center w-[240px]">
-                              <span>In-App</span>
-                              <span>Push</span>
-                              <span>Email</span>
-                            </div>
-                          </div>
-
-                          {group.events.map(ev => (
-                            <div key={ev.id} className="p-4 hover:bg-muted/5 transition-colors md:grid md:grid-cols-[1fr_auto] md:items-center md:gap-4">
-                              <div className="mb-3 md:mb-0">
-                                <p className="text-sm font-medium">{ev.label}</p>
-                                <p className="text-xs text-muted-foreground">{ev.description}</p>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 md:grid md:grid-cols-3 md:gap-8 md:w-[240px] md:justify-items-center">
-                                {(["inApp", "push", "email"] as const).map(channel => {
-                                  const masterKey = channel === "inApp" ? "inAppEnabled" : channel === "push" ? "pushEnabled" : "emailEnabled";
-                                  const masterOn = notifForm.watch(masterKey);
-                                  return (
-                                    <FormField key={channel} control={notifForm.control} name={`events.${ev.id}.${channel}`} render={({ field }) => (
-                                      <FormItem className="flex items-center gap-2 md:gap-0 m-0">
-                                        <FormLabel className={cn("text-xs font-medium cursor-pointer md:hidden", !masterOn && "opacity-40")}>
-                                          {channel === "inApp" ? "In-App" : channel === "push" ? "Push" : "Email"}
-                                        </FormLabel>
-                                        <FormControl>
-                                          <Switch checked={!!field.value} onCheckedChange={field.onChange} disabled={!masterOn} className="scale-90" />
-                                        </FormControl>
-                                      </FormItem>
-                                    )} />
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t px-6 py-4 flex justify-end">
-                  <Button type="submit" disabled={notifForm.formState.isSubmitting}>{notifForm.formState.isSubmitting ? "Saving..." : "Save Preferences"}</Button>
-                </CardFooter>
-              </Card>
-            </form>
-          </Form>
-        </div>
-      );
-
-      case "security": return (
-        <div className="space-y-4">
-          <Card>
-            <Form {...passwordForm}>
-              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
-                <CardHeader><CardTitle>Password</CardTitle><CardDescription>{hasPassword ? "Change your current password." : "Set a password for email/password sign-in."}</CardDescription></CardHeader>
-                <CardContent className="space-y-4">
-                  {hasPassword && <FormField control={passwordForm.control} name="currentPassword" render={({ field }) => (<FormItem><FormLabel>Current Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />}
-                  <FormField control={passwordForm.control} name="newPassword" render={({ field }) => (<FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={passwordForm.control} name="confirmPassword" render={({ field }) => (<FormItem><FormLabel>Confirm Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                </CardContent>
-                <CardFooter className="border-t px-6 py-4 flex justify-end">
-                  <Button type="submit" disabled={passwordForm.formState.isSubmitting}>{hasPassword ? "Change Password" : "Set Password"}</Button>
-                </CardFooter>
-              </form>
-            </Form>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>Linked Accounts</CardTitle><CardDescription>Connect third-party accounts for easier sign-in.</CardDescription></CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-3 border rounded-xl">
-                <div className="flex items-center gap-3"><Icons.Google className="h-5 w-5" /><p className="font-medium text-sm">Google</p></div>
-                {isGoogleLinked
-                  ? <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">Connected</span><Button variant="outline" size="sm" onClick={handleDisconnectGoogle} disabled={isGoogleLoading}>Disconnect</Button></div>
-                  : <Button variant="secondary" size="sm" onClick={handleConnectGoogle} disabled={isGoogleLoading}>Connect</Button>}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      );
-
-      case "groups": return (
-        <Card>
-          <CardHeader><CardTitle>My Groups</CardTitle><CardDescription>Groups you are a member of.</CardDescription></CardHeader>
-          <CardContent><UserGroupsList userId={userProfile.uid} /></CardContent>
-        </Card>
-      );
-
-      case "danger": return (
-        <Card className="border-destructive/50">
-          <CardHeader><CardTitle className="text-destructive flex items-center gap-2"><Icons.Delete className="h-5 w-5" />Danger Zone</CardTitle><CardDescription>Permanent and irreversible actions.</CardDescription></CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-              <div>
-                <p className="font-medium text-sm">Delete Account</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Permanently removes your profile. You will be removed from all groups.</p>
-              </div>
-              <Button variant="destructive" className="shrink-0" onClick={() => { setDeletePassword(""); setDeleteError(""); setShowDeleteDialog(true); }}>
-                Delete My Account
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-  };
-
   return (
-    <div className="max-w-5xl mx-auto w-full pb-20 md:pb-6 relative">
-      {/* Delete Account Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive flex items-center gap-2">
-              <Icons.Delete className="h-5 w-5" /> Delete Account
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <span className="block">
-                This is permanent and cannot be undone. Your profile will be deleted and you will be removed from all groups.
-              </span>
-              {hasPassword && (
-                <span className="block">
-                  Please enter your password to confirm.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {hasPassword && (
-            <div className="py-2 space-y-1">
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                value={deletePassword}
-                onChange={e => { setDeletePassword(e.target.value); setDeleteError(""); }}
-                onKeyDown={e => { if (e.key === "Enter" && deletePassword) handleDeleteAccount(); }}
-                autoFocus
-              />
-              {deleteError && <p className="text-xs text-destructive">{deleteError}</p>}
-            </div>
-          )}
-          {!hasPassword && deleteError && <p className="text-xs text-destructive pb-2">{deleteError}</p>}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={e => { e.preventDefault(); handleDeleteAccount(); }}
-              disabled={isDeletingAccount || (hasPassword ? !deletePassword : false)}
-            >
-              {isDeletingAccount ? "Deleting..." : "Yes, Delete My Account"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-4 pb-4 mb-6 border-b flex items-center justify-between">
+    <div className="container max-w-6xl py-6 md:py-10 space-y-6">
+      {/* ── Page Title & Subtitle ─────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-5">
         <div>
-          <h1 className="text-2xl font-bold font-headline tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground hidden sm:block">Manage your account preferences.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Settings & Preferences</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your account details, payment UPI addresses, security, and app customization.
+          </p>
         </div>
-        
-        {hasUnsavedChanges && (
-            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                <span className="text-xs font-medium text-amber-500 hidden sm:inline-flex items-center gap-1.5 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    Unsaved changes
-                </span>
-                <Button size="sm" onClick={handleSaveAll} className="shadow-sm">Save All</Button>
-            </div>
-        )}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Sidebar — desktop */}
-        <nav className="hidden md:flex flex-col w-48 shrink-0 gap-1">
-          {SECTIONS.map(s => {
-            const Icon = Icons[s.icon as keyof typeof Icons] as any;
-            return (
-              <button key={s.id} onClick={() => setActiveSection(s.id)}
-                className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left",
-                  activeSection === s.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  s.id === "danger" && activeSection !== s.id && "text-destructive/70 hover:text-destructive hover:bg-destructive/10"
-                )}>
-                <Icon className="h-4 w-4 shrink-0" />
-                {s.label}
-              </button>
-            );
-          })}
-        </nav>
+      {/* ── Responsive Layout: Left Sidebar (Desktop) / Top Scrollbar (Mobile) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+        {/* Navigation Tabs */}
+        <div className="md:col-span-4 lg:col-span-3">
+          {/* Mobile Top Horizontal Scroll Bar */}
+          <div className="flex md:hidden overflow-x-auto gap-2 pb-2 scrollbar-none snap-x">
+            {SECTIONS.map(section => {
+              const Icon = section.icon;
+              const isSectionDirty =
+                (section.id === "profile" && isProfileDirty) ||
+                (section.id === "security" && isPasswordDirty) ||
+                (section.id === "notifications" && isNotifDirty);
 
-        {/* Pill tabs — mobile */}
-        <div className="md:hidden flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-          {SECTIONS.map(s => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)}
-              className={cn("shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                activeSection === s.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80",
-                s.id === "danger" && activeSection !== s.id && "text-destructive bg-destructive/10"
-              )}>
-              {s.label}
-            </button>
-          ))}
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveTab(section.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all snap-start border",
+                    activeTab === section.id
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-card/60 hover:bg-card text-muted-foreground border-border/40"
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{section.label}</span>
+                  {isSectionDirty && (
+                    <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" title="Unsaved changes" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop Left Vertical Nav */}
+          <div className="hidden md:flex flex-col space-y-1.5 p-2 rounded-2xl bg-card/40 border border-border/40 backdrop-blur-md sticky top-20">
+            {SECTIONS.map(section => {
+              const Icon = section.icon;
+              const isSectionDirty =
+                (section.id === "profile" && isProfileDirty) ||
+                (section.id === "security" && isPasswordDirty) ||
+                (section.id === "notifications" && isNotifDirty);
+
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveTab(section.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-xl text-left transition-all duration-200 group text-sm font-medium",
+                    activeTab === section.id
+                      ? "bg-primary text-primary-foreground shadow-md font-semibold"
+                      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={cn(
+                        "p-2 rounded-lg transition-colors",
+                        activeTab === section.id ? "bg-primary-foreground/10 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="truncate">
+                      <p className="leading-none">{section.label}</p>
+                      <p className={cn("text-[11px] mt-1 truncate", activeTab === section.id ? "text-primary-foreground/80" : "text-muted-foreground/70")}>
+                        {section.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isSectionDirty ? (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[10px] px-1.5 py-0.5 font-bold gap-1 shrink-0">
+                      <AlertCircle className="h-3 w-3" />
+                      !
+                    </Badge>
+                  ) : (
+                    <ChevronRight className={cn("h-4 w-4 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity", activeTab === section.id && "opacity-100")} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">{renderSection()}</div>
+        {/* Dynamic Section Content Pane */}
+        <div className="md:col-span-8 lg:col-span-9 space-y-6">
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {/* TAB 1: PROFILE & PAYMENT DETAILS                                  */}
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {activeTab === "profile" && (
+            <Card className="border-border/40 bg-card/60 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader className="border-b border-border/30 bg-muted/20 px-6 py-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold flex items-center gap-2">
+                      Profile & Payment Information
+                      {isProfileDirty && (
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs gap-1">
+                          <AlertCircle className="h-3 w-3" /> Unsaved
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>Update your personal info and UPI address for Quick-Settle QR codes.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-6">
+                <Form {...profileForm}>
+                  <form id="profile-form" onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                    {/* Avatar Display */}
+                    <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border/30">
+                      <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-inner">
+                        <AvatarImage src={profileForm.watch("avatarUrl") || userProfile?.avatarUrl} />
+                        <AvatarFallback className="text-lg font-bold">
+                          {getInitials(profileForm.watch("firstName"), profileForm.watch("lastName"))}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 w-full space-y-1.5 text-center sm:text-left">
+                        <p className="text-sm font-semibold">{getFullName(profileForm.watch("firstName"), profileForm.watch("lastName")) || "User Profile"}</p>
+                        <FormField
+                          control={profileForm.control}
+                          name="avatarUrl"
+                          render={({ field }) => (
+                            <FormItem className="w-full">
+                              <FormControl>
+                                <Input placeholder="Paste Image URL (https://...)" {...field} className="h-9 text-xs" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Name Fields Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={profileForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-semibold">First Name *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="First Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={profileForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-semibold">Last Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Last Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Username & Email */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={profileForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-semibold">Username *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="username" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={profileForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-semibold">Email Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="email@domain.com" {...field} disabled className="bg-muted/40 cursor-not-allowed" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Mobile Number & Clean Country Code */}
+                    <div className="space-y-1.5">
+                      <FormLabel className="text-xs font-semibold">Mobile Phone Number</FormLabel>
+                      <div className="flex gap-2">
+                        <FormField
+                          control={profileForm.control}
+                          name="countryCode"
+                          render={({ field }) => (
+                            <FormItem className="w-[110px] shrink-0">
+                              <Select onValueChange={field.onChange} value={field.value || "+91"}>
+                                <FormControl>
+                                  <SelectTrigger className="h-10 text-xs">
+                                    <SelectValue placeholder="Code" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {countryCodesList.map((cc) => (
+                                    <SelectItem key={`${cc.name}-${cc.code}`} value={cc.code}>
+                                      {cc.flag} {cc.code} ({cc.name})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={profileForm.control}
+                          name="mobileNumber"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormControl>
+                                <Input placeholder="10-digit mobile number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+
+                    {/* UPI ID */}
+                    <FormField
+                      control={profileForm.control}
+                      name="upiId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-semibold">UPI ID (VPA)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. username@okicici or 9876543210@paytm" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+
+                    {/* Date of Birth */}
+                    <FormField
+                      control={profileForm.control}
+                      name="dob"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="text-xs font-semibold">Date of Birth</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn("w-full sm:w-64 justify-start text-left font-normal h-10", !field.value && "text-muted-foreground")}
+                                >
+                                  {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                  <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                captionLayout="dropdown-buttons"
+                                fromYear={1900}
+                                toYear={new Date().getFullYear()}
+                                selected={field.value ? new Date(field.value) : undefined}
+                                onSelect={(d) => field.onChange(d?.toISOString())}
+                                disabled={(d) => d > new Date() || d < new Date("1900-01-01")}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </form>
+                </Form>
+              </CardContent>
+
+              {/* Card Footer with Section Save Action */}
+              <CardFooter className="border-t border-border/30 bg-muted/20 px-6 py-4 flex items-center justify-between">
+                <div className="text-xs text-muted-foreground">
+                  {isProfileDirty ? (
+                    <span className="text-amber-500 font-semibold flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" /> You have unsaved changes in Profile
+                    </span>
+                  ) : (
+                    "Profile is up to date."
+                  )}
+                </div>
+                <Button
+                  type="submit"
+                  form="profile-form"
+                  disabled={!isProfileDirty || profileForm.formState.isSubmitting}
+                  className={cn(
+                    "rounded-xl gap-2 font-semibold text-xs transition-all",
+                    isProfileDirty ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md" : ""
+                  )}
+                >
+                  {profileForm.formState.isSubmitting ? (
+                    <Icons.AppLogo className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save Profile & Payment
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {/* TAB 2: SECURITY & LOGIN                                           */}
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {activeTab === "security" && (
+            <div className="space-y-6">
+              {/* Change Password Card */}
+              <Card className="border-border/40 bg-card/60 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden">
+                <CardHeader className="border-b border-border/30 bg-muted/20 px-6 py-5">
+                  <CardTitle className="text-xl font-bold flex items-center gap-2">
+                    Security & Password
+                    {isPasswordDirty && (
+                      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs gap-1">
+                        <AlertCircle className="h-3 w-3" /> Unsaved
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>Manage your authentication password and account credentials.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <Form {...passwordForm}>
+                    <form id="password-form" onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                      {hasPassword && (
+                        <FormField
+                          control={passwordForm.control}
+                          name="currentPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-semibold">Current Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="••••••••" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={passwordForm.control}
+                          name="newPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-semibold">New Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="At least 6 characters" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-semibold">Confirm New Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" placeholder="Confirm password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+                <CardFooter className="border-t border-border/30 bg-muted/20 px-6 py-4 flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">
+                    {isPasswordDirty ? (
+                      <span className="text-amber-500 font-semibold flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5" /> Unsaved password changes
+                      </span>
+                    ) : (
+                      "Password meets security requirements."
+                    )}
+                  </div>
+                  <Button
+                    type="submit"
+                    form="password-form"
+                    disabled={!isPasswordDirty || passwordForm.formState.isSubmitting}
+                    className="rounded-xl gap-2 font-semibold text-xs"
+                  >
+                    <Key className="h-4 w-4" />
+                    Update Password
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              {/* Email Management Section */}
+              {userProfile && <EmailManagementSection userProfile={userProfile} />}
+            </div>
+          )}
+
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {/* TAB 3: NOTIFICATION PREFERENCES                                   */}
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {activeTab === "notifications" && (
+            <Card className="border-border/40 bg-card/60 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader className="border-b border-border/30 bg-muted/20 px-6 py-5">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  Notification Preferences
+                  {isNotifDirty && (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs gap-1">
+                      <AlertCircle className="h-3 w-3" /> Unsaved
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>Choose how you receive expense, payment, and balance alerts.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                {/* Browser Push Status */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-muted/30 border border-border/30">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold flex items-center gap-2">
+                      <Smartphone className="h-4 w-4 text-primary" /> Browser Push Notifications
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Status: <strong className="capitalize text-foreground">{browserNotifPermission}</strong>
+                    </p>
+                  </div>
+                  {browserNotifPermission !== "granted" && (
+                    <Button onClick={handleRequestPermission} variant="outline" size="sm" className="rounded-xl text-xs">
+                      Enable Push Notifications
+                    </Button>
+                  )}
+                </div>
+
+                {/* Master Channels */}
+                <Form {...notifForm}>
+                  <form id="notif-form" onSubmit={notifForm.handleSubmit(onNotifSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <FormField
+                        control={notifForm.control}
+                        name="inAppEnabled"
+                        render={({ field }) => (
+                          <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/40 bg-background/50">
+                            <div>
+                              <p className="text-xs font-semibold">In-App Center</p>
+                              <p className="text-[11px] text-muted-foreground">Notification bell</p>
+                            </div>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </div>
+                        )}
+                      />
+
+                      <FormField
+                        control={notifForm.control}
+                        name="pushEnabled"
+                        render={({ field }) => (
+                          <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/40 bg-background/50">
+                            <div>
+                              <p className="text-xs font-semibold">Push Alerts</p>
+                              <p className="text-[11px] text-muted-foreground">Device alerts</p>
+                            </div>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </div>
+                        )}
+                      />
+
+                      <FormField
+                        control={notifForm.control}
+                        name="emailEnabled"
+                        render={({ field }) => (
+                          <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/40 bg-background/50">
+                            <div>
+                              <p className="text-xs font-semibold">Email Alerts</p>
+                              <p className="text-[11px] text-muted-foreground">Inbox messages</p>
+                            </div>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </div>
+                        )}
+                      />
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+              <CardFooter className="border-t border-border/30 bg-muted/20 px-6 py-4 flex items-center justify-between">
+                <div className="text-xs text-muted-foreground">
+                  {isNotifDirty ? (
+                    <span className="text-amber-500 font-semibold flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" /> Unsaved notification settings
+                    </span>
+                  ) : (
+                    "Preferences updated."
+                  )}
+                </div>
+                <Button
+                  type="submit"
+                  form="notif-form"
+                  disabled={!isNotifDirty || notifForm.formState.isSubmitting}
+                  className="rounded-xl gap-2 font-semibold text-xs"
+                >
+                  <Save className="h-4 w-4" />
+                  Save Preferences
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {/* TAB 4: APPEARANCE & THEME CUSTOMIZATION                          */}
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {activeTab === "appearance" && (
+            <Card className="border-border/40 bg-card/60 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader className="border-b border-border/30 bg-muted/20 px-6 py-5">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  Theme & Visual Customization
+                </CardTitle>
+                <CardDescription>Select your active application theme and color palette.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {selectableThemes.map((t) => {
+                    const isActive = currentTheme === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setTheme(t.id)}
+                        className={cn(
+                          "flex flex-col text-left p-4 rounded-xl border transition-all duration-200 group relative",
+                          isActive
+                            ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
+                            : "border-border/40 hover:border-border hover:bg-muted/40"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-bold text-sm">{t.name}</p>
+                          {isActive && (
+                            <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.2">
+                              Active
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-auto pt-4">
+                          <div className="h-4 w-4 rounded-full border shadow-sm" style={{ backgroundColor: `hsl(${t.primary})` }} />
+                          <div className="h-4 w-4 rounded-full border shadow-sm" style={{ backgroundColor: `hsl(${t.accent})` }} />
+                          <div className="h-4 w-4 rounded-full border shadow-sm" style={{ backgroundColor: `hsl(${t.secondary})` }} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

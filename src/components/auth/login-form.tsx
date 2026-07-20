@@ -120,9 +120,9 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="text-sm font-medium">Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder={authPageSettings?.loginEmailPlaceholder || "you@example.com"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
+                  <Input type="email" placeholder={authPageSettings?.loginEmailPlaceholder || "you@example.com"} {...field} className="h-11 rounded-xl bg-muted/20 border-border/30 px-4 text-sm font-normal focus-visible:ring-primary focus-visible:border-primary transition-all" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -134,7 +134,7 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
             render={({ field }) => (
               <FormItem>
                  <div className="flex items-center justify-between">
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-sm font-medium">Password</FormLabel>
                     <Link
                         href="/auth/forgot-password"
                         className="text-sm font-medium text-primary hover:underline"
@@ -143,13 +143,13 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
                     </Link>
                 </div>
                 <FormControl>
-                  <Input type="password" placeholder={authPageSettings?.loginPasswordPlaceholder || "••••••••"} {...field} className="border-x-0 border-t-0 border-b-2 rounded-none bg-transparent px-1 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 transition focus-visible:shadow-none" />
+                  <Input type="password" placeholder={authPageSettings?.loginPasswordPlaceholder || "••••••••"} {...field} className="h-11 rounded-xl bg-muted/20 border-border/30 px-4 text-sm font-normal focus-visible:ring-primary focus-visible:border-primary transition-all" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full bg-secondary-foreground text-secondary hover:bg-secondary-foreground/90" disabled={form.formState.isSubmitting || isGoogleLoading}>
+          <Button type="submit" className="w-full h-11 rounded-xl text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" disabled={form.formState.isSubmitting || isGoogleLoading}>
             {form.formState.isSubmitting ? "Logging in..." : "Sign In"}
           </Button>
         </form>
@@ -157,7 +157,7 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
+          <span className="w-full border-t border-border/30" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-card px-2 text-muted-foreground">
@@ -165,7 +165,7 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
           </span>
         </div>
       </div>
-      <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={form.formState.isSubmitting || isGoogleLoading}>
+      <Button variant="outline" className="w-full h-11 rounded-xl text-sm font-medium border-border/30 bg-muted/10 hover:bg-muted/30 transition-colors" onClick={handleGoogleLogin} disabled={form.formState.isSubmitting || isGoogleLoading}>
         {isGoogleLoading ? (
           <Icons.AppLogo className="mr-2 h-4 w-4 animate-spin" />
         ) : (

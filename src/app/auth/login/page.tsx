@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/auth/login-form";
+import { AuthCard } from "@/components/auth/auth-card";
 import type { Metadata } from 'next';
 import { getSiteSettings } from '@/lib/mock-data';
 
@@ -12,5 +12,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function LoginPage() {
   const settings = await getSiteSettings();
-  return <LoginForm authPageSettings={settings.authPage} appName={settings.appName} />;
+  return (
+    <AuthCard
+      initialMode="login"
+      authPageSettings={settings.authPage}
+      appName={settings.appName}
+    />
+  );
 }

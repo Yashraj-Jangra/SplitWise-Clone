@@ -53,11 +53,12 @@ export function NotificationItem({ notification, onClick, onMarkRead }: Notifica
       bgColor = 'bg-purple-500/10';
       if (!notification.isRead) borderClass = 'border-l-purple-500';
       break;
-    case 'balance_reminder':
+    case 'payment_reminder':
+    case 'payment_confirmation_request':
       Icon = Icons.Wallet;
-      iconColor = 'text-yellow-500';
-      bgColor = 'bg-yellow-500/10';
-      if (!notification.isRead) borderClass = 'border-l-yellow-500';
+      iconColor = 'text-emerald-500';
+      bgColor = 'bg-emerald-500/10';
+      if (!notification.isRead) borderClass = 'border-l-emerald-500';
       break;
     case 'support_reply':
       Icon = Icons.Help;

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -147,6 +146,7 @@ export function DynamicSpendingChart({ expenses }: DynamicSpendingChartProps) {
           </div>
         ) : (
           <>
+            {/* Left Column: Donut Pie Chart */}
             <div className="w-full sm:w-1/2 flex-shrink-0 relative">
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <ResponsiveContainer>
@@ -188,9 +188,11 @@ export function DynamicSpendingChart({ expenses }: DynamicSpendingChartProps) {
                     )}
                 </div>
             </div>
-            <div className="w-full sm:w-1/2 h-full flex flex-col">
-                <ScrollArea className="flex-1 pr-4 -mr-4">
-                    <div className="space-y-2">
+
+            {/* Right Column: Scrollable Category List with Sticky Total Spent Footer */}
+            <div className="w-full sm:w-1/2 h-[260px] flex flex-col justify-between overflow-hidden">
+                <ScrollArea className="flex-1 pr-3 max-h-[180px] overflow-y-auto">
+                    <div className="space-y-2 pr-1">
                         {expensesByCategory.map((category, index) => {
                         const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;
                         const isAnimating = isAnimationEnabled && !isHovered && index === animationIndex;
@@ -207,12 +209,12 @@ export function DynamicSpendingChart({ expenses }: DynamicSpendingChartProps) {
                             >
                             <div className="flex items-center gap-2">
                                 <span
-                                className="h-2 w-2 rounded-full"
+                                className="h-2 w-2 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: chartConfig[category.name]?.color }}
                                 />
-                                <span className="text-sm text-muted-foreground">{category.name}</span>
+                                <span className="text-sm text-muted-foreground line-clamp-1">{category.name}</span>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex-shrink-0">
                                 <p className="text-sm font-semibold">{CURRENCY_SYMBOL}{category.total.toFixed(2)}</p>
                                 <p className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</p>
                             </div>
@@ -221,10 +223,11 @@ export function DynamicSpendingChart({ expenses }: DynamicSpendingChartProps) {
                         })}
                     </div>
                 </ScrollArea>
-                <Separator className="my-2" />
-                <div className="flex flex-col items-center pt-2">
-                    <p className="text-sm text-muted-foreground">Total Spent</p>
-                    <p className="text-2xl font-bold">{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+
+                {/* Sticky Total Spent Footer */}
+                <div className="flex-shrink-0 pt-2 border-t border-border bg-card mt-auto z-10 text-center">
+                    <p className="text-xs text-muted-foreground">Total Spent</p>
+                    <p className="text-xl font-bold">{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
                 </div>
             </div>
           </>

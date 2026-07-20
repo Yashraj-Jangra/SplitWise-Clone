@@ -42,7 +42,7 @@ export default async function LandingPage() {
     : 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920';
 
 
-  const replaceAppName = (text: string | undefined) => (text ?? '').replace(/{appName}/g, settings.appName ?? 'SplitWise Clone');
+  const replaceAppName = (text: string | undefined) => (text ?? '').replace(/{appName}/g, settings.appName ?? 'SplitIt');
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

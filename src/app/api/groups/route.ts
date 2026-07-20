@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { getGroupsByUserId, createGroup } from '@/lib/services/group.service';
+import { getGroupsByUserId, getAllGroups, createGroup } from '@/lib/services/group.service';
 
 export async function GET(request: Request) {
   try {
@@ -8,7 +8,26 @@ export async function GET(request: Request) {
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const groups = await getGroupsByUserId(session.user.id);
+
+    const { searchParams } = new URL(request.url);
+    const requestedUserId = searchParams.get('userId');
+    const fetchAll = searchParams.get('all') === 'true';
+
+    if (fetchAll) {
+      if (session.user.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      const groups = await getAllGroups();
+      return NextResponse.json(groups);
+    }
+
+    const targetUserId = requestedUserId || session.user.id;
+
+    if (targetUserId !== session.user.id && session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const groups = await getGroupsByUserId(targetUserId);
     return NextResponse.json(groups);
   } catch (error: any) {
     console.error('Error listing groups:', error);

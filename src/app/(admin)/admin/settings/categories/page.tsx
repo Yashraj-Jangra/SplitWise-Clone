@@ -8,7 +8,8 @@ import { Icons, IconName } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings, updateSiteSettings } from '@/lib/firestore.service';
+
 import type { SiteSettings, MasterCategory, SubCategory } from '@/types';
 import { X, GripVertical } from 'lucide-react';
 import {

@@ -10,6 +10,7 @@ export type NotificationEventType =
   | 'member_removed'
   | 'balance_reminder'
   | 'payment_reminder'
+  | 'payment_confirmation_request'
   | 'support_reply'
   | 'broadcast_announcement'
   | 'broadcast_critical';
@@ -26,6 +27,7 @@ export interface UserProfile {
   avatarUrl?: string;
   countryCode?: string;
   mobileNumber?: string;
+  upiId?: string;
   dob?: string; // ISO string for client
   role: 'admin' | 'user';
   createdAt?: string; // ISO string for client

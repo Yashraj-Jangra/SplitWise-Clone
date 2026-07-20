@@ -32,11 +32,13 @@ export async function isUsernameTaken(username: string, excludeUserId?: string):
 }
 
 export async function updateUser(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
-  return fetchApi('/api/user/profile', {
+  const response = await fetchApi('/api/user/profile', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  // API returns { success: true, profile } — extract the profile
+  return (response as any).profile ?? response;
 }
 
 export async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
@@ -58,7 +60,7 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
 }
 
 export async function getGroupsByUserId(userId: string): Promise<Group[]> {
-  return fetchApi(`/api/groups`);
+  return fetchApi(`/api/groups?userId=${encodeURIComponent(userId)}`);
 }
 
 export async function getAllGroups(): Promise<Group[]> {

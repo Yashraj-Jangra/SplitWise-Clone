@@ -65,7 +65,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         {userProfile.role === 'admin' && (
            <>
-            <DropdownMenuItem asChild className="focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem asChild className="focus:text-primary focus:bg-primary/10">
               <Link href="/admin/dashboard">
                 <Icons.ShieldCheck className="mr-2 h-4 w-4" />
                 <span>Admin Panel</span>

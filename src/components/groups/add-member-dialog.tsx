@@ -21,7 +21,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, UserProfile } from "@/types";
-import { getAllUsers, addMembersToGroup } from "@/lib/mock-data";
+import { getAllUsers, addMembersToGroup } from "@/lib/firestore.service";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "../ui/skeleton";
 import { getFullName, getInitials } from "@/lib/utils";

@@ -14,7 +14,8 @@ import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { removeMemberFromGroup } from "@/lib/mock-data";
+import { removeMemberFromGroup } from "@/lib/firestore.service";
+
 import { appEventEmitter } from "@/lib/event-emitter";
 
 function MemberActions({ member, group }: { member: UserProfile, group: Group }) {

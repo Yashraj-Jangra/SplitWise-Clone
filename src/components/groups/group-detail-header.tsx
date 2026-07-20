@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/popover";
 
 import { useToast } from "@/hooks/use-toast";
-import { updateGroup, getSiteSettings } from "@/lib/mock-data";
+import { updateGroup, getSiteSettings } from "@/lib/firestore.service";
+
+
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddExpenseDialog } from "../expenses/add-expense-dialog";

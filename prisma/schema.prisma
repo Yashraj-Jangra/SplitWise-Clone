@@ -25,6 +25,7 @@ model User {
   avatarUrl     String?
   countryCode   String?
   mobileNumber  String?
+  upiId         String?
   dob           DateTime?
 
   // Relations

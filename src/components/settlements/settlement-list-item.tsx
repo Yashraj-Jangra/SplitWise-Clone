@@ -276,7 +276,7 @@ export function SettlementListItem({ settlement, currentUserId, group, groupHist
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-base font-bold text-green-500">{getGroupCurrencySymbol(group)}{settlement.amount.toFixed(2)}</p>
+                <p className="text-base font-bold text-green-500">{getGroupCurrencySymbol(group)}{Number(settlement.amount || 0).toFixed(2)}</p>
             </div>
         </AccordionTrigger>
         <AccordionContent>

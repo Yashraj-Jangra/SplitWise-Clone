@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       avatarUrl: user.image || user.avatarUrl || `https://ui-avatars.com/api/?name=${user.name}`,
       countryCode: user.countryCode || '',
       mobileNumber: user.mobileNumber || '',
+      upiId: user.upiId || '',
       dob: user.dob || undefined,
       createdAt: user.createdAt?.toISOString(),
     } as UserProfile;

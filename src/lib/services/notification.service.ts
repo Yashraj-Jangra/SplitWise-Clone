@@ -144,6 +144,7 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
     member_removed: { inApp: true, push: false, email: false },
     balance_reminder: { inApp: true, push: false, email: true },
     payment_reminder: { inApp: true, push: true, email: true },
+    payment_confirmation_request: { inApp: true, push: true, email: true },
     support_reply: { inApp: true, push: true, email: true },
     broadcast_announcement: { inApp: true, push: true, email: false },
     broadcast_critical: { inApp: true, push: true, email: true },
@@ -238,7 +239,8 @@ export async function notifyExpenseAdded(
   await createNotification({
     type: 'expense_added',
     title: 'New Expense Added',
-    body: `An expense "${description}" for $${amount.toFixed(2)} was added.`,
+    body: `An expense "${description}" for $${Number(amount || 0).toFixed(2)} was added.`,
+
     recipientIds,
     actorId,
     groupId,
@@ -293,7 +295,8 @@ export async function notifySettlementAdded(
   await createNotification({
     type: 'settlement_added',
     title: 'Payment Received',
-    body: `You received a payment of $${amount.toFixed(2)}.`,
+    body: `You received a payment of $${Number(amount || 0).toFixed(2)}.`,
+
     recipientIds: [recipientId],
     actorId,
     groupId,

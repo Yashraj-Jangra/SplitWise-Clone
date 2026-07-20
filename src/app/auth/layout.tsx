@@ -1,42 +1,40 @@
-
-import Link from 'next/link';
-import Image from 'next/image';
-import { Icons } from '@/components/icons';
 import { getSiteSettings } from '@/lib/mock-data';
+import Image from 'next/image';
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSiteSettings();
+  const bgImage = settings.authPage?.imageUrl || "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-      <main className="w-full max-w-4xl mx-auto z-10">
-        <div className="relative flex min-h-[600px] rounded-2xl shadow-2xl overflow-hidden bg-card/80 backdrop-blur-sm border border-border/50">
-          {/* Left Panel: Image */}
-          <div className="hidden md:block md:w-1/2 relative">
-            <Image
-              src={settings.authPage?.imageUrl || "https://placehold.co/800x1200.png"}
-              alt="Authentication background"
-              fill
-              className="object-cover"
-              data-ai-hint="mountain night"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-          </div>
+    <div className="relative min-h-screen w-full flex flex-col justify-between items-center p-4 sm:p-6 overflow-hidden select-none">
+      
+      {/* ── Full-Page Background Image (Configurable via Admin Panel) ─────── */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src={bgImage}
+          alt="Authentication background"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        {/* Dark overlay without backdrop blur */}
+        <div className="absolute inset-0 bg-black/35" />
+      </div>
 
-          {/* Right Panel: Form */}
-          <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center">
-            {children}
-          </div>
-          
-          {/* Decorative Wave */}
-           <div className="absolute bottom-0 right-0 w-full h-48 text-primary overflow-hidden -z-10 pointer-events-none">
-                <svg viewBox="0 0 500 150" preserveAspectRatio="none" className="absolute bottom-0 right-0 h-full w-full">
-                    <path d="M-4.22,33.53 C151.32,234.23 241.29,-84.38 503.31,104.28 L500.00,150.00 L0.00,150.00 Z" style={{stroke: 'none', fill: 'hsla(0, 0%, 0%, 0.2)'}}></path>
-                    <path d="M-4.22,63.53 C121.32,184.23 300.29,-4.38 503.31,74.28 L500.00,150.00 L0.00,150.00 Z" style={{stroke: 'none', fill: 'hsla(0, 0%, 0%, 0.4)'}}></path>
-                </svg>
-           </div>
-        </div>
+      {/* Top spacer */}
+      <div className="w-full max-w-[420px] h-4 relative z-10" />
+
+      {/* ── Center Glassmorphic Form Hub ── */}
+      <main className="relative z-10 w-full max-w-[420px] mx-auto my-auto">
+        {children}
       </main>
+
+      {/* Footer */}
+      <footer className="relative z-10 w-full max-w-[420px] mx-auto text-center py-4 text-xs text-white/70">
+        <p>&copy; {new Date().getFullYear()} {settings.appName}. All rights reserved.</p>
+      </footer>
+
     </div>
   );
 }

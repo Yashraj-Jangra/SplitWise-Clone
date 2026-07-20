@@ -24,7 +24,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { createGroup, getAllUsers, getSiteSettings } from "@/lib/mock-data";
+import { createGroup, getAllUsers, getSiteSettings } from "@/lib/firestore.service";
+
+
 import type { UserProfile, GroupDocument } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/auth-context";

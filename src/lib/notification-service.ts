@@ -197,3 +197,26 @@ export const notifyPaymentReminder = async (
     });
 };
 
+export const notifyPaymentConfirmationRequest = async (
+    actorId: string,
+    recipientId: string,
+    amount: number,
+    groupId?: string,
+    groupName?: string
+) => {
+    await dispatchNotification({
+        type: 'payment_confirmation_request',
+        recipientIds: [recipientId],
+        title: 'UPI Payment Confirmation Request',
+        body: `A member marked ₹${Number(amount || 0).toFixed(2)} as paid via UPI. Please confirm receipt to auto-record this settlement.`,
+        actorId,
+        groupId,
+        target: 'specific_users',
+        ...({
+            amount: `₹${Number(amount || 0).toFixed(2)}`,
+            groupName: groupName || 'Shared Expenses',
+            forceEmail: true
+        } as any)
+    });
+};
+

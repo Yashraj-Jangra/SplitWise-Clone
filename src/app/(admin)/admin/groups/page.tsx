@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { getAllGroups, archiveGroup, restoreGroup, deleteGroupPermanently } from "@/lib/mock-data";
+import { getAllGroups, archiveGroup, restoreGroup, deleteGroupPermanently } from "@/lib/firestore.service";
 import { format, formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react';
 import type { Group } from '@/types';

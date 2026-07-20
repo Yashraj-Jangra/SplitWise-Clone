@@ -204,6 +204,8 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
           control={control}
           name="category"
           render={({ field }) => {
+            const [isCategoryOpen, setIsCategoryOpen] = React.useState(false);
+
             const triggerContent = (
               <button tabIndex={-1} type="button" role="combobox" className="h-auto p-0 flex flex-col items-center gap-1 group focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md">
                 <div className="flex-shrink-0 p-3 bg-muted rounded-lg group-hover:bg-primary/10 transition-colors">
@@ -230,6 +232,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                             onSelect={() => {
                               setValue('category', subCat);
                               setUserOverriddenCategory(true);
+                              setIsCategoryOpen(false);
                             }}
                           >
                             <Icon className={cn("mr-2 h-4 w-4", field.value === subCat ? "opacity-100" : "opacity-40")} />
@@ -246,7 +249,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
             return (
               <FormItem className="flex flex-col items-center">
                 {isMobile ? (
-                  <Drawer>
+                  <Drawer open={isCategoryOpen} onOpenChange={setIsCategoryOpen}>
                     <DrawerTrigger asChild>{triggerContent}</DrawerTrigger>
                     <DrawerContent className="px-4 pb-8 pt-2 max-h-[85vh]">
                       <DrawerHeader className="px-0 pt-0 text-left">
@@ -256,7 +259,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                     </DrawerContent>
                   </Drawer>
                 ) : (
-                  <Popover>
+                  <Popover open={isCategoryOpen} onOpenChange={setIsCategoryOpen}>
                     <PopoverTrigger asChild>{triggerContent}</PopoverTrigger>
                     <PopoverContent className="w-[250px] p-0">{dropdownContent}</PopoverContent>
                   </Popover>
@@ -361,6 +364,8 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
           control={control}
           name="date"
           render={({ field }) => {
+            const [isDateOpen, setIsDateOpen] = React.useState(false);
+
             const triggerButton = (
               <Button
                 type="button"
@@ -379,7 +384,12 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
               <Calendar
                 mode="single"
                 selected={field.value ? new Date(field.value) : undefined}
-                onSelect={field.onChange}
+                onSelect={(date) => {
+                  if (date) {
+                    field.onChange(date);
+                  }
+                  setIsDateOpen(false);
+                }}
                 initialFocus
               />
             );
@@ -387,7 +397,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
             return (
               <FormItem>
                 {isMobile ? (
-                  <Drawer>
+                  <Drawer open={isDateOpen} onOpenChange={setIsDateOpen}>
                     <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
                     <DrawerContent className="px-4 pb-8 pt-2 flex flex-col items-center">
                       <DrawerHeader className="w-full text-center pt-0">
@@ -397,7 +407,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                     </DrawerContent>
                   </Drawer>
                 ) : (
-                  <Popover>
+                  <Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
                     <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       {calendarContent}

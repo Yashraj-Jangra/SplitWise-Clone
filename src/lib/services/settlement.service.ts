@@ -46,7 +46,8 @@ export async function addSettlement(
   const paidByName = getFullName(paidBy?.firstName, paidBy?.lastName);
   const paidToName = getFullName(paidTo?.firstName, paidTo?.lastName);
 
-  const description = `${actorName} recorded a settlement: ${paidByName} paid ${paidToName} $${settlementData.amount.toFixed(2)}.`;
+  const description = `${actorName} recorded a settlement: ${paidByName} paid ${paidToName} $${Number(settlementData.amount).toFixed(2)}.`;
+
   
   await logHistoryEvent(settlementData.groupId, 'settlement_created', actorId, description, {
     settlementId: settlement.id,
@@ -169,7 +170,7 @@ export async function updateSettlement(
   const changes: { field: string; from: any; to: any }[] = [];
 
   if (data.amount !== undefined && data.amount !== oldData.amount) {
-    changes.push({ field: 'Amount', from: `$${oldData.amount.toFixed(2)}`, to: `$${data.amount.toFixed(2)}` });
+    changes.push({ field: 'Amount', from: `$${Number(oldData.amount).toFixed(2)}`, to: `$${Number(data.amount).toFixed(2)}` });
   }
   if (data.paidById && data.paidById !== oldData.paidById) {
     changes.push({ field: 'Payer', from: getFullName(oldPaidBy?.firstName, oldPaidBy?.lastName), to: getFullName(newPaidBy?.firstName, newPaidBy?.lastName) });
@@ -202,7 +203,8 @@ export async function deleteSettlement(settlementId: string, groupId: string, ac
   const paidByName = getFullName(paidBy?.firstName, paidBy?.lastName);
   const paidToName = getFullName(paidTo?.firstName, paidTo?.lastName);
 
-  const description = `${actorName} deleted a settlement of $${settlement.amount.toFixed(2)} from ${paidByName} to ${paidToName}.`;
+  const description = `${actorName} deleted a settlement of $${Number(settlement.amount).toFixed(2)} from ${paidByName} to ${paidToName}.`;
+
   
   await logHistoryEvent(groupId, 'settlement_deleted', actorId, description, {
     ...settlement,

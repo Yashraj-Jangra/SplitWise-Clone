@@ -18,6 +18,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     avatarUrl: user.avatarUrl || user.image || undefined,
     countryCode: user.countryCode || undefined,
     mobileNumber: user.mobileNumber || undefined,
+    upiId: user.upiId || undefined,
     dob: user.dob ? user.dob.toISOString() : undefined,
     createdAt: user.createdAt.toISOString(),
   } as UserProfile;
@@ -38,6 +39,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
     avatarUrl: user.avatarUrl || user.image || undefined,
     countryCode: user.countryCode || undefined,
     mobileNumber: user.mobileNumber || undefined,
+    upiId: user.upiId || undefined,
     dob: user.dob ? user.dob.toISOString() : undefined,
     createdAt: user.createdAt.toISOString(),
   } as UserProfile));
@@ -66,6 +68,7 @@ export async function getAllUsersPaginated(
     avatarUrl: user.avatarUrl || user.image || undefined,
     countryCode: user.countryCode || undefined,
     mobileNumber: user.mobileNumber || undefined,
+    upiId: user.upiId || undefined,
     dob: user.dob ? user.dob.toISOString() : undefined,
     createdAt: user.createdAt.toISOString(),
   } as UserProfile));
@@ -103,6 +106,7 @@ export async function updateUser(userId: string, data: Partial<UserProfile>): Pr
   }
   if (data.countryCode !== undefined) updateData.countryCode = data.countryCode;
   if (data.mobileNumber !== undefined) updateData.mobileNumber = data.mobileNumber;
+  if (data.upiId !== undefined) updateData.upiId = data.upiId || null;
   if (data.dob !== undefined) updateData.dob = data.dob ? new Date(data.dob) : null;
   if (data.role !== undefined) updateData.role = data.role;
 
@@ -120,7 +124,7 @@ export async function updateUser(userId: string, data: Partial<UserProfile>): Pr
   });
 
   const profile = await getUserProfile(updatedUser.id);
-  if (!profile) throw new Error("Failed to fetch updated user profile");
+  if (!profile) throw new Error('Failed to fetch updated user profile');
   return profile;
 }
 
@@ -142,6 +146,7 @@ export async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
     avatarUrl: user.avatarUrl || user.image || undefined,
     countryCode: user.countryCode || undefined,
     mobileNumber: user.mobileNumber || undefined,
+    upiId: user.upiId || undefined,
     dob: user.dob ? user.dob.toISOString() : undefined,
     createdAt: user.createdAt.toISOString(),
   } as UserProfile));

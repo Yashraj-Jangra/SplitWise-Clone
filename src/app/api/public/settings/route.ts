@@ -15,6 +15,8 @@ export async function GET() {
             defaultThemeId: settings.defaultThemeId,
             userSelectableThemeIds: settings.userSelectableThemeIds,
             customThemes: settings.customThemes,
+            expenseCategories: settings.expenseCategories,
+            countryCodes: settings.countryCodes,
             landingPage: settings.landingPage,
             authPage: settings.authPage,
             about: settings.about,

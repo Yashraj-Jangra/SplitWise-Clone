@@ -376,25 +376,27 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
             <CardContent className="flex-1 flex flex-col gap-2 pt-0">
                 <p className="text-xs text-muted-foreground">From {obligations.length} {obligations.length === 1 ? 'person' : 'people'}</p>
                 {obligations.length > 0 ? (
-                    <ScrollArea className="flex-1">
-                        <div className="space-y-3 pr-4 mt-2">
+                    <ScrollArea className="flex-1 min-h-[110px] max-h-[140px] overflow-y-auto">
+                        <div className="space-y-2.5 pr-2 mt-1">
                             {obligations.slice(0, 3).map(item => (
-                                <div key={item.user.uid} className="flex flex-col gap-1.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2 truncate">
-                                            <Avatar className="h-7 w-7">
+                                <div key={item.user.uid} className="flex flex-col gap-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2 min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                            <Avatar className="h-7 w-7 flex-shrink-0">
                                                 <AvatarImage src={item.user.avatarUrl} />
                                                 <AvatarFallback>{getInitials(item.user.firstName, item.user.lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <span className="text-sm font-medium truncate">{getFullName(item.user.firstName, item.user.lastName)}</span>
+                                            <span className="text-sm font-medium truncate min-w-0" title={getFullName(item.user.firstName, item.user.lastName)}>
+                                                {getFullName(item.user.firstName, item.user.lastName)}
+                                            </span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-sm font-semibold">{CURRENCY_SYMBOL}{item.amount.toFixed(2)}</div>
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                                            <div className="text-sm font-semibold whitespace-nowrap">{CURRENCY_SYMBOL}{item.amount.toFixed(2)}</div>
                                             {type === 'owed' && (
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full"
+                                                    className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full flex-shrink-0"
                                                     onClick={() => {
                                                         setRemindTarget(item);
                                                         setSendEmail(true);

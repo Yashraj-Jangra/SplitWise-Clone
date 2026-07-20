@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import type { Balance, Group, SimplifiedSettlement } from "@/types";
-import { simplifyDebts } from "@/lib/mock-data";
+import { simplifyDebts } from "@/lib/firestore.service";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Icons } from "@/components/icons";

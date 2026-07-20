@@ -14,6 +14,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         {...props}
+        value={props.value ?? (props.value === undefined ? "" : props.value)}
       />
     )
   }

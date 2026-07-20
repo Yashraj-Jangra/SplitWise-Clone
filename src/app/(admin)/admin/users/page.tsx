@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { getAllUsersPaginated } from "@/lib/mock-data";
+import { getAllUsersPaginated } from "@/lib/firestore.service";
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import type { UserProfile } from '@/types';

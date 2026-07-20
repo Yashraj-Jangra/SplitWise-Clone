@@ -78,7 +78,8 @@ function AdminHeader() {
         <MobileNav items={adminNavItems} />
       </div>
       <div className="flex flex-1 items-center justify-end space-x-4">
-        <span className="text-xs font-semibold uppercase text-destructive tracking-wider rounded-full bg-destructive/20 px-3 py-1">Admin Mode</span>
+        <span className="text-xs font-semibold uppercase text-amber-400 tracking-wider rounded-full bg-amber-400/10 border border-amber-400/20 px-3 py-1">Admin Mode</span>
+
         <NotificationBell />
         <nav className="flex items-center space-x-2">
             <UserNav />

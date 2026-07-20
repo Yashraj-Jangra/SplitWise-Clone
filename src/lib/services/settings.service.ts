@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import type { SiteSettings, PolicyPage, CountryCode, MasterCategory } from '@/types';
 import { defaultExpenseCategories } from '../expense-categories';
 
-const DEFAULT_APP_NAME = 'SplitWise Clone';
+const DEFAULT_APP_NAME = 'SplitIt';
 const FALLBACK_GROUP_COVER_IMAGES = [
   'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=2029&auto=format&fit=crop',
@@ -80,9 +80,15 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 
     if (settingsDoc) {
       const data = settingsDoc.data as any;
+      const expenseCategories =
+        data?.expenseCategories && Object.keys(data.expenseCategories).length > 0
+          ? data.expenseCategories
+          : defaultExpenseCategories;
+
       return {
         ...DEFAULT_SETTINGS_DATA,
         ...data,
+        expenseCategories,
       };
     } else {
       // First bootstrap

@@ -19,7 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, Settlement, SettlementDocument } from "@/types";
-import { updateSettlement, getGroupById } from "@/lib/mock-data";
+import { updateSettlement, getGroupById } from "@/lib/firestore.service";
+
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
@@ -187,28 +188,42 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
                 <FormField
                 control={form.control}
                 name="date"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Date of Payment</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={"outline"}
-                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                            >
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )}
+                render={({ field }) => {
+                    const [dateOpen, setDateOpen] = useState(false);
+
+                    return (
+                        <FormItem>
+                        <FormLabel>Date of Payment</FormLabel>
+                        <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                >
+                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={(date) => {
+                                if (date) {
+                                  field.onChange(date);
+                                }
+                                setDateOpen(false);
+                              }}
+                              initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                        </FormItem>
+                    );
+                }}
                 />
             </div>
              <FormField
