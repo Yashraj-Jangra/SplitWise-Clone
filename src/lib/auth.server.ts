@@ -5,6 +5,11 @@ import nodemailer from 'nodemailer';
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
+  account: {
+    accountLinking: {
+      enabled: true,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false, // Set to false initially for ease of migration

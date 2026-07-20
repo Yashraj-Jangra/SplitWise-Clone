@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
 import { markNotificationRead } from '@/lib/services/notification.service';
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const notificationId = params.id;
+    const { id } = await params;
+    const notificationId = id;
     await markNotificationRead(notificationId, session.user.id);
 
     return NextResponse.json({ success: true });

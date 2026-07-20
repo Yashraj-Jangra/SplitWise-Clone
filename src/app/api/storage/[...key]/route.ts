@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { s3, BUCKET } from '@/lib/minio';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 
-export async function GET(request: Request, { params }: { params: { key: string[] } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ key: string[] }> }) {
   try {
-    const key = params.key.join('/');
+    const { key: keyParts } = await params;
+    const key = keyParts.join('/');
     const response = await s3.send(new GetObjectCommand({
       Bucket: BUCKET,
       Key: key,
