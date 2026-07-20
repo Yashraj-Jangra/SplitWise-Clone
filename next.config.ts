@@ -41,6 +41,12 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
+        protocol: 'http',
+        hostname: '141.148.222.255',
+        port: '7777',
+        pathname: '/**',
+      },
+      {
         protocol: 'https',
         hostname: 'cdn.cvweb.tech',
         port: '',
