@@ -23,7 +23,26 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert } from 'lucide-react';
+import {
+  ShieldAlert,
+  Mail,
+  Key,
+  UserCheck,
+  DollarSign,
+  CheckCircle2,
+  UserPlus,
+  Clock,
+  Bell,
+  FileText,
+  MessageSquare,
+  Megaphone,
+  Server,
+  Settings2,
+  Check,
+  Send,
+  AlertTriangle,
+  BarChart3
+} from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -59,6 +78,22 @@ const templateGroups = [
   { label: 'Support', templates: ['supportTicketConfirmation', 'supportTicketReply', 'supportTicketAdminNotification'] },
   { label: 'Broadcast', templates: ['broadcast'] },
 ];
+
+const templateIcons: Record<EmailTemplateName, React.ComponentType<any>> = {
+  registration: UserPlus,
+  forgotPassword: Key,
+  loginNotification: ShieldAlert,
+  monthlyReport: BarChart3,
+  expenseAdded: DollarSign,
+  settlementAdded: CheckCircle2,
+  memberAdded: UserCheck,
+  balanceReminder: Clock,
+  paymentReminder: Bell,
+  supportTicketConfirmation: FileText,
+  supportTicketReply: MessageSquare,
+  supportTicketAdminNotification: AlertTriangle,
+  broadcast: Megaphone,
+};
 
 export default function AdminMailSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -471,64 +506,77 @@ export default function AdminMailSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="registration" className="w-full">
-            <div className="overflow-x-auto">
-              <TabsList className="flex w-max gap-1 mb-4">
+          <Tabs defaultValue="registration" className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full" orientation="vertical">
+            {/* Sidebar list */}
+            <div className="col-span-1 border-b md:border-b-0 md:border-r pb-4 md:pb-0 md:pr-4">
+              <TabsList className="flex flex-col bg-transparent w-full h-auto gap-1 p-0 justify-start items-stretch">
                 {templateGroups.map(group => (
-                  <div key={group.label} className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground px-2 font-medium whitespace-nowrap">{group.label}</span>
-                    {group.templates.map(t => (
-                      <TabsTrigger key={t} value={t} className="text-xs capitalize whitespace-nowrap">
-                        {t.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
-                      </TabsTrigger>
-                    ))}
-                    <div className="w-px h-4 bg-border mx-1" />
+                  <div key={group.label} className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground/80 px-2 font-semibold uppercase tracking-wider block mt-2 mb-1">
+                      {group.label}
+                    </span>
+                    {group.templates.map(t => {
+                      const IconComponent = templateIcons[t as EmailTemplateName] || Mail;
+                      return (
+                        <TabsTrigger
+                          key={t}
+                          value={t}
+                          className="w-full justify-start text-left py-2 px-2.5 text-xs capitalize font-medium transition-all rounded-md gap-2 hover:bg-muted/50 data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:font-semibold"
+                        >
+                          <IconComponent className="h-4 w-4 opacity-75 text-primary shrink-0" />
+                          <span className="truncate">{t.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</span>
+                        </TabsTrigger>
+                      );
+                    })}
                   </div>
                 ))}
               </TabsList>
             </div>
 
-            {(Object.keys(templatePlaceholders) as EmailTemplateName[]).map(tKey => (
-              <TabsContent key={tKey} value={tKey} className="mt-0">
-                <div className="space-y-4 p-4 border rounded-lg bg-muted/10">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`${tKey}-subject`} className="text-sm font-medium">Subject Line</Label>
-                    <Input
-                      id={`${tKey}-subject`}
-                      value={emailTemplates?.[tKey]?.subject || ''}
-                      onChange={(e) => handleTemplateChange(tKey, 'subject', e.target.value)}
-                      placeholder="Email subject..."
-                      className="font-mono text-sm"
-                    />
+            {/* Editor Area */}
+            <div className="col-span-1 md:col-span-3">
+              {(Object.keys(templatePlaceholders) as EmailTemplateName[]).map(tKey => (
+                <TabsContent key={tKey} value={tKey} className="mt-0">
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/10">
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${tKey}-subject`} className="text-sm font-medium">Subject Line</Label>
+                      <Input
+                        id={`${tKey}-subject`}
+                        value={emailTemplates?.[tKey]?.subject || ''}
+                        onChange={(e) => handleTemplateChange(tKey, 'subject', e.target.value)}
+                        placeholder="Email subject..."
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${tKey}-body`} className="text-sm font-medium">Body</Label>
+                      <Textarea
+                        id={`${tKey}-body`}
+                        value={emailTemplates?.[tKey]?.body || ''}
+                        onChange={(e) => handleTemplateChange(tKey, 'body', e.target.value)}
+                        rows={10}
+                        className="font-mono text-sm resize-y"
+                        placeholder="Email body content..."
+                      />
+                    </div>
+                    <Accordion type="single" collapsible>
+                      <AccordionItem value="placeholders" className="border-b-0">
+                        <AccordionTrigger className="text-xs text-muted-foreground hover:no-underline p-0 h-auto">
+                          View available placeholders
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            {templatePlaceholders[tKey]?.map(p => (
+                              <Badge key={p} variant="secondary" className="font-mono text-xs">{p}</Badge>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`${tKey}-body`} className="text-sm font-medium">Body</Label>
-                    <Textarea
-                      id={`${tKey}-body`}
-                      value={emailTemplates?.[tKey]?.body || ''}
-                      onChange={(e) => handleTemplateChange(tKey, 'body', e.target.value)}
-                      rows={10}
-                      className="font-mono text-sm resize-y"
-                      placeholder="Email body content..."
-                    />
-                  </div>
-                  <Accordion type="single" collapsible>
-                    <AccordionItem value="placeholders" className="border-b-0">
-                      <AccordionTrigger className="text-xs text-muted-foreground hover:no-underline p-0 h-auto">
-                        View available placeholders
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {templatePlaceholders[tKey]?.map(p => (
-                            <Badge key={p} variant="secondary" className="font-mono text-xs">{p}</Badge>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
-              </TabsContent>
-            ))}
+                </TabsContent>
+              ))}
+            </div>
           </Tabs>
         </CardContent>
       </Card>
