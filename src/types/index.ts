@@ -399,7 +399,7 @@ export interface SiteSettings {
     imageUrl: string;
   };
   emailSettings?: {
-    sendingMethod: 'firebase' | 'custom' | 'gmail';
+    sendingMethod: 'custom' | 'gmail';
     fromAddresses: {
         default: string;
         auth: string;
@@ -443,6 +443,9 @@ export interface SiteSettings {
     title: string;
     message: string;
     imageUrl: string;
+  };
+  securitySettings?: {
+    requireOtpVerification?: boolean;
   };
 }
 

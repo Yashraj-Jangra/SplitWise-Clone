@@ -12,7 +12,7 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // Set to false initially for ease of migration
+    requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       // Fetch settings from Database
       const settingsDoc = await prisma.settings.findUnique({
@@ -63,6 +63,84 @@ export const auth = betterAuth({
       }
     },
   },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      try {
+        const settingsDoc = await prisma.settings.findUnique({
+          where: { id: 'general' }
+        });
+        const settings = (settingsDoc?.data as any) || {};
+        const emailSettings = settings.emailSettings;
+        const appName = settings.appName || 'SplitWise Clone';
+
+        if (emailSettings?.smtpSettings?.host) {
+          const smtp = emailSettings.smtpSettings;
+          const fromAddress = emailSettings.fromAddresses?.auth || emailSettings.fromAddresses?.default || smtp.user;
+          
+          const transporter = nodemailer.createTransport({
+            host: smtp.host,
+            port: smtp.port,
+            secure: smtp.port === 465,
+            auth: {
+              user: smtp.user,
+              pass: smtp.pass,
+            },
+          });
+
+          const template = settings.emailTemplates?.registration || {
+            subject: 'Welcome to {appName} - Verify Your Email',
+            body: 'Hi {userName},\n\nThank you for registering. Please verify your email address by clicking the link below:\n{verificationLink}\n\nThanks,\nThe {appName} Team'
+          };
+
+          const subject = template.subject.replace(/\{appName\}/g, appName).replace(/\{userName\}/g, user.name);
+          const text = template.body
+            .replace(/\{appName\}/g, appName)
+            .replace(/\{userName\}/g, user.name)
+            .replace(/\{verificationLink\}/g, url);
+
+          await transporter.sendMail({
+            from: `"${appName}" <${fromAddress}>`,
+            to: user.email,
+            subject,
+            text,
+            html: `<p>${text.replace(/\n/g, '<br>')}</p>`,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to send verification email via SMTP:', error);
+      }
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          try {
+            const settingsDoc = await prisma.settings.findUnique({
+              where: { id: 'general' }
+            });
+            if (!settingsDoc) return;
+            const settings = settingsDoc.data as any;
+            const emailSettings = settings?.emailSettings;
+            const smtpConfigured = !!(emailSettings?.smtpSettings?.host && emailSettings?.smtpSettings?.user);
+            const requireOtp = settings?.securitySettings?.requireOtpVerification ?? false;
+            
+            if (!smtpConfigured || !requireOtp) {
+              return {
+                data: {
+                  ...user,
+                  emailVerified: true
+                }
+              };
+            }
+          } catch (e) {
+            console.error('Error in databaseHook user.create.before:', e);
+          }
+        }
+      }
+    }
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -70,8 +148,12 @@ export const auth = betterAuth({
     },
   },
   session: {
-    cookieName: '__session',   // Matches existing middleware configuration
     expiresIn: 60 * 60 * 24 * 7, // 7 days
+  },
+  cookies: {
+    session: {
+      name: '__session',
+    }
   },
   user: {
     additionalFields: {

@@ -35,7 +35,7 @@ const DEFAULT_TERMS_AND_CONDITIONS: PolicyPage = {
 };
 
 const DEFAULT_EMAIL_SETTINGS = {
-  sendingMethod: 'custom' as 'firebase' | 'custom' | 'gmail',
+  sendingMethod: 'custom' as 'custom' | 'gmail',
   fromAddresses: {
     default: 'noreply@example.com',
     auth: 'auth@example.com',
@@ -67,6 +67,9 @@ const DEFAULT_SETTINGS_DATA: SiteSettings = {
   termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS,
   stats: { users: 0, groups: 0, expenses: 0 },
   emailSettings: DEFAULT_EMAIL_SETTINGS,
+  securitySettings: {
+    requireOtpVerification: false,
+  },
 };
 
 export async function getSiteSettings(): Promise<SiteSettings> {

@@ -23,6 +23,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
+import { ShieldAlert } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -128,6 +129,14 @@ export default function AdminMailSettingsPage() {
     handleEmailSettingsChange('gmailSettings', newGmail);
   };
 
+  const handleSecuritySettingsChange = (field: string, value: any) => {
+    if (!settings) return;
+    const currentSecuritySettings = settings.securitySettings || {
+      requireOtpVerification: false,
+    };
+    setSettings(prev => prev ? ({ ...prev, securitySettings: { ...currentSecuritySettings, [field]: value } }) : null);
+  };
+
   const handleTemplateChange = (templateName: EmailTemplateName, field: keyof EmailTemplate, value: string) => {
     if (!settings) return;
     setSettings(prev => {
@@ -189,6 +198,7 @@ export default function AdminMailSettingsPage() {
       await updateSiteSettings({ 
           emailSettings: settings.emailSettings,
           emailTemplates: settings.emailTemplates,
+          securitySettings: settings.securitySettings,
        });
       toast({
         title: 'Settings Saved',
@@ -237,7 +247,12 @@ export default function AdminMailSettingsPage() {
         ...settings.emailSettings?.gmailSettings
     }
   };
+  const securitySettings = {
+    requireOtpVerification: false,
+    ...settings.securitySettings
+  };
   const emailTemplates = (settings.emailTemplates || {}) as Record<string, any>;
+  const isSmtpConfigured = !!(emailSettings.smtpSettings.host && emailSettings.smtpSettings.user);
 
   return (
     <div className="space-y-6">
@@ -253,22 +268,10 @@ export default function AdminMailSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <RadioGroup
-            value={emailSettings?.sendingMethod}
-            onValueChange={(value: 'firebase' | 'custom' | 'gmail') => handleEmailSettingsChange('sendingMethod', value)}
+            value={emailSettings.sendingMethod}
+            onValueChange={(value: 'custom' | 'gmail') => handleEmailSettingsChange('sendingMethod', value)}
             className="space-y-3"
           >
-            {/* Firebase option */}
-            <Label className="flex items-start gap-4 border p-4 rounded-lg has-[:checked]:bg-muted has-[:checked]:border-primary transition-all cursor-pointer">
-              <RadioGroupItem value="firebase" id="firebase-mail" className="mt-0.5" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-base">Firebase Authentication Emailing</span>
-                  <Badge variant="secondary" className="text-xs">Free</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">Use Firebase's built-in service for password resets and email verification. No configuration needed, but templates cannot be customized.</p>
-              </div>
-            </Label>
-
             {/* Custom SMTP option */}
             <Label className="flex items-start gap-4 border p-4 rounded-lg has-[:checked]:bg-muted has-[:checked]:border-primary transition-all cursor-pointer">
               <RadioGroupItem value="custom" id="custom-mail" className="mt-0.5" />
@@ -281,7 +284,7 @@ export default function AdminMailSettingsPage() {
                   <p className="text-sm text-muted-foreground">Connect your own SMTP server (e.g., SendGrid, Postmark, Brevo) for full template control and multiple from-addresses.</p>
                 </div>
 
-                {emailSettings?.sendingMethod === 'custom' && (
+                {emailSettings.sendingMethod === 'custom' && (
                   <div className="space-y-6 pt-4 border-t" onClick={(e) => e.preventDefault()}>
 
                     {/* From Addresses */}
@@ -378,7 +381,7 @@ export default function AdminMailSettingsPage() {
                   </div>
                   <p className="text-sm text-muted-foreground">Send via the Gmail API for high deliverability. Requires a Google Cloud project with OAuth 2.0.</p>
                 </div>
-                {emailSettings?.sendingMethod === 'gmail' && (
+                {emailSettings.sendingMethod === 'gmail' && (
                   <div className="space-y-4 pt-4 border-t" onClick={(e) => e.preventDefault()}>
                     {emailSettings.gmailSettings?.connectedEmail ? (
                       <div className="flex items-center justify-between p-3 bg-muted rounded-md">
@@ -410,6 +413,43 @@ export default function AdminMailSettingsPage() {
               </div>
             </Label>
           </RadioGroup>
+        </CardContent>
+      </Card>
+
+      {/* ─── EMAIL VERIFICATION & SIGNUP SECURITY ────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-primary" />
+            Email Verification & Sign-up Security
+          </CardTitle>
+          <CardDescription>Control authentication rules and security policies on sign-up.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="require-otp" className="text-base font-semibold">Require Email Verification (OTP Link)</Label>
+                {!isSmtpConfigured && (
+                  <Badge variant="destructive" className="text-[10px] uppercase font-bold tracking-wider">Locked</Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground max-w-[500px]">
+                Require newly registered users to click a verification link sent to their email address before accessing their account.
+              </p>
+              {!isSmtpConfigured && (
+                <p className="text-xs text-destructive font-medium mt-1">
+                  ⚠️ This option is disabled and locked because your custom SMTP server is not configured.
+                </p>
+              )}
+            </div>
+            <Switch
+              id="require-otp"
+              checked={isSmtpConfigured && securitySettings.requireOtpVerification}
+              disabled={!isSmtpConfigured}
+              onCheckedChange={(checked) => handleSecuritySettingsChange('requireOtpVerification', checked)}
+            />
+          </div>
         </CardContent>
       </Card>
 
