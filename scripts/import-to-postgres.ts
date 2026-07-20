@@ -38,20 +38,45 @@ async function main() {
   const usersPath = path.join(exportDir, 'users.json');
   if (fs.existsSync(usersPath)) {
     const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+    const seenEmails = new Set<string>();
+    const seenUsernames = new Set<string>();
+
     for (const u of users) {
       const name = `${u.firstName || 'User'} ${u.lastName || ''}`.trim();
+      
+      let email = u.email;
+      if (email) {
+        email = email.toLowerCase().trim();
+        if (seenEmails.has(email)) {
+          const parts = email.split('@');
+          email = `${parts[0]}+${u.id.substring(0, 5)}@${parts[1]}`;
+        }
+        seenEmails.add(email);
+      } else {
+        email = `missing-email-${u.id}@placeholder.com`;
+      }
+
+      let username = u.username;
+      if (username) {
+        username = username.toLowerCase().trim();
+        if (seenUsernames.has(username)) {
+          username = `${username}_${u.id.substring(0, 5)}`;
+        }
+        seenUsernames.add(username);
+      }
+
       await prisma.user.upsert({
         where: { id: u.id },
         create: {
           id: u.id,
           name,
-          email: u.email,
+          email,
           emailVerified: u.emailVerified || false,
           image: u.avatarUrl || null,
           role: u.role || 'user',
           firstName: u.firstName || null,
           lastName: u.lastName || null,
-          username: u.username || null,
+          username: username || null,
           avatarUrl: u.avatarUrl || null,
           countryCode: u.countryCode || null,
           mobileNumber: u.mobileNumber || null,
@@ -64,11 +89,11 @@ async function main() {
 
       // Create credential account for Better Auth so they can do password resets
       await prisma.account.upsert({
-        where: { providerId_accountId: { providerId: 'email', accountId: u.email } },
+        where: { providerId_accountId: { providerId: 'email', accountId: email } },
         create: {
           userId: u.id,
           providerId: 'email',
-          accountId: u.email,
+          accountId: email,
           password: 'MIGRATED_PASSWORD_RESET_REQUIRED', // placeholder
         },
         update: {}
