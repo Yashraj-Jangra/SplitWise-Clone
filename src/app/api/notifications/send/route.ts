@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth.server';
 import nodemailer from 'nodemailer';
 import { renderEmail } from '@/lib/email-templates/compiler';
+import { sendEmailViaGmail } from '@/lib/gmail-sender';
 import type { NotificationEventType, UserNotificationPrefsDocument } from '@/types';
 import { sendVapidPush } from '@/lib/vapid-push';
 import { getSiteSettings } from '@/lib/services/settings.service';
@@ -163,50 +164,67 @@ export async function POST(request: Request) {
       await Promise.all(pushPromises);
     }
 
-    // 5. Send SMTP Emails
-    if (usersToEmail.length > 0 && transporter && settings.emailTemplates) {
-      let templateName = type as string;
-      if (type.includes('_')) {
-        const parts = type.split('_');
-        templateName = parts[0] + parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
-      }
-
-      const template = (settings.emailTemplates as any)[templateName] || { subject: title, body: notifBody };
-
-      for (const user of usersToEmail) {
-        let actorName = 'Someone';
-        if (actorId) {
-          try {
-            const actor = await prisma.user.findUnique({ where: { id: actorId } });
-            if (actor) {
-              actorName = actor.name || 'Someone';
-            }
-          } catch (e) {}
+    // 5. Send SMTP/Gmail Emails
+    if (usersToEmail.length > 0 && settings.emailTemplates) {
+      const isGmail = emailSettings?.sendingMethod === 'gmail' && emailSettings?.gmailSettings?.refreshToken;
+      if (isGmail || transporter) {
+        let templateName = type as string;
+        if (type.includes('_')) {
+          const parts = type.split('_');
+          templateName = parts[0] + parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
         }
 
-        const variables = {
-          appName: settings.appName,
-          userName: user.name,
-          actorName,
-          amount: '0',
-          balanceAmount: balanceAmount || '0',
-          groupName: groupName || 'your group',
-          description: 'an expense',
-          broadcastSubject: title,
-          broadcastBody: notifBody
-        };
+        const template = (settings.emailTemplates as any)[templateName] || { subject: title, body: notifBody };
 
-        const html = renderEmail(template.body, variables, settings, template.subject);
+        for (const user of usersToEmail) {
+          let actorName = 'Someone';
+          if (actorId) {
+            try {
+              const actor = await prisma.user.findUnique({ where: { id: actorId } });
+              if (actor) {
+                actorName = actor.name || 'Someone';
+              }
+            } catch (e) {}
+          }
 
-        try {
-          await transporter.sendMail({
-            from: emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || '"App" <noreply@example.com>',
-            to: user.email,
-            subject: renderEmail(template.subject, variables, settings, template.subject),
-            html
-          });
-        } catch (e) {
-          console.error("Email send error to", user.email, e);
+          const variables = {
+            appName: settings.appName,
+            userName: user.name,
+            actorName,
+            amount: '0',
+            balanceAmount: balanceAmount || '0',
+            groupName: groupName || 'your group',
+            description: 'an expense',
+            broadcastSubject: title,
+            broadcastBody: notifBody
+          };
+
+          const html = renderEmail(template.body, variables, settings, template.subject);
+          const text = template.body;
+          const subject = renderEmail(template.subject, variables, settings, template.subject);
+
+          try {
+            if (isGmail) {
+              const fromAddress = emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || emailSettings?.gmailSettings?.connectedEmail || '';
+              await sendEmailViaGmail({
+                to: user.email,
+                subject,
+                text,
+                html,
+                fromAddress,
+                refreshToken: emailSettings.gmailSettings!.refreshToken!
+              });
+            } else if (transporter) {
+              await transporter.sendMail({
+                from: emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || '"App" <noreply@example.com>',
+                to: user.email,
+                subject,
+                html
+              });
+            }
+          } catch (e) {
+            console.error("Email send error to", user.email, e);
+          }
         }
       }
     }

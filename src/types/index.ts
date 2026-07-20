@@ -416,6 +416,8 @@ export interface SiteSettings {
     };
     gmailSettings?: {
         connectedEmail?: string;
+        refreshToken?: string;
+        aliases?: string[];
     }
   };
   emailTemplates?: {

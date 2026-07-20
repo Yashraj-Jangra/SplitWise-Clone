@@ -22,6 +22,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import {
   ShieldAlert,
@@ -109,6 +116,23 @@ export default function AdminMailSettingsPage() {
       try {
         const siteSettings = await getSiteSettings();
         setSettings(siteSettings);
+
+        // Listen for Gmail OAuth redirect results
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success') === 'gmail') {
+          toast({
+            title: "Gmail Connected",
+            description: "Successfully authenticated Gmail API connection and retrieved verified sending aliases.",
+          });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (urlParams.get('error')) {
+          toast({
+            variant: "destructive",
+            title: "Connection Failed",
+            description: `Could not connect to Gmail API: ${urlParams.get('details') || urlParams.get('error')}`,
+          });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not load site settings.' });
       } finally {
@@ -162,6 +186,16 @@ export default function AdminMailSettingsPage() {
     const currentGmail = currentEmailSettings.gmailSettings || { connectedEmail: '' };
     const newGmail = { ...currentGmail, [field]: value };
     handleEmailSettingsChange('gmailSettings', newGmail);
+  };
+
+  const handleGmailDisconnect = () => {
+    if (!settings) return;
+    const currentEmailSettings = settings.emailSettings || {
+      sendingMethod: 'custom',
+      fromAddresses: { default: '', auth: '', notifications: '', support: '', broadcast: '' },
+      smtpSettings: { host: '', port: 587, user: '', pass: '', secure: false },
+    };
+    handleEmailSettingsChange('gmailSettings', { connectedEmail: '', refreshToken: '', aliases: [] });
   };
 
   const handleSecuritySettingsChange = (field: string, value: any) => {
@@ -301,153 +335,170 @@ export default function AdminMailSettingsPage() {
           </CardTitle>
           <CardDescription>Choose how your application sends transactional emails.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <RadioGroup
             value={emailSettings.sendingMethod}
             onValueChange={(value: 'custom' | 'gmail') => handleEmailSettingsChange('sendingMethod', value)}
-            className="space-y-3"
+            className="space-y-4"
           >
             {/* Custom SMTP option */}
-            <Label className="flex items-start gap-4 border p-4 rounded-lg has-[:checked]:bg-muted has-[:checked]:border-primary transition-all cursor-pointer">
-              <RadioGroupItem value="custom" id="custom-mail" className="mt-0.5" />
-              <div className="flex-1 space-y-5">
-                <div>
+            <div className="flex flex-col border p-4 rounded-lg bg-muted/10 has-[:checked]:bg-muted/40 has-[:checked]:border-primary transition-all">
+              <Label className="flex items-start gap-4 cursor-pointer">
+                <RadioGroupItem value="custom" id="custom-mail" className="mt-0.5" />
+                <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-base">Custom SMTP Server</span>
                     <Badge variant="outline" className="text-xs">Recommended</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">Connect your own SMTP server (e.g., SendGrid, Postmark, Brevo) for full template control and multiple from-addresses.</p>
+                  <p className="text-sm text-muted-foreground">Connect your own SMTP server (e.g., SendGrid, Postmark, Brevo) for full template control.</p>
                 </div>
+              </Label>
 
-                {emailSettings.sendingMethod === 'custom' && (
-                  <div className="space-y-6 pt-4 border-t" onClick={(e) => e.preventDefault()}>
-
-                    {/* From Addresses */}
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-0.5">From Addresses</h4>
-                        <p className="text-xs text-muted-foreground">Configure a dedicated sending address for each email category.</p>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {FROM_ADDRESS_CONFIG.map(({ key, label, description, badge }) => (
-                          <div key={key} className="space-y-1.5 p-3 rounded-md bg-muted/30 border">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{badge}</Badge>
-                              <Label htmlFor={`from-${key}`} className="text-sm font-medium">{label}</Label>
-                            </div>
-                            <Input
-                              id={`from-${key}`}
-                              value={emailSettings.fromAddresses[key] || ''}
-                              onChange={(e) => handleFromAddressChange(key, e.target.value)}
-                              placeholder={`${key}@yourapp.com`}
-                              className="font-mono text-sm"
-                            />
-                            <p className="text-[11px] text-muted-foreground leading-tight">{description}</p>
-                          </div>
-                        ))}
-                      </div>
+              {emailSettings.sendingMethod === 'custom' && (
+                <div className="space-y-4 pt-4 mt-4 border-t" onClick={(e) => e.preventDefault()}>
+                  <h4 className="text-sm font-semibold text-foreground">SMTP Server Configuration</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="smtpHost">SMTP Host</Label>
+                      <Input id="smtpHost" value={emailSettings.smtpSettings.host} onChange={(e) => handleSmtpChange('host', e.target.value)} placeholder="smtp.example.com" />
                     </div>
-
-                    <Separator />
-
-                    {/* SMTP Server */}
-                    <div className="space-y-4">
-                      <h4 className="text-sm font-semibold text-foreground">SMTP Server Configuration</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="smtpHost">SMTP Host</Label>
-                          <Input id="smtpHost" value={emailSettings.smtpSettings.host} onChange={(e) => handleSmtpChange('host', e.target.value)} placeholder="smtp.example.com" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="smtpPort">Port</Label>
-                          <Input id="smtpPort" type="number" value={emailSettings.smtpSettings.port} onChange={(e) => handleSmtpChange('port', parseInt(e.target.value, 10))} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="smtpUser">Username</Label>
-                          <Input id="smtpUser" value={emailSettings.smtpSettings.user} onChange={(e) => handleSmtpChange('user', e.target.value)} placeholder="smtp_username" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="smtpPass">Password / API Key</Label>
-                          <Input id="smtpPass" type="password" value={emailSettings.smtpSettings.pass} onChange={(e) => handleSmtpChange('pass', e.target.value)} placeholder="••••••••••••" />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch id="smtp-secure" checked={emailSettings.smtpSettings.secure} onCheckedChange={(checked) => handleSmtpChange('secure', checked)} />
-                        <Label htmlFor="smtp-secure" className="text-sm">Use SSL/TLS (recommended for port 465)</Label>
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="smtpPort">Port</Label>
+                      <Input id="smtpPort" type="number" value={emailSettings.smtpSettings.port} onChange={(e) => handleSmtpChange('port', parseInt(e.target.value, 10))} />
                     </div>
-
-                    <Separator />
-
-                    {/* Test Buttons */}
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-foreground">Send Test Emails</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {FROM_ADDRESS_CONFIG.map(({ key, label }) => (
-                          <Button
-                            key={key}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSendTestMail(key)}
-                            disabled={!!isSendingTest}
-                            className="text-xs h-8"
-                          >
-                            {isSendingTest === key && <Icons.AppLogo className="mr-1.5 h-3 w-3 animate-spin" />}
-                            Test {label}
-                          </Button>
-                        ))}
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="smtpUser">Username</Label>
+                      <Input id="smtpUser" value={emailSettings.smtpSettings.user} onChange={(e) => handleSmtpChange('user', e.target.value)} placeholder="smtp_username" />
                     </div>
-
+                    <div className="space-y-1.5">
+                      <Label htmlFor="smtpPass">Password / API Key</Label>
+                      <Input id="smtpPass" type="password" value={emailSettings.smtpSettings.pass} onChange={(e) => handleSmtpChange('pass', e.target.value)} placeholder="••••••••••••" />
+                    </div>
                   </div>
-                )}
-              </div>
-            </Label>
+                  <div className="flex items-center gap-2">
+                    <Switch id="smtp-secure" checked={emailSettings.smtpSettings.secure} onCheckedChange={(checked) => handleSmtpChange('secure', checked)} />
+                    <Label htmlFor="smtp-secure" className="text-sm">Use SSL/TLS (recommended for port 465)</Label>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Gmail API option */}
-            <Label className="flex items-start gap-4 border p-4 rounded-lg has-[:checked]:bg-muted has-[:checked]:border-primary transition-all cursor-pointer">
-              <RadioGroupItem value="gmail" id="gmail-api" className="mt-0.5" />
-              <div className="flex-1 space-y-4">
-                <div>
+            <div className="flex flex-col border p-4 rounded-lg bg-muted/10 has-[:checked]:bg-muted/40 has-[:checked]:border-primary transition-all">
+              <Label className="flex items-start gap-4 cursor-pointer">
+                <RadioGroupItem value="gmail" id="gmail-api" className="mt-0.5" />
+                <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-base">Gmail API</span>
                     <Badge variant="outline" className="text-xs">Advanced</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">Send via the Gmail API for high deliverability. Requires a Google Cloud project with OAuth 2.0.</p>
+                  <p className="text-sm text-muted-foreground">Send via the Gmail API for high deliverability. Requires OAuth 2.0 connection.</p>
                 </div>
-                {emailSettings.sendingMethod === 'gmail' && (
-                  <div className="space-y-4 pt-4 border-t" onClick={(e) => e.preventDefault()}>
-                    {emailSettings.gmailSettings?.connectedEmail ? (
-                      <div className="flex items-center justify-between p-3 bg-muted rounded-md">
-                        <div className="flex items-center gap-2">
-                          <Icons.Mail className="h-5 w-5 text-primary" />
-                          <p className="text-sm font-medium">Connected as {emailSettings.gmailSettings.connectedEmail}</p>
-                        </div>
-                        <Button size="sm" variant="secondary" onClick={() => handleGmailChange('connectedEmail', '')}>Disconnect</Button>
+              </Label>
+
+              {emailSettings.sendingMethod === 'gmail' && (
+                <div className="space-y-4 pt-4 mt-4 border-t" onClick={(e) => e.preventDefault()}>
+                  {emailSettings.gmailSettings?.connectedEmail ? (
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-5 w-5 text-primary" />
+                        <p className="text-sm font-medium">Connected as {emailSettings.gmailSettings.connectedEmail}</p>
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-center p-6 border-2 border-dashed rounded-lg">
-                        <Icons.Google className="h-8 w-8 mb-3 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground mb-4">No Gmail account connected.</p>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button type="button" variant="secondary" onClick={() => toast({ title: 'Feature Not Implemented', description: 'Gmail API connection requires backend logic not yet implemented.' })}>
-                                <Icons.Google className="mr-2 h-4 w-4" />
-                                Connect with Gmail
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>This feature requires backend implementation.</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </Label>
+                      <Button type="button" size="sm" variant="secondary" onClick={handleGmailDisconnect}>Disconnect</Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-6 border border-dashed rounded-lg bg-background/50">
+                      <Mail className="h-8 w-8 mb-3 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-4">No Gmail account connected.</p>
+                      <Button type="button" variant="secondary" onClick={() => window.location.href = '/api/admin/gmail/auth'}>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Connect with Gmail
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </RadioGroup>
+
+          <Separator />
+
+          {/* From Addresses */}
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-0.5">From Addresses</h4>
+              <p className="text-xs text-muted-foreground">Configure a dedicated sending address for each email category.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {FROM_ADDRESS_CONFIG.map(({ key, label, description, badge }) => (
+                <div key={key} className="space-y-1.5 p-3 rounded-md bg-muted/30 border">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{badge}</Badge>
+                    <Label htmlFor={`from-${key}`} className="text-sm font-medium">{label}</Label>
+                  </div>
+                  {emailSettings.sendingMethod === 'gmail' ? (
+                    emailSettings.gmailSettings?.connectedEmail ? (
+                      <Select
+                        value={emailSettings.fromAddresses[key] || emailSettings.gmailSettings.connectedEmail}
+                        onValueChange={(val) => handleFromAddressChange(key, val)}
+                      >
+                        <SelectTrigger id={`from-${key}`} className="w-full text-xs font-mono">
+                          <SelectValue placeholder="Select sender email..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(emailSettings.gmailSettings.aliases || [emailSettings.gmailSettings.connectedEmail]).map(alias => (
+                            <SelectItem key={alias} value={alias} className="font-mono text-xs">
+                              {alias}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id={`from-${key}`}
+                        value=""
+                        disabled
+                        placeholder="Connect Gmail account first"
+                        className="font-mono text-xs opacity-75"
+                      />
+                    )
+                  ) : (
+                    <Input
+                      id={`from-${key}`}
+                      value={emailSettings.fromAddresses[key] || ''}
+                      onChange={(e) => handleFromAddressChange(key, e.target.value)}
+                      placeholder={`${key}@yourapp.com`}
+                      className="font-mono text-sm"
+                    />
+                  )}
+                  <p className="text-[11px] text-muted-foreground leading-tight">{description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Test Buttons */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-foreground">Send Test Emails</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {FROM_ADDRESS_CONFIG.map(({ key, label }) => (
+                <Button
+                  key={key}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSendTestMail(key)}
+                  disabled={!!isSendingTest}
+                  className="text-xs h-8"
+                >
+                  {isSendingTest === key && <Icons.AppLogo className="mr-1.5 h-3 w-3 animate-spin" />}
+                  Test {label}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

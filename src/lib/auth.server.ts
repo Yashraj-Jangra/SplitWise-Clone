@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { prisma } from './db';
 import nodemailer from 'nodemailer';
+import { sendEmailViaGmail } from './gmail-sender';
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
@@ -14,27 +15,13 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      // Fetch settings from Database
-      const settingsDoc = await prisma.settings.findUnique({
-        where: { id: 'general' }
-      });
-      const settings = (settingsDoc?.data as any) || {};
-      const emailSettings = settings.emailSettings;
-      const appName = settings.appName || 'SplitWise Clone';
-
-      if (emailSettings && emailSettings.smtpSettings) {
-        const smtp = emailSettings.smtpSettings;
-        const fromAddress = emailSettings.fromAddresses?.auth || emailSettings.fromAddresses?.default || smtp.user;
-        
-        const transporter = nodemailer.createTransport({
-          host: smtp.host,
-          port: smtp.port,
-          secure: smtp.port === 465,
-          auth: {
-            user: smtp.user,
-            pass: smtp.pass,
-          },
+      try {
+        const settingsDoc = await prisma.settings.findUnique({
+          where: { id: 'general' }
         });
+        const settings = (settingsDoc?.data as any) || {};
+        const emailSettings = settings.emailSettings || {};
+        const appName = settings.appName || 'SplitWise Clone';
 
         const resetTemplate = settings.emailTemplates?.forgotPassword || {
           subject: 'Password Reset Request for {appName}',
@@ -46,35 +33,19 @@ export const auth = betterAuth({
           .replace(/\{appName\}/g, appName)
           .replace(/\{userName\}/g, user.name)
           .replace(/\{resetLink\}/g, url);
+        const html = `<p>${text.replace(/\n/g, '<br>')}</p>`;
 
-        try {
-          await transporter.sendMail({
-            from: `"${appName}" <${fromAddress}>`,
+        if (emailSettings.sendingMethod === 'gmail' && emailSettings.gmailSettings?.refreshToken) {
+          const fromAddress = emailSettings.fromAddresses?.auth || emailSettings.fromAddresses?.default || emailSettings.gmailSettings.connectedEmail;
+          await sendEmailViaGmail({
             to: user.email,
             subject,
             text,
-            html: `<p>${text.replace(/\n/g, '<br>')}</p>`,
+            html,
+            fromAddress,
+            refreshToken: emailSettings.gmailSettings.refreshToken
           });
-        } catch (error) {
-          console.error('Failed to send password reset email via SMTP:', error);
-        }
-      } else {
-        console.warn('SMTP Settings not configured. Reset link:', url);
-      }
-    },
-  },
-  emailVerification: {
-    sendOnSignUp: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      try {
-        const settingsDoc = await prisma.settings.findUnique({
-          where: { id: 'general' }
-        });
-        const settings = (settingsDoc?.data as any) || {};
-        const emailSettings = settings.emailSettings;
-        const appName = settings.appName || 'SplitWise Clone';
-
-        if (emailSettings?.smtpSettings?.host) {
+        } else if (emailSettings.smtpSettings?.host) {
           const smtp = emailSettings.smtpSettings;
           const fromAddress = emailSettings.fromAddresses?.auth || emailSettings.fromAddresses?.default || smtp.user;
           
@@ -88,27 +59,78 @@ export const auth = betterAuth({
             },
           });
 
-          const template = settings.emailTemplates?.registration || {
-            subject: 'Welcome to {appName} - Verify Your Email',
-            body: 'Hi {userName},\n\nThank you for registering. Please verify your email address by clicking the link below:\n{verificationLink}\n\nThanks,\nThe {appName} Team'
-          };
+          await transporter.sendMail({
+            from: `"${appName}" <${fromAddress}>`,
+            to: user.email,
+            subject,
+            text,
+            html,
+          });
+        } else {
+          console.warn('Mail Settings not configured. Reset link:', url);
+        }
+      } catch (error) {
+        console.error('Failed to send reset password email:', error);
+      }
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      try {
+        const settingsDoc = await prisma.settings.findUnique({
+          where: { id: 'general' }
+        });
+        const settings = (settingsDoc?.data as any) || {};
+        const emailSettings = settings.emailSettings || {};
+        const appName = settings.appName || 'SplitWise Clone';
 
-          const subject = template.subject.replace(/\{appName\}/g, appName).replace(/\{userName\}/g, user.name);
-          const text = template.body
-            .replace(/\{appName\}/g, appName)
-            .replace(/\{userName\}/g, user.name)
-            .replace(/\{verificationLink\}/g, url);
+        const template = settings.emailTemplates?.registration || {
+          subject: 'Welcome to {appName} - Verify Your Email',
+          body: 'Hi {userName},\n\nThank you for registering. Please verify your email address by clicking the link below:\n{verificationLink}\n\nThanks,\nThe {appName} Team'
+        };
+
+        const subject = template.subject.replace(/\{appName\}/g, appName).replace(/\{userName\}/g, user.name);
+        const text = template.body
+          .replace(/\{appName\}/g, appName)
+          .replace(/\{userName\}/g, user.name)
+          .replace(/\{verificationLink\}/g, url);
+        const html = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+
+        if (emailSettings.sendingMethod === 'gmail' && emailSettings.gmailSettings?.refreshToken) {
+          const fromAddress = emailSettings.fromAddresses?.auth || emailSettings.fromAddresses?.default || emailSettings.gmailSettings.connectedEmail;
+          await sendEmailViaGmail({
+            to: user.email,
+            subject,
+            text,
+            html,
+            fromAddress,
+            refreshToken: emailSettings.gmailSettings.refreshToken
+          });
+        } else if (emailSettings.smtpSettings?.host) {
+          const smtp = emailSettings.smtpSettings;
+          const fromAddress = emailSettings.fromAddresses?.auth || emailSettings.fromAddresses?.default || smtp.user;
+          
+          const transporter = nodemailer.createTransport({
+            host: smtp.host,
+            port: smtp.port,
+            secure: smtp.port === 465,
+            auth: {
+              user: smtp.user,
+              pass: smtp.pass,
+            },
+          });
 
           await transporter.sendMail({
             from: `"${appName}" <${fromAddress}>`,
             to: user.email,
             subject,
             text,
-            html: `<p>${text.replace(/\n/g, '<br>')}</p>`,
+            html,
           });
         }
       } catch (error) {
-        console.error('Failed to send verification email via SMTP:', error);
+        console.error('Failed to send verification email:', error);
       }
     },
   },
