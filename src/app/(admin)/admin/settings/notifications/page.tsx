@@ -27,6 +27,7 @@ const templatesSchema = z.object({
   settlementAdded: templateSchema,
   memberAdded: templateSchema,
   balanceReminder: templateSchema,
+  paymentReminder: templateSchema,
   broadcast: templateSchema,
 });
 type TemplatesFormValues = z.infer<typeof templatesSchema>;
@@ -44,6 +45,7 @@ export default function AdminNotificationSettingsPage() {
         settlementAdded: { subject: '', body: '' },
         memberAdded: { subject: '', body: '' },
         balanceReminder: { subject: '', body: '' },
+        paymentReminder: { subject: '', body: '' },
         broadcast: { subject: '', body: '' },
     }
   });
@@ -60,6 +62,7 @@ export default function AdminNotificationSettingsPage() {
                 settlementAdded: siteSettings.emailTemplates.settlementAdded || { subject: 'Payment Received in {groupName}', body: 'Hi {userName},\n\n{actorName} recorded a payment of {amount} to you in {groupName}.\n\nLog in to see details.\n\nThanks,\nThe {appName} Team' },
                 memberAdded: siteSettings.emailTemplates.memberAdded || { subject: 'You were added to {groupName}', body: 'Hi {userName},\n\nYou were added to the group "{groupName}" by {actorName}.\n\nLog in to start tracking shared expenses.\n\nThanks,\nThe {appName} Team' },
                 balanceReminder: siteSettings.emailTemplates.balanceReminder || { subject: 'Balance Reminder from {appName}', body: 'Hi {userName},\n\nYou have outstanding balances in your groups. Please log in to settle up.\n\nThanks,\nThe {appName} Team' },
+                paymentReminder: siteSettings.emailTemplates.paymentReminder || { subject: 'Settle Up Reminder: Balance Owed in {groupName}', body: 'Hi {userName},\n\nThis is a friendly reminder that you have an outstanding balance of {balanceAmount} in the group "{groupName}".\n\nPlease log in to settle up.\n\nThanks,\n{actorName}' },
                 broadcast: siteSettings.emailTemplates.broadcast || { subject: '{broadcastSubject}', body: '{broadcastBody}' },
             });
         }
@@ -119,6 +122,7 @@ export default function AdminNotificationSettingsPage() {
       { id: 'settlementAdded', label: 'New Settlement', description: 'Available variables: {appName}, {userName}, {actorName}, {amount}, {groupName}' },
       { id: 'memberAdded', label: 'Group Invitation', description: 'Available variables: {appName}, {userName}, {actorName}, {groupName}' },
       { id: 'balanceReminder', label: 'Debt Reminder', description: 'Available variables: {appName}, {userName}' },
+      { id: 'paymentReminder', label: 'Payment Reminder', description: 'Available variables: {appName}, {userName}, {actorName}, {balanceAmount}, {groupName}' },
       { id: 'broadcast', label: 'Broadcasts', description: 'Available variables: {appName}, {userName}, {broadcastSubject}, {broadcastBody}' },
   ] as const;
 

@@ -172,3 +172,28 @@ export const broadcastToAll = async (
         target: 'all_users'
     });
 };
+
+export const notifyPaymentReminder = async (
+    recipientId: string, 
+    actorId: string, 
+    groupId: string | undefined, 
+    groupName: string | undefined,
+    balanceAmount: number,
+    forceEmail: boolean = false
+) => {
+    await dispatchNotification({
+        type: 'payment_reminder',
+        recipientIds: [recipientId],
+        title: 'Settle Up Reminder',
+        body: `Friendly reminder to settle up your outstanding balance of $${balanceAmount.toFixed(2)}${groupName ? ` in "${groupName}"` : ''}.`,
+        actorId,
+        groupId,
+        target: 'specific_users',
+        ...({
+            balanceAmount: `$${balanceAmount.toFixed(2)}`,
+            groupName: groupName || 'your group',
+            forceEmail
+        } as any)
+    });
+};
+

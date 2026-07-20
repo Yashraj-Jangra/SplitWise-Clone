@@ -143,6 +143,7 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
     member_added: { inApp: true, push: true, email: false },
     member_removed: { inApp: true, push: false, email: false },
     balance_reminder: { inApp: true, push: false, email: true },
+    payment_reminder: { inApp: true, push: true, email: true },
     support_reply: { inApp: true, push: true, email: true },
     broadcast_announcement: { inApp: true, push: true, email: false },
     broadcast_critical: { inApp: true, push: true, email: true },

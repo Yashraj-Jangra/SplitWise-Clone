@@ -19,6 +19,10 @@ import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { notifyPaymentReminder } from '@/lib/notification-service';
+import { Bell } from 'lucide-react';
 
 
 interface Obligation {
@@ -59,6 +63,129 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
     const [sharedGroupsWithBalance, setSharedGroupsWithBalance] = useState<Array<{ group: Group; amountOwed: number }>>([]);
     const [groupsLoading, setGroupsLoading] = useState(false);
     const { userProfile } = useAuth();
+    
+    // Remind Dialog States
+    const [remindDialogOpen, setRemindDialogOpen] = useState(false);
+    const [remindAllDialogOpen, setRemindAllDialogOpen] = useState(false);
+    const [remindTarget, setRemindTarget] = useState<Obligation | null>(null);
+    const [sendEmail, setSendEmail] = useState(true);
+    const [sendingReminder, setSendingReminder] = useState(false);
+    const { toast } = useToast();
+
+    const handleSendReminder = async (obligation: Obligation) => {
+        if (!userProfile) return;
+        setSendingReminder(true);
+        try {
+            // Find common groups to identify the groupName context
+            const allUserGroups = await getGroupsByUserId(userProfile.uid);
+            const groupsInCommon = allUserGroups.filter(g => g.members.some(m => m.uid === obligation.user.uid));
+            
+            let mainGroupName = "Shared Groups";
+            let mainGroupId: string | undefined = undefined;
+            
+            const groupsWithBalances = await Promise.all(
+                groupsInCommon.map(async (group) => {
+                    const groupBalances = await getGroupBalances(group.id);
+                    const simplifiedDebtsForGroup = simplifyDebts(groupBalances);
+                    const debt = simplifiedDebtsForGroup.find(
+                        s => s.from.uid === obligation.user.uid && s.to.uid === userProfile.uid
+                    );
+                    return { group, amountOwed: debt?.amount || 0 };
+                })
+            );
+            
+            const activeDebts = groupsWithBalances.filter(g => g.amountOwed > 0.01);
+            if (activeDebts.length === 1) {
+                mainGroupName = activeDebts[0].group.name;
+                mainGroupId = activeDebts[0].group.id;
+            }
+
+            await notifyPaymentReminder(
+                obligation.user.uid,
+                userProfile.uid,
+                mainGroupId,
+                mainGroupName,
+                obligation.amount,
+                sendEmail
+            );
+
+            toast({
+                title: "Reminder Sent",
+                description: `Sent a settle up reminder to ${getFullName(obligation.user.firstName, obligation.user.lastName)}.`
+            });
+            setRemindDialogOpen(false);
+        } catch (error) {
+            console.error("Failed to send reminder:", error);
+            toast({
+                variant: "destructive",
+                title: "Failed to Send Reminder",
+                description: error instanceof Error ? error.message : "An unknown error occurred."
+            });
+        } finally {
+            setSendingReminder(false);
+        }
+    };
+
+    const handleSendReminderAll = async () => {
+        if (!userProfile || obligations.length === 0) return;
+        setSendingReminder(true);
+        let successCount = 0;
+        try {
+            const allUserGroups = await getGroupsByUserId(userProfile.uid);
+            
+            for (const obligation of obligations) {
+                try {
+                    const groupsInCommon = allUserGroups.filter(g => g.members.some(m => m.uid === obligation.user.uid));
+                    let mainGroupName = "Shared Groups";
+                    let mainGroupId: string | undefined = undefined;
+                    
+                    const groupsWithBalances = await Promise.all(
+                        groupsInCommon.map(async (group) => {
+                            const groupBalances = await getGroupBalances(group.id);
+                            const simplifiedDebtsForGroup = simplifyDebts(groupBalances);
+                            const debt = simplifiedDebtsForGroup.find(
+                                s => s.from.uid === obligation.user.uid && s.to.uid === userProfile.uid
+                            );
+                            return { group, amountOwed: debt?.amount || 0 };
+                        })
+                    );
+                    
+                    const activeDebts = groupsWithBalances.filter(g => g.amountOwed > 0.01);
+                    if (activeDebts.length === 1) {
+                        mainGroupName = activeDebts[0].group.name;
+                        mainGroupId = activeDebts[0].group.id;
+                    }
+
+                    await notifyPaymentReminder(
+                        obligation.user.uid,
+                        userProfile.uid,
+                        mainGroupId,
+                        mainGroupName,
+                        obligation.amount,
+                        sendEmail
+                    );
+                    successCount++;
+                } catch (e) {
+                    console.error(`Failed to remind user ${obligation.user.uid}:`, e);
+                }
+            }
+
+            toast({
+                title: "Reminders Sent",
+                description: `Sent settle up reminders to ${successCount} people.`
+            });
+            setRemindAllDialogOpen(false);
+        } catch (error) {
+            console.error("Failed to send reminders:", error);
+            toast({
+                variant: "destructive",
+                title: "Failed to Send Reminders",
+                description: error instanceof Error ? error.message : "An unknown error occurred."
+            });
+        } finally {
+            setSendingReminder(false);
+        }
+    };
     
     const handleObligationSelect = async (obligation: Obligation) => {
         if (!userProfile) return;
@@ -220,7 +347,7 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                                 {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                              </div>
                         ): sharedGroupsWithBalance.length > 0 ? (
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 {sharedGroupsWithBalance.map(({ group, amountOwed }) => (
                                     <GroupToSettleItem key={group.id} group={group} amountOwed={amountOwed} />
                                 ))}
@@ -261,7 +388,24 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                                             </Avatar>
                                             <span className="text-sm font-medium truncate">{getFullName(item.user.firstName, item.user.lastName)}</span>
                                         </div>
-                                        <div className="text-sm font-semibold">{CURRENCY_SYMBOL}{item.amount.toFixed(2)}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-sm font-semibold">{CURRENCY_SYMBOL}{item.amount.toFixed(2)}</div>
+                                            {type === 'owed' && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full"
+                                                    onClick={() => {
+                                                        setRemindTarget(item);
+                                                        setSendEmail(true);
+                                                        setRemindDialogOpen(true);
+                                                    }}
+                                                    title={`Remind ${getFullName(item.user.firstName, item.user.lastName)}`}
+                                                >
+                                                    <Bell className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                     <Progress value={(item.amount / total) * 100} className="h-1.5" />
                                 </div>
@@ -278,10 +422,106 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                     </div>
                 )}
                  {type === 'owed' 
-                    ? <Button variant="secondary" size="sm" className="mt-auto" disabled={obligations.length === 0}>Remind All</Button>
+                    ? (
+                        <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="mt-auto" 
+                            disabled={obligations.length === 0}
+                            onClick={() => {
+                                setSendEmail(true);
+                                setRemindAllDialogOpen(true);
+                            }}
+                        >
+                            Remind All
+                        </Button>
+                      )
                     : SettleNowButton
                 }
             </CardContent>
+
+            {/* Individual Reminder Dialog */}
+            <Dialog open={remindDialogOpen} onOpenChange={setRemindDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Send Settle Up Reminder</DialogTitle>
+                        <DialogDescription>
+                            Send an in-app and push notification reminder to {remindTarget && getFullName(remindTarget.user.firstName, remindTarget.user.lastName)}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {remindTarget && (
+                        <div className="space-y-4 py-4">
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                                <span className="text-sm font-medium">Outstanding Balance</span>
+                                <span className="font-bold text-lg text-green-500">{CURRENCY_SYMBOL}{remindTarget.amount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="send-email-checkbox" 
+                                    checked={sendEmail} 
+                                    onCheckedChange={(checked) => setSendEmail(!!checked)} 
+                                />
+                                <label 
+                                    htmlFor="send-email-checkbox" 
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer select-none"
+                                >
+                                    Also send an email notification reminder
+                                </label>
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setRemindDialogOpen(false)} disabled={sendingReminder}>
+                            Cancel
+                        </Button>
+                        <Button onClick={() => remindTarget && handleSendReminder(remindTarget)} disabled={sendingReminder}>
+                            {sendingReminder ? <Icons.AppLogo className="animate-spin mr-2 h-4 w-4" /> : null}
+                            Send Reminder
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Remind All Dialog */}
+            <Dialog open={remindAllDialogOpen} onOpenChange={setRemindAllDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Remind All Debtors</DialogTitle>
+                        <DialogDescription>
+                            Send settle up reminders to all {obligations.length} people who owe you.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                            <span className="text-sm font-medium">Total Amount Owed</span>
+                            <span className="font-bold text-lg text-green-500">{CURRENCY_SYMBOL}{total.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox 
+                                id="send-email-all-checkbox" 
+                                checked={sendEmail} 
+                                onCheckedChange={(checked) => setSendEmail(!!checked)} 
+                            />
+                            <label 
+                                htmlFor="send-email-all-checkbox" 
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer select-none"
+                            >
+                                Also send email notification reminders to everyone
+                            </label>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setRemindAllDialogOpen(false)} disabled={sendingReminder}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSendReminderAll} disabled={sendingReminder}>
+                            {sendingReminder ? <Icons.AppLogo className="animate-spin mr-2 h-4 w-4" /> : null}
+                            Send Reminders
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 }
+

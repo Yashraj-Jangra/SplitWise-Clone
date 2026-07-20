@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const authUid = session.user.id;
 
     const body = await request.json();
-    const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, settlementId, target = 'specific_users', imageUrl } = body as {
+    const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, settlementId, target = 'specific_users', imageUrl, balanceAmount, groupName } = body as {
       type: NotificationEventType;
       recipientIds: string[];
       title: string;
@@ -27,6 +27,8 @@ export async function POST(request: Request) {
       settlementId?: string;
       target?: 'all_users' | 'specific_users' | 'group';
       imageUrl?: string;
+      balanceAmount?: string;
+      groupName?: string;
     };
 
     if (!type || !title || !notifBody || !recipientIds) {
@@ -84,7 +86,7 @@ export async function POST(request: Request) {
       if (inAppEnabled) inAppRecipients.push(uid);
       if (pushEnabled) targetUserIdsForPush.push(uid);
 
-      if (emailEnabled) {
+      if (emailEnabled || body.forceEmail) {
         try {
           const userRecord = await prisma.user.findUnique({ where: { id: uid } });
           if (userRecord?.email) {
@@ -187,7 +189,8 @@ export async function POST(request: Request) {
           userName: user.name,
           actorName,
           amount: '0',
-          groupName: 'your group',
+          balanceAmount: balanceAmount || '0',
+          groupName: groupName || 'your group',
           description: 'an expense',
           broadcastSubject: title,
           broadcastBody: notifBody

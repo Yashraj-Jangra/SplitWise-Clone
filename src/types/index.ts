@@ -9,6 +9,7 @@ export type NotificationEventType =
   | 'member_added'
   | 'member_removed'
   | 'balance_reminder'
+  | 'payment_reminder'
   | 'support_reply'
   | 'broadcast_announcement'
   | 'broadcast_critical';

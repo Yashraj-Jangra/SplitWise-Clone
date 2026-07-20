@@ -54,7 +54,7 @@ const templatePlaceholders: Partial<Record<EmailTemplateName, string[]>> = {
 
 const templateGroups = [
   { label: 'Auth & Account', templates: ['registration', 'forgotPassword', 'loginNotification'] },
-  { label: 'Expenses & Groups', templates: ['expenseAdded', 'settlementAdded', 'memberAdded', 'balanceReminder'] },
+  { label: 'Expenses & Groups', templates: ['expenseAdded', 'settlementAdded', 'memberAdded', 'balanceReminder', 'paymentReminder'] },
   { label: 'Support', templates: ['supportTicketConfirmation', 'supportTicketReply', 'supportTicketAdminNotification'] },
   { label: 'Broadcast', templates: ['broadcast'] },
 ];
