@@ -428,27 +428,32 @@ export default function AdminMailSettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
             <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="require-otp" className="text-base font-semibold">Require Email Verification (OTP Link)</Label>
-                {!isSmtpConfigured && (
-                  <Badge variant="destructive" className="text-[10px] uppercase font-bold tracking-wider">Locked</Badge>
-                )}
-              </div>
+              <Label htmlFor="require-otp" className="text-base font-semibold">Require Email Verification (OTP Link)</Label>
               <p className="text-sm text-muted-foreground max-w-[500px]">
                 Require newly registered users to click a verification link sent to their email address before accessing their account.
               </p>
-              {!isSmtpConfigured && (
-                <p className="text-xs text-destructive font-medium mt-1">
-                  ⚠️ This option is disabled and locked because your custom SMTP server is not configured.
-                </p>
-              )}
             </div>
-            <Switch
-              id="require-otp"
-              checked={isSmtpConfigured && securitySettings.requireOtpVerification}
-              disabled={!isSmtpConfigured}
-              onCheckedChange={(checked) => handleSecuritySettingsChange('requireOtpVerification', checked)}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center py-2 px-1">
+                    <Switch
+                      id="require-otp"
+                      checked={isSmtpConfigured && securitySettings.requireOtpVerification}
+                      disabled={!isSmtpConfigured}
+                      onCheckedChange={(checked) => handleSecuritySettingsChange('requireOtpVerification', checked)}
+                    />
+                  </div>
+                </TooltipTrigger>
+                {!isSmtpConfigured && (
+                  <TooltipContent>
+                    <p className="text-xs max-w-[220px] text-center">
+                      Email verification is locked because SMTP settings are not configured.
+                    </p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>
