@@ -84,32 +84,55 @@ export default function AdminMailSettingsPage() {
 
   const handleEmailSettingsChange = (field: string, value: any) => {
     if (!settings) return;
-    setSettings(prev => prev ? ({ ...prev, emailSettings: { ...prev.emailSettings!, [field]: value } }) : null);
+    const currentEmailSettings = settings.emailSettings || {
+      sendingMethod: 'custom',
+      fromAddresses: { default: '', auth: '', notifications: '', support: '', broadcast: '' },
+      smtpSettings: { host: '', port: 587, user: '', pass: '', secure: false },
+    };
+    setSettings(prev => prev ? ({ ...prev, emailSettings: { ...currentEmailSettings, [field]: value } }) : null);
   };
 
   const handleFromAddressChange = (key: FromAddressKey, value: string) => {
-    if (!settings?.emailSettings) return;
-    const newFrom = { ...settings.emailSettings.fromAddresses, [key]: value };
+    if (!settings) return;
+    const currentEmailSettings = settings.emailSettings || {
+      sendingMethod: 'custom',
+      fromAddresses: { default: '', auth: '', notifications: '', support: '', broadcast: '' },
+      smtpSettings: { host: '', port: 587, user: '', pass: '', secure: false },
+    };
+    const currentFromAddresses = currentEmailSettings.fromAddresses || { default: '', auth: '', notifications: '', support: '', broadcast: '' };
+    const newFrom = { ...currentFromAddresses, [key]: value };
     handleEmailSettingsChange('fromAddresses', newFrom);
   };
   
   const handleSmtpChange = (field: string, value: any) => {
-      if (!settings?.emailSettings) return;
-      const newSmtp = { ...settings.emailSettings.smtpSettings, [field]: value };
-      handleEmailSettingsChange('smtpSettings', newSmtp);
+    if (!settings) return;
+    const currentEmailSettings = settings.emailSettings || {
+      sendingMethod: 'custom',
+      fromAddresses: { default: '', auth: '', notifications: '', support: '', broadcast: '' },
+      smtpSettings: { host: '', port: 587, user: '', pass: '', secure: false },
+    };
+    const currentSmtp = currentEmailSettings.smtpSettings || { host: '', port: 587, user: '', pass: '', secure: false };
+    const newSmtp = { ...currentSmtp, [field]: value };
+    handleEmailSettingsChange('smtpSettings', newSmtp);
   };
   
   const handleGmailChange = (field: string, value: any) => {
-    if (!settings?.emailSettings) return;
-    const newGmail = { ...settings.emailSettings.gmailSettings, [field]: value };
+    if (!settings) return;
+    const currentEmailSettings = settings.emailSettings || {
+      sendingMethod: 'custom',
+      fromAddresses: { default: '', auth: '', notifications: '', support: '', broadcast: '' },
+      smtpSettings: { host: '', port: 587, user: '', pass: '', secure: false },
+    };
+    const currentGmail = currentEmailSettings.gmailSettings || { connectedEmail: '' };
+    const newGmail = { ...currentGmail, [field]: value };
     handleEmailSettingsChange('gmailSettings', newGmail);
   };
 
   const handleTemplateChange = (templateName: EmailTemplateName, field: keyof EmailTemplate, value: string) => {
     if (!settings) return;
     setSettings(prev => {
-        if (!prev || !prev.emailTemplates) return prev;
-        const newTemplates = { ...prev.emailTemplates };
+        if (!prev) return prev;
+        const newTemplates = { ...prev.emailTemplates } as any;
         newTemplates[templateName] = { ...newTemplates[templateName], [field]: value };
         return { ...prev, emailTemplates: newTemplates };
     });
@@ -191,7 +214,30 @@ export default function AdminMailSettingsPage() {
     );
   }
 
-  const { emailSettings, emailTemplates } = settings;
+  const emailSettings = {
+    sendingMethod: settings.emailSettings?.sendingMethod || 'custom',
+    fromAddresses: {
+        default: '',
+        auth: '',
+        notifications: '',
+        support: '',
+        broadcast: '',
+        ...settings.emailSettings?.fromAddresses
+    },
+    smtpSettings: {
+        host: '',
+        port: 587,
+        user: '',
+        pass: '',
+        secure: false,
+        ...settings.emailSettings?.smtpSettings
+    },
+    gmailSettings: {
+        connectedEmail: '',
+        ...settings.emailSettings?.gmailSettings
+    }
+  };
+  const emailTemplates = (settings.emailTemplates || {}) as Record<string, any>;
 
   return (
     <div className="space-y-6">
