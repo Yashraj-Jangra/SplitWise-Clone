@@ -2,17 +2,26 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NetBalanceCard } from '@/components/dashboard/net-balance-card';
 import { ObligationsCard } from '@/components/dashboard/obligations-card';
-import { DynamicSpendingChart } from '@/components/dashboard/dynamic-spending-chart';
-import { PredictiveInsights } from '@/components/dashboard/predictive-insights';
 import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/mock-data';
 import type { Expense, Settlement, Group, Balance, SimplifiedSettlement, UserProfile } from '@/types';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
 import { PullToRefresh } from '@/components/shared/pull-to-refresh';
+
+// Defer heavy Recharts bundles — only loaded after user data is ready
+const DynamicSpendingChart = dynamic(
+  () => import('@/components/dashboard/dynamic-spending-chart').then(m => ({ default: m.DynamicSpendingChart })),
+  { ssr: false, loading: () => <Skeleton className="h-80 w-full" /> }
+);
+const PredictiveInsights = dynamic(
+  () => import('@/components/dashboard/predictive-insights').then(m => ({ default: m.PredictiveInsights })),
+  { ssr: false, loading: () => <Skeleton className="h-80 w-full" /> }
+);
 
 interface DashboardData {
   expenses: Expense[];

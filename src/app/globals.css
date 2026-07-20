@@ -9,7 +9,7 @@
   }
 
   body {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-inter), 'Inter', sans-serif;
     @apply bg-background text-foreground;
   }
 

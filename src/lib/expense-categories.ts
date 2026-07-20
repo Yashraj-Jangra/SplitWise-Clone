@@ -102,7 +102,7 @@ export function classifyExpense(description: string, categories: Record<string, 
 
   const lowerCaseDescription = description.toLowerCase();
 
-  for (const masterCategoryName in categories) {
+  for (const masterCategoryName in (categories || {})) {
     const masterCategory = categories[masterCategoryName];
     if (masterCategory?.subCategories) {
         for (const subCategoryName in masterCategory.subCategories) {
@@ -122,7 +122,7 @@ export function classifyExpense(description: string, categories: Record<string, 
 }
 
 export function getMasterCategory(subCategoryName: string, categories: Record<string, MasterCategory>): string {
-    for (const masterCategoryName in categories) {
+    for (const masterCategoryName in (categories || {})) {
         const masterCategory = categories[masterCategoryName];
         if (masterCategory && masterCategory.subCategories && masterCategory.subCategories[subCategoryName]) {
             return masterCategoryName;

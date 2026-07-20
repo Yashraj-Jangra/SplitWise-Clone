@@ -429,7 +429,7 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory, i
     }
   }
 
-  const categoryIconName = settings.expenseCategories[expense.masterCategory || 'Uncategorized']?.subCategories[expense.category || 'Other']?.icon || 'Wallet';
+  const categoryIconName = settings?.expenseCategories?.[expense.masterCategory || 'Uncategorized']?.subCategories?.[expense.category || 'Other']?.icon || 'Wallet';
   const CategoryIcon = Icons[categoryIconName];
   const canEdit = !group?.archivedAt;
 

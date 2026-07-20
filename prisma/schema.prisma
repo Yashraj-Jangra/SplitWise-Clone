@@ -134,6 +134,10 @@ model Expense {
   payers          ExpensePayer[]
   participants    ExpenseParticipant[]
   historyEvents   HistoryEvent[]      @relation("ExpenseHistory")
+
+  @@index([groupId])
+  @@index([expenseCreatorId])
+  @@index([date])
 }
 
 model ExpensePayer {
@@ -144,6 +148,7 @@ model ExpensePayer {
   expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user      User    @relation(fields: [userId], references: [id])
   @@unique([expenseId, userId])
+  @@index([userId])
 }
 
 model ExpenseParticipant {
@@ -155,6 +160,7 @@ model ExpenseParticipant {
   expense     Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   user        User    @relation(fields: [userId], references: [id])
   @@unique([expenseId, userId])
+  @@index([userId])
 }
 
 // ── SETTLEMENTS ────────────────────────────────────────
@@ -171,6 +177,10 @@ model Settlement {
   group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   paidBy  User  @relation("SettlementPaidBy", fields: [paidById], references: [id])
   paidTo  User  @relation("SettlementPaidTo", fields: [paidToId], references: [id])
+
+  @@index([groupId])
+  @@index([paidById])
+  @@index([paidToId])
 }
 
 // ── HISTORY / AUDIT LOG ────────────────────────────────
@@ -188,6 +198,9 @@ model HistoryEvent {
   group   Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   actor   User     @relation(fields: [actorId], references: [id])
   expense Expense? @relation("ExpenseHistory", fields: [expenseId], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  @@index([actorId])
 }
 
 // ── SETTINGS ───────────────────────────────────────────
@@ -251,6 +264,7 @@ model NotificationRecipient {
   userId         String
   notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
   @@id([notificationId, userId])
+  @@index([userId])
 }
 
 // Replaces Firestore `readBy` array
@@ -276,6 +290,8 @@ model PushSubscription {
   createdAt    DateTime @default(now())
   lastSeen     DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ── USER NOTIFICATION PREFS ────────────────────────────

@@ -218,7 +218,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                 <CommandInput placeholder="Search category..." />
                 <CommandList onWheel={(e) => e.stopPropagation()}>
                   <CommandEmpty>No category found.</CommandEmpty>
-                  {Object.entries(settings.expenseCategories).map(([masterCat, details]) => (
+                  {Object.entries(settings?.expenseCategories || {}).map(([masterCat, details]) => (
                     <CommandGroup key={masterCat} heading={masterCat}>
                       {details && details.subCategories && Object.keys(details.subCategories).map((subCat) => {
                         const subDetails = details.subCategories[subCat];
