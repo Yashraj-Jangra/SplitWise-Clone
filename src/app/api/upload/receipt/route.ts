@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
 import { uploadFile } from '@/lib/minio';
+import { verifyGroupMembership } from '@/lib/services/group.service';
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +13,14 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const groupId = formData.get('groupId') as string;
+
+    if (groupId) {
+      // Authorization Check: Must be admin or group member
+      const isMember = session.user.role === 'admin' || await verifyGroupMembership(groupId, session.user.id);
+      if (!isMember) {
+        return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
+      }
+    }
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });

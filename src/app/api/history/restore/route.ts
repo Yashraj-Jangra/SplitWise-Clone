@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
 import { restoreExpense, restoreSettlement } from '@/lib/services/history.service';
+import { verifyGroupMembership } from '@/lib/services/group.service';
+import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +15,21 @@ export async function POST(request: Request) {
 
     if (!eventId || !type) {
       return NextResponse.json({ error: 'eventId and type are required' }, { status: 400 });
+    }
+
+    // Fetch the history event to obtain the associated groupId
+    const historyEvent = await prisma.historyEvent.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!historyEvent) {
+      return NextResponse.json({ error: 'History event not found' }, { status: 404 });
+    }
+
+    // Authorization Check: Must be admin or member of the group
+    const isMember = session.user.role === 'admin' || await verifyGroupMembership(historyEvent.groupId, session.user.id);
+    if (!isMember) {
+      return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
     }
 
     if (type === 'expense') {

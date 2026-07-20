@@ -260,5 +260,17 @@ export async function deleteGroupPermanently(groupId: string): Promise<void> {
   });
 }
 
+export async function verifyGroupMembership(groupId: string, userId: string): Promise<boolean> {
+  const membership = await prisma.groupMember.findUnique({
+    where: {
+      groupId_userId: {
+        groupId,
+        userId,
+      },
+    },
+  });
+  return !!membership;
+}
+
 // Circular imports helper (resolved at runtime)
 import { getGroupBalances } from './balance.service';

@@ -1,11 +1,31 @@
 import { NextResponse } from 'next/server';
 import { s3, BUCKET } from '@/lib/minio';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { auth } from '@/lib/auth.server';
+import { verifyGroupMembership } from '@/lib/services/group.service';
 
 export async function GET(request: Request, { params }: { params: Promise<{ key: string[] }> }) {
   try {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { key: keyParts } = await params;
     const key = keyParts.join('/');
+
+    // Security Check: Enforce group membership boundaries on group receipt directories
+    if (key.startsWith('groups/')) {
+      const parts = key.split('/');
+      const groupId = parts[1];
+      if (groupId) {
+        const isMember = session.user.role === 'admin' || await verifyGroupMembership(groupId, session.user.id);
+        if (!isMember) {
+          return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
+        }
+      }
+    }
+
     const response = await s3.send(new GetObjectCommand({
       Bucket: BUCKET,
       Key: key,
@@ -38,3 +58,4 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 }
+

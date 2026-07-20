@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
 import { updateSettlement, deleteSettlement } from '@/lib/services/settlement.service';
+import { verifyGroupMembership } from '@/lib/services/group.service';
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -10,6 +11,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
     const { id } = await params;
     const body = await request.json();
+
+    if (!body.groupId) {
+      return NextResponse.json({ error: 'groupId is required' }, { status: 400 });
+    }
+
+    // Authorization Check: Must be admin or group member
+    const isMember = session.user.role === 'admin' || await verifyGroupMembership(body.groupId, session.user.id);
+    if (!isMember) {
+      return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
+    }
+
     const settlementData = {
       ...body,
       date: new Date(body.date),
@@ -36,6 +48,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'groupId parameter is required' }, { status: 400 });
     }
 
+    // Authorization Check: Must be admin or group member
+    const isMember = session.user.role === 'admin' || await verifyGroupMembership(groupId, session.user.id);
+    if (!isMember) {
+      return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
+    }
+
     await deleteSettlement(id, groupId, session.user.id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -43,3 +61,4 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
