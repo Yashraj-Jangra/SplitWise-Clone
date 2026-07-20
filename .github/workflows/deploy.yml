@@ -82,60 +82,35 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          envs: |
-            FIREBASE_SERVICE_ACCOUNT
-            ADMIN_EMAIL
-            GOOGLE_CLIENT_ID
-            GOOGLE_CLIENT_SECRET
-            NEXT_PUBLIC_FIREBASE_API_KEY
-            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-            NEXT_PUBLIC_FIREBASE_PROJECT_ID
-            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-            NEXT_PUBLIC_FIREBASE_APP_ID
+          envs: FIREBASE_SERVICE_ACCOUNT,ADMIN_EMAIL,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID
           script: |
-            # Navigate to/create app directory
             mkdir -p ~/app
             cd ~/app
-            
-            # Log in to GitHub Container Registry on your VPS using a token
+
             echo "${{ secrets.DEPLOY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Base64-encode the service account JSON to avoid all quoting/newline issues in .env
-            FIREBASE_SERVICE_ACCOUNT_B64=$(echo "${FIREBASE_SERVICE_ACCOUNT}" | tr -d '\r\n' | base64 -w 0)
 
-            # Dynamically recreate the .env file from secrets passed by GitHub Actions
-            # DO NOT wrap values in quotes - dotenv treats them as literal characters
-            cat <<EOF > .env
-FIREBASE_SERVICE_ACCOUNT_B64=${FIREBASE_SERVICE_ACCOUNT_B64}
-ADMIN_EMAIL=${ADMIN_EMAIL}
-GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY}
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
-NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}
-EOF
-            
-            # Recreate docker-compose.yml to use the GHCR package image
-            cat <<'COMPOSEEOF' > docker-compose.yml
-services:
-  web:
-    image: ghcr.io/${{ env.IMAGE_NAME }}:latest
-    ports:
-      - "3231:3231"
-    volumes:
-      - ./.env:/app/.env
-    environment:
-      - PORT=3231
-      - NODE_ENV=production
-    restart: always
-COMPOSEEOF
+            # Use Python to safely strip surrounding quotes, parse + re-serialize as compact JSON,
+            # then base64 encode. Single line to stay within YAML indentation (multiline Python
+            # at column 0 would terminate the YAML block scalar, same issue as heredocs).
+            # Uses chr() for quote/separator chars to avoid shell quoting conflicts.
+            SA_B64=$(printf '%s' "${FIREBASE_SERVICE_ACCOUNT}" | python3 -c "import sys,json,base64; raw=sys.stdin.read().strip(); raw=raw[1:-1] if len(raw)>=2 and raw[0]==raw[-1] and raw[0] in (chr(39),chr(34)) else raw; obj=json.loads(raw); print(base64.b64encode(json.dumps(obj,separators=(chr(44),chr(58))).encode()).decode(),end=str())")
 
-            # Pull the latest image, stop existing containers, and recreate
+            # Write docker-compose.yml with ALL env vars baked in directly.
+            # No .env file, no volume mount, no dotenv needed - vars go straight into process.env.
+            # Using key: value format (not KEY=VALUE list) so special chars in values don't break YAML.
+            printf 'services:\n  web:\n    image: ghcr.io/${{ env.IMAGE_NAME }}:latest\n    ports:\n      - "3231:3231"\n    environment:\n      PORT: "3231"\n      NODE_ENV: production\n      FIREBASE_SERVICE_ACCOUNT_B64: "%s"\n      ADMIN_EMAIL: "%s"\n      GOOGLE_CLIENT_ID: "%s"\n      GOOGLE_CLIENT_SECRET: "%s"\n      NEXT_PUBLIC_FIREBASE_API_KEY: "%s"\n      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "%s"\n      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "%s"\n      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "%s"\n      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "%s"\n      NEXT_PUBLIC_FIREBASE_APP_ID: "%s"\n    restart: always\n' \
+              "${SA_B64}" \
+              "${ADMIN_EMAIL}" \
+              "${GOOGLE_CLIENT_ID}" \
+              "${GOOGLE_CLIENT_SECRET}" \
+              "${NEXT_PUBLIC_FIREBASE_API_KEY}" \
+              "${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}" \
+              "${NEXT_PUBLIC_FIREBASE_PROJECT_ID}" \
+              "${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}" \
+              "${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}" \
+              "${NEXT_PUBLIC_FIREBASE_APP_ID}" \
+              > docker-compose.yml
+
             docker compose pull
             docker compose down
             docker compose up -d --remove-orphans
-

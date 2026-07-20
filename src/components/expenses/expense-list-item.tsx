@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { deleteExpense } from '@/lib/mock-data';
+import { useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { appEventEmitter } from '@/lib/event-emitter';
@@ -131,6 +132,7 @@ interface ExpenseListItemProps {
   currentUserId: string;
   group?: Group;
   groupHistory: HistoryEvent[];
+  isHighlighted?: boolean;
 }
 
 function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: Omit<ExpenseListItemProps, ''>) {
@@ -394,7 +396,8 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
 }
 
 
-export function ExpenseListItem({ expense, currentUserId, group, groupHistory }: ExpenseListItemProps) {
+export function ExpenseListItem({ expense, currentUserId, group, groupHistory, isHighlighted }: ExpenseListItemProps) {
+  const router = useRouter();
   const { settings } = useSiteSettings();
   const haptic = useHaptics();
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
@@ -455,7 +458,14 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
 
   return (
     <>
-      <AccordionItem value={`exp-${expense.id}`} className="border-b border-border/50">
+      <AccordionItem
+        id={`exp-${expense.id}`}
+        value={`exp-${expense.id}`}
+        className={cn(
+          "border-b border-border/50 transition-colors duration-1000",
+          isHighlighted && "bg-primary/10 dark:bg-primary/20"
+        )}
+      >
           <AccordionTrigger
             className="p-3 hover:bg-muted/50 active:bg-muted/70 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50 select-none"
             onClick={handleAccordionTriggerClick}
@@ -470,7 +480,31 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory }:
                   </div>
                   <div className="grid gap-0.5 text-left">
                       <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
-                      <p className="text-xs text-muted-foreground">{expense.category}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          <p className="text-xs text-muted-foreground">{expense.category}</p>
+                          {group && (
+                              <>
+                                  <span className="text-[10px] text-muted-foreground/60 select-none">•</span>
+                                  <span
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          router.push(`/groups/${group.id}`);
+                                      }}
+                                      onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                              e.stopPropagation();
+                                              router.push(`/groups/${group.id}`);
+                                          }
+                                      }}
+                                      className="text-[11px] font-semibold text-primary hover:underline hover:text-primary/80 transition-colors cursor-pointer"
+                                  >
+                                      {group.name}
+                                  </span>
+                              </>
+                          )}
+                      </div>
                   </div>
               </div>
               <div className="text-right">

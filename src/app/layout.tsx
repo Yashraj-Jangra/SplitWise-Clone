@@ -46,6 +46,16 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            try {
+              var savedTheme = localStorage.getItem('user-theme-preference');
+              if (savedTheme) {
+                document.documentElement.className = 'theme-' + savedTheme;
+              }
+            } catch (e) {}
+          })();
+        `}} />
       </head>
       <body>
         <QueryProvider>

@@ -149,6 +149,7 @@ export async function addSettlement(settlementData: any, actorId: string): Promi
   return data.id;
 }
 
+
 export async function getSettlementsByGroupId(groupId: string): Promise<Settlement[]> {
   return fetchApi(`/api/settlements?groupId=${groupId}`);
 }

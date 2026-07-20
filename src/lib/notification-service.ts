@@ -8,11 +8,16 @@ export interface DispatchNotificationParams {
   actorId?: string;
   groupId?: string;
   expenseId?: string;
+  settlementId?: string;
   target?: 'all_users' | 'specific_users' | 'group';
 }
 
 export async function dispatchNotification(params: DispatchNotificationParams): Promise<void> {
-  const response = await fetch('/api/notifications/send', {
+  const baseUrl = typeof window === 'undefined'
+    ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231')
+    : '';
+
+  const response = await fetch(`${baseUrl}/api/notifications/send`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -87,7 +92,8 @@ export const notifySettlementAdded = async (
     recipientId: string, 
     actorId: string, 
     groupId: string, 
-    amount: number
+    amount: number,
+    settlementId?: string
 ) => {
     await dispatchNotification({
         type: 'settlement_added',
@@ -96,6 +102,7 @@ export const notifySettlementAdded = async (
         body: `You received a payment of ${amount}.`,
         actorId,
         groupId,
+        settlementId,
         target: 'specific_users'
     });
 };

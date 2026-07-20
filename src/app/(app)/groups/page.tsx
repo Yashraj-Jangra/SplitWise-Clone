@@ -94,37 +94,50 @@ export default function GroupsPage() {
                             fill
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/20" />
                         
-                        {/* Status Badge */}
-                        <div className="absolute top-4 right-4">
-                            <div className={cn(
-                                "px-2.5 py-1 rounded-full text-xs font-bold shadow-sm backdrop-blur-md",
-                                isOwed ? "bg-green-500/90 text-white" : 
-                                isDebtor ? "bg-red-500/90 text-white" : 
-                                "bg-black/50 text-white/90"
-                            )}>
-                                {isOwed && `You're owed ${CURRENCY_SYMBOL}${net.toFixed(2)}`}
-                                {isDebtor && `You owe ${CURRENCY_SYMBOL}${Math.abs(net).toFixed(2)}`}
-                                {isSettled && "Settled up"}
-                            </div>
-                        </div>
-
-                        <div className="relative flex flex-col h-full p-6 text-white justify-end">
-                            <h3 className="text-2xl font-bold font-headline drop-shadow-md truncate mb-4">{group.name}</h3>
-                            <div className="flex items-center justify-between mt-auto">
-                                <div className="flex -space-x-2 overflow-visible">
-                                {group.members.slice(0, 5).map(member => (
-                                    <Avatar key={member.uid} className="inline-block h-9 w-9 rounded-full ring-2 ring-black/40" title={getFullName(member.firstName, member.lastName)}>
-                                        <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
-                                        <AvatarFallback className="text-foreground">{getInitials(member.firstName, member.lastName)}</AvatarFallback>
-                                    </Avatar>
-                                ))}
-                                {group.members.length > 5 && <Avatar className="h-9 w-9 rounded-full ring-2 ring-black/40 bg-muted/80 text-foreground backdrop-blur-sm"><AvatarFallback>+{group.members.length - 5}</AvatarFallback></Avatar>}
+                        <div className="relative flex flex-col h-full p-5 text-white justify-between z-10">
+                            {/* Top row */}
+                            <div className="flex items-start justify-between w-full">
+                                <div className="p-2 bg-black/35 rounded-xl backdrop-blur-md border border-white/10 text-white/95 shadow-inner">
+                                    <Icons.Users className="h-4 w-4" />
                                 </div>
-                                <p className="text-xs font-medium text-white/80 bg-black/40 px-2 py-1 rounded-md backdrop-blur-sm">
-                                    {CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)} spent
-                                </p>
+                                
+                                <div className={cn(
+                                    "px-3 py-1 rounded-full text-xs font-bold shadow-md backdrop-blur-md border border-white/5",
+                                    isOwed ? "bg-green-500/90 text-white" : 
+                                    isDebtor ? "bg-red-500/90 text-white" : 
+                                    "bg-black/40 text-white/90"
+                                )}>
+                                    {isOwed && `You're owed ${CURRENCY_SYMBOL}${net.toFixed(2)}`}
+                                    {isDebtor && `You owe ${CURRENCY_SYMBOL}${Math.abs(net).toFixed(2)}`}
+                                    {isSettled && "Settled up"}
+                                </div>
+                            </div>
+
+                            {/* Bottom row */}
+                            <div className="space-y-3 w-full">
+                                <h3 className="text-xl font-bold font-headline drop-shadow-md truncate leading-tight pr-2">
+                                    {group.name}
+                                </h3>
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex -space-x-2 overflow-visible">
+                                    {group.members.slice(0, 5).map(member => (
+                                        <Avatar key={member.uid} className="inline-block h-8 w-8 rounded-full ring-2 ring-black/40" title={getFullName(member.firstName, member.lastName)}>
+                                            <AvatarImage src={member.avatarUrl} alt={getFullName(member.firstName, member.lastName)} />
+                                            <AvatarFallback className="text-foreground text-[10px]">{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                                        </Avatar>
+                                    ))}
+                                    {group.members.length > 5 && (
+                                        <Avatar className="h-8 w-8 rounded-full ring-2 ring-black/40 bg-muted/80 text-foreground backdrop-blur-sm text-[10px]">
+                                            <AvatarFallback>+{group.members.length - 5}</AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                    </div>
+                                    <p className="text-[11px] font-semibold text-white/90 bg-black/45 px-2.5 py-1 rounded-lg backdrop-blur-sm border border-white/5">
+                                        {CURRENCY_SYMBOL}{group.totalExpenses.toFixed(2)} spent
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </Link>
