@@ -46,21 +46,24 @@ export default function AdminGeneralSettingsPage() {
 
   const handleCoverImageChange = (index: number, value: string) => {
     if (!settings) return;
-    const newImages = [...settings.coverImages];
+    const coverImages = settings.coverImages || [];
+    const newImages = [...coverImages];
     newImages[index] = value;
     setSettings({ ...settings, coverImages: newImages });
   };
 
   const handleRemoveCoverImage = (index: number) => {
     if (!settings) return;
-    const newImages = settings.coverImages.filter((_, i) => i !== index);
+    const coverImages = settings.coverImages || [];
+    const newImages = coverImages.filter((_, i) => i !== index);
     setSettings({ ...settings, coverImages: newImages });
   };
 
   const handleAddCoverImage = () => {
     if (!settings) return;
-    if (newCoverImageUrl && !settings.coverImages.includes(newCoverImageUrl)) {
-      setSettings({ ...settings, coverImages: [...settings.coverImages, newCoverImageUrl] });
+    const coverImages = settings.coverImages || [];
+    if (newCoverImageUrl && !coverImages.includes(newCoverImageUrl)) {
+      setSettings({ ...settings, coverImages: [...coverImages, newCoverImageUrl] });
       setNewCoverImageUrl('');
     } else {
       toast({
@@ -168,7 +171,7 @@ export default function AdminGeneralSettingsPage() {
             <CardContent>
                  <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {settings.coverImages.map((url, index) => (
+                    {(settings.coverImages || []).map((url, index) => (
                         <div key={index} className="relative group space-y-2">
                         <div className="relative aspect-video w-full overflow-hidden rounded-md">
                             <Image src={url} alt={`Cover ${index + 1}`} fill className="object-cover" />

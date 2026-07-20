@@ -56,21 +56,24 @@ export default function AdminLandingSettingsPage() {
   
   const handleLandingImageChange = (index: number, value: string) => {
     if (!settings) return;
-    const newImages = [...settings.landingImages];
+    const landingImages = settings.landingImages || [];
+    const newImages = [...landingImages];
     newImages[index] = value;
     setSettings({ ...settings, landingImages: newImages });
   };
   
   const handleRemoveLandingImage = (index: number) => {
     if (!settings) return;
-    const newImages = settings.landingImages.filter((_, i) => i !== index);
+    const landingImages = settings.landingImages || [];
+    const newImages = landingImages.filter((_, i) => i !== index);
     setSettings({ ...settings, landingImages: newImages });
   };
 
   const handleAddLandingImage = () => {
     if (!settings) return;
-    if (newLandingImageUrl && !settings.landingImages.includes(newLandingImageUrl)) {
-      setSettings({ ...settings, landingImages: [...settings.landingImages, newLandingImageUrl] });
+    const landingImages = settings.landingImages || [];
+    if (newLandingImageUrl && !landingImages.includes(newLandingImageUrl)) {
+      setSettings({ ...settings, landingImages: [...landingImages, newLandingImageUrl] });
       setNewLandingImageUrl('');
     } else {
       toast({
@@ -205,10 +208,10 @@ export default function AdminLandingSettingsPage() {
                     <div className="space-y-6">
                         <p className="text-sm text-muted-foreground">Manage the background images for the public landing page hero section. An image is chosen based on the rotation interval.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {settings.landingImages.map((url, index) => (
+                        {(settings.landingImages || []).map((url, index) => (
                             <div key={index} className="relative group space-y-2">
                             <div className="relative aspect-video w-full overflow-hidden rounded-md">
-                                <Image src={url} alt={`Landing Image ${index + 1}`} fill className="object-cover" />
+                                <Image src={url} alt={`Landing ${index + 1}`} fill className="object-cover" />
                                 <Button
                                 variant="destructive"
                                 size="icon"
@@ -256,7 +259,7 @@ export default function AdminLandingSettingsPage() {
                         <Input id="featuresSubtitle" value={settings.landingPage?.featuresSubtitle || ''} onChange={(e) => handleLandingPageChange('featuresSubtitle', e.target.value)} />
                     </div>
                     <div className="space-y-4">
-                        {settings.landingPage?.features.map((feature, index) => (
+                        {(settings.landingPage?.features || []).map((feature, index) => (
                             <div key={index} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
                                 <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeLandingFeature(index)}>
                                     <X className="h-4 w-4 text-destructive" /><span className="sr-only">Remove Feature</span>
@@ -315,7 +318,7 @@ export default function AdminLandingSettingsPage() {
                         <Input value={settings.landingPage?.howItWorksImageUrl || ''} onChange={(e) => handleLandingPageChange('howItWorksImageUrl', e.target.value)} placeholder="https://images.unsplash.com/..."/>
                     </div>
                     <div className="space-y-4">
-                        {settings.landingPage?.howItWorksSteps.map((step, index) => (
+                        {(settings.landingPage?.howItWorksSteps || []).map((step, index) => (
                             <div key={index} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
                                 <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeLandingStep(index)}>
                                     <X className="h-4 w-4 text-destructive" /><span className="sr-only">Remove Step</span>

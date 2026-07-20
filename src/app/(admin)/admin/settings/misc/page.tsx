@@ -96,7 +96,7 @@ export default function AdminMiscSettingsPage() {
                         <span>Country Name</span>
                         <span className="col-span-2">Code</span>
                     </div>
-                     {settings.countryCodes.map((cc, index) => (
+                     {(settings.countryCodes || []).map((cc, index) => (
                         <div key={index} className="grid grid-cols-4 gap-2 items-center">
                             <Input value={cc.flag} onChange={(e) => handleCountryCodeChange(index, 'flag', e.target.value)} maxLength={2} />
                             <Input value={cc.name} onChange={(e) => handleCountryCodeChange(index, 'name', e.target.value)} />

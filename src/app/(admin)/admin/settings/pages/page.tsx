@@ -183,7 +183,7 @@ export default function AdminContentPagesPage() {
                 <Separator />
                 <h3 className="text-lg font-medium">Meet the Team</h3>
                 <div className="space-y-6">
-                    {settings.about?.team.map((member, index) => (
+                    {(settings.about?.team || []).map((member, index) => (
                         <div key={member.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/20">
                             <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeTeamMember(index)}>
                                 <X className="h-4 w-4 text-destructive" />
@@ -252,7 +252,7 @@ export default function AdminContentPagesPage() {
                 <Label>Page Title</Label>
                 <Input value={settings.privacyPolicy?.title || ''} onChange={(e) => handlePolicyChange('privacyPolicy', -1, 'title', e.target.value)} />
             </div>
-            {settings.privacyPolicy?.sections.map((section, index) => (
+            {(settings.privacyPolicy?.sections || []).map((section, index) => (
                 <div key={section.id} className="space-y-3 p-4 border rounded-md relative">
                     <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removePolicySection('privacyPolicy', index)}>
                         <X className="h-4 w-4 text-destructive" />
@@ -285,7 +285,7 @@ export default function AdminContentPagesPage() {
                 <Label>Page Title</Label>
                 <Input value={settings.termsAndConditions?.title || ''} onChange={(e) => handlePolicyChange('termsAndConditions', -1, 'title', e.target.value)} />
             </div>
-            {settings.termsAndConditions?.sections.map((section, index) => (
+            {(settings.termsAndConditions?.sections || []).map((section, index) => (
                 <div key={section.id} className="space-y-3 p-4 border rounded-md relative">
                     <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removePolicySection('termsAndConditions', index)}>
                         <X className="h-4 w-4 text-destructive" />

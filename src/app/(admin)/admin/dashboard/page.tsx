@@ -346,7 +346,7 @@ export default function AdminDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stats.recentUsers.map(user => (
+                {(stats.recentUsers || []).map(user => (
                   <TableRow key={user.uid} className="hover:bg-muted/40">
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -394,7 +394,7 @@ export default function AdminDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stats.recentExpenses.map(expense => (
+                {(stats.recentExpenses || []).map(expense => (
                   <TableRow key={expense.id} className="hover:bg-muted/40">
                     <TableCell>
                       <p className="font-medium text-sm truncate max-w-[140px]">{expense.description}</p>
