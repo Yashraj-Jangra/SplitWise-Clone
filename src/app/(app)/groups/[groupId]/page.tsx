@@ -264,6 +264,7 @@ export default function GroupDetailPage() {
                                     group={group}
                                     groupHistory={groupHistory}
                                     isHighlighted={highlightedItemId === `exp-${expense.id}`}
+                                    showGroupName={false}
                                   />
                               )
                           } else {
@@ -276,6 +277,7 @@ export default function GroupDetailPage() {
                                       group={group}
                                       groupHistory={groupHistory}
                                       isHighlighted={highlightedItemId === `set-${settlement.id}`}
+                                      showGroupName={false}
                                   />
                               )
                           }
@@ -314,6 +316,7 @@ export default function GroupDetailPage() {
                         currentUserId={userProfile.uid}
                         group={group}
                         groupHistory={groupHistory}
+                        showGroupName={false}
                       />
                     ))}
                   </Accordion>

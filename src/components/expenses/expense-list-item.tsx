@@ -133,6 +133,7 @@ interface ExpenseListItemProps {
   group?: Group;
   groupHistory: HistoryEvent[];
   isHighlighted?: boolean;
+  showGroupName?: boolean;
 }
 
 function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: Omit<ExpenseListItemProps, ''>) {
@@ -396,7 +397,7 @@ function ExpenseDetailContent({ expense, currentUserId, group, groupHistory }: O
 }
 
 
-export function ExpenseListItem({ expense, currentUserId, group, groupHistory, isHighlighted }: ExpenseListItemProps) {
+export function ExpenseListItem({ expense, currentUserId, group, groupHistory, isHighlighted, showGroupName = true }: ExpenseListItemProps) {
   const router = useRouter();
   const { settings } = useSiteSettings();
   const haptic = useHaptics();
@@ -482,7 +483,7 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory, i
                       <p className="text-base font-medium leading-none truncate max-w-[150px] sm:max-w-xs">{expense.description}</p>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
                           <p className="text-xs text-muted-foreground">{expense.category}</p>
-                          {group && (
+                          {group && showGroupName && (
                               <>
                                   <span className="text-[10px] text-muted-foreground/60 select-none">•</span>
                                   <span

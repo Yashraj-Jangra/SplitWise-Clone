@@ -34,6 +34,7 @@ interface SettlementListItemProps {
   group?: Group;
   groupHistory?: HistoryEvent[];
   isHighlighted?: boolean;
+  showGroupName?: boolean;
 }
 
 function SettlementDetailContent({ settlement, group, groupHistory = [] }: Omit<SettlementListItemProps, 'currentUserId'>) {
@@ -219,7 +220,7 @@ function SettlementDetailContent({ settlement, group, groupHistory = [] }: Omit<
 }
 
 
-export function SettlementListItem({ settlement, currentUserId, group, groupHistory, isHighlighted }: SettlementListItemProps) {
+export function SettlementListItem({ settlement, currentUserId, group, groupHistory, isHighlighted, showGroupName = true }: SettlementListItemProps) {
   const router = useRouter();
   const isPayer = settlement.paidBy.uid === currentUserId;
   const isPayee = settlement.paidTo.uid === currentUserId;
@@ -249,7 +250,7 @@ export function SettlementListItem({ settlement, currentUserId, group, groupHist
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1">
                         <p className="text-xs text-muted-foreground">Settlement</p>
-                        {group && (
+                        {group && showGroupName && (
                             <>
                                 <span className="text-[10px] text-muted-foreground/60 select-none">•</span>
                                 <span
