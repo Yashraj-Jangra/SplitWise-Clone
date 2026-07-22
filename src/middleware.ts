@@ -7,9 +7,7 @@ import type { NextRequest } from 'next/server';
  * Runs on every matched request BEFORE the page renders.
  * Redirects unauthenticated users server-side (no client-side flash).
  *
- * Strategy: Check for the Firebase session cookie set by /api/auth/session.
- * The cookie itself is verified in the API route using the Admin SDK.
- * Here we only check existence to keep middleware on the Edge runtime (fast).
+ * Strategy: Check for the Better Auth session cookie set by Better Auth (`__session`).
  * Full token verification happens in API routes and server components.
  */
 export function middleware(request: NextRequest) {
@@ -41,7 +39,10 @@ export function middleware(request: NextRequest) {
   }
 
   // --- Check for session cookie ---
-  const sessionCookie = request.cookies.get('__session')?.value;
+  const sessionCookie = 
+    request.cookies.get('better-auth.session_token')?.value ||
+    request.cookies.get('__Secure-better-auth.session_token')?.value ||
+    request.cookies.get('__session')?.value;
 
   if (!sessionCookie) {
     // No session — redirect to login, preserving the intended destination

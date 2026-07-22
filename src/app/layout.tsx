@@ -7,7 +7,6 @@ import './globals.css';
 import { getSiteSettings } from '@/lib/services/settings.service';
 import { NotificationProvider } from '@/contexts/notification-context';
 import { SiteSettingsProvider } from '@/contexts/site-settings-context';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { ThemeProvider } from '@/contexts/theme-context';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -21,7 +20,7 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
-// force-dynamic is required because generateMetadata calls Prisma directly
+// force-dynamic is required because generateMetadata calls getSiteSettings dynamically
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -70,7 +69,6 @@ export default function RootLayout({
             <SiteSettingsProvider>
               <ThemeProvider>
                 <NotificationProvider>
-                  <FirebaseErrorListener />
                   {children}
                 </NotificationProvider>
               </ThemeProvider>

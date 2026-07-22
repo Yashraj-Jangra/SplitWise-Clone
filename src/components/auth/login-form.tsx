@@ -77,11 +77,6 @@ export function LoginForm({ authPageSettings, appName }: LoginFormProps) {
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-      toast({
-        title: "Login Successful",
-        description: "Welcome!",
-      });
-      router.push("/dashboard");
     } catch (error: any) {
        let description = error.message || "An unknown error occurred. Please try again.";
       toast({

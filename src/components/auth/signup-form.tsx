@@ -88,11 +88,6 @@ export function SignupForm({ authPageSettings, appName }: SignupFormProps) {
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-      toast({
-        title: "Sign Up Successful",
-        description: "Welcome!",
-      });
-      router.push("/dashboard");
     } catch (error: any) {
       let description = error.message || "An unknown error occurred. Please try again.";
       toast({

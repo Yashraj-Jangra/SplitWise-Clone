@@ -53,19 +53,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const userProfile = useMemo((): UserProfile | null => {
     if (!sessionData?.user) return null;
     const user = sessionData.user as any;
+    const createdAtStr = typeof user.createdAt === 'string'
+      ? user.createdAt
+      : user.createdAt instanceof Date
+        ? user.createdAt.toISOString()
+        : new Date().toISOString();
+
     return {
       uid: user.id,
       firstName: user.firstName || user.name?.split(' ')[0] || 'User',
       lastName: user.lastName || user.name?.split(' ').slice(1).join(' ') || '',
-      username: user.username || user.email.split('@')[0],
-      email: user.email,
+      username: user.username || (user.email ? user.email.split('@')[0] : 'user'),
+      email: user.email || '',
       role: (user.role as 'admin' | 'user') || 'user',
       avatarUrl: user.image || user.avatarUrl || `https://ui-avatars.com/api/?name=${user.name}`,
       countryCode: user.countryCode || '',
       mobileNumber: user.mobileNumber || '',
       upiId: user.upiId || '',
-      dob: user.dob || undefined,
-      createdAt: user.createdAt?.toISOString(),
+      dob: user.dob ? (typeof user.dob === 'string' ? user.dob : new Date(user.dob).toISOString()) : undefined,
+      createdAt: createdAtStr,
     } as UserProfile;
   }, [sessionData]);
 
@@ -144,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/',
+        callbackURL: '/dashboard',
       });
     } catch (err: any) {
       setAuthError(err.message);

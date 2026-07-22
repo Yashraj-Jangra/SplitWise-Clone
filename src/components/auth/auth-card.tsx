@@ -174,8 +174,6 @@ export function AuthCard({
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-      setIsRedirecting(true);
-      router.push("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
