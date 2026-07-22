@@ -35,10 +35,31 @@ export async function updateUser(userId: string, data: Partial<UserProfile>): Pr
   const response = await fetchApi('/api/user/profile', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, userId }),
   });
-  // API returns { success: true, profile } — extract the profile
   return (response as any).profile ?? response;
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  await fetchApi(`/api/admin/users?userId=${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function deleteUsersMass(userIds: string[]): Promise<void> {
+  await fetchApi('/api/admin/users', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userIds }),
+  });
+}
+
+export async function updateUserRoleMass(userIds: string[], role: 'admin' | 'user'): Promise<void> {
+  await fetchApi('/api/admin/users', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userIds, role }),
+  });
 }
 
 export async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
