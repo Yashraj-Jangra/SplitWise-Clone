@@ -5,7 +5,7 @@ import { getItem, putItem, queryByPk } from '@/lib/nosql';
 
 export async function POST(
   req: Request,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -13,7 +13,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized. Admin permission required.' }, { status: 403 });
     }
 
-    const { userId } = params;
+    const { userId } = await params;
     const body = await req.json();
     const { newPassword } = body;
 
