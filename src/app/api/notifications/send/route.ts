@@ -147,17 +147,32 @@ export async function POST(request: Request) {
       const appName = settings.appName || 'SplitIt';
       const fromAddress = emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || 'notifications@splitit.app';
 
+      const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
+
       for (const u of usersToEmail) {
         try {
-          const mailBodyWithUpi = upiUrl
-            ? `${notifBody}\n\n[Pay via UPI App (GPay / PhonePe / Paytm)](${upiUrl})`
+          let httpUpiUrl = upiUrl;
+          if (upiUrl && upiUrl.startsWith('upi://')) {
+            try {
+              const parsed = new URL(upiUrl);
+              const pa = parsed.searchParams.get('pa') || '';
+              const pn = parsed.searchParams.get('pn') || '';
+              const am = parsed.searchParams.get('am') || '';
+              httpUpiUrl = `${appBaseUrl}/api/pay-upi?pa=${encodeURIComponent(pa)}&pn=${encodeURIComponent(pn)}&am=${encodeURIComponent(am)}`;
+            } catch (e) {
+              httpUpiUrl = upiUrl;
+            }
+          }
+
+          const mailBodyWithUpi = httpUpiUrl
+            ? `${notifBody}\n\n[⚡ Pay via UPI App (GPay / PhonePe / Paytm)](${httpUpiUrl})`
             : notifBody;
 
           const targetActionUrl = actionUrl 
-            ? `${process.env.NEXT_PUBLIC_APP_URL || ''}${actionUrl}`
+            ? `${appBaseUrl}${actionUrl}`
             : groupId 
-              ? `${process.env.NEXT_PUBLIC_APP_URL || ''}/groups/${groupId}` 
-              : (process.env.NEXT_PUBLIC_APP_URL || '');
+              ? `${appBaseUrl}/groups/${groupId}` 
+              : appBaseUrl;
 
           const htmlContent = renderEmail(
             mailBodyWithUpi,
