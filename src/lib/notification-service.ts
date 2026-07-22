@@ -218,21 +218,21 @@ export const notifyPaymentPing = async (
     groupId?: string,
     groupName?: string
 ) => {
-    const upiUri = upiId ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Payee&am=${Number(amount || 0).toFixed(2)}&cu=INR&tn=${encodeURIComponent('SplitWise Settlement')}` : undefined;
-    const disclaimer = "Note: Please record the settlement manually in Splitwise once paid. We do not directly process or track banking transactions as Splitwise is a 100% free platform with zero usage fees.";
+    const actionUrl = `/dashboard?action=settle&to=${actorId}&amount=${Number(amount || 0).toFixed(2)}${groupId ? `&groupId=${groupId}` : ''}`;
+    const disclaimer = "Note: Please record the settlement manually in Splitwise once confirmed. We do not directly process or track banking transactions as Splitwise is a 100% free platform with zero usage fees.";
 
     await dispatchNotification({
         type: 'payment_reminder',
         recipientIds: [recipientId],
-        title: 'UPI Settle Up Request',
-        body: `A member is asking to settle up ₹${Number(amount || 0).toFixed(2)}${groupName ? ` in "${groupName}"` : ''}.\n\n${disclaimer}`,
+        title: 'Payment Sent via UPI',
+        body: `A member sent you a payment of ₹${Number(amount || 0).toFixed(2)}${groupName ? ` in "${groupName}"` : ''} via UPI. Please confirm receipt and record the settlement.\n\n${disclaimer}`,
         actorId,
         groupId,
         target: 'specific_users',
         ...({
             balanceAmount: `₹${Number(amount || 0).toFixed(2)}`,
             groupName: groupName || 'Shared Expenses',
-            upiUrl: upiUri,
+            actionUrl,
             disclaimer,
             forceEmail: true
         } as any)

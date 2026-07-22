@@ -73,14 +73,14 @@ export function UpiQrModal({
 
       toast({
         title: "Notification Sent!",
-        description: `Pinged ${receiverName} with your settle up request and UPI link.`,
+        description: `Notified ${receiverName} that you sent ₹${Number(amount || 0).toFixed(2)} via UPI.`,
       });
 
       onOpenChange(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed to Send Ping",
+        title: "Failed to Send Notification",
         description: error.message || "An unexpected error occurred.",
       });
     } finally {
@@ -188,12 +188,12 @@ export function UpiQrModal({
               {sendingPing ? (
                 <>
                   <Icons.AppLogo className="h-4 w-4 animate-spin" />
-                  Sending Ping...
+                  Sending Notification...
                 </>
               ) : (
                 <>
                   <Bell className="h-4 w-4 text-primary" />
-                  Ping {receiverName} (Send Settle Up Notification)
+                  Notify {receiverName} (I've Paid via UPI)
                 </>
               )}
             </Button>
