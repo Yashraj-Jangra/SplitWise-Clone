@@ -52,27 +52,44 @@ function calculateUserBalances(userId: string, expenses: Expense[], settlements:
   const userMap = new Map<string, { user: UserProfile; netBalance: number }>();
 
   expenses.forEach((expense) => {
-    const myPayer = expense.payers?.find((p) => p.user?.uid === userId);
-    const myAmountPaid = myPayer ? myPayer.amount : 0;
-
-    const myParticipant = expense.participants?.find((p) => p.user?.uid === userId);
-    const myAmountOwed = myParticipant ? myParticipant.amountOwed : 0;
-
-    const myNetDelta = myAmountPaid - myAmountOwed;
-    if (Math.abs(myNetDelta) < 0.001) return;
-
-    const otherParticipants = expense.participants?.filter((p) => p.user?.uid && p.user.uid !== userId) || [];
-    if (otherParticipants.length === 0) return;
-
-    const totalOtherOwed = otherParticipants.reduce((sum, p) => sum + (p.amountOwed || 0), 0);
-
-    otherParticipants.forEach((p) => {
-      const otherUid = p.user.uid;
-      const existing = userMap.get(otherUid) || { user: p.user, netBalance: 0 };
-      const share = totalOtherOwed > 0 ? (p.amountOwed || 0) / totalOtherOwed : 1 / otherParticipants.length;
-      existing.netBalance -= myNetDelta * share;
-      userMap.set(otherUid, existing);
+    const participantPositions = (expense.participants || []).map((p) => {
+      const payer = expense.payers?.find((pay) => pay.user?.uid === p.user?.uid);
+      const amountPaid = payer ? payer.amount : 0;
+      const amountOwed = p.amountOwed || 0;
+      return {
+        user: p.user,
+        net: amountPaid - amountOwed,
+      };
     });
+
+    const myPosition = participantPositions.find((p) => p.user?.uid === userId);
+    if (!myPosition || Math.abs(myPosition.net) < 0.001) return;
+
+    const lenders = participantPositions.filter((p) => p.net > 0.001);
+    const borrowers = participantPositions.filter((p) => p.net < -0.001);
+
+    const totalLenderSurplus = lenders.reduce((sum, l) => sum + l.net, 0);
+    if (totalLenderSurplus < 0.001) return;
+
+    if (myPosition.net > 0) {
+      // I am a lender: borrowers owe me in proportion to their debt and my surplus
+      borrowers.forEach((b) => {
+        if (!b.user?.uid || b.user.uid === userId) return;
+        const amountOwedToMe = (myPosition.net * Math.abs(b.net)) / totalLenderSurplus;
+        const existing = userMap.get(b.user.uid) || { user: b.user, netBalance: 0 };
+        existing.netBalance += amountOwedToMe; // Positive: b owes me
+        userMap.set(b.user.uid, existing);
+      });
+    } else {
+      // I am a borrower: I owe lenders in proportion to my debt and their surplus
+      lenders.forEach((l) => {
+        if (!l.user?.uid || l.user.uid === userId) return;
+        const amountIOwe = (Math.abs(myPosition.net) * l.net) / totalLenderSurplus;
+        const existing = userMap.get(l.user.uid) || { user: l.user, netBalance: 0 };
+        existing.netBalance -= amountIOwe; // Negative: I owe l
+        userMap.set(l.user.uid, existing);
+      });
+    }
   });
 
   settlements.forEach((settlement) => {

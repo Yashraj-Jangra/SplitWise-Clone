@@ -103,12 +103,12 @@ export async function getAllUserBalances(userId: string): Promise<Balance[]> {
     if (settlement.from.uid === userId) {
       const otherUser = settlement.to;
       const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
-      existing.netBalance += settlement.amount;
+      existing.netBalance -= settlement.amount;
       userP2PBalanceMap.set(otherUser.uid, existing);
     } else if (settlement.to.uid === userId) {
       const otherUser = settlement.from;
       const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
-      existing.netBalance -= settlement.amount;
+      existing.netBalance += settlement.amount;
       userP2PBalanceMap.set(otherUser.uid, existing);
     }
   });
