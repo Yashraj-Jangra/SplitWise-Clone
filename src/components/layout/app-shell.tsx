@@ -158,7 +158,7 @@ function Header() {
   const { settings, loading } = useSiteSettings();
 
   return (
-      <header className="flex h-[60px] items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6 sticky top-0 z-30">
+      <header className="flex h-[60px] items-center gap-2.5 sm:gap-4 border-b bg-background/95 backdrop-blur-sm px-2.5 sm:px-4 lg:px-6 sticky top-0 z-30">
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
                 <Button
@@ -224,7 +224,7 @@ function EmailVerificationBanner() {
   };
 
   return (
-    <div className="bg-yellow-900/50 border border-yellow-400/50 text-yellow-200 p-4 rounded-md flex flex-col sm:flex-row items-center justify-between gap-4 mx-4 my-6 lg:mx-6">
+    <div className="bg-yellow-900/50 border border-yellow-400/50 text-yellow-200 p-4 rounded-md flex flex-col sm:flex-row items-center justify-between gap-4 mx-2.5 my-4 sm:mx-4 lg:mx-6">
       <div className="flex items-start sm:items-center gap-3">
         <Icons.Mail className="h-6 w-6 flex-shrink-0 mt-1 sm:mt-0" />
         <div>
@@ -281,7 +281,7 @@ export function AppShell({ children }: AppShellProps) {
           <UpdateBanner />
           <Header />
           <EmailVerificationBanner />
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 animate-in fade-in-0 duration-300 pb-24 md:pb-4 lg:pb-6">
+          <main className="flex flex-1 flex-col gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 animate-in fade-in-0 duration-300 pb-24 md:pb-4 lg:pb-6">
             {children}
           </main>
           <BottomNavBar />

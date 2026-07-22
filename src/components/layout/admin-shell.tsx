@@ -228,7 +228,7 @@ export function AdminShell({ children }: AdminShellProps) {
       </div>
       <div className="flex flex-col min-w-0">
         <AdminHeader />
-        <main className="flex-1 p-4 lg:p-5 space-y-4">{children}</main>
+        <main className="flex-1 px-2.5 py-3 sm:p-4 lg:p-5 space-y-4">{children}</main>
       </div>
     </div>
   );
