@@ -150,7 +150,7 @@ export async function POST(request: Request) {
       for (const u of usersToEmail) {
         try {
           const mailBodyWithUpi = upiUrl
-            ? `${notifBody}\n\n[Pay via UPI App](${upiUrl})`
+            ? `${notifBody}\n\n[Pay via UPI App (GPay / PhonePe / Paytm)](${upiUrl})`
             : notifBody;
 
           const targetActionUrl = actionUrl 

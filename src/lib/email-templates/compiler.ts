@@ -39,11 +39,27 @@ export function renderEmail(
     })
     .join('');
 
-  // Extract any CTA button links (format: [Button Text](url))
-  const bodyWithButtons = paragraphs.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,
-    `<a href="$2" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;letter-spacing:0.3px;margin:8px 0;">$1</a>`
+  // Extract any CTA button links (format: [Button Text](url) with support for upi://, http://, https://)
+  let bodyWithButtons = paragraphs.replace(
+    /\[([^\]]+)\]\(([a-zA-Z0-9\+\.\-]+:\/\/[^\)]+)\)/g,
+    (_match, text, url) => {
+      const isUpi = String(url).startsWith('upi://');
+      const bgStyle = isUpi
+        ? 'background:#10b981;color:#ffffff;'
+        : 'background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#ffffff;';
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 24px;${bgStyle}text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;letter-spacing:0.3px;margin:8px 0;">${text}</a>`;
+    }
   );
+
+  // Append actionUrl primary CTA button if provided and not already included
+  if (variables.actionUrl && typeof variables.actionUrl === 'string' && variables.actionUrl.trim().length > 0) {
+    const actionUrlStr = String(variables.actionUrl).trim();
+    if (!bodyWithButtons.includes(actionUrlStr)) {
+      bodyWithButtons += `<div style="margin-top:20px;text-align:center;">
+        <a href="${actionUrlStr}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(99,102,241,0.35);">Open Settle Up in App</a>
+      </div>`;
+    }
+  }
 
   const headerSection = logoUrl
     ? `<img src="${logoUrl}" alt="${appName}" style="max-height:44px;max-width:160px;object-fit:contain;">`
