@@ -209,11 +209,11 @@ export function SearchDialog() {
           <DialogHeader className="sr-only">
             <DialogTitle>Global Search</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center border-b px-4">
-            <Icons.Search className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center border-b px-4 bg-muted/20 hover:bg-muted/40 focus-within:bg-muted/60 transition-colors">
+            <Icons.Search className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             <Input
               placeholder="Search for groups, expenses, users..."
-              className="border-0 h-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:shadow-none bg-transparent pl-3"
+              className="border-0 h-12 text-base shadow-none !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 pr-8 flex-1"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
