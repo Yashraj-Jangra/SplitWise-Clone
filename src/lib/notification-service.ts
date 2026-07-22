@@ -210,32 +210,5 @@ export const notifyPaymentReminder = async (
     });
 };
 
-export const notifyPaymentPing = async (
-    actorId: string,
-    recipientId: string,
-    amount: number,
-    upiId?: string,
-    groupId?: string,
-    groupName?: string
-) => {
-    const actionUrl = `/dashboard?action=settle&to=${actorId}&amount=${Number(amount || 0).toFixed(2)}${groupId ? `&groupId=${groupId}` : ''}`;
-    const disclaimer = "Note: Please record the settlement manually in Splitwise once confirmed. We do not directly process or track banking transactions as Splitwise is a 100% free platform with zero usage fees.";
 
-    await dispatchNotification({
-        type: 'payment_reminder',
-        recipientIds: [recipientId],
-        title: 'Payment Sent via UPI',
-        body: `A member sent you a payment of ₹${Number(amount || 0).toFixed(2)}${groupName ? ` in "${groupName}"` : ''} via UPI. Please confirm receipt and record the settlement.\n\n${disclaimer}`,
-        actorId,
-        groupId,
-        target: 'specific_users',
-        ...({
-            balanceAmount: `₹${Number(amount || 0).toFixed(2)}`,
-            groupName: groupName || 'Shared Expenses',
-            actionUrl,
-            disclaimer,
-            forceEmail: true
-        } as any)
-    });
-};
 

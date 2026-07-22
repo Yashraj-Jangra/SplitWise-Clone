@@ -13,41 +13,28 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getFullName, getInitials } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
-import { useAuth } from '@/contexts/auth-context';
-import { notifyPaymentPing, notifyPaymentReminder } from '@/lib/notification-service';
 import { useToast } from '@/hooks/use-toast';
-import { Icons } from '@/components/icons';
-import { Check, Copy, ExternalLink, QrCode, Bell, Info } from 'lucide-react';
+import { Check, Copy, ExternalLink, QrCode, Info } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
 interface UpiQrModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receiver: UserProfile;
-  payer?: UserProfile;
   amount: number;
-  groupId?: string;
-  groupName?: string;
 }
 
 export function UpiQrModal({
   open,
   onOpenChange,
   receiver,
-  payer,
   amount,
-  groupId,
-  groupName,
 }: UpiQrModalProps) {
-  const { userProfile } = useAuth();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-  const [sendingPing, setSendingPing] = useState(false);
 
   const receiverName = getFullName(receiver.firstName, receiver.lastName);
-  const payerName = payer ? getFullName(payer.firstName, payer.lastName) : 'member';
   const upiId = receiver.upiId || '';
-  const isReceiverLoggedIn = userProfile?.uid === receiver.uid;
 
   // Construct valid UPI payment deep link URI
   const upiUri = upiId
@@ -60,56 +47,6 @@ export function UpiQrModal({
     setCopied(true);
     toast({ title: "UPI ID Copied", description: `${receiver.upiId} copied to clipboard.` });
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleSendNotification = async () => {
-    if (!userProfile) return;
-    setSendingPing(true);
-    try {
-      if (isReceiverLoggedIn && payer) {
-        // Creditor (Receiver) is logged in -> send Settle Up reminder to Debtor (Payer)
-        await notifyPaymentReminder(
-          payer.uid,
-          userProfile.uid,
-          groupId,
-          groupName || 'Shared Expenses',
-          amount,
-          true,
-          receiver.upiId,
-          receiverName
-        );
-
-        toast({
-          title: "Settle Up Reminder Sent!",
-          description: `Sent a settle up request and your UPI QR code to ${payerName}.`,
-        });
-      } else {
-        // Debtor (Payer) is logged in -> notify Creditor (Receiver) that payment was transferred
-        await notifyPaymentPing(
-          userProfile.uid,
-          receiver.uid,
-          amount,
-          receiver.upiId,
-          groupId,
-          groupName || 'Shared Expenses'
-        );
-
-        toast({
-          title: "Notification Sent!",
-          description: `Notified ${receiverName} that you sent ₹${Number(amount || 0).toFixed(2)} via UPI.`,
-        });
-      }
-
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to Send Notification",
-        description: error.message || "An unexpected error occurred.",
-      });
-    } finally {
-      setSendingPing(false);
-    }
   };
 
   return (
@@ -176,7 +113,7 @@ export function UpiQrModal({
             <div className="p-5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center text-amber-500 space-y-1.5">
               <p className="text-sm font-semibold">UPI ID Not Configured</p>
               <p className="text-xs opacity-90">
-                {receiverName} has not added their UPI ID to their profile yet. You can send them a reminder or record a manual cash settlement.
+                {receiverName} has not added their UPI ID to their profile yet.
               </p>
             </div>
           )}
@@ -190,8 +127,8 @@ export function UpiQrModal({
           </div>
 
           {/* ── Actions ────────────────────────────────────────────────────── */}
-          <div className="space-y-2 pt-1">
-            {!isReceiverLoggedIn && receiver.upiId && (
+          {receiver.upiId && (
+            <div className="pt-1">
               <Button
                 asChild
                 className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs tracking-wide shadow-md transition-all gap-2"
@@ -201,32 +138,8 @@ export function UpiQrModal({
                   Open in UPI App (GPay / PhonePe / Paytm)
                 </a>
               </Button>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={handleSendNotification}
-              disabled={sendingPing}
-              className="w-full h-10 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground border-border/30 gap-2"
-            >
-              {sendingPing ? (
-                <>
-                  <Icons.AppLogo className="h-4 w-4 animate-spin" />
-                  Sending Notification...
-                </>
-              ) : isReceiverLoggedIn ? (
-                <>
-                  <Bell className="h-4 w-4 text-primary" />
-                  Send Settle Up Request & QR to {payerName}
-                </>
-              ) : (
-                <>
-                  <Bell className="h-4 w-4 text-primary" />
-                  Notify {receiverName} (I've Paid via UPI)
-                </>
-              )}
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
