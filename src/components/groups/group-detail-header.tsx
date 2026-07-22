@@ -106,8 +106,8 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
         </div>
 
 
-        {/* Group name + description — top-left, always visible */}
-        <div className="absolute top-2 left-2 right-16 z-10">
+        {/* Group name + description — top-left on mobile, bottom-left on desktop */}
+        <div className="absolute top-2 left-2 right-16 md:top-auto md:bottom-3 md:left-4 md:right-auto md:max-w-[calc(100%-250px)] z-10">
           <h1 className="text-xl md:text-3xl font-bold font-headline drop-shadow-lg truncate text-white leading-tight">
             {group.name}
           </h1>
