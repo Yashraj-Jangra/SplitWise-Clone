@@ -51,33 +51,33 @@ function StatCard({
   valueColor?: string;
 }) {
   return (
-    <Card className="relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 group">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Icon className="h-4 w-4" />
+    <Card className="border border-border bg-card rounded-lg shadow-sm transition-colors hover:border-border/80">
+      <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between space-y-0">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</p>
+        <div className="rounded-md bg-muted border border-border p-1.5 text-foreground">
+          <Icon className="h-3.5 w-3.5" />
         </div>
       </CardHeader>
-      <CardContent className="pb-4">
-        <p className={cn('text-3xl font-bold font-headline tracking-tight', valueColor)}>{value}</p>
+      <CardContent className="p-3 pt-1 space-y-1">
+        <p className={cn('text-3xl font-black font-mono tracking-tight text-foreground', valueColor)}>{value}</p>
         {(sub || trendLabel) && (
-          <div className="flex items-center gap-1.5 mt-1.5">
-            {trend === 'up' && <Icons.TrendingUp className="h-3.5 w-3.5 text-green-500" />}
-            {trend === 'down' && <Icons.TrendingDown className="h-3.5 w-3.5 text-red-500" />}
+          <div className="flex items-center gap-1 text-xs font-medium">
+            {trend === 'up' && <Icons.TrendingUp className="h-3 w-3 text-emerald-500" />}
+            {trend === 'down' && <Icons.TrendingDown className="h-3 w-3 text-rose-500" />}
             {trendLabel && (
-              <span className={cn(
-                'text-xs font-medium',
-                trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-muted-foreground'
-              )}>{trendLabel}</span>
+              <span className={cn(trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-rose-500' : 'text-muted-foreground')}>
+                {trendLabel}
+              </span>
             )}
-            {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
+            {sub && <span className="text-muted-foreground/80 font-normal">{sub}</span>}
           </div>
         )}
         {href && (
-          <Button variant="link" size="sm" asChild className="p-0 h-auto mt-2 text-xs">
-            <Link href={href}>View all →</Link>
-          </Button>
+          <div className="pt-1">
+            <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs font-bold text-foreground hover:underline">
+              <Link href={href}>Inspect →</Link>
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -261,39 +261,39 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* ── User Growth (full width) ─────────────────── */}
-      <Card>
-        <CardHeader>
+      <Card className="border border-border bg-card rounded-lg shadow-sm">
+        <CardHeader className="p-4 border-b border-border/40 pb-3">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle>Platform Growth</CardTitle>
-              <CardDescription>Monthly user signups and cumulative total over the last 12 months.</CardDescription>
+              <CardTitle className="text-base font-extrabold text-foreground">Platform Growth</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">Monthly user signups and cumulative total over the last 12 months.</CardDescription>
             </div>
-            <Badge variant="secondary" className="text-xs">{users.length} total</Badge>
+            <Badge variant="outline" className="text-xs font-bold font-mono">{users.length} total</Badge>
           </div>
         </CardHeader>
-        <CardContent className="pl-0 pr-4 pb-4">
+        <CardContent className="p-4 pl-0 pr-4 pb-2">
           <UserGrowthChart users={users} />
         </CardContent>
       </Card>
 
       {/* ── Expense Volume + Category Donut ──────────── */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Expense Volume</CardTitle>
-            <CardDescription>Total spending recorded per month for the past 6 months.</CardDescription>
+        <Card className="border border-border bg-card rounded-lg shadow-sm">
+          <CardHeader className="p-4 border-b border-border/40 pb-3">
+            <CardTitle className="text-base font-extrabold text-foreground">Expense Volume</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">Total spending recorded per month for the past 6 months.</CardDescription>
           </CardHeader>
-          <CardContent className="pl-0 pr-4 pb-4">
+          <CardContent className="p-4 pl-0 pr-4 pb-2">
             <ExpenseVolumeChart expenses={expenses} />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Spending by Category</CardTitle>
-            <CardDescription>Breakdown of all platform spending by master category.</CardDescription>
+        <Card className="border border-border bg-card rounded-lg shadow-sm">
+          <CardHeader className="p-4 border-b border-border/40 pb-3">
+            <CardTitle className="text-base font-extrabold text-foreground">Spending by Category</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">Breakdown of all platform spending by master category.</CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
+          <CardContent className="p-4 pb-2">
             <CategoryDonutChart expenses={expenses} />
           </CardContent>
         </Card>

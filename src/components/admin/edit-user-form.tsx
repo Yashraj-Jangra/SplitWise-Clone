@@ -162,35 +162,35 @@ export function EditUserForm({ user }: EditUserFormProps) {
   return (
     <div className="space-y-6">
       {/* Header Profile Summary */}
-      <Card className="border-border/30 bg-card/60 backdrop-blur-md shadow-lg rounded-2xl overflow-hidden">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <Avatar className="h-20 w-20 rounded-2xl border-2 border-primary/20 shadow-md">
+      <Card className="border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Avatar className="h-16 w-16 rounded-xl border border-border">
               <AvatarImage src={profileForm.watch('avatarUrl') || user.avatarUrl} alt={user.firstName} />
-              <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary rounded-2xl">
+              <AvatarFallback className="text-lg font-bold bg-primary/10 text-primary rounded-xl">
                 {getInitials(`${user.firstName} ${user.lastName || ''}`)}
               </AvatarFallback>
             </Avatar>
-            <div className="space-y-1 text-center sm:text-left flex-1">
+            <div className="space-y-0.5 text-center sm:text-left flex-1">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h2 className="text-2xl font-bold text-foreground">
+                <h2 className="text-xl font-extrabold text-foreground">
                   {profileForm.watch('firstName')} {profileForm.watch('lastName')}
                 </h2>
                 <span
                   className={cn(
-                    'px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider',
+                    'px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider',
                     user.role === 'admin'
                       ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                      : 'bg-primary/10 text-primary border border-primary/20'
+                      : 'bg-muted text-muted-foreground border border-border'
                   )}
                 >
                   {user.role}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-              <p className="text-xs text-muted-foreground/80">User ID: {user.uid}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+              <p className="text-[11px] font-mono text-muted-foreground/70">ID: {user.uid}</p>
             </div>
-            <Button variant="outline" className="rounded-xl text-sm font-medium" onClick={() => router.push('/admin/users')}>
+            <Button variant="outline" size="sm" className="rounded-lg text-xs font-bold border-border h-8" onClick={() => router.push('/admin/users')}>
               Back to Users
             </Button>
           </div>
@@ -198,26 +198,26 @@ export function EditUserForm({ user }: EditUserFormProps) {
       </Card>
 
       {/* Tabs for Profile & Security Settings */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
-        <TabsList className="grid grid-cols-2 max-w-md h-12 rounded-xl bg-muted/40 p-1">
-          <TabsTrigger value="profile" className="rounded-lg text-sm font-medium transition-all gap-2">
-            <User className="h-4 w-4" /> Profile & Details
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-4">
+        <TabsList className="grid grid-cols-2 max-w-sm h-9 rounded-xl bg-muted/50 p-1 border border-border">
+          <TabsTrigger value="profile" className="rounded-lg text-xs font-bold transition-all gap-1.5 py-1">
+            <User className="h-3.5 w-3.5" /> Profile & Details
           </TabsTrigger>
-          <TabsTrigger value="security" className="rounded-lg text-sm font-medium transition-all gap-2">
-            <Lock className="h-4 w-4" /> Password & Security
+          <TabsTrigger value="security" className="rounded-lg text-xs font-bold transition-all gap-1.5 py-1">
+            <Lock className="h-3.5 w-3.5" /> Password & Security
           </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Profile Details */}
-        <TabsContent value="profile" className="space-y-6">
-          <Card className="border-border/30 bg-card/60 backdrop-blur-md shadow-lg rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" /> Profile & Contact Details
+        <TabsContent value="profile" className="space-y-4">
+          <Card className="border border-border bg-card shadow-sm rounded-2xl">
+            <CardHeader className="p-4 border-b border-border/40 pb-3">
+              <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+                <User className="h-4 w-4 text-primary" /> Profile & Contact Details
               </CardTitle>
-              <CardDescription>Update user personal details, contact number, and payment info.</CardDescription>
+              <CardDescription className="text-xs text-muted-foreground">Update user personal details, contact number, and payment info.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
