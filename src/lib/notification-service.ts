@@ -179,19 +179,32 @@ export const notifyPaymentReminder = async (
     groupId: string | undefined, 
     groupName: string | undefined,
     balanceAmount: number,
-    forceEmail: boolean = false
+    forceEmail: boolean = false,
+    actorUpiId?: string,
+    actorName?: string
 ) => {
+    const upiUri = actorUpiId 
+        ? `upi://pay?pa=${encodeURIComponent(actorUpiId)}&pn=${encodeURIComponent(actorName || 'Payee')}&am=${Number(balanceAmount || 0).toFixed(2)}&cu=INR&tn=${encodeURIComponent('SplitWise Settlement')}` 
+        : undefined;
+
+    const disclaimer = "Note: You'll need to update it manually in Splitwise that the amount is paid, because we don't directly receive or track payments and it is a free platform with zero usage fee.";
+
+    const actionUrl = `/dashboard?action=settle&to=${actorId}&amount=${Number(balanceAmount || 0).toFixed(2)}${groupId ? `&groupId=${groupId}` : ''}`;
+
     await dispatchNotification({
         type: 'payment_reminder',
         recipientIds: [recipientId],
         title: 'Settle Up Reminder',
-        body: `Friendly reminder to settle up your outstanding balance of $${balanceAmount.toFixed(2)}${groupName ? ` in "${groupName}"` : ''}.`,
+        body: `A member is asking you to settle up ₹${Number(balanceAmount || 0).toFixed(2)}${groupName ? ` in "${groupName}"` : ''}.\n\n${disclaimer}`,
         actorId,
         groupId,
         target: 'specific_users',
         ...({
-            balanceAmount: `$${balanceAmount.toFixed(2)}`,
+            balanceAmount: `₹${Number(balanceAmount || 0).toFixed(2)}`,
             groupName: groupName || 'your group',
+            upiUrl: upiUri,
+            actionUrl,
+            disclaimer,
             forceEmail
         } as any)
     });

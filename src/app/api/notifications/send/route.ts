@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
     const authUid = session.user.id;
     const body = await request.json();
-    const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, settlementId, target = 'specific_users', imageUrl, balanceAmount, groupName, upiUrl, forceEmail } = body as {
+    const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, settlementId, target = 'specific_users', imageUrl, balanceAmount, groupName, upiUrl, actionUrl, forceEmail } = body as {
       type: NotificationEventType;
       recipientIds: string[];
       title: string;
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       balanceAmount?: string;
       groupName?: string;
       upiUrl?: string;
+      actionUrl?: string;
       forceEmail?: boolean;
     };
 
@@ -152,12 +153,18 @@ export async function POST(request: Request) {
             ? `${notifBody}\n\n[Pay via UPI App](${upiUrl})`
             : notifBody;
 
+          const targetActionUrl = actionUrl 
+            ? `${process.env.NEXT_PUBLIC_APP_URL || ''}${actionUrl}`
+            : groupId 
+              ? `${process.env.NEXT_PUBLIC_APP_URL || ''}/groups/${groupId}` 
+              : (process.env.NEXT_PUBLIC_APP_URL || '');
+
           const htmlContent = renderEmail(
             mailBodyWithUpi,
             {
               userName: u.name,
               appName,
-              actionUrl: groupId ? `${process.env.NEXT_PUBLIC_APP_URL || ''}/groups/${groupId}` : (process.env.NEXT_PUBLIC_APP_URL || ''),
+              actionUrl: targetActionUrl,
               title,
               bodyText: mailBodyWithUpi,
               balanceAmount: balanceAmount || '',

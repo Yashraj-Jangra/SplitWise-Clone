@@ -106,7 +106,9 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                 mainGroupId,
                 mainGroupName,
                 obligation.amount,
-                sendEmail
+                sendEmail,
+                userProfile.upiId,
+                getFullName(userProfile.firstName, userProfile.lastName)
             );
 
             toast({
@@ -162,7 +164,9 @@ export function ObligationsCard({ balances, type }: ObligationsCardProps) {
                         mainGroupId,
                         mainGroupName,
                         obligation.amount,
-                        sendEmail
+                        sendEmail,
+                        userProfile.upiId,
+                        getFullName(userProfile.firstName, userProfile.lastName)
                     );
                     successCount++;
                 } catch (e) {
