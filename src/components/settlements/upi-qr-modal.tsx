@@ -14,10 +14,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getFullName, getInitials } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
-import { notifyPaymentConfirmationRequest } from '@/lib/notification-service';
+import { notifyPaymentPing } from '@/lib/notification-service';
 import { useToast } from '@/hooks/use-toast';
 import { Icons } from '@/components/icons';
-import { Check, Copy, ExternalLink, QrCode, ShieldCheck } from 'lucide-react';
+import { Check, Copy, ExternalLink, QrCode, Bell, Info } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
 interface UpiQrModalProps {
@@ -40,13 +40,15 @@ export function UpiQrModal({
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-  const [sendingRequest, setSendingRequest] = useState(false);
+  const [sendingPing, setSendingPing] = useState(false);
 
   const receiverName = getFullName(receiver.firstName, receiver.lastName);
-  const upiId = receiver.upiId || 'Not configured';
+  const upiId = receiver.upiId || '';
 
   // Construct valid UPI payment deep link URI
-  const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(receiverName)}&am=${Number(amount || 0).toFixed(2)}&cu=INR&tn=${encodeURIComponent(`SplitIt Settlement`)}`;
+  const upiUri = upiId
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(receiverName)}&am=${Number(amount || 0).toFixed(2)}&cu=INR&tn=${encodeURIComponent('SplitWise Settlement')}`
+    : '';
 
   const handleCopyUpi = () => {
     if (!receiver.upiId) return;
@@ -56,135 +58,146 @@ export function UpiQrModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRequestConfirmation = async () => {
+  const handlePingRecipient = async () => {
     if (!userProfile) return;
-    setSendingRequest(true);
+    setSendingPing(true);
     try {
-      await notifyPaymentConfirmationRequest(
+      await notifyPaymentPing(
         userProfile.uid,
         receiver.uid,
         amount,
+        receiver.upiId,
         groupId,
         groupName || 'Shared Expenses'
       );
 
       toast({
-        title: "Payment Confirmation Sent",
-        description: `Sent a 1-tap confirmation request to ${receiverName}. Your settlement will auto-record once confirmed!`,
+        title: "Notification Sent!",
+        description: `Pinged ${receiverName} with your settle up request and UPI link.`,
       });
 
       onOpenChange(false);
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Failed to Send Request",
+        title: "Failed to Send Ping",
         description: error.message || "An unexpected error occurred.",
       });
     } finally {
-      setSendingRequest(false);
+      setSendingPing(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px] text-center p-6">
-        <DialogHeader className="text-center items-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 mb-2">
-            <QrCode className="h-6 w-6" />
-          </div>
-          <DialogTitle className="text-xl font-bold">Quick-Settle UPI QR</DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
-            Scan with GPay, PhonePe, Paytm or BHIM to pay instantly
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-border/20 rounded-2xl shadow-2xl bg-background">
+        <div className="p-6 space-y-4 text-center">
+          <DialogHeader className="text-center items-center space-y-1.5">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <QrCode className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-xl font-bold font-headline">Quick-Settle UPI QR</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Scan with GPay, PhonePe, Paytm, or BHIM to transfer directly
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* ── Receiver Profile & Amount Badge ────────────────────────────── */}
-        <div className="my-3 flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
-          <div className="flex items-center gap-3 min-w-0 text-left">
-            <Avatar className="h-10 w-10 flex-shrink-0">
-              <AvatarImage src={receiver.avatarUrl} alt={receiverName} />
-              <AvatarFallback>{getInitials(receiver.firstName, receiver.lastName)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">{receiverName}</p>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="font-mono text-[11px] truncate">{upiId}</span>
-                {receiver.upiId && (
-                  <button
-                    onClick={handleCopyUpi}
-                    className="hover:text-foreground transition-colors p-0.5"
-                    title="Copy UPI ID"
-                  >
-                    {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                  </button>
-                )}
+          {/* ── Receiver Profile & Amount Card ────────────────────────────── */}
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/20 border border-border/30">
+            <div className="flex items-center gap-3 min-w-0 text-left">
+              <Avatar className="h-10 w-10 flex-shrink-0 border border-border/40">
+                <AvatarImage src={receiver.avatarUrl} alt={receiverName} />
+                <AvatarFallback>{getInitials(receiver.firstName, receiver.lastName)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate">{receiverName}</p>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="font-mono text-[11px] truncate">{upiId || 'No UPI ID set'}</span>
+                  {receiver.upiId && (
+                    <button
+                      onClick={handleCopyUpi}
+                      className="hover:text-foreground transition-colors p-0.5"
+                      title="Copy UPI ID"
+                    >
+                      {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-xs text-muted-foreground">Amount</p>
-            <p className="text-lg font-bold text-emerald-500">
-              {CURRENCY_SYMBOL}{Number(amount || 0).toFixed(2)}
-            </p>
-          </div>
-        </div>
-
-        {/* ── High-Contrast QR Code Display ──────────────────────────────── */}
-        {receiver.upiId ? (
-          <div className="flex flex-col items-center justify-center py-2">
-            <div className="p-4 bg-white rounded-2xl border-2 border-emerald-500/30 shadow-lg inline-block">
-              <QRCodeSVG
-                value={upiUri}
-                size={180}
-                level="M"
-                includeMargin={false}
-              />
+            <div className="text-right flex-shrink-0">
+              <p className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">Amount</p>
+              <p className="text-lg font-bold text-emerald-500">
+                {CURRENCY_SYMBOL}{Number(amount || 0).toFixed(2)}
+              </p>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-2.5">
-              Instant zero-fee transfer to <strong className="text-foreground">{receiverName}</strong>
-            </p>
           </div>
-        ) : (
-          <div className="p-6 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center text-amber-500 space-y-2">
-            <p className="text-sm font-semibold">UPI ID Not Configured</p>
-            <p className="text-xs opacity-90">
-              {receiverName} has not set up their UPI ID yet. You can remind them or settle via cash/manual record.
-            </p>
-          </div>
-        )}
 
-        {/* ── Actions ────────────────────────────────────────────────────── */}
-        <div className="mt-4 space-y-2">
-          {receiver.upiId && (
-            <Button
-              asChild
-              variant="outline"
-              className="w-full h-10 rounded-xl text-xs gap-2 font-medium"
-            >
-              <a href={upiUri} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
-                Open in UPI App (GPay / PhonePe)
-              </a>
-            </Button>
+          {/* ── High-Contrast QR Code Display ──────────────────────────────── */}
+          {receiver.upiId ? (
+            <div className="flex flex-col items-center justify-center py-1 space-y-2">
+              <div className="p-4 bg-white rounded-2xl border-2 border-emerald-500/30 shadow-lg inline-block">
+                <QRCodeSVG
+                  value={upiUri}
+                  size={170}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Direct zero-fee transfer to <strong className="text-foreground">{receiverName}</strong>
+              </p>
+            </div>
+          ) : (
+            <div className="p-5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center text-amber-500 space-y-1.5">
+              <p className="text-sm font-semibold">UPI ID Not Configured</p>
+              <p className="text-xs opacity-90">
+                {receiverName} has not added their UPI ID to their profile yet. You can ping them or record a manual cash settlement.
+              </p>
+            </div>
           )}
 
-          <Button
-            onClick={handleRequestConfirmation}
-            disabled={sendingRequest || !receiver.upiId}
-            className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs tracking-wide shadow-md transition-all gap-2"
-          >
-            {sendingRequest ? (
-              <>
-                <Icons.AppLogo className="h-4 w-4 animate-spin" />
-                Sending Request...
-              </>
-            ) : (
-              <>
-                <ShieldCheck className="h-4 w-4" />
-                I Have Paid (Request Confirmation)
-              </>
+          {/* ── Disclaimer Banner ────────────────────────────────────────────── */}
+          <div className="p-3 rounded-xl bg-muted/20 border border-border/30 text-left flex items-start gap-2.5">
+            <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Note:</strong> Splitwise is a 100% free platform with zero usage fees. We do not directly process or track banking payments. Please manually record the settlement once transferred.
+            </p>
+          </div>
+
+          {/* ── Actions ────────────────────────────────────────────────────── */}
+          <div className="space-y-2 pt-1">
+            {receiver.upiId && (
+              <Button
+                asChild
+                className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs tracking-wide shadow-md transition-all gap-2"
+              >
+                <a href={upiUri} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Open in UPI App (GPay / PhonePe / Paytm)
+                </a>
+              </Button>
             )}
-          </Button>
+
+            <Button
+              variant="outline"
+              onClick={handlePingRecipient}
+              disabled={sendingPing}
+              className="w-full h-10 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground border-border/30 gap-2"
+            >
+              {sendingPing ? (
+                <>
+                  <Icons.AppLogo className="h-4 w-4 animate-spin" />
+                  Sending Ping...
+                </>
+              ) : (
+                <>
+                  <Bell className="h-4 w-4 text-primary" />
+                  Ping {receiverName} (Send Settle Up Notification)
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

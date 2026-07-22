@@ -17,9 +17,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
     }
     const authUid = session.user.id;
-
     const body = await request.json();
-    const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, settlementId, target = 'specific_users', imageUrl, balanceAmount, groupName } = body as {
+    const { type, recipientIds, title, body: notifBody, actorId, groupId, expenseId, settlementId, target = 'specific_users', imageUrl, balanceAmount, groupName, upiUrl, forceEmail } = body as {
       type: NotificationEventType;
       recipientIds: string[];
       title: string;
@@ -32,6 +31,7 @@ export async function POST(request: Request) {
       imageUrl?: string;
       balanceAmount?: string;
       groupName?: string;
+      upiUrl?: string;
       forceEmail?: boolean;
     };
 
@@ -148,14 +148,18 @@ export async function POST(request: Request) {
 
       for (const u of usersToEmail) {
         try {
+          const mailBodyWithUpi = upiUrl
+            ? `${notifBody}\n\n[Pay via UPI App](${upiUrl})`
+            : notifBody;
+
           const htmlContent = renderEmail(
-            notifBody,
+            mailBodyWithUpi,
             {
               userName: u.name,
               appName,
               actionUrl: groupId ? `${process.env.NEXT_PUBLIC_APP_URL || ''}/groups/${groupId}` : (process.env.NEXT_PUBLIC_APP_URL || ''),
               title,
-              bodyText: notifBody,
+              bodyText: mailBodyWithUpi,
               balanceAmount: balanceAmount || '',
               groupName: groupName || '',
             },
