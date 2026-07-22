@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
+import { addTicketReply } from '@/lib/services/ticket.service';
 
 export async function POST(request: Request) {
   try {
@@ -15,18 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required parameters.' }, { status: 400 });
     }
 
-    const message = await prisma.ticketMessage.create({
-      data: {
-        ticketId,
-        sentById: session.user.id,
-        message: replyMessage,
-      }
-    });
-
-    await prisma.supportTicket.update({
-      where: { id: ticketId },
-      data: { updatedAt: new Date() }
-    });
+    await addTicketReply(ticketId, session.user.id, replyMessage);
 
     // Trigger notification
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235';
@@ -40,7 +29,7 @@ export async function POST(request: Request) {
       })
     }).catch(err => console.error('Failed to trigger ticket reply notification:', err));
 
-    return NextResponse.json({ success: true, messageId: message.id });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error adding ticket reply:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });

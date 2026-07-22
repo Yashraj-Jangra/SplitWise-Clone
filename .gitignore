@@ -54,3 +54,7 @@ progress.md
 # secrets and data exports
 service-account.json
 scripts/exports/
+oracle_migration_data/
+wallet/
+Wallet*.zip
+

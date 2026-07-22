@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
-import { uploadFile } from '@/lib/minio';
+import { updateUserProfile } from '@/lib/services/user.service';
+import { uploadFile } from '@/lib/storage';
 
 export async function POST(request: Request) {
   try {
@@ -34,13 +34,9 @@ export async function POST(request: Request) {
 
     const relativeUrl = await uploadFile(key, fileBuffer, file.type);
 
-    // Update user profile in the database
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        avatarUrl: relativeUrl,
-        image: relativeUrl
-      }
+    // Update user profile in Oracle Autonomous DB
+    await updateUserProfile(userId, {
+      avatarUrl: relativeUrl,
     });
 
     return NextResponse.json({ success: true, url: relativeUrl });

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth.server';
 import nodemailer from 'nodemailer';
 import { renderEmail } from '@/lib/email-templates/compiler';
@@ -7,6 +6,9 @@ import { sendEmailViaGmail } from '@/lib/gmail-sender';
 import type { NotificationEventType, UserNotificationPrefsDocument } from '@/types';
 import { sendVapidPush } from '@/lib/vapid-push';
 import { getSiteSettings } from '@/lib/services/settings.service';
+import { createNotification, getUserNotificationPrefs } from '@/lib/services/notification.service';
+import { getUserProfile } from '@/lib/services/user.service';
+import { queryByEntityType } from '@/lib/nosql';
 
 export async function POST(request: Request) {
   try {
@@ -30,6 +32,7 @@ export async function POST(request: Request) {
       imageUrl?: string;
       balanceAmount?: string;
       groupName?: string;
+      forceEmail?: boolean;
     };
 
     if (!type || !title || !notifBody || !recipientIds) {
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
 
     const settings = await getSiteSettings();
     const emailSettings = settings.emailSettings;
-    
+
     let transporter: nodemailer.Transporter | null = null;
     if (emailSettings?.smtpSettings && emailSettings.smtpSettings.host) {
       transporter = nodemailer.createTransport({
@@ -53,20 +56,11 @@ export async function POST(request: Request) {
     }
 
     // 1. Fetch user preferences
-    const prefs = await prisma.userNotificationPrefs.findMany({
-      where: { userId: { in: recipientIds.length ? recipientIds : ['nobody'] } }
-    });
     const prefsMap = new Map<string, UserNotificationPrefsDocument>();
-    prefs.forEach(p => {
-      prefsMap.set(p.userId, {
-        userId: p.userId,
-        inAppEnabled: p.inAppEnabled,
-        pushEnabled: p.pushEnabled,
-        emailEnabled: p.emailEnabled,
-        events: p.events as any,
-        updatedAt: p.updatedAt as any
-      });
-    });
+    for (const uid of recipientIds) {
+      const p = await getUserNotificationPrefs(uid);
+      if (p) prefsMap.set(uid, p);
+    }
 
     // 2. Filter channels per user
     const usersToEmail: any[] = [];
@@ -89,9 +83,9 @@ export async function POST(request: Request) {
 
       if (emailEnabled || body.forceEmail) {
         try {
-          const userRecord = await prisma.user.findUnique({ where: { id: uid } });
+          const userRecord = await getUserProfile(uid);
           if (userRecord?.email) {
-            usersToEmail.push({ uid, email: userRecord.email, name: userRecord.name || 'User' });
+            usersToEmail.push({ uid, email: userRecord.email, name: `${userRecord.firstName} ${userRecord.lastName}`.trim() });
           }
         } catch (e) {
           console.error("Failed to fetch user email for UID:", uid);
@@ -99,41 +93,28 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Write In-App Notification using Prisma transaction
+    // 3. Write In-App Notification to Oracle Autonomous DB
     if (inAppRecipients.length > 0 || target === 'all_users') {
-      await prisma.$transaction(async (tx) => {
-        const notif = await tx.notification.create({
-          data: {
-            type,
-            title,
-            body: notifBody,
-            actorId: actorId || null,
-            groupId: groupId || null,
-            expenseId: expenseId || null,
-            settlementId: settlementId || null,
-            target,
-            channels: ['in_app'],
-            imageUrl: imageUrl || null,
-            createdBy: authUid,
-          }
-        });
-
-        if (target !== 'all_users' && inAppRecipients.length > 0) {
-          await tx.notificationRecipient.createMany({
-            data: inAppRecipients.map(uid => ({
-              notificationId: notif.id,
-              userId: uid
-            }))
-          });
-        }
+      await createNotification({
+        type,
+        title,
+        body: notifBody,
+        actorId: actorId || null,
+        groupId: groupId || null,
+        expenseId: expenseId || null,
+        settlementId: settlementId || null,
+        target,
+        channels: ['in_app'],
+        imageUrl: imageUrl || null,
+        createdBy: authUid,
+        recipientIds: target === 'all_users' ? [] : inAppRecipients,
       });
     }
 
     // 4. Send VAPID Push Notifications
     if (targetUserIdsForPush.length > 0) {
-      const subscriptions = await prisma.pushSubscription.findMany({
-        where: { userId: { in: targetUserIdsForPush } }
-      });
+      const allPushSubs = await queryByEntityType<any>('PUSH_SUB');
+      const subscriptions = allPushSubs.filter(s => targetUserIdsForPush.includes(s.userId));
 
       const pushPayload = {
         title,
@@ -147,92 +128,68 @@ export async function POST(request: Request) {
         }
       };
 
-      const pushPromises = subscriptions.map(sub => {
+      const pushPromises = subscriptions.map((sub: any) => {
         return sendVapidPush({
           endpoint: sub.endpoint,
           p256dh: sub.p256dh,
           auth: sub.auth
         }, pushPayload).catch(err => {
-          console.error(`Failed to send VAPID push to device ${sub.deviceId}:`, err);
-          // If subscription has expired (e.g. 410 Gone status), clean it up
-          if (err.statusCode === 410) {
-            prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
-          }
+          console.error(`Failed push to sub ${sub.id}:`, err);
         });
       });
 
-      await Promise.all(pushPromises);
+      Promise.allSettled(pushPromises);
     }
 
-    // 5. Send SMTP/Gmail Emails
-    if (usersToEmail.length > 0 && settings.emailTemplates) {
-      const isGmail = emailSettings?.sendingMethod === 'gmail' && emailSettings?.gmailSettings?.refreshToken;
-      if (isGmail || transporter) {
-        let templateName = type as string;
-        if (type.includes('_')) {
-          const parts = type.split('_');
-          templateName = parts[0] + parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
-        }
+    // 5. Send Email Notifications if configured
+    if (usersToEmail.length > 0 && (transporter || (emailSettings?.sendingMethod === 'gmail' && emailSettings?.gmailSettings?.refreshToken))) {
+      const appName = settings.appName || 'SplitIt';
+      const fromAddress = emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || 'notifications@splitit.app';
 
-        const template = (settings.emailTemplates as any)[templateName] || { subject: title, body: notifBody };
+      for (const u of usersToEmail) {
+        try {
+          const htmlContent = renderEmail(
+            notifBody,
+            {
+              userName: u.name,
+              appName,
+              actionUrl: groupId ? `${process.env.NEXT_PUBLIC_APP_URL || ''}/groups/${groupId}` : (process.env.NEXT_PUBLIC_APP_URL || ''),
+              title,
+              bodyText: notifBody,
+              balanceAmount: balanceAmount || '',
+              groupName: groupName || '',
+            },
+            settings,
+            title
+          );
 
-        for (const user of usersToEmail) {
-          let actorName = 'Someone';
-          if (actorId) {
-            try {
-              const actor = await prisma.user.findUnique({ where: { id: actorId } });
-              if (actor) {
-                actorName = actor.name || 'Someone';
-              }
-            } catch (e) {}
+          if (emailSettings?.sendingMethod === 'gmail' && emailSettings?.gmailSettings?.refreshToken) {
+            await sendEmailViaGmail({
+              to: u.email,
+              subject: `${title} - ${appName}`,
+              text: notifBody,
+              html: htmlContent,
+              fromAddress,
+              refreshToken: emailSettings.gmailSettings.refreshToken
+            });
+          } else if (transporter) {
+            await transporter.sendMail({
+              from: `"${appName}" <${fromAddress}>`,
+              to: u.email,
+              subject: `${title} - ${appName}`,
+              text: notifBody,
+              html: htmlContent
+            });
           }
-
-          const variables = {
-            appName: settings.appName,
-            userName: user.name,
-            actorName,
-            amount: '0',
-            balanceAmount: balanceAmount || '0',
-            groupName: groupName || 'your group',
-            description: 'an expense',
-            broadcastSubject: title,
-            broadcastBody: notifBody
-          };
-
-          const html = renderEmail(template.body, variables, settings, template.subject);
-          const text = template.body;
-          const subject = renderEmail(template.subject, variables, settings, template.subject);
-
-          try {
-            if (isGmail) {
-              const fromAddress = emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || emailSettings?.gmailSettings?.connectedEmail || '';
-              await sendEmailViaGmail({
-                to: user.email,
-                subject,
-                text,
-                html,
-                fromAddress,
-                refreshToken: emailSettings.gmailSettings!.refreshToken!
-              });
-            } else if (transporter) {
-              await transporter.sendMail({
-                from: emailSettings?.fromAddresses?.notifications || emailSettings?.fromAddresses?.default || '"App" <noreply@example.com>',
-                to: user.email,
-                subject,
-                html
-              });
-            }
-          } catch (e) {
-            console.error("Email send error to", user.email, e);
-          }
+        } catch (mailErr) {
+          console.error(`Failed sending notification email to ${u.email}:`, mailErr);
         }
       }
     }
 
     return NextResponse.json({ success: true });
-
-  } catch (error) {
-    console.error('API Error - /api/notifications/send:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error sending notification:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

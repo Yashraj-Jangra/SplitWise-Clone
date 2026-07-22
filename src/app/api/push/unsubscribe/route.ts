@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
+import { deleteItem } from '@/lib/nosql';
 
 export async function POST(request: Request) {
   try {
@@ -15,9 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing deviceId parameter.' }, { status: 400 });
     }
 
-    await prisma.pushSubscription.delete({
-      where: { deviceId }
-    }).catch(() => {}); // ignore if it doesn't exist
+    await deleteItem(`USER#${session.user.id}`, `PUSH_SUB#${deviceId}`).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

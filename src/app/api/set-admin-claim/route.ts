@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
+import { getUserProfile, updateUserProfile } from '@/lib/services/user.service';
 import { rateLimitProfiles, getCallerIp } from '@/lib/rate-limit';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'action must be "promote" or "demote"' }, { status: 400 });
     }
 
-    // --- Verify caller identity via Better Auth session ---
+    // Verify caller identity
     const session = await auth.api.getSession({ headers: request.headers });
     let callerIsAuthorized = false;
 
@@ -36,10 +36,8 @@ export async function POST(request: Request) {
       callerIsAuthorized = !!(callerIsBootstrapAdmin || callerHasAdminClaim);
     }
 
-    // Special case: allow unauthenticated self-promotion ONLY if the target uid's
-    // email matches ADMIN_EMAIL (bootstrap scenario — first login).
     if (!callerIsAuthorized && ADMIN_EMAIL) {
-      const targetRecord = await prisma.user.findUnique({ where: { id: uid } });
+      const targetRecord = await getUserProfile(uid);
       if (targetRecord && targetRecord.email === ADMIN_EMAIL && action === 'promote') {
         callerIsAuthorized = true;
       }
@@ -53,10 +51,7 @@ export async function POST(request: Request) {
     }
 
     const targetRole = action === 'promote' ? 'admin' : 'user';
-    await prisma.user.update({
-      where: { id: uid },
-      data: { role: targetRole }
-    });
+    await updateUserProfile(uid, { role: targetRole });
 
     return NextResponse.json({
       success: true,

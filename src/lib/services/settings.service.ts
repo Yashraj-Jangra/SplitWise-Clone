@@ -1,5 +1,5 @@
-import { prisma } from '@/lib/db';
-import type { SiteSettings, PolicyPage, CountryCode, MasterCategory } from '@/types';
+import { getItem, putItem } from '@/lib/nosql';
+import type { SiteSettings, PolicyPage, CountryCode } from '@/types';
 import { defaultExpenseCategories } from '../expense-categories';
 
 const DEFAULT_APP_NAME = 'SplitIt';
@@ -74,12 +74,10 @@ const DEFAULT_SETTINGS_DATA: SiteSettings = {
 
 export async function getSiteSettings(): Promise<SiteSettings> {
   try {
-    const settingsDoc = await prisma.settings.findUnique({
-      where: { id: 'general' }
-    });
+    const settingsDoc = await getItem<any>('SYSTEM', 'SETTINGS');
 
     if (settingsDoc) {
-      const data = settingsDoc.data as any;
+      const data = settingsDoc.data || settingsDoc;
       const expenseCategories =
         data?.expenseCategories && Object.keys(data.expenseCategories).length > 0
           ? data.expenseCategories
@@ -92,14 +90,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
       };
     } else {
       // First bootstrap
-      await prisma.settings.upsert({
-        where: { id: 'general' },
-        create: {
-          id: 'general',
-          data: DEFAULT_SETTINGS_DATA as any,
-        },
-        update: {},
-      });
+      await putItem('SYSTEM', 'SETTINGS', 'SETTINGS', DEFAULT_SETTINGS_DATA);
       return DEFAULT_SETTINGS_DATA;
     }
   } catch (error) {
@@ -115,14 +106,5 @@ export async function updateSiteSettings(settings: Partial<SiteSettings>): Promi
     ...settings,
   };
 
-  await prisma.settings.upsert({
-    where: { id: 'general' },
-    create: {
-      id: 'general',
-      data: mergedData as any,
-    },
-    update: {
-      data: mergedData as any,
-    }
-  });
+  await putItem('SYSTEM', 'SETTINGS', 'SETTINGS', mergedData);
 }

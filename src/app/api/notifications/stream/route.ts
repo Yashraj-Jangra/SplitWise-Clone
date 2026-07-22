@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
+import { getNotificationsForUser } from '@/lib/services/notification.service';
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -18,52 +18,11 @@ export async function GET(request: Request) {
 
       const interval = setInterval(async () => {
         try {
-          // Poll database for any new notifications since lastCheck
-          const newNotifs = await prisma.notification.findMany({
-            where: {
-              recipients: { some: { userId } },
-              createdAt: { gt: lastCheck },
-            },
-            include: {
-              reads: { where: { userId } },
-              actor: {
-                select: {
-                  id: true,
-                  name: true,
-                  firstName: true,
-                  lastName: true,
-                  avatarUrl: true,
-                  image: true
-                }
-              }
-            },
-            orderBy: { createdAt: 'asc' },
-          });
+          const userNotifs = await getNotificationsForUser(userId, 20);
+          const newNotifs = userNotifs.filter(n => new Date(n.createdAt) > lastCheck);
 
           if (newNotifs.length > 0) {
-            const mappedNotifs = newNotifs.map(n => ({
-              id: n.id,
-              type: n.type,
-              title: n.title,
-              body: n.body,
-              groupId: n.groupId || undefined,
-              expenseId: n.expenseId || undefined,
-              settlementId: n.settlementId || undefined,
-              actorId: n.actorId || undefined,
-              createdAt: n.createdAt.toISOString(),
-              target: n.target,
-              channels: n.channels,
-              imageUrl: n.imageUrl || undefined,
-              isRead: n.reads.length > 0,
-              actor: n.actor ? {
-                uid: n.actor.id,
-                firstName: n.actor.firstName || n.actor.name.split(' ')[0] || 'User',
-                lastName: n.actor.lastName || n.actor.name.split(' ').slice(1).join(' ') || '',
-                avatarUrl: n.actor.avatarUrl || n.actor.image || undefined,
-              } : undefined
-            }));
-
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(mappedNotifs)}\n\n`));
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(newNotifs)}\n\n`));
           }
           lastCheck = new Date();
         } catch (error) {

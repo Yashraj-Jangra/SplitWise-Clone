@@ -11,9 +11,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client
-RUN npx prisma generate
-
 # Define build-time args for Web Push and App URL
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ARG NEXT_PUBLIC_APP_URL
@@ -41,11 +38,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.ts ./next.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/prisma ./prisma
 
 USER nextjs
 
 EXPOSE 3231
 
-# Run prisma migration deploy and start the application using shell form
-CMD npx prisma migrate deploy && npm start
+CMD ["npm", "start"]

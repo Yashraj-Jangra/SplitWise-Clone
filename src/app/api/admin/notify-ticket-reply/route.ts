@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { getAllTickets } from '@/lib/services/ticket.service';
 import { getSiteSettings } from '@/lib/services/settings.service';
 import { getUserProfile } from '@/lib/services/user.service';
 import nodemailer from 'nodemailer';
@@ -12,45 +12,45 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required parameters.' }, { status: 400 });
         }
 
-        const [siteSettings, ticket, replier] = await Promise.all([
+        const [siteSettings, allTickets, replier] = await Promise.all([
             getSiteSettings(),
-            prisma.supportTicket.findUnique({
-                where: { id: ticketId },
-                include: { user: true }
-            }),
+            getAllTickets(),
             getUserProfile(replierId)
         ]);
+
+        const ticket = allTickets.find(t => t.id === ticketId);
 
         if (!ticket || !replier) {
             return NextResponse.json({ error: 'Ticket or replier not found.' }, { status: 404 });
         }
 
         const { emailSettings, appName } = siteSettings;
-        const template = siteSettings.emailTemplates?.supportTicketReply;
+        const template = (siteSettings as any).emailTemplates?.supportTicketReply;
 
         const isAdminReply = replier.role === 'admin';
-        const recipientEmail = isAdminReply ? ticket.user.email : emailSettings?.fromAddresses.support;
+        const recipientEmail = isAdminReply ? ticket.userEmail : (emailSettings as any)?.fromAddresses?.support;
         const recipientName = isAdminReply ? getFullName(ticket.user.firstName || undefined, ticket.user.lastName || undefined) : 'Support Team';
 
-        if (!emailSettings || !emailSettings.smtpSettings || !recipientEmail || !template) {
+        if (!emailSettings || !(emailSettings as any).smtpSettings || !recipientEmail || !template) {
             console.log("Email notification skipped: Mail sending is not configured or recipient/template is missing.");
             return NextResponse.json({ success: true, message: 'Email notification skipped; mail not configured.' });
         }
-        
+
+        const smtp = (emailSettings as any).smtpSettings;
         const transporter = nodemailer.createTransport({
-            host: emailSettings.smtpSettings.host,
-            port: emailSettings.smtpSettings.port,
-            secure: emailSettings.smtpSettings.port === 465,
+            host: smtp.host,
+            port: smtp.port,
+            secure: smtp.port === 465,
             auth: {
-                user: emailSettings.smtpSettings.user,
-                pass: emailSettings.smtpSettings.pass,
+                user: smtp.user,
+                pass: smtp.pass,
             },
         });
-        
+
         await transporter.verify();
 
         const subject = template.subject.replace(/{appName}/g, appName).replace(/{ticketId}/g, ticket.id.slice(0, 8));
-        
+
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235';
         const ticketLink = isAdminReply ? `${appUrl}/support` : `${appUrl}/admin/support/${ticket.id}`;
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
             .replace(/{ticketLink}/g, ticketLink);
 
         const mailOptions = {
-            from: emailSettings.fromAddresses.support,
+            from: (emailSettings as any).fromAddresses?.support || 'support@splitit.app',
             to: recipientEmail,
             subject: subject,
             html: `<p>${body.replace(/\n/g, '<br>')}</p>`,

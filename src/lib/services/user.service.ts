@@ -1,91 +1,56 @@
-import { prisma } from '@/lib/db';
+import { getItem, putItem, queryByEntityType, deleteItem } from '@/lib/nosql';
 import type { UserProfile } from '@/types';
 
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const user = await prisma.user.findUnique({
-    where: { id: uid },
-  });
-
-  if (!user) return null;
-
+function mapToUserProfile(u: any): UserProfile {
+  const nameParts = (u.name || '').split(' ');
   return {
-    uid: user.id,
-    firstName: user.firstName || user.name.split(' ')[0] || 'User',
-    lastName: user.lastName || user.name.split(' ').slice(1).join(' ') || '',
-    username: user.username || user.email.split('@')[0],
-    email: user.email,
-    role: (user.role as 'admin' | 'user') || 'user',
-    avatarUrl: user.avatarUrl || user.image || undefined,
-    countryCode: user.countryCode || undefined,
-    mobileNumber: user.mobileNumber || undefined,
-    upiId: user.upiId || undefined,
-    dob: user.dob ? user.dob.toISOString() : undefined,
-    createdAt: user.createdAt.toISOString(),
-  } as UserProfile;
+    uid: u.id || u.uid,
+    firstName: u.firstName || nameParts[0] || 'User',
+    lastName: u.lastName || nameParts.slice(1).join(' ') || '',
+    username: u.username || (u.email ? u.email.split('@')[0] : 'user'),
+    email: u.email || '',
+    role: (u.role as 'admin' | 'user') || 'user',
+    avatarUrl: u.avatarUrl || u.image || undefined,
+    countryCode: u.countryCode || undefined,
+    mobileNumber: u.mobileNumber || undefined,
+    upiId: u.upiId || undefined,
+    dob: u.dob ? new Date(u.dob).toISOString() : undefined,
+    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const user = await getItem<any>(`USER#${uid}`, 'PROFILE');
+  if (!user) return null;
+  return mapToUserProfile(user);
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
-
-  return users.map(user => ({
-    uid: user.id,
-    firstName: user.firstName || user.name.split(' ')[0] || 'User',
-    lastName: user.lastName || user.name.split(' ').slice(1).join(' ') || '',
-    username: user.username || user.email.split('@')[0],
-    email: user.email,
-    role: (user.role as 'admin' | 'user') || 'user',
-    avatarUrl: user.avatarUrl || user.image || undefined,
-    countryCode: user.countryCode || undefined,
-    mobileNumber: user.mobileNumber || undefined,
-    upiId: user.upiId || undefined,
-    dob: user.dob ? user.dob.toISOString() : undefined,
-    createdAt: user.createdAt.toISOString(),
-  } as UserProfile));
+  const users = await queryByEntityType<any>('USER');
+  return users.map(mapToUserProfile).sort((a, b) => 
+    new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime()
+  );
 }
 
 export async function getAllUsersPaginated(
   pageSize: number = 20,
-  pageIndex: number = 0 // Offset-based pagination replaces Firestore cursors
+  pageIndex: number = 0
 ): Promise<{ users: UserProfile[]; totalCount: number }> {
-  const [users, totalCount] = await prisma.$transaction([
-    prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
-      skip: pageIndex * pageSize,
-      take: pageSize,
-    }),
-    prisma.user.count(),
-  ]);
+  const allUsers = await getAllUsers();
+  const start = pageIndex * pageSize;
+  const paginated = allUsers.slice(start, start + pageSize);
 
-  const mappedUsers = users.map(user => ({
-    uid: user.id,
-    firstName: user.firstName || user.name.split(' ')[0] || 'User',
-    lastName: user.lastName || user.name.split(' ').slice(1).join(' ') || '',
-    username: user.username || user.email.split('@')[0],
-    email: user.email,
-    role: (user.role as 'admin' | 'user') || 'user',
-    avatarUrl: user.avatarUrl || user.image || undefined,
-    countryCode: user.countryCode || undefined,
-    mobileNumber: user.mobileNumber || undefined,
-    upiId: user.upiId || undefined,
-    dob: user.dob ? user.dob.toISOString() : undefined,
-    createdAt: user.createdAt.toISOString(),
-  } as UserProfile));
-
-  return { users: mappedUsers, totalCount };
+  return { users: paginated, totalCount: allUsers.length };
 }
 
 export async function isUsernameTaken(username: string, excludeUserId?: string): Promise<boolean> {
   const normalizedUsername = username.toLowerCase();
-  const user = await prisma.user.findFirst({
-    where: {
-      username: normalizedUsername,
-      NOT: excludeUserId ? { id: excludeUserId } : undefined,
-    },
-  });
+  const allUsers = await queryByEntityType<any>('USER');
 
-  return !!user;
+  return allUsers.some(u => {
+    if (excludeUserId && (u.id === excludeUserId || u.uid === excludeUserId)) return false;
+    return (u.username || '').toLowerCase() === normalizedUsername;
+  });
 }
 
 export async function updateUser(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
@@ -96,34 +61,30 @@ export async function updateUser(userId: string, data: Partial<UserProfile>): Pr
     }
   }
 
-  const updateData: any = {};
-  if (data.firstName !== undefined) updateData.firstName = data.firstName;
-  if (data.lastName !== undefined) updateData.lastName = data.lastName;
-  if (data.username !== undefined) updateData.username = data.username.toLowerCase();
-  if (data.avatarUrl !== undefined) {
-    updateData.avatarUrl = data.avatarUrl;
-    updateData.image = data.avatarUrl;
-  }
-  if (data.countryCode !== undefined) updateData.countryCode = data.countryCode;
-  if (data.mobileNumber !== undefined) updateData.mobileNumber = data.mobileNumber;
-  if (data.upiId !== undefined) updateData.upiId = data.upiId || null;
-  if (data.dob !== undefined) updateData.dob = data.dob ? new Date(data.dob) : null;
-  if (data.role !== undefined) updateData.role = data.role;
+  const existing = (await getItem<any>(`USER#${userId}`, 'PROFILE')) || {};
 
-  // Sync the composite 'name' field in Better Auth User model
-  if (data.firstName !== undefined || data.lastName !== undefined) {
-    const currentProfile = await getUserProfile(userId);
-    const fname = data.firstName !== undefined ? data.firstName : currentProfile?.firstName || '';
-    const lname = data.lastName !== undefined ? data.lastName : currentProfile?.lastName || '';
-    updateData.name = `${fname} ${lname}`.trim();
-  }
+  const updatedData = {
+    ...existing,
+    id: userId,
+    ...(data.firstName !== undefined && { firstName: data.firstName }),
+    ...(data.lastName !== undefined && { lastName: data.lastName }),
+    ...(data.username !== undefined && { username: data.username.toLowerCase() }),
+    ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl, image: data.avatarUrl }),
+    ...(data.countryCode !== undefined && { countryCode: data.countryCode }),
+    ...(data.mobileNumber !== undefined && { mobileNumber: data.mobileNumber }),
+    ...(data.upiId !== undefined && { upiId: data.upiId || null }),
+    ...(data.dob !== undefined && { dob: data.dob }),
+    ...(data.role !== undefined && { role: data.role }),
+    updatedAt: new Date().toISOString(),
+  };
 
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: updateData,
-  });
+  const fname = updatedData.firstName || existing.firstName || 'User';
+  const lname = updatedData.lastName || existing.lastName || '';
+  updatedData.name = `${fname} ${lname}`.trim();
 
-  const profile = await getUserProfile(updatedUser.id);
+  await putItem(`USER#${userId}`, 'PROFILE', 'USER', updatedData, `EMAIL#${updatedData.email}`, 'PROFILE');
+
+  const profile = await getUserProfile(userId);
   if (!profile) throw new Error('Failed to fetch updated user profile');
   return profile;
 }
@@ -132,22 +93,16 @@ export async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
   if (uids.length === 0) return [];
   const uniqueUids = [...new Set(uids)];
 
-  const users = await prisma.user.findMany({
-    where: { id: { in: uniqueUids } },
-  });
-
-  return users.map(user => ({
-    uid: user.id,
-    firstName: user.firstName || user.name.split(' ')[0] || 'User',
-    lastName: user.lastName || user.name.split(' ').slice(1).join(' ') || '',
-    username: user.username || user.email.split('@')[0],
-    email: user.email,
-    role: (user.role as 'admin' | 'user') || 'user',
-    avatarUrl: user.avatarUrl || user.image || undefined,
-    countryCode: user.countryCode || undefined,
-    mobileNumber: user.mobileNumber || undefined,
-    upiId: user.upiId || undefined,
-    dob: user.dob ? user.dob.toISOString() : undefined,
-    createdAt: user.createdAt.toISOString(),
-  } as UserProfile));
+  const profiles = await Promise.all(uniqueUids.map(id => getUserProfile(id)));
+  return profiles.filter((p): p is UserProfile => p !== null);
 }
+
+export async function deleteUser(userId: string): Promise<void> {
+  const user = await getItem<any>(`USER#${userId}`, 'PROFILE');
+  if (user && (user.email === 'jangrayash1505@gmail.com' || user.role === 'superadmin')) {
+    throw new Error('The main admin user cannot be deleted.');
+  }
+  await deleteItem(`USER#${userId}`, 'PROFILE');
+}
+
+export const updateUserProfile = updateUser;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { s3, BUCKET } from '@/lib/minio';
+import { s3, BUCKET } from '@/lib/storage';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { auth } from '@/lib/auth.server';
 import { verifyGroupMembership } from '@/lib/services/group.service';

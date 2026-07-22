@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { restoreExpense, restoreSettlement } from '@/lib/services/history.service';
+import { restoreExpense, restoreSettlement, getHistoryEventById } from '@/lib/services/history.service';
 import { verifyGroupMembership } from '@/lib/services/group.service';
-import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -17,10 +16,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'eventId and type are required' }, { status: 400 });
     }
 
-    // Fetch the history event to obtain the associated groupId
-    const historyEvent = await prisma.historyEvent.findUnique({
-      where: { id: eventId }
-    });
+    const historyEvent = await getHistoryEventById(eventId);
 
     if (!historyEvent) {
       return NextResponse.json({ error: 'History event not found' }, { status: 404 });

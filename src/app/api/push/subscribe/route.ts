@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
+import { putItem } from '@/lib/nosql';
 
 export async function POST(request: Request) {
   try {
@@ -16,26 +16,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required subscription parameters.' }, { status: 400 });
     }
 
-    // Save VAPID push subscription details in DB
-    await prisma.pushSubscription.upsert({
-      where: { deviceId },
-      create: {
-        userId,
-        deviceId,
-        endpoint,
-        p256dh,
-        auth: authSecret,
-        deviceName: deviceName || 'Unknown Device',
-      },
-      update: {
-        userId, // ensure it's linked to active user if device gets re-used
-        endpoint,
-        p256dh,
-        auth: authSecret,
-        deviceName: deviceName || undefined,
-        lastSeen: new Date(),
-      }
-    });
+    const subData = {
+      deviceId,
+      userId,
+      endpoint,
+      p256dh,
+      auth: authSecret,
+      deviceName: deviceName || 'Unknown Device',
+      lastSeen: new Date().toISOString(),
+    };
+
+    await putItem(`USER#${userId}`, `PUSH_SUB#${deviceId}`, 'PUSH_SUB', subData, `DEVICE#${deviceId}`, 'PUSH_SUB');
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

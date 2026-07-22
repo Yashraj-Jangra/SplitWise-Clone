@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { uploadFile } from '@/lib/minio';
+import { uploadFile } from '@/lib/storage';
 import { verifyGroupMembership } from '@/lib/services/group.service';
 
 export async function POST(request: Request) {

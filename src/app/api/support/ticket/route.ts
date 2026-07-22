@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
+import { createTicket } from '@/lib/services/ticket.service';
 
 export async function POST(request: Request) {
   try {
@@ -15,21 +15,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required parameters.' }, { status: 400 });
     }
 
-    const ticket = await prisma.supportTicket.create({
-      data: {
-        userId: session.user.id,
-        userName: session.user.name || 'User',
-        userEmail: session.user.email,
-        subject,
-        category,
-        status: 'open',
-        messages: {
-          create: {
-            sentById: session.user.id,
-            message,
-          }
-        }
-      }
+    const ticketId = await createTicket({
+      userId: session.user.id,
+      userName: session.user.name || 'User',
+      userEmail: session.user.email,
+      subject,
+      category,
+      message,
     });
 
     // Trigger admin notification asynchronously
@@ -37,10 +29,10 @@ export async function POST(request: Request) {
     fetch(`${appUrl}/api/admin/notify-new-ticket`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticketId: ticket.id })
+      body: JSON.stringify({ ticketId }),
     }).catch(err => console.error('Failed to trigger ticket notification:', err));
 
-    return NextResponse.json({ success: true, ticketId: ticket.id });
+    return NextResponse.json({ success: true, ticketId });
   } catch (error: any) {
     console.error('Error creating support ticket:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });

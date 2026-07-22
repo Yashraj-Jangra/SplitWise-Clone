@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
-import { prisma } from '@/lib/db';
+import { getAllUsers } from '@/lib/services/user.service';
 import { getSiteSettings } from '@/lib/services/settings.service';
 import nodemailer from 'nodemailer';
 
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
         if (!session?.user) {
             return NextResponse.json({ error: 'Unauthorized: No session found.' }, { status: 401 });
         }
-        
+
         if (session.user.role !== 'admin') {
              return NextResponse.json({ error: 'Forbidden: User is not an admin.' }, { status: 403 });
         }
@@ -21,9 +21,9 @@ export async function POST(request: Request) {
         }
 
         const siteSettings = await getSiteSettings();
-        const emailSettings = siteSettings.emailSettings;
+        const emailSettings: any = siteSettings.emailSettings;
 
-        if (!emailSettings || !emailSettings.smtpSettings || !emailSettings.fromAddresses.broadcast) {
+        if (!emailSettings || !emailSettings.smtpSettings || !emailSettings.fromAddresses?.broadcast) {
             return NextResponse.json({ error: 'Broadcast email sending is not configured.' }, { status: 501 });
         }
 
@@ -36,12 +36,10 @@ export async function POST(request: Request) {
                 pass: emailSettings.smtpSettings.pass,
             },
         });
-        
+
         await transporter.verify();
 
-        const allUsers = await prisma.user.findMany({
-            select: { email: true }
-        });
+        const allUsers = await getAllUsers();
         const allUserEmails = allUsers.map(user => user.email).filter(Boolean) as string[];
 
         const sendPromises = allUserEmails.map(email => {

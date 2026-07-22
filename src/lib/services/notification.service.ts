@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db';
+import { getItem, putItem, queryByPk, queryByEntityType, deleteItem } from '@/lib/nosql';
 import type { NotificationV2, UserNotificationPrefsDocument } from '@/types';
 import { hydrateUsers } from './user.service';
 
@@ -12,10 +12,10 @@ function mapNotificationRow(row: any, isRead: boolean, actor?: any): Notificatio
     expenseId: row.expenseId || undefined,
     settlementId: row.settlementId || undefined,
     actorId: row.actorId || undefined,
-    createdAt: row.createdAt.toISOString(),
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
     createdBy: row.createdBy || undefined,
-    target: row.target as any,
-    channels: row.channels as any,
+    target: (row.target as any) || 'specific_users',
+    channels: row.channels || ['in_app'],
     imageUrl: row.imageUrl || undefined,
     isRead,
     actor,
@@ -23,112 +23,119 @@ function mapNotificationRow(row: any, isRead: boolean, actor?: any): Notificatio
 }
 
 export async function createNotification(data: any): Promise<string> {
-  const notif = await prisma.$transaction(async (tx) => {
-    const row = await tx.notification.create({
-      data: {
-        type: data.type,
-        title: data.title,
-        body: data.body,
-        actorId: data.actorId,
-        groupId: data.groupId,
-        expenseId: data.expenseId,
-        settlementId: data.settlementId,
-        target: data.target || 'specific_users',
-        channels: data.channels || ['in_app'],
-        imageUrl: data.imageUrl,
-        createdBy: data.createdBy,
-      }
-    });
+  const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const notifDoc = {
+    id: notifId,
+    type: data.type,
+    title: data.title,
+    body: data.body,
+    actorId: data.actorId || null,
+    groupId: data.groupId || null,
+    expenseId: data.expenseId || null,
+    settlementId: data.settlementId || null,
+    target: data.target || 'specific_users',
+    channels: data.channels || ['in_app'],
+    imageUrl: data.imageUrl || null,
+    createdBy: data.createdBy || null,
+    recipientIds: data.recipientIds || [],
+    reads: [],
+    createdAt: new Date().toISOString(),
+  };
 
-    if (data.recipientIds && data.recipientIds.length > 0) {
-      await tx.notificationRecipient.createMany({
-        data: data.recipientIds.map((uid: string) => ({
-          notificationId: row.id,
-          userId: uid
-        }))
-      });
-    }
+  await putItem(
+    `NOTIFICATION#${notifId}`,
+    'METADATA',
+    'NOTIFICATION',
+    notifDoc,
+    data.actorId ? `USER#${data.actorId}` : null,
+    `NOTIFICATION#${notifId}`
+  );
 
-    return row;
-  });
-
-  return notif.id;
+  return notifId;
 }
 
 export async function getNotificationsForUser(userId: string, limit: number = 50): Promise<NotificationV2[]> {
-  const rows = await prisma.notification.findMany({
-    where: {
-      OR: [
-        { recipients: { some: { userId } } },
-        { target: 'all_users' }
-      ]
-    },
-    include: {
-      reads: {
-        where: { userId }
-      }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
+  const allNotifs = await queryByEntityType<any>('NOTIFICATION');
+
+  const userNotifs = allNotifs.filter(n => {
+    if (n.target === 'all_users') return true;
+    const recipientIds: string[] = n.recipientIds || [];
+    return recipientIds.includes(userId);
   });
 
-  const actorIds = [...new Set(rows.map(r => r.actorId).filter(Boolean) as string[])];
+  userNotifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const limited = userNotifs.slice(0, limit);
+
+  const actorIds = [...new Set(limited.map(r => r.actorId).filter(Boolean) as string[])];
   const actors = await hydrateUsers(actorIds);
   const actorMap = new Map(actors.map(u => [u.uid, u]));
 
-  return rows.map(r => {
-    const isRead = r.reads.length > 0;
+  return limited.map(r => {
+    const reads: string[] = (r.reads || []).map((rd: any) => typeof rd === 'string' ? rd : rd.userId);
+    const isRead = reads.includes(userId);
     const actor = r.actorId ? actorMap.get(r.actorId) : undefined;
     return mapNotificationRow(r, isRead, actor);
   });
 }
 
 export async function markNotificationRead(notificationId: string, userId: string): Promise<void> {
-  await prisma.notificationRead.upsert({
-    where: {
-      notificationId_userId: {
-        notificationId,
-        userId
-      }
-    },
-    create: {
-      notificationId,
-      userId
-    },
-    update: {}
-  });
+  const notifDoc = await getItem<any>(`NOTIFICATION#${notificationId}`, 'METADATA');
+  if (!notifDoc) return;
+
+  const currentReads: any[] = notifDoc.reads || [];
+  const readUserIds = currentReads.map((rd: any) => typeof rd === 'string' ? rd : rd.userId);
+
+  if (!readUserIds.includes(userId)) {
+    currentReads.push({ userId, readAt: new Date().toISOString() });
+    notifDoc.reads = currentReads;
+    notifDoc.updatedAt = new Date().toISOString();
+    await putItem(
+      `NOTIFICATION#${notificationId}`,
+      'METADATA',
+      'NOTIFICATION',
+      notifDoc,
+      notifDoc.actorId ? `USER#${notifDoc.actorId}` : null,
+      `NOTIFICATION#${notificationId}`
+    );
+  }
 }
 
 export async function markAllRead(userId: string): Promise<void> {
-  const unreadNotifs = await prisma.notification.findMany({
-    where: {
-      recipients: { some: { userId } },
-      reads: { none: { userId } }
-    },
-    select: { id: true }
+  const allNotifs = await queryByEntityType<any>('NOTIFICATION');
+  const userNotifs = allNotifs.filter(n => {
+    if (n.target === 'all_users') return true;
+    const recipientIds: string[] = n.recipientIds || [];
+    return recipientIds.includes(userId);
   });
 
-  if (unreadNotifs.length === 0) return;
+  for (const notifDoc of userNotifs) {
+    const currentReads: any[] = notifDoc.reads || [];
+    const readUserIds = currentReads.map((rd: any) => typeof rd === 'string' ? rd : rd.userId);
 
-  await prisma.notificationRead.createMany({
-    data: unreadNotifs.map(n => ({
-      notificationId: n.id,
-      userId
-    })),
-    skipDuplicates: true
-  });
+    if (!readUserIds.includes(userId)) {
+      currentReads.push({ userId, readAt: new Date().toISOString() });
+      notifDoc.reads = currentReads;
+      notifDoc.updatedAt = new Date().toISOString();
+      await putItem(
+        `NOTIFICATION#${notifDoc.id}`,
+        'METADATA',
+        'NOTIFICATION',
+        notifDoc,
+        notifDoc.actorId ? `USER#${notifDoc.actorId}` : null,
+        `NOTIFICATION#${notifDoc.id}`
+      );
+    }
+  }
 }
 
 export async function getAllNotifications(): Promise<NotificationV2[]> {
-  const rows = await prisma.notification.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-
-  return rows.map(r => mapNotificationRow(r, false));
+  const allNotifs = await queryByEntityType<any>('NOTIFICATION');
+  allNotifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return allNotifs.map(r => mapNotificationRow(r, false));
 }
 
 export async function deleteNotification(notificationId: string): Promise<void> {
-  await prisma.notification.delete({ where: { id: notificationId } });
+  await deleteItem(`NOTIFICATION#${notificationId}`, 'METADATA');
 }
 
 const DEFAULT_USER_NOTIFICATION_PREFS = {
@@ -152,58 +159,40 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
 };
 
 export async function getUserNotificationPrefs(userId: string): Promise<UserNotificationPrefsDocument> {
-  const prefs = await prisma.userNotificationPrefs.findUnique({
-    where: { userId }
-  });
+  const prefsDoc = await getItem<any>(`USER#${userId}`, 'NOTIFICATION_PREFS');
 
-  if (prefs) {
+  if (prefsDoc) {
     return {
-      userId: prefs.userId,
-      inAppEnabled: prefs.inAppEnabled,
-      pushEnabled: prefs.pushEnabled,
-      emailEnabled: prefs.emailEnabled,
-      events: prefs.events as any,
-      updatedAt: prefs.updatedAt as any,
+      userId,
+      inAppEnabled: prefsDoc.inAppEnabled,
+      pushEnabled: prefsDoc.pushEnabled,
+      emailEnabled: prefsDoc.emailEnabled,
+      events: prefsDoc.events as any,
+      updatedAt: prefsDoc.updatedAt as any,
     };
   } else {
     const defaultPrefs = {
       userId,
       ...DEFAULT_USER_NOTIFICATION_PREFS,
+      updatedAt: new Date().toISOString(),
     };
-    await prisma.userNotificationPrefs.create({
-      data: {
-        userId,
-        inAppEnabled: defaultPrefs.inAppEnabled,
-        pushEnabled: defaultPrefs.pushEnabled,
-        emailEnabled: defaultPrefs.emailEnabled,
-        events: defaultPrefs.events,
-        updatedAt: new Date(),
-      }
-    });
-    return {
-      ...defaultPrefs,
-      updatedAt: new Date() as any,
-    };
+    await putItem(`USER#${userId}`, 'NOTIFICATION_PREFS', 'USER_PREFS', defaultPrefs);
+    return defaultPrefs as any;
   }
 }
 
 export async function updateUserNotificationPrefs(userId: string, prefs: Partial<any>): Promise<void> {
-  const updateData: any = {};
-  if (prefs.inAppEnabled !== undefined) updateData.inAppEnabled = prefs.inAppEnabled;
-  if (prefs.pushEnabled !== undefined) updateData.pushEnabled = prefs.pushEnabled;
-  if (prefs.emailEnabled !== undefined) updateData.emailEnabled = prefs.emailEnabled;
-  if (prefs.events !== undefined) updateData.events = prefs.events;
+  const current = await getUserNotificationPrefs(userId);
+  const updated = {
+    ...current,
+    ...prefs,
+    updatedAt: new Date().toISOString(),
+  };
 
-  await prisma.userNotificationPrefs.update({
-    where: { userId },
-    data: {
-      ...updateData,
-      updatedAt: new Date(),
-    }
-  });
+  await putItem(`USER#${userId}`, 'NOTIFICATION_PREFS', 'USER_PREFS', updated);
 }
 
-// Helpers for notify functions (used internally or by API)
+// Helpers for notify functions
 export async function notifyMemberAdded(recipientIds: string[], actorId: string, groupId: string, groupName: string) {
   await createNotification({
     type: 'member_added',
@@ -239,8 +228,7 @@ export async function notifyExpenseAdded(
   await createNotification({
     type: 'expense_added',
     title: 'New Expense Added',
-    body: `An expense "${description}" for $${Number(amount || 0).toFixed(2)} was added.`,
-
+    body: `An expense "${description}" for ₹${Number(amount || 0).toFixed(2)} was added.`,
     recipientIds,
     actorId,
     groupId,
@@ -295,8 +283,7 @@ export async function notifySettlementAdded(
   await createNotification({
     type: 'settlement_added',
     title: 'Payment Received',
-    body: `You received a payment of $${Number(amount || 0).toFixed(2)}.`,
-
+    body: `You received a payment of ₹${Number(amount || 0).toFixed(2)}.`,
     recipientIds: [recipientId],
     actorId,
     groupId,
@@ -304,4 +291,3 @@ export async function notifySettlementAdded(
     target: 'specific_users'
   });
 }
-

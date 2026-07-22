@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
 import { getAllTickets, deleteTicket, updateTicket } from '@/lib/services/ticket.service';
-import { prisma } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
@@ -13,49 +12,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const ticketId = searchParams.get('ticketId');
 
+    const tickets = await getAllTickets();
+
     if (ticketId) {
-      const ticket = await prisma.supportTicket.findUnique({
-        where: { id: ticketId },
-        include: {
-          messages: { include: { sentBy: true }, orderBy: { sentAt: 'asc' } },
-          user: true
-        }
-      });
+      const ticket = tickets.find(t => t.id === ticketId);
       if (!ticket) {
         return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
       }
-
-      const mappedTicket = {
-        id: ticket.id,
-        user: {
-          uid: ticket.user.id,
-          firstName: ticket.user.firstName || ticket.user.name.split(' ')[0] || 'User',
-          lastName: ticket.user.lastName || ticket.user.name.split(' ').slice(1).join(' ') || '',
-          username: ticket.user.username || ticket.user.email.split('@')[0],
-          email: ticket.user.email,
-          role: ticket.user.role,
-          avatarUrl: ticket.user.avatarUrl || ticket.user.image || undefined,
-        },
-        subject: ticket.subject,
-        category: ticket.category,
-        status: ticket.status,
-        createdAt: ticket.createdAt.toISOString(),
-        updatedAt: ticket.updatedAt.toISOString(),
-        messages: ticket.messages.map((m: any) => ({
-          message: m.message,
-          sentAt: m.sentAt.toISOString(),
-          sentBy: {
-            uid: m.sentBy.id,
-            firstName: m.sentBy.firstName || m.sentBy.name.split(' ')[0] || 'User',
-            lastName: m.sentBy.lastName || m.sentBy.name.split(' ').slice(1).join(' ') || '',
-            avatarUrl: m.sentBy.avatarUrl || m.sentBy.image || undefined,
-          }
-        }))
-      };
-      return NextResponse.json(mappedTicket);
+      return NextResponse.json(ticket);
     }
 
-    const tickets = await getAllTickets();
     return NextResponse.json(tickets);
   } catch (error: any) {
     console.error('Error fetching admin tickets list:', error);
