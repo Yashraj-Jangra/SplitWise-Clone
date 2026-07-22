@@ -48,68 +48,7 @@ function DashboardSkeleton() {
     );
 }
 
-function calculateUserBalances(userId: string, expenses: Expense[], settlements: Settlement[]): Balance[] {
-  const userMap = new Map<string, { user: UserProfile; netBalance: number }>();
 
-  expenses.forEach((expense) => {
-    const participantPositions = (expense.participants || []).map((p) => {
-      const payer = expense.payers?.find((pay) => pay.user?.uid === p.user?.uid);
-      const amountPaid = payer ? payer.amount : 0;
-      const amountOwed = p.amountOwed || 0;
-      return {
-        user: p.user,
-        net: amountPaid - amountOwed,
-      };
-    });
-
-    const myPosition = participantPositions.find((p) => p.user?.uid === userId);
-    if (!myPosition || Math.abs(myPosition.net) < 0.001) return;
-
-    const lenders = participantPositions.filter((p) => p.net > 0.001);
-    const borrowers = participantPositions.filter((p) => p.net < -0.001);
-
-    const totalLenderSurplus = lenders.reduce((sum, l) => sum + l.net, 0);
-    if (totalLenderSurplus < 0.001) return;
-
-    if (myPosition.net > 0) {
-      // I am a lender: borrowers owe me in proportion to their debt and my surplus
-      borrowers.forEach((b) => {
-        if (!b.user?.uid || b.user.uid === userId) return;
-        const amountOwedToMe = (myPosition.net * Math.abs(b.net)) / totalLenderSurplus;
-        const existing = userMap.get(b.user.uid) || { user: b.user, netBalance: 0 };
-        existing.netBalance += amountOwedToMe; // Positive: b owes me
-        userMap.set(b.user.uid, existing);
-      });
-    } else {
-      // I am a borrower: I owe lenders in proportion to my debt and their surplus
-      lenders.forEach((l) => {
-        if (!l.user?.uid || l.user.uid === userId) return;
-        const amountIOwe = (Math.abs(myPosition.net) * l.net) / totalLenderSurplus;
-        const existing = userMap.get(l.user.uid) || { user: l.user, netBalance: 0 };
-        existing.netBalance -= amountIOwe; // Negative: I owe l
-        userMap.set(l.user.uid, existing);
-      });
-    }
-  });
-
-  settlements.forEach((settlement) => {
-    if (settlement.paidBy?.uid === userId && settlement.paidTo?.uid) {
-      const otherUser = settlement.paidTo;
-      const existing = userMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
-      existing.netBalance += settlement.amount;
-      userMap.set(otherUser.uid, existing);
-    } else if (settlement.paidTo?.uid === userId && settlement.paidBy?.uid) {
-      const otherUser = settlement.paidBy;
-      const existing = userMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
-      existing.netBalance -= settlement.amount;
-      userMap.set(otherUser.uid, existing);
-    }
-  });
-
-  return Array.from(userMap.values())
-    .map((b) => ({ user: b.user, netBalance: parseFloat(b.netBalance.toFixed(2)) }))
-    .filter((b) => Math.abs(b.netBalance) >= 0.01);
-}
 
 export default function DashboardPage() {
   const { userProfile, loading: authLoading } = useAuth();
@@ -122,11 +61,37 @@ export default function DashboardPage() {
     
     setDataLoading(true);
     try {
-        const [expenses, settlements] = await Promise.all([
+        const [expenses, settlements, groups] = await Promise.all([
             getExpensesByUserId(userProfile.uid),
             getSettlementsByUserId(userProfile.uid),
+            getGroupsByUserId(userProfile.uid),
         ]);
-        const balances = calculateUserBalances(userProfile.uid, expenses, settlements);
+
+        const groupBalancesArrays = await Promise.all(groups.map(g => getGroupBalances(g.id)));
+
+        const userP2PBalanceMap = new Map<string, { user: UserProfile; netBalance: number }>();
+
+        groupBalancesArrays.forEach(groupBalances => {
+          const simplified = simplifyDebts(groupBalances);
+          simplified.forEach(settlement => {
+            if (settlement.from.uid === userProfile.uid) {
+              const otherUser = settlement.to;
+              const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
+              existing.netBalance -= settlement.amount;
+              userP2PBalanceMap.set(otherUser.uid, existing);
+            } else if (settlement.to.uid === userProfile.uid) {
+              const otherUser = settlement.from;
+              const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
+              existing.netBalance += settlement.amount;
+              userP2PBalanceMap.set(otherUser.uid, existing);
+            }
+          });
+        });
+
+        const balances: Balance[] = Array.from(userP2PBalanceMap.values())
+          .map(b => ({ user: b.user, netBalance: parseFloat(b.netBalance.toFixed(2)) }))
+          .filter(b => Math.abs(b.netBalance) >= 0.01);
+
         setDashboardData({ expenses, settlements, balances });
     } catch (error) {
         console.error("Failed to load dashboard data:", error);
