@@ -102,8 +102,15 @@
     background-color: hsl(var(--primary));
   }
 
+  .hide-number-arrows::-webkit-outer-spin-button,
+  .hide-number-arrows::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   .hide-number-arrows {
     -moz-appearance: textfield;
+    appearance: textfield;
   }
   
   .text-money-positive {

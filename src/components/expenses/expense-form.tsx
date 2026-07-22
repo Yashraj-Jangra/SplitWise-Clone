@@ -282,7 +282,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                     autoCapitalize="sentences"
                     autoCorrect="on"
                     enterKeyHint="next"
-                    className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent hover:bg-transparent focus:bg-transparent active:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </FormControl>
                 <FormMessage />
@@ -308,7 +308,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                       {...field}
                       value={field.value ?? ''}
                       onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                      className="pl-2 text-[clamp(2rem,8vw,3rem)] leading-none font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent hover:bg-transparent focus:bg-transparent active:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
+                      className="pl-2 text-[clamp(2rem,8vw,3rem)] leading-none font-bold border-x-0 border-t-0 rounded-none border-b-2 !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
                     />
                   </div>
                 </FormControl>
