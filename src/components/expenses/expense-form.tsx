@@ -282,7 +282,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                     autoCapitalize="sentences"
                     autoCorrect="on"
                     enterKeyHint="next"
-                    className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="text-lg font-semibold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent hover:bg-transparent focus:bg-transparent active:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </FormControl>
                 <FormMessage />
@@ -308,7 +308,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                       {...field}
                       value={field.value ?? ''}
                       onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
-                      className="pl-2 text-[clamp(2rem,8vw,3rem)] leading-none font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
+                      className="pl-2 text-[clamp(2rem,8vw,3rem)] leading-none font-bold border-x-0 border-t-0 rounded-none border-b-2 bg-transparent hover:bg-transparent focus:bg-transparent active:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
                     />
                   </div>
                 </FormControl>
@@ -437,7 +437,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                   <div className="space-y-2">
                     <h4 className="font-medium leading-none">Notes</h4>
                     <p className="text-sm text-muted-foreground">Add any extra details about the expense.</p>
-                    <Textarea {...field} rows={4} />
+                    <Textarea {...field} rows={4} className="hover:bg-background focus:bg-background active:bg-background" />
                   </div>
                 </PopoverContent>
               </Popover>
@@ -544,7 +544,7 @@ export function PayerView({ setView, group }: { setView: (view: 'main') => void,
                   </Avatar>
                   <span className="flex-1 font-medium text-sm truncate">{p.name}</span>
                   <div className="w-28">
-                    <FormField control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
+                    <FormField control={control} name={`multiPayers.${index}.amount`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} placeholder="0.00" value={field.value === undefined ? '' : field.value} className="hover:bg-background focus:bg-background active:bg-background" />)} />
                   </div>
                 </div>
               ))}
@@ -663,17 +663,17 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
                 {p.selected && (
                   <div className="w-32 relative">
                     {watchSplitType === 'equally' && (
-                      <Input type="number" inputMode="decimal" pattern="[0-9]*" disabled value={(p.amountOwed || 0).toFixed(2)} />
+                      <Input type="number" inputMode="decimal" pattern="[0-9]*" disabled value={(p.amountOwed || 0).toFixed(2)} className="hover:bg-background focus:bg-background active:bg-background" />
                     )}
                     {watchSplitType === 'unequally' && (
-                      <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} className="hide-number-arrows" placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
+                      <FormField control={control} name={`participants.${index}.amountOwed`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} className="hide-number-arrows hover:bg-background focus:bg-background active:bg-background" placeholder="0.00" value={field.value === undefined ? '' : field.value} />)} />
                     )}
                     {watchSplitType === 'by_shares' && (
-                      <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} placeholder="1" className="hide-number-arrows" value={field.value === undefined ? '' : field.value} />)} />
+                      <FormField control={control} name={`participants.${index}.shares`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} placeholder="1" className="hide-number-arrows hover:bg-background focus:bg-background active:bg-background" value={field.value === undefined ? '' : field.value} />)} />
                     )}
                     {watchSplitType === 'by_percentage' && (
                       <div className="relative">
-                        <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} className="pr-8 hide-number-arrows" placeholder="0" value={field.value === undefined ? '' : field.value} />)} />
+                        <FormField control={control} name={`participants.${index}.percentage`} render={({ field }) => (<Input type="number" inputMode="decimal" pattern="[0-9]*" {...field} className="pr-8 hide-number-arrows hover:bg-background focus:bg-background active:bg-background" placeholder="0" value={field.value === undefined ? '' : field.value} />)} />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                       </div>
                     )}
