@@ -454,6 +454,7 @@ export function AddSettlementDialog({ group, initialSettlement, trigger }: AddSe
             email: "",
             role: "user",
           }}
+          payer={payerMember}
           amount={Number(watchAmount) || 0}
           groupId={group.id}
           groupName={group.name}
