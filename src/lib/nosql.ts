@@ -62,10 +62,24 @@ export async function executeOracleQuery<T = any>(sql: string, params: any = {})
   }
 }
 
+// High-performance in-memory TTL cache for read operations
+const readCache = new Map<string, { expiresAt: number; data: any }>();
+const CACHE_TTL_MS = 15000; // 15-second read cache
+
+export function clearNoSqlCache(): void {
+  readCache.clear();
+}
+
 /**
  * Get a single document by Primary Key (pk, sk)
  */
 export async function getItem<T = any>(pk: string, sk: string): Promise<T | null> {
+  const cacheKey = `getItem:${pk}:${sk}`;
+  const cached = readCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data as T;
+  }
+
   const rows = await executeOracleQuery<{ DATA: string | object }>(
     `SELECT data FROM SplitItDB WHERE pk = :pk AND sk = :sk`,
     { pk, sk }
@@ -73,7 +87,9 @@ export async function getItem<T = any>(pk: string, sk: string): Promise<T | null
 
   if (!rows || rows.length === 0) return null;
   const raw = rows[0].DATA;
-  return (typeof raw === 'string' ? JSON.parse(raw) : raw) as T;
+  const result = (typeof raw === 'string' ? JSON.parse(raw) : raw) as T;
+  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  return result;
 }
 
 /**
@@ -87,6 +103,7 @@ export async function putItem(
   gsi1pk: string | null = null,
   gsi1sk: string | null = null
 ): Promise<void> {
+  clearNoSqlCache();
   const dataStr = JSON.stringify(data);
   const sql = `
     MERGE INTO SplitItDB dst
@@ -113,41 +130,66 @@ export async function putItem(
  * Query all documents under a Partition Key (e.g., GROUP#123)
  */
 export async function queryByPk<T = any>(pk: string): Promise<T[]> {
+  const cacheKey = `queryByPk:${pk}`;
+  const cached = readCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data as T[];
+  }
+
   const rows = await executeOracleQuery<{ DATA: string | object }>(
     `SELECT data FROM SplitItDB WHERE pk = :pk OR LOWER(pk) = LOWER(:pk)`,
     { pk }
   );
 
-  return rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
+  const result = rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
+  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  return result;
 }
 
 /**
  * Query documents by Entity Type (e.g., USER, GROUP)
  */
 export async function queryByEntityType<T = any>(entityType: string): Promise<T[]> {
+  const cacheKey = `queryByEntityType:${entityType}`;
+  const cached = readCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data as T[];
+  }
+
   const rows = await executeOracleQuery<{ DATA: string | object }>(
     `SELECT data FROM SplitItDB WHERE entityType = :entityType`,
     { entityType }
   );
 
-  return rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
+  const result = rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
+  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  return result;
 }
 
 /**
  * Query documents by Global Secondary Index (e.g. EMAIL#user@example.com)
  */
 export async function queryByGsi<T = any>(gsi1pk: string): Promise<T[]> {
+  const cacheKey = `queryByGsi:${gsi1pk}`;
+  const cached = readCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data as T[];
+  }
+
   const rows = await executeOracleQuery<{ DATA: string | object }>(
     `SELECT data FROM SplitItDB WHERE gsi1pk = :gsi1pk OR LOWER(gsi1pk) = LOWER(:gsi1pk)`,
     { gsi1pk }
   );
 
-  return rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
+  const result = rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
+  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  return result;
 }
 
 /**
  * Delete a document by Primary Key (pk, sk)
  */
 export async function deleteItem(pk: string, sk: string): Promise<void> {
+  clearNoSqlCache();
   await executeOracleQuery(`DELETE FROM SplitItDB WHERE pk = :pk AND sk = :sk`, { pk, sk });
 }

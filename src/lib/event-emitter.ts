@@ -1,6 +1,8 @@
 // A simple, shared event emitter for cross-component communication.
 // This helps decouple components, particularly for triggering data refetches.
 
+import { clearClientFetchCache } from './firestore.service';
+
 type Listener = () => void;
 
 class EventEmitter {
@@ -24,6 +26,9 @@ class EventEmitter {
   }
 
   emit(event: string): void {
+    if (event === 'data-changed') {
+      clearClientFetchCache();
+    }
     if (!this.listeners.has(event)) {
       return;
     }

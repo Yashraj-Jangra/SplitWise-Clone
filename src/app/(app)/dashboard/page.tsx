@@ -48,44 +48,51 @@ function DashboardSkeleton() {
     );
 }
 
-async function getOverallBalances(userId: string): Promise<Balance[]> {
-    const userGroups = await getGroupsByUserId(userId);
-    if (userGroups.length === 0) return [];
+function calculateUserBalances(userId: string, expenses: Expense[], settlements: Settlement[]): Balance[] {
+  const userMap = new Map<string, { user: UserProfile; netBalance: number }>();
 
-    // 1. Get all balances for each group
-    const allGroupBalancesPromises = userGroups.map(group => getGroupBalances(group.id));
-    const allGroupBalancesArrays = await Promise.all(allGroupBalancesPromises);
+  expenses.forEach((expense) => {
+    const myPayer = expense.payers?.find((p) => p.user?.uid === userId);
+    const myAmountPaid = myPayer ? myPayer.amount : 0;
 
-    // 2. Simplify debts for each group to get P2P transactions
-    const allSettlements: SimplifiedSettlement[] = allGroupBalancesArrays
-        .map(groupBalances => simplifyDebts(groupBalances))
-        .flat();
+    const myParticipant = expense.participants?.find((p) => p.user?.uid === userId);
+    const myAmountOwed = myParticipant ? myParticipant.amountOwed : 0;
 
-    // 3. Aggregate P2P transactions to find net balance with each person
-    const userP2PBalanceMap = new Map<string, { user: UserProfile, netBalance: number }>();
+    const myNetDelta = myAmountPaid - myAmountOwed;
+    if (Math.abs(myNetDelta) < 0.001) return;
 
-    allSettlements.forEach(settlement => {
-        // If I am the one who needs to pay
-        if (settlement.from.uid === userId) {
-            const otherUser = settlement.to;
-            const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
-            // I owe them, so my debt to them is a positive value in this context
-            existing.netBalance += settlement.amount;
-            userP2PBalanceMap.set(otherUser.uid, existing);
-        }
-        // If I am the one who should receive money
-        else if (settlement.to.uid === userId) {
-            const otherUser = settlement.from;
-            const existing = userP2PBalanceMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
-            // They owe me, so my "debt" to them is negative (i.e., they owe me)
-            existing.netBalance -= settlement.amount;
-            userP2PBalanceMap.set(otherUser.uid, existing);
-        }
+    const otherParticipants = expense.participants?.filter((p) => p.user?.uid && p.user.uid !== userId) || [];
+    if (otherParticipants.length === 0) return;
+
+    const totalOtherOwed = otherParticipants.reduce((sum, p) => sum + (p.amountOwed || 0), 0);
+
+    otherParticipants.forEach((p) => {
+      const otherUid = p.user.uid;
+      const existing = userMap.get(otherUid) || { user: p.user, netBalance: 0 };
+      const share = totalOtherOwed > 0 ? (p.amountOwed || 0) / totalOtherOwed : 1 / otherParticipants.length;
+      existing.netBalance -= myNetDelta * share;
+      userMap.set(otherUid, existing);
     });
+  });
 
-    return Array.from(userP2PBalanceMap.values());
+  settlements.forEach((settlement) => {
+    if (settlement.paidBy?.uid === userId && settlement.paidTo?.uid) {
+      const otherUser = settlement.paidTo;
+      const existing = userMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
+      existing.netBalance += settlement.amount;
+      userMap.set(otherUser.uid, existing);
+    } else if (settlement.paidTo?.uid === userId && settlement.paidBy?.uid) {
+      const otherUser = settlement.paidBy;
+      const existing = userMap.get(otherUser.uid) || { user: otherUser, netBalance: 0 };
+      existing.netBalance -= settlement.amount;
+      userMap.set(otherUser.uid, existing);
+    }
+  });
+
+  return Array.from(userMap.values())
+    .map((b) => ({ user: b.user, netBalance: parseFloat(b.netBalance.toFixed(2)) }))
+    .filter((b) => Math.abs(b.netBalance) >= 0.01);
 }
-
 
 export default function DashboardPage() {
   const { userProfile, loading: authLoading } = useAuth();
@@ -98,11 +105,11 @@ export default function DashboardPage() {
     
     setDataLoading(true);
     try {
-        const [expenses, settlements, balances] = await Promise.all([
+        const [expenses, settlements] = await Promise.all([
             getExpensesByUserId(userProfile.uid),
             getSettlementsByUserId(userProfile.uid),
-            getOverallBalances(userProfile.uid)
         ]);
+        const balances = calculateUserBalances(userProfile.uid, expenses, settlements);
         setDashboardData({ expenses, settlements, balances });
     } catch (error) {
         console.error("Failed to load dashboard data:", error);
