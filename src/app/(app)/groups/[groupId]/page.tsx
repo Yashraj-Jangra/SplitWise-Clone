@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { GroupDetailHeader } from '@/components/groups/group-detail-header';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
@@ -146,6 +147,42 @@ export default function GroupDetailPage() {
       return combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [expenses, settlements]);
 
+  const BATCH_SIZE = 15;
+  const [visibleActivityCount, setVisibleActivityCount] = useState(BATCH_SIZE);
+
+  const visibleActivityItems = useMemo(() => {
+    return activityItems.slice(0, visibleActivityCount);
+  }, [activityItems, visibleActivityCount]);
+
+  // Expand visible bounds if deep-linked item is beyond initial batch
+  useEffect(() => {
+    const expId = searchParams?.get('expenseId');
+    const setDocId = searchParams?.get('settlementId');
+    const targetId = expId ? `exp-${expId}` : setDocId ? `set-${setDocId}` : null;
+    if (targetId) {
+      const idx = activityItems.findIndex(i => i.id === targetId);
+      if (idx !== -1 && idx >= visibleActivityCount) {
+        setVisibleActivityCount(idx + 10);
+      }
+    }
+  }, [searchParams, activityItems, visibleActivityCount]);
+
+  // Infinite Scroll IntersectionObserver
+  useEffect(() => {
+    if (visibleActivityCount >= activityItems.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleActivityCount(prev => Math.min(prev + BATCH_SIZE, activityItems.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+    const node = document.getElementById('activity-scroll-sentinel');
+    if (node) observer.observe(node);
+    return () => observer.disconnect();
+  }, [activityItems.length, visibleActivityCount]);
+
 
   useEffect(() => {
     if (activeTab === 'expenses' && targetExpenseId) {
@@ -252,37 +289,51 @@ export default function GroupDetailPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {activityItems.length > 0 ? (
-                  <Accordion type="single" collapsible className="w-full" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
-                      {activityItems.map((item) => {
-                          if (item.type === 'expense') {
-                              const expense = item.data as Expense;
-                              return (
-                                 <ExpenseListItem
-                                    key={item.id}
-                                    expense={expense}
-                                    currentUserId={userProfile.uid}
-                                    group={group}
-                                    groupHistory={groupHistory}
-                                    isHighlighted={highlightedItemId === `exp-${expense.id}`}
-                                    showGroupName={false}
-                                  />
-                              )
-                          } else {
-                              const settlement = item.data as Settlement;
-                              return (
-                                   <SettlementListItem
+                  <>
+                    <Accordion type="single" collapsible className="w-full" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
+                        {visibleActivityItems.map((item) => {
+                            if (item.type === 'expense') {
+                                const expense = item.data as Expense;
+                                return (
+                                   <ExpenseListItem
                                       key={item.id}
-                                      settlement={settlement}
+                                      expense={expense}
                                       currentUserId={userProfile.uid}
                                       group={group}
                                       groupHistory={groupHistory}
-                                      isHighlighted={highlightedItemId === `set-${settlement.id}`}
+                                      isHighlighted={highlightedItemId === `exp-${expense.id}`}
                                       showGroupName={false}
-                                  />
-                              )
-                          }
-                      })}
-                   </Accordion>
+                                    />
+                                )
+                            } else {
+                                const settlement = item.data as Settlement;
+                                return (
+                                     <SettlementListItem
+                                        key={item.id}
+                                        settlement={settlement}
+                                        currentUserId={userProfile.uid}
+                                        group={group}
+                                        groupHistory={groupHistory}
+                                        isHighlighted={highlightedItemId === `set-${settlement.id}`}
+                                        showGroupName={false}
+                                    />
+                                )
+                            }
+                        })}
+                     </Accordion>
+                     {visibleActivityCount < activityItems.length && (
+                       <div id="activity-scroll-sentinel" className="p-3 text-center border-t border-border/30">
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           className="text-xs text-muted-foreground hover:text-foreground"
+                           onClick={() => setVisibleActivityCount(prev => Math.min(prev + BATCH_SIZE, activityItems.length))}
+                         >
+                           Showing {visibleActivityItems.length} of {activityItems.length} records — Scroll or tap to load more...
+                         </Button>
+                       </div>
+                     )}
+                  </>
                 ) : (
                   <div className="text-center p-8 text-muted-foreground">
                     <Icons.History className="h-12 w-12 mx-auto mb-2" />
