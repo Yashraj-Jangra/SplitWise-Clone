@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, FormProvider, useFormContext } from 'react-hook-form';
+import { useForm, FormProvider, useFormContext, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -114,7 +114,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
   const watchSinglePayerId = watch('singlePayerId');
   const watchMultiPayers = watch('multiPayers');
   const watchSplitType = watch('splitType');
-  const watchParticipants = watch('participants');
+  const watchParticipants = useWatch({ control, name: 'participants' }) || watch('participants');
   const watchCategory = watch('category');
   const watchDescription = watch('description');
 
@@ -568,7 +568,7 @@ export function SplitView({ setView }: { setView: (view: 'main') => void }) {
   const { control, watch, formState: { errors } } = useFormContext();
   const { userProfile } = useAuth();
   const watchSplitType = watch('splitType');
-  const watchParticipants = watch('participants');
+  const watchParticipants = useWatch({ control, name: 'participants' }) || watch('participants');
   const watchAmount = watch('amount');
   const watchPayerType = watch('payerType');
   const watchSinglePayerId = watch('singlePayerId');
@@ -736,7 +736,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
 
   const watchedAmount = watch('amount');
   const watchedSplitType = watch('splitType');
-  const watchedParticipants = watch('participants');
+  const watchedParticipants = useWatch({ control: form.control, name: 'participants' }) || watch('participants');
   const hasSelectedParticipants = watchedParticipants?.some((p: any) => p.selected) ?? false;
 
   const participantDeps = React.useMemo(() => {
@@ -780,6 +780,11 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     } else if (splitType === 'by_percentage') {
       amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
     } else { // unequally
+      allParticipants.forEach((p: any, index: number) => {
+        if (!p.selected) {
+          setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
+        }
+      });
       return; // Don't auto-calculate for unequal split
     }
 
