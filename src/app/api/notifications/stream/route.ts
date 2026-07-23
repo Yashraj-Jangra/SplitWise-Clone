@@ -13,27 +13,56 @@ export async function GET(request: Request) {
 
   const stream = new ReadableStream({
     start(controller) {
+      let isClosed = false;
+
       // Send initial keep-alive comment
-      controller.enqueue(encoder.encode(': ok\n\n'));
+      try {
+        controller.enqueue(encoder.encode(': ok\n\n'));
+      } catch (e) {
+        return;
+      }
+
+      const cleanup = () => {
+        if (isClosed) return;
+        isClosed = true;
+        clearInterval(interval);
+        try {
+          controller.close();
+        } catch (e) {
+          // Controller already closed
+        }
+      };
 
       const interval = setInterval(async () => {
+        if (isClosed || request.signal.aborted) {
+          cleanup();
+          return;
+        }
+
         try {
           const userNotifs = await getNotificationsForUser(userId, 20);
+          
+          if (isClosed || request.signal.aborted) {
+            cleanup();
+            return;
+          }
+
           const newNotifs = userNotifs.filter(n => new Date(n.createdAt) > lastCheck);
 
           if (newNotifs.length > 0) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(newNotifs)}\n\n`));
           }
           lastCheck = new Date();
-        } catch (error) {
+        } catch (error: any) {
+          if (isClosed || request.signal.aborted || error?.code === 'ERR_INVALID_STATE') {
+            cleanup();
+            return;
+          }
           console.error("SSE interval loop error:", error);
         }
       }, 5000); // Check every 5 seconds
 
-      request.signal.addEventListener('abort', () => {
-        clearInterval(interval);
-        controller.close();
-      });
+      request.signal.addEventListener('abort', cleanup);
     },
   });
 
