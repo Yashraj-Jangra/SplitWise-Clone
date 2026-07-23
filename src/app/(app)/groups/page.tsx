@@ -28,6 +28,7 @@ function GroupSkeleton() {
 export default function GroupsPage() {
   const { userProfile } = useAuth();
   const [groups, setGroups] = useState<(Group & { userNetBalance?: number })[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [coverImages, setCoverImages] = useState<string[]>([]);
 
@@ -59,6 +60,12 @@ export default function GroupsPage() {
     loadInitialData();
   }, [userProfile]);
 
+  const filteredGroups = groups.filter(g => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return g.name.toLowerCase().includes(q) || (g.description && g.description.toLowerCase().includes(q));
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -66,16 +73,30 @@ export default function GroupsPage() {
           <h1 className="text-4xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">My Groups</h1>
           <p className="text-lg text-muted-foreground">Manage your shared expense groups.</p>
         </div>
-        <CreateGroupDialog />
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {groups.length > 0 && (
+            <div className="relative flex-1 sm:w-64">
+              <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search groups..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full h-10 pl-9 pr-4 rounded-xl bg-muted/20 border border-border/30 text-sm font-normal focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+          )}
+          <CreateGroupDialog />
+        </div>
       </div>
 
       {loading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(8)].map((_, i) => <GroupSkeleton key={i} />)}
         </div>
-      ) : groups.length > 0 ? (
+      ) : filteredGroups.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {groups.map((group, index) => {
+          {filteredGroups.map((group, index) => {
              const net = group.userNetBalance || 0;
              const isOwed = net > 0.01;
              const isDebtor = net < -0.01;
@@ -153,13 +174,23 @@ export default function GroupsPage() {
                  <Icons.Users className="h-10 w-10 text-primary" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-headline">No Groups Yet</CardTitle>
+            <CardTitle className="text-2xl font-headline">
+              {searchQuery ? "No Groups Found" : "No Groups Yet"}
+            </CardTitle>
             <CardDescription className="max-w-md mx-auto text-base">
-              Groups are where you track shared expenses with roommates, travel buddies, or friends. Create one to get started!
+              {searchQuery
+                ? `No groups matching "${searchQuery}". Try a different search term.`
+                : "Groups are where you track shared expenses with roommates, travel buddies, or friends. Create one to get started!"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-             <CreateGroupDialog buttonVariant="default" buttonSize="lg" />
+            {searchQuery ? (
+              <Button variant="outline" onClick={() => setSearchQuery('')}>
+                Clear Search
+              </Button>
+            ) : (
+              <CreateGroupDialog buttonVariant="default" buttonSize="lg" />
+            )}
           </CardContent>
         </Card>
       )}

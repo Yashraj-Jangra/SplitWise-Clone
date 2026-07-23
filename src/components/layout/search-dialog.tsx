@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, UserProfile } from '@/types';
-import { getAllGroups, getAllExpenses, hydrateUsers } from '@/lib/mock-data';
+import { getGroupsByUserId, getExpensesByUserId, hydrateUsers } from '@/lib/mock-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getFullName, getInitials } from '@/lib/utils';
@@ -72,15 +72,14 @@ export function SearchDialog() {
     if (!userProfile?.uid) return;
     setLoading(true);
 
-    const userGroups = await getAllGroups();
-    const filteredGroups = userGroups.filter(g => g.members.some(m => m.uid === userProfile.uid));
-    
-    const allExpenses = await getAllExpenses();
-    const filteredExpenses = allExpenses.filter(e => e.groupMemberIds?.includes(userProfile.uid));
+    const [userGroups, userExpenses] = await Promise.all([
+      getGroupsByUserId(userProfile.uid),
+      getExpensesByUserId(userProfile.uid),
+    ]);
 
     const mutualMemberIds = new Set<string>();
-    filteredGroups.forEach(group => {
-        group.members.forEach(m => mutualMemberIds.add(m.uid));
+    userGroups.forEach(group => {
+      group.members?.forEach(m => mutualMemberIds.add(m.uid));
     });
     
     // Remove current user from the list of users to display
@@ -89,8 +88,8 @@ export function SearchDialog() {
     const mutualUsers = await hydrateUsers(Array.from(mutualMemberIds));
 
     setAllData({
-      groups: filteredGroups,
-      expenses: filteredExpenses,
+      groups: userGroups,
+      expenses: userExpenses,
       users: mutualUsers,
     });
     setLoading(false);
@@ -108,23 +107,36 @@ export function SearchDialog() {
   const searchResults = useMemo(() => {
     if (!query || !allData) return [];
 
-    const lowerCaseQuery = query.toLowerCase();
+    const lowerCaseQuery = query.toLowerCase().trim();
     const results: SearchResult[] = [];
 
     // Search groups
     allData.groups.forEach(group => {
-      if (group.name.toLowerCase().includes(lowerCaseQuery)) {
+      if (
+        group.name.toLowerCase().includes(lowerCaseQuery) ||
+        (group.description && group.description.toLowerCase().includes(lowerCaseQuery))
+      ) {
         results.push({ type: 'group', data: group });
       }
     });
 
     // Search expenses
     allData.expenses.forEach(expense => {
+      const payerMatch = expense.payers?.some(p =>
+        getFullName(p.user?.firstName, p.user?.lastName).toLowerCase().includes(lowerCaseQuery)
+      );
+      const participantMatch = expense.participants?.some(p =>
+        getFullName(p.user?.firstName, p.user?.lastName).toLowerCase().includes(lowerCaseQuery)
+      );
+
       if (
         expense.description.toLowerCase().includes(lowerCaseQuery) ||
-        (expense.category &&
-          expense.category.toLowerCase().includes(lowerCaseQuery)) ||
-        (expense.notes && expense.notes.toLowerCase().includes(lowerCaseQuery))
+        (expense.category && expense.category.toLowerCase().includes(lowerCaseQuery)) ||
+        (expense.masterCategory && expense.masterCategory.toLowerCase().includes(lowerCaseQuery)) ||
+        (expense.notes && expense.notes.toLowerCase().includes(lowerCaseQuery)) ||
+        expense.amount.toString().includes(lowerCaseQuery) ||
+        payerMatch ||
+        participantMatch
       ) {
         results.push({ type: 'expense', data: expense });
       }
@@ -133,10 +145,9 @@ export function SearchDialog() {
     // Search users
     allData.users.forEach(user => {
       if (
-        getFullName(user.firstName, user.lastName)
-          .toLowerCase()
-          .includes(lowerCaseQuery) ||
-        user.email.toLowerCase().includes(lowerCaseQuery)
+        getFullName(user.firstName, user.lastName).toLowerCase().includes(lowerCaseQuery) ||
+        user.email.toLowerCase().includes(lowerCaseQuery) ||
+        (user.username && user.username.toLowerCase().includes(lowerCaseQuery))
       ) {
         results.push({ type: 'user', data: user });
       }

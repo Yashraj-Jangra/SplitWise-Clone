@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { getFullName } from '@/lib/utils';
 
 export default function AllExpensesPage() {
   const { userProfile } = useAuth();
@@ -94,9 +95,20 @@ export default function AllExpensesPage() {
   const groupedExpenses = useMemo(() => {
     let result = [...userExpenses];
 
-    // Filter by description search
+    // Filter by search query (description, category, notes, members, amount)
     if (searchQuery) {
-      result = result.filter(e => e.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(e => {
+        const descMatch = e.description.toLowerCase().includes(q);
+        const catMatch = e.category?.toLowerCase().includes(q);
+        const masterCatMatch = e.masterCategory?.toLowerCase().includes(q);
+        const notesMatch = e.notes?.toLowerCase().includes(q);
+        const amountMatch = e.amount.toString().includes(q);
+        const payerMatch = e.payers?.some(p => getFullName(p.user?.firstName, p.user?.lastName).toLowerCase().includes(q));
+        const participantMatch = e.participants?.some(p => getFullName(p.user?.firstName, p.user?.lastName).toLowerCase().includes(q));
+
+        return descMatch || catMatch || masterCatMatch || notesMatch || amountMatch || payerMatch || participantMatch;
+      });
     }
     // Filter by group
     if (selectedGroupId && selectedGroupId !== 'all') {
