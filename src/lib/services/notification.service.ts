@@ -63,7 +63,11 @@ export async function getNotificationsForUser(userId: string, limit: number = 50
     return recipientIds.includes(userId);
   });
 
-  userNotifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  userNotifs.sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+  });
   const limited = userNotifs.slice(0, limit);
 
   const actorIds = [...new Set(limited.map(r => r.actorId).filter(Boolean) as string[])];
@@ -130,7 +134,11 @@ export async function markAllRead(userId: string): Promise<void> {
 
 export async function getAllNotifications(): Promise<NotificationV2[]> {
   const allNotifs = await queryByEntityType<any>('NOTIFICATION');
-  allNotifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  allNotifs.sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+  });
   return allNotifs.map(r => mapNotificationRow(r, false));
 }
 
