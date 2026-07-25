@@ -5,7 +5,10 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
-        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+        - NEXT_PUBLIC_APP_URL=http://localhost:3235
+        - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+        - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+        - VAPID_EMAIL=${VAPID_EMAIL}
     ports:
       - "3235:3231"   # Map host port 3235 to container port 3231
     env_file:
@@ -13,4 +16,6 @@ services:
     environment:
       - PORT=3231
       - NODE_ENV=production
+      - BETTER_AUTH_URL=http://localhost:3235
+      - NEXT_PUBLIC_APP_URL=http://localhost:3235
     restart: always
