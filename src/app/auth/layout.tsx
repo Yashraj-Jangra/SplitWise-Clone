@@ -7,10 +7,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const bgImage = settings.authPage?.imageUrl || "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80";
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background select-none overflow-x-hidden">
+    <div className="min-h-screen md:h-screen w-full flex flex-col md:flex-row bg-background select-none overflow-x-hidden md:overflow-hidden">
       
       {/* ── Left Visual Pane (Desktop/Tablet) ────────────────────────────── */}
-      <div className="relative hidden md:flex w-1/2 flex-col justify-between p-10 lg:p-14 text-white overflow-hidden flex-shrink-0">
+      <div className="relative hidden md:flex w-1/2 h-full flex-col justify-between p-10 lg:p-14 text-white overflow-hidden flex-shrink-0">
         {/* Background Image with Zoom and Smooth Loading */}
         <div className="absolute inset-0 z-0">
           <Image
@@ -45,7 +45,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* ── Right Content Pane (All Viewports) ───────────────────────────── */}
-      <div className="w-full md:w-1/2 flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-background min-h-screen overflow-y-auto">
+      <div className="w-full md:w-1/2 flex flex-col justify-between p-6 sm:p-8 lg:p-10 bg-background min-h-screen md:min-h-0 md:h-full overflow-y-auto">
         
         {/* Top Spacer or Small Desktop Logo */}
         <div className="w-full flex justify-end md:justify-start items-center">
@@ -53,7 +53,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </div>
 
         {/* Center Form Hub */}
-        <main className="relative w-full max-w-[420px] mx-auto my-auto flex flex-col justify-center py-6">
+        <main className="relative w-full max-w-[420px] mx-auto my-auto flex flex-col justify-center py-4">
           {/* Mobile-Only Interactive Banner */}
           <div 
             className="block md:hidden mb-6 relative w-full h-36 overflow-hidden border border-border/50 shadow-md"
@@ -82,7 +82,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </main>
 
         {/* Footer */}
-        <footer className="w-full text-center py-4 text-[11px] text-muted-foreground mt-8 border-t border-border/10">
+        <footer className="w-full text-center py-3 text-[11px] text-muted-foreground mt-4 border-t border-border/10">
           <p>&copy; {new Date().getFullYear()} {settings.appName}. All rights reserved.</p>
         </footer>
 
