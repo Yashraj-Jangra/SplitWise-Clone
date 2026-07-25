@@ -84,13 +84,12 @@ export function AuthCard({
       if (newMode === mode) return;
       setMode(newMode);
       setShowPassword(false);
-      window.history.replaceState(
-        null,
-        "",
-        newMode === "login" ? "/auth/login" : "/auth/signup"
+      router.replace(
+        newMode === "login" ? "/auth/login" : "/auth/signup",
+        { scroll: false }
       );
     },
-    [mode]
+    [mode, router]
   );
 
   // ── Forms ──────────────────────────────────────────────────────────────────
