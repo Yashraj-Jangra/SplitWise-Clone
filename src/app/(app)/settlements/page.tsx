@@ -139,7 +139,7 @@ export default function AllSettlementsPage() {
   const hasActiveFilters = searchQuery !== '' || selectedGroupId !== 'all' || selectedRole !== 'all' || sortBy !== 'date_desc';
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto pb-6 px-2 sm:px-4">
+    <div className="space-y-5 max-w-6xl mx-auto pb-6">
       {/* Header Area */}
       <div className="flex flex-row justify-between items-center gap-4">
         <div>
@@ -181,74 +181,68 @@ export default function AllSettlementsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <Card className="border-border/60 shadow-sm bg-card/30 backdrop-blur-sm">
-        <CardContent className="p-3 sm:p-4 space-y-3">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {/* Search Input */}
-            <div className="relative col-span-2 lg:col-span-1">
-              <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
-              <Input
-                placeholder="Search member name..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 sm:h-10 text-xs sm:text-sm bg-background/50"
-              />
-            </div>
+      <div className="flex flex-wrap items-center gap-2 w-full">
+        {/* Search Input */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
+          <Input
+            placeholder="Search member name..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9 h-10 rounded-xl bg-muted/20 border-border/30 text-xs sm:text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary placeholder:text-muted-foreground/50"
+          />
+        </div>
 
-            {/* Filter by Group */}
-            <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-              <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm bg-background/50">
-                <SelectValue placeholder="All Groups" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Groups</SelectItem>
-                {userGroupsList.map(g => (
-                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Filter by Group */}
+        <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+          <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/30 text-xs sm:text-sm focus:ring-0 focus:ring-offset-0 focus:border-primary w-full sm:w-[130px] md:w-[150px]">
+            <SelectValue placeholder="All Groups" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Groups</SelectItem>
+            {userGroupsList.map(g => (
+              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-            {/* Filter by Payer/Payee Role */}
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm bg-background/50">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="paid_by_me">Payments you sent</SelectItem>
-                <SelectItem value="paid_to_me">Payments you received</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Filter by Payer/Payee Role */}
+        <Select value={selectedRole} onValueChange={setSelectedRole}>
+          <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/30 text-xs sm:text-sm focus:ring-0 focus:ring-offset-0 focus:border-primary w-full sm:w-[130px] md:w-[150px]">
+            <SelectValue placeholder="All Roles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="paid_by_me">Payments you sent</SelectItem>
+            <SelectItem value="paid_to_me">Payments you received</SelectItem>
+          </SelectContent>
+        </Select>
 
-            {/* Sorting */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm bg-background/50 col-span-2 lg:col-span-1">
-                <SelectValue placeholder="Sort Order" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date_desc">Date: Newest</SelectItem>
-                <SelectItem value="date_asc">Date: Oldest</SelectItem>
-                <SelectItem value="amount_desc">Amount: High to Low</SelectItem>
-                <SelectItem value="amount_asc">Amount: Low to High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Sorting */}
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="h-10 rounded-xl bg-muted/20 border-border/30 text-xs sm:text-sm focus:ring-0 focus:ring-offset-0 focus:border-primary w-full sm:w-[130px] md:w-[150px]">
+            <SelectValue placeholder="Sort Order" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date_desc">Date: Newest</SelectItem>
+            <SelectItem value="date_asc">Date: Oldest</SelectItem>
+            <SelectItem value="amount_desc">Amount: High to Low</SelectItem>
+            <SelectItem value="amount_asc">Amount: Low to High</SelectItem>
+          </SelectContent>
+        </Select>
 
-          {hasActiveFilters && (
-            <div className="flex justify-end pt-0.5">
-              <Button onClick={clearFilters} variant="ghost" size="sm" className="h-7 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground">
-                <Icons.Close className="mr-1 h-3 w-3" /> Clear Filters
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {hasActiveFilters && (
+          <Button onClick={clearFilters} variant="ghost" size="sm" className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground">
+            <Icons.Close className="mr-1 h-3.5 w-3.5" /> Clear
+          </Button>
+        )}
+      </div>
 
       {/* Main Settlements History List */}
-      <Card className="border-border/60 shadow-sm overflow-hidden bg-card/20 rounded-2xl">
-        <CardHeader className="border-b border-border/50 bg-muted/20 py-3.5 px-4 sm:px-6 flex flex-row items-center justify-between">
+      <Card className="border-none shadow-none bg-transparent rounded-none animate-in fade-in duration-500">
+        <CardHeader className="py-3 px-0 flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base sm:text-lg">Settlement History</CardTitle>
+            <CardTitle className="text-base sm:text-lg font-bold">Settlement History</CardTitle>
             {!loading && (
               <CardDescription className="text-[10px] sm:text-xs">
                 Showing {groupedSettlements.reduce((sum, g) => sum + g.items.length, 0)} settlements.
@@ -259,7 +253,7 @@ export default function AllSettlementsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="py-4 px-0 space-y-4">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="space-y-2">
                   <Skeleton className="h-4 w-20 rounded" />
@@ -268,8 +262,8 @@ export default function AllSettlementsPage() {
               ))}
             </div>
           ) : groupedSettlements.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-21rem)] sm:h-[calc(100vh-23rem)]">
-              <div className="space-y-5 p-4 sm:p-6">
+            <ScrollArea className="h-[calc(100vh-17rem)] sm:h-[calc(100vh-19rem)]">
+              <div className="space-y-5 py-4 px-0">
                 {groupedSettlements.map(group => (
                   <div key={group.monthYear} className="space-y-2.5">
                     {/* Month Section Header */}

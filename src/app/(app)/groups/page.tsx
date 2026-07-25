@@ -16,6 +16,19 @@ import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName, getInitials, cn } from '@/lib/utils';
 import { getGroupBalances, simplifyDebts } from '@/lib/mock-data';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import {
+  Clock,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+} from 'lucide-react';
 
 function GroupSkeleton() {
     return (
@@ -28,9 +41,22 @@ function GroupSkeleton() {
 export default function GroupsPage() {
   const { userProfile } = useAuth();
   const [groups, setGroups] = useState<(Group & { userNetBalance?: number })[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [coverImages, setCoverImages] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('last_usage');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const savedSort = localStorage.getItem('splitwise_groups_sort_preference');
+    if (savedSort) {
+      setSortBy(savedSort);
+    }
+  }, []);
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    localStorage.setItem('splitwise_groups_sort_preference', value);
+  };
 
   useEffect(() => {
     async function loadInitialData() {
@@ -60,33 +86,132 @@ export default function GroupsPage() {
     loadInitialData();
   }, [userProfile]);
 
-  const filteredGroups = groups.filter(g => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return g.name.toLowerCase().includes(q) || (g.description && g.description.toLowerCase().includes(q));
+  const sortedGroups = [...groups].sort((a, b) => {
+    switch (sortBy) {
+      case 'name_asc':
+        return a.name.localeCompare(b.name);
+      case 'name_desc':
+        return b.name.localeCompare(a.name);
+      case 'owed_desc':
+        return (b.userNetBalance || 0) - (a.userNetBalance || 0);
+      case 'owed_asc':
+        return (a.userNetBalance || 0) - (b.userNetBalance || 0);
+      case 'owes_desc':
+        return (a.userNetBalance || 0) - (b.userNetBalance || 0);
+      case 'owes_asc':
+        return (b.userNetBalance || 0) - (a.userNetBalance || 0);
+      case 'last_usage':
+      default:
+        const timeA = new Date(a.updatedAt || a.createdAt).getTime();
+        const timeB = new Date(b.updatedAt || b.createdAt).getTime();
+        return timeB - timeA;
+    }
   });
+
+  const filteredGroups = sortedGroups.filter(group =>
+    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (group.description && group.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const getSortIcon = (sortBy: string) => {
+    switch (sortBy) {
+      case 'name_asc':
+        return <ArrowDownAZ className="h-5 w-5" />;
+      case 'name_desc':
+        return <ArrowUpAZ className="h-5 w-5" />;
+      case 'owed_desc':
+        return <ArrowDownWideNarrow className="h-5 w-5 text-green-500" />;
+      case 'owed_asc':
+        return <ArrowUpNarrowWide className="h-5 w-5 text-green-500" />;
+      case 'owes_desc':
+        return <ArrowDownWideNarrow className="h-5 w-5 text-red-500" />;
+      case 'owes_asc':
+        return <ArrowUpNarrowWide className="h-5 w-5 text-red-500" />;
+      case 'last_usage':
+      default:
+        return <Clock className="h-5 w-5" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 animate-in fade-in duration-300">
         <div>
-          <h1 className="text-4xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">My Groups</h1>
-          <p className="text-lg text-muted-foreground">Manage your shared expense groups.</p>
+          <h1 className="text-3xl sm:text-4xl font-bold font-headline text-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">My Groups</h1>
+          <p className="text-sm sm:text-lg text-muted-foreground hidden sm:block">Manage your shared expense groups.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {groups.length > 0 && (
-            <div className="relative flex-1 sm:w-64">
-              <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search groups..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 rounded-xl bg-muted/20 border border-border/30 text-sm font-normal focus:outline-none focus:border-primary transition-colors"
-              />
-            </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          {loading ? (
+            <>
+              <Skeleton className="h-10 w-full sm:w-64 rounded-xl" />
+              <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+                <Skeleton className="h-10 w-10 rounded-md" />
+                <Skeleton className="h-10 w-28 rounded-md flex-1 sm:flex-none" />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Search Box */}
+              {groups.length > 0 && (
+                <div className="relative w-full sm:w-64">
+                  <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search groups..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full h-10 pl-9 pr-4 rounded-xl bg-muted/20 border border-border/30 text-sm font-normal focus:outline-none focus:border-primary transition-colors text-foreground placeholder:text-muted-foreground/55"
+                  />
+                </div>
+              )}
+
+              {/* Action Controls */}
+              <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+                {groups.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="h-10 w-10 p-0 flex items-center justify-center shrink-0 [&_svg]:size-5" title="Sort Groups">
+                        {getSortIcon(sortBy)}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => handleSortChange('last_usage')} className={cn("flex items-center justify-between rounded-lg cursor-pointer focus:bg-muted/40 focus:text-foreground", sortBy === 'last_usage' && "bg-primary/10 font-medium")}>
+                        <span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Last Activity</span>
+                        {sortBy === 'last_usage' && <Icons.Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange('name_asc')} className={cn("flex items-center justify-between rounded-lg cursor-pointer focus:bg-muted/40 focus:text-foreground", sortBy === 'name_asc' && "bg-primary/10 font-medium")}>
+                        <span className="flex items-center gap-2"><ArrowDownAZ className="h-4 w-4" /> Name (A-Z)</span>
+                        {sortBy === 'name_asc' && <Icons.Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange('name_desc')} className={cn("flex items-center justify-between rounded-lg cursor-pointer focus:bg-muted/40 focus:text-foreground", sortBy === 'name_desc' && "bg-primary/10 font-medium")}>
+                        <span className="flex items-center gap-2"><ArrowUpAZ className="h-4 w-4" /> Name (Z-A)</span>
+                        {sortBy === 'name_desc' && <Icons.Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange('owed_desc')} className={cn("flex items-center justify-between rounded-lg cursor-pointer focus:bg-muted/40 focus:text-foreground", sortBy === 'owed_desc' && "bg-primary/10 font-medium")}>
+                        <span className="flex items-center gap-2"><ArrowDownWideNarrow className="h-4 w-4 text-green-500" /> Owed: High to Low</span>
+                        {sortBy === 'owed_desc' && <Icons.Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange('owed_asc')} className={cn("flex items-center justify-between rounded-lg cursor-pointer focus:bg-muted/40 focus:text-foreground", sortBy === 'owed_asc' && "bg-primary/10 font-medium")}>
+                        <span className="flex items-center gap-2"><ArrowUpNarrowWide className="h-4 w-4 text-green-500" /> Owed: Low to High</span>
+                        {sortBy === 'owed_asc' && <Icons.Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange('owes_desc')} className={cn("flex items-center justify-between rounded-lg cursor-pointer focus:bg-muted/40 focus:text-foreground", sortBy === 'owes_desc' && "bg-primary/10 font-medium")}>
+                        <span className="flex items-center gap-2"><ArrowDownWideNarrow className="h-4 w-4 text-red-500" /> Owes: High to Low</span>
+                        {sortBy === 'owes_desc' && <Icons.Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSortChange('owes_asc')} className={cn("flex items-center justify-between rounded-lg cursor-pointer focus:bg-muted/40 focus:text-foreground", sortBy === 'owes_asc' && "bg-primary/10 font-medium")}>
+                        <span className="flex items-center gap-2"><ArrowUpNarrowWide className="h-4 w-4 text-red-500" /> Owes: Low to High</span>
+                        {sortBy === 'owes_asc' && <Icons.Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <div className="flex-1 sm:flex-none">
+                  <CreateGroupDialog />
+                </div>
+              </div>
+            </>
           )}
-          <CreateGroupDialog />
         </div>
       </div>
 
@@ -94,7 +219,47 @@ export default function GroupsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(8)].map((_, i) => <GroupSkeleton key={i} />)}
         </div>
-      ) : filteredGroups.length > 0 ? (
+      ) : groups.length === 0 ? (
+        <Card className="col-span-full py-16 text-center border-dashed border-border/50 bg-muted/10 animate-in fade-in duration-500">
+          <CardHeader>
+            <div className="flex justify-center mb-6">
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center animate-bounce-slow">
+                 <Icons.Users className="h-10 w-10 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-headline">
+              No Groups Yet
+            </CardTitle>
+            <CardDescription className="max-w-md mx-auto text-base">
+              Groups are where you track shared expenses with roommates, travel buddies, or friends. Create one to get started!
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CreateGroupDialog buttonVariant="default" buttonSize="lg" />
+          </CardContent>
+        </Card>
+      ) : filteredGroups.length === 0 ? (
+        <Card className="col-span-full py-16 text-center border-dashed border-border/50 bg-muted/10 animate-in fade-in duration-500">
+          <CardHeader>
+            <div className="flex justify-center mb-6">
+              <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center">
+                 <Icons.Search className="h-10 w-10 text-muted-foreground" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-headline">
+              No Groups Found
+            </CardTitle>
+            <CardDescription className="max-w-md mx-auto text-base">
+              No groups matching "{searchQuery}". Try a different search term.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => setSearchQuery('')}>
+              Clear Search
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredGroups.map((group, index) => {
              const net = group.userNetBalance || 0;
@@ -166,33 +331,6 @@ export default function GroupsPage() {
             )
           })}
         </div>
-      ) : (
-        <Card className="col-span-full py-16 text-center border-dashed border-border/50 bg-muted/10 animate-in fade-in duration-500">
-          <CardHeader>
-            <div className="flex justify-center mb-6">
-              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center animate-bounce-slow">
-                 <Icons.Users className="h-10 w-10 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl font-headline">
-              {searchQuery ? "No Groups Found" : "No Groups Yet"}
-            </CardTitle>
-            <CardDescription className="max-w-md mx-auto text-base">
-              {searchQuery
-                ? `No groups matching "${searchQuery}". Try a different search term.`
-                : "Groups are where you track shared expenses with roommates, travel buddies, or friends. Create one to get started!"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {searchQuery ? (
-              <Button variant="outline" onClick={() => setSearchQuery('')}>
-                Clear Search
-              </Button>
-            ) : (
-              <CreateGroupDialog buttonVariant="default" buttonSize="lg" />
-            )}
-          </CardContent>
-        </Card>
       )}
     </div>
   );

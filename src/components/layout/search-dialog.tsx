@@ -12,21 +12,24 @@ import {
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { useAuth } from '@/contexts/auth-context';
-import type { Group, Expense, UserProfile } from '@/types';
-import { getGroupsByUserId, getExpensesByUserId, hydrateUsers } from '@/lib/mock-data';
+import type { Group, Expense, UserProfile, Settlement } from '@/types';
+import { getGroupsByUserId, getExpensesByUserId, getSettlementsByUserId, hydrateUsers } from '@/lib/mock-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getFullName, getInitials } from '@/lib/utils';
+import { getFullName, getInitials, cn } from '@/lib/utils';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { Button } from '@/components/ui/button';
+import { ChevronRight, Folder } from 'lucide-react';
 
 type SearchResult =
   | { type: 'group'; data: Group }
   | { type: 'expense'; data: Expense }
+  | { type: 'settlement'; data: Settlement }
   | { type: 'user'; data: UserProfile };
 
 interface RecentSearch {
   id: string;
-  type: 'group' | 'expense' | 'user';
+  type: 'group' | 'expense' | 'settlement' | 'user';
   title: string;
   subtitle?: string;
   url: string;
@@ -39,6 +42,7 @@ export function SearchDialog() {
   const [allData, setAllData] = useState<{
     groups: Group[];
     expenses: Expense[];
+    settlements: Settlement[];
     users: UserProfile[];
   } | null>(null);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
@@ -72,9 +76,10 @@ export function SearchDialog() {
     if (!userProfile?.uid) return;
     setLoading(true);
 
-    const [userGroups, userExpenses] = await Promise.all([
+    const [userGroups, userExpenses, userSettlements] = await Promise.all([
       getGroupsByUserId(userProfile.uid),
       getExpensesByUserId(userProfile.uid),
+      getSettlementsByUserId(userProfile.uid),
     ]);
 
     const mutualMemberIds = new Set<string>();
@@ -90,6 +95,7 @@ export function SearchDialog() {
     setAllData({
       groups: userGroups,
       expenses: userExpenses,
+      settlements: userSettlements,
       users: mutualUsers,
     });
     setLoading(false);
@@ -142,6 +148,25 @@ export function SearchDialog() {
       }
     });
 
+    // Search settlements
+    allData.settlements.forEach(settlement => {
+      const payerName = getFullName(settlement.paidBy?.firstName, settlement.paidBy?.lastName).toLowerCase();
+      const payeeName = getFullName(settlement.paidTo?.firstName, settlement.paidTo?.lastName).toLowerCase();
+      const groupName = (allData.groups.find(g => g.id === settlement.groupId)?.name || '').toLowerCase();
+      const notesMatch = settlement.notes?.toLowerCase().includes(lowerCaseQuery) || false;
+      const amountMatch = settlement.amount.toString().includes(lowerCaseQuery);
+
+      if (
+        payerName.includes(lowerCaseQuery) ||
+        payeeName.includes(lowerCaseQuery) ||
+        groupName.includes(lowerCaseQuery) ||
+        notesMatch ||
+        amountMatch
+      ) {
+        results.push({ type: 'settlement', data: settlement });
+      }
+    });
+
     // Search users
     allData.users.forEach(user => {
       if (
@@ -156,15 +181,45 @@ export function SearchDialog() {
     return results;
   }, [query, allData]);
   
-  const groupedResults = useMemo(() => {
-    return searchResults.reduce((acc, result) => {
-      if (!acc[result.type]) {
-        acc[result.type] = [];
+  const processedResults = useMemo(() => {
+    const groupsList: Group[] = [];
+    const expensesGrouped: Record<string, { group: Group; items: Expense[] }> = {};
+    const settlementsGrouped: Record<string, { group: Group; items: Settlement[] }> = {};
+    const usersList: UserProfile[] = [];
+
+    searchResults.forEach(result => {
+      if (result.type === 'group') {
+        groupsList.push(result.data);
+      } else if (result.type === 'user') {
+        usersList.push(result.data);
+      } else if (result.type === 'expense') {
+        const expense = result.data;
+        const group = allData?.groups.find(g => g.id === expense.groupId);
+        if (group) {
+          if (!expensesGrouped[expense.groupId]) {
+            expensesGrouped[expense.groupId] = { group, items: [] };
+          }
+          expensesGrouped[expense.groupId].items.push(expense);
+        }
+      } else if (result.type === 'settlement') {
+        const settlement = result.data;
+        const group = allData?.groups.find(g => g.id === settlement.groupId);
+        if (group) {
+          if (!settlementsGrouped[settlement.groupId]) {
+            settlementsGrouped[settlement.groupId] = { group, items: [] };
+          }
+          settlementsGrouped[settlement.groupId].items.push(settlement);
+        }
       }
-      acc[result.type].push(result);
-      return acc;
-    }, {} as Record<SearchResult['type'], SearchResult[]>);
-  }, [searchResults]);
+    });
+
+    return {
+      groups: groupsList,
+      expensesByGroup: Object.values(expensesGrouped),
+      settlementsByGroup: Object.values(settlementsGrouped),
+      users: usersList,
+    };
+  }, [searchResults, allData]);
 
   const handleSelectResult = (result: SearchResult, path: string) => {
     let title = '';
@@ -176,6 +231,10 @@ export function SearchDialog() {
        id = result.data.id;
     } else if (result.type === 'expense') {
        title = result.data.description;
+       subtitle = allData?.groups.find(g => g.id === result.data.groupId)?.name || '';
+       id = result.data.id;
+    } else if (result.type === 'settlement') {
+       title = `${getFullName(result.data.paidBy?.firstName, result.data.paidBy?.lastName)} to ${getFullName(result.data.paidTo?.firstName, result.data.paidTo?.lastName)}`;
        subtitle = allData?.groups.find(g => g.id === result.data.groupId)?.name || '';
        id = result.data.id;
     } else if (result.type === 'user') {
@@ -216,110 +275,263 @@ export function SearchDialog() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-sm:fixed max-sm:inset-0 max-sm:h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:m-0 max-sm:rounded-none max-sm:border-none sm:max-w-3xl p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-md border border-border/20 shadow-2xl animate-in duration-200 [&>button]:hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>Global Search</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center border-b px-4 bg-muted/20 hover:bg-muted/40 focus-within:bg-muted/60 transition-colors">
-            <Icons.Search className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          <div className="flex items-center border-b border-border/20 px-4 bg-muted/15 focus-within:bg-muted/30 transition-colors h-14">
+            <Icons.Search className="h-5 w-5 text-muted-foreground/75 flex-shrink-0" />
             <Input
-              placeholder="Search for groups, expenses, users..."
-              className="border-0 h-12 text-base shadow-none !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 pr-8 flex-1"
+              placeholder="Search groups, expenses, settlements, friends..."
+              className="border-0 h-full text-base shadow-none !bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-3 pr-4 flex-1 placeholder:text-muted-foreground/40"
               value={query}
               onChange={e => setQuery(e.target.value)}
+              autoFocus
             />
+            {query ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setQuery('')}
+                className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 rounded-lg mr-1 shrink-0"
+              >
+                <Icons.Close className="h-4 w-4" />
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 shrink-0">
+                <kbd className="hidden sm:inline-flex pointer-events-none select-none items-center gap-1 rounded border border-border/40 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground/80">
+                  ESC
+                </kbd>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setOpen(false)}
+                  className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 rounded-lg shrink-0"
+                  title="Close Search"
+                >
+                  <Icons.Close className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
-          <ScrollArea className="h-96">
-            <div className="p-2">
+          <ScrollArea className="h-[calc(100dvh-52px)] sm:h-[500px]">
+            <div className="p-3 sm:p-5 space-y-6">
               {loading && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Icons.AppLogo className="mx-auto h-8 w-8 animate-spin" />
-                  <p>Indexing data...</p>
+                <div className="text-center py-12 text-muted-foreground space-y-3">
+                  <Icons.AppLogo className="mx-auto h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium">Indexing data...</p>
                 </div>
               )}
-               {!loading && !query && (
-                 <div className="py-4">
-                    {recentSearches.length > 0 ? (
-                        <div className="space-y-4">
-                            <h3 className="text-xs font-semibold uppercase text-muted-foreground px-2">Recent Searches</h3>
-                            <div className="space-y-1">
-                                {recentSearches.map(recent => (
-                                    <div key={recent.id} onClick={() => handleRecentClick(recent)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
-                                        <Icons.History className="h-4 w-4 text-muted-foreground ml-1" />
-                                        <div>
-                                            <p className="font-medium text-sm leading-none mb-1">{recent.title}</p>
-                                            {recent.subtitle && <p className="text-xs text-muted-foreground">{recent.subtitle}</p>}
-                                        </div>
-                                    </div>
-                                ))}
+              {!loading && !query && (
+                <div className="py-4">
+                  {recentSearches.length > 0 ? (
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 px-2 flex items-center gap-2">
+                        <Icons.History className="h-3.5 w-3.5" /> Recent Searches
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {recentSearches.map(recent => (
+                          <div
+                            key={recent.id}
+                            onClick={() => handleRecentClick(recent)}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-border/20 bg-muted/10 hover:bg-muted/30 transition-all cursor-pointer group"
+                          >
+                            <Icons.History className="h-4 w-4 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm leading-tight text-foreground truncate group-hover:text-primary transition-colors">{recent.title}</p>
+                              {recent.subtitle && <p className="text-[11px] text-muted-foreground truncate">{recent.subtitle}</p>}
                             </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <Icons.Search className="mx-auto h-12 w-12 opacity-50" />
-                            <p className="mt-2 font-semibold">Start typing to search</p>
-                            <p className="text-sm">Find anything in your workspace instantly.</p>
-                        </div>
-                    )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 text-muted-foreground space-y-3">
+                      <Icons.Search className="mx-auto h-12 w-12 text-muted-foreground/40 animate-pulse" />
+                      <div>
+                        <p className="font-bold text-lg text-foreground">Start typing to search</p>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">Find groups, expenses, settlements, or friends instantly.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {!loading && query && searchResults.length === 0 && (
-                 <div className="text-center py-8 text-muted-foreground">
-                    <Icons.SearchX className="mx-auto h-12 w-12" />
-                    <p className="mt-2 font-semibold">No results found</p>
-                    <p className="text-sm">Try a different search term.</p>
+                <div className="text-center py-16 text-muted-foreground space-y-3">
+                  <Icons.SearchX className="mx-auto h-12 w-12 text-muted-foreground/45" />
+                  <div>
+                    <p className="font-bold text-lg text-foreground">No results found</p>
+                    <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">We couldn&apos;t find anything matching &quot;{query}&quot;.</p>
+                  </div>
                 </div>
               )}
-              
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(groupedResults).map(([type, results]) => (
-                    <div key={type}>
-                        <h3 className="text-xs font-semibold uppercase text-muted-foreground mb-2 px-2">{type}</h3>
-                        <div className="space-y-1">
-                            {results.map(result => {
-                                if (result.type === 'group') {
-                                    const { data: group } = result;
-                                    return (
-                                        <div key={group.id} onClick={() => handleSelectResult(result, `/groups/${group.id}`)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
-                                            <Avatar className="h-8 w-8"><AvatarImage src={group.coverImageUrl}/><AvatarFallback>{getInitials(group.name)}</AvatarFallback></Avatar>
-                                            <p className="font-medium text-sm">{group.name}</p>
-                                        </div>
-                                    )
-                                }
-                                if (result.type === 'expense') {
-                                    const { data: expense } = result;
-                                    return (
-                                        <div key={expense.id} onClick={() => handleSelectResult(result, `/groups/${expense.groupId}`)} className="flex items-center justify-between p-2 rounded-md hover:bg-muted cursor-pointer">
-                                            <div className="flex items-center gap-3">
-                                                 <Icons.Expense className="h-6 w-6 text-muted-foreground"/>
-                                                 <div>
-                                                    <p className="font-medium text-sm">{expense.description}</p>
-                                                    <p className="text-xs text-muted-foreground">{allData?.groups.find(g => g.id === expense.groupId)?.name}</p>
-                                                 </div>
-                                            </div>
-                                            <p className="font-semibold text-sm">{CURRENCY_SYMBOL}{expense.amount.toFixed(2)}</p>
-                                        </div>
-                                    )
-                                }
-                                if (result.type === 'user') {
-                                    const { data: user } = result;
-                                    const link = userProfile?.role === 'admin' ? `/admin/users/${user.uid}/edit` : '#';
-                                    return (
-                                         <div key={user.uid} onClick={() => link !== '#' && handleSelectResult(result, link)} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
-                                            <Avatar className="h-8 w-8"><AvatarImage src={user.avatarUrl}/><AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback></Avatar>
-                                            <div>
-                                                <p className="font-medium text-sm">{getFullName(user.firstName, user.lastName)}</p>
-                                                <p className="text-xs text-muted-foreground">{user.email}</p>
-                                            </div>
-                                        </div>
-                                    )
-                                }
-                                return null;
-                            })}
+
+              {/* Groups Results */}
+              {!loading && query && processedResults.groups.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                    <Icons.Users className="h-3.5 w-3.5 text-primary" />
+                    <span>Groups ({processedResults.groups.length})</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {processedResults.groups.map(group => (
+                      <div
+                        key={group.id}
+                        onClick={() => handleSelectResult({ type: 'group', data: group }, `/groups/${group.id}`)}
+                        className="flex items-center justify-between p-3 rounded-xl border border-border/20 bg-muted/10 hover:bg-muted/30 transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-9 w-9 rounded-lg border border-border/10">
+                            <AvatarImage src={group.coverImageUrl} />
+                            <AvatarFallback className="rounded-lg">{getInitials(group.name)}</AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-0.5 min-w-0">
+                            <p className="font-semibold text-sm leading-tight text-foreground truncate group-hover:text-primary transition-colors">{group.name}</p>
+                            <p className="text-[11px] text-muted-foreground">{group.members?.length || 0} members</p>
+                          </div>
                         </div>
-                    </div>
-                ))}
-              </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Expenses Results Grouped by Group */}
+              {!loading && query && processedResults.expensesByGroup.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                    <Icons.Expense className="h-3.5 w-3.5 text-blue-500" />
+                    <span>Expenses ({processedResults.expensesByGroup.reduce((sum, g) => sum + g.items.length, 0)})</span>
+                  </div>
+                  <div className="space-y-3">
+                    {processedResults.expensesByGroup.map(({ group, items }) => (
+                      <div key={group.id} className="rounded-xl border border-border/20 bg-muted/5 overflow-hidden">
+                        <div className="bg-muted/15 px-3.5 py-1.5 border-b border-border/10 flex items-center justify-between">
+                          <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                            <Folder className="h-3 w-3 text-muted-foreground/75" />
+                            {group.name}
+                          </span>
+                        </div>
+                        <div className="divide-y divide-border/10">
+                          {items.map(expense => (
+                            <div
+                              key={expense.id}
+                              onClick={() => handleSelectResult({ type: 'expense', data: expense }, `/groups/${expense.groupId}`)}
+                              className="flex items-center justify-between p-3 hover:bg-muted/20 transition-colors cursor-pointer group"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                                  <Icons.Expense className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">{expense.description}</p>
+                                  <p className="text-[11px] text-muted-foreground/80 flex items-center gap-1.5 flex-wrap">
+                                    <span>Paid by {expense.payers?.map(p => getFullName(p.user?.firstName, p.user?.lastName)).join(', ')}</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted/30 text-muted-foreground font-semibold uppercase">{expense.category}</span>
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-bold text-sm">{CURRENCY_SYMBOL}{expense.amount.toFixed(2)}</span>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground/45 group-hover:translate-x-0.5 transition-transform" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Settlements Results Grouped by Group */}
+              {!loading && query && processedResults.settlementsByGroup.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                    <Icons.Settle className="h-3.5 w-3.5 text-green-500" />
+                    <span>Settlements ({processedResults.settlementsByGroup.reduce((sum, g) => sum + g.items.length, 0)})</span>
+                  </div>
+                  <div className="space-y-3">
+                    {processedResults.settlementsByGroup.map(({ group, items }) => (
+                      <div key={group.id} className="rounded-xl border border-border/20 bg-muted/5 overflow-hidden">
+                        <div className="bg-muted/15 px-3.5 py-1.5 border-b border-border/10 flex items-center justify-between">
+                          <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                            <Folder className="h-3 w-3 text-muted-foreground/75" />
+                            {group.name}
+                          </span>
+                        </div>
+                        <div className="divide-y divide-border/10">
+                          {items.map(settlement => (
+                            <div
+                              key={settlement.id}
+                              onClick={() => handleSelectResult({ type: 'settlement', data: settlement }, `/settlements`)}
+                              className="flex items-center justify-between p-3 hover:bg-muted/20 transition-colors cursor-pointer group"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500 shrink-0">
+                                  <Icons.Settle className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                                    {getFullName(settlement.paidBy?.firstName, settlement.paidBy?.lastName)} &rarr; {getFullName(settlement.paidTo?.firstName, settlement.paidTo?.lastName)}
+                                  </p>
+                                  {settlement.notes && (
+                                    <p className="text-[11px] text-muted-foreground truncate">Note: {settlement.notes}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-bold text-sm text-green-500">{CURRENCY_SYMBOL}{settlement.amount.toFixed(2)}</span>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground/45 group-hover:translate-x-0.5 transition-transform" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Members/Users Results */}
+              {!loading && query && processedResults.users.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+                    <Icons.Users className="h-3.5 w-3.5 text-purple-500" />
+                    <span>Members & Friends ({processedResults.users.length})</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {processedResults.users.map(user => {
+                      const link = userProfile?.role === 'admin' ? `/admin/users/${user.uid}/edit` : '#';
+                      return (
+                        <div
+                          key={user.uid}
+                          onClick={() => link !== '#' && handleSelectResult({ type: 'user', data: user }, link)}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-xl border border-border/20 bg-muted/10 transition-all group",
+                            link !== '#' ? "hover:bg-muted/30 cursor-pointer" : "opacity-85"
+                          )}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Avatar className="h-9 w-9 border border-border/10">
+                              <AvatarImage src={user.avatarUrl} />
+                              <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
+                            </Avatar>
+                            <div className="space-y-0.5 min-w-0">
+                              <p className="font-semibold text-sm leading-tight text-foreground truncate group-hover:text-primary transition-colors">{getFullName(user.firstName, user.lastName)}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
+                            </div>
+                          </div>
+                          {link !== '#' && (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </DialogContent>

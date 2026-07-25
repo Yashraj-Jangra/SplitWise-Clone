@@ -130,6 +130,26 @@ export function AuthCard({
   // ── Handlers ────────────────────────────────────────────────────────────────
   async function onLoginSubmit(values: LoginValues) {
     try {
+      // 1. Check if the user exists but requires a password reset (e.g. migrated user)
+      const checkRes = await fetch(`/api/auth/check-status?email=${encodeURIComponent(values.email)}`);
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.exists && checkData.requiresReset) {
+          // Trigger the password reset email flow automatically
+          await fetch("/api/send-password-reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: values.email }),
+          });
+
+          toast({
+            title: "Password Reset Required",
+            description: "To keep your account secure, please set a new password. We've sent a password reset link to your email.",
+          });
+          return;
+        }
+      }
+
       await login(values.email, values.password);
       setIsRedirecting(true);
       router.push("/dashboard");

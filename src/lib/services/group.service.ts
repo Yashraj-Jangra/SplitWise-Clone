@@ -14,6 +14,7 @@ function mapGroupRow(g: any, members: UserProfile[], createdBy: UserProfile): Gr
     currency: g.currency || undefined,
     totalExpenses: g.totalExpenses || 0,
     createdAt: g.createdAt ? new Date(g.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: g.updatedAt ? new Date(g.updatedAt).toISOString() : undefined,
     archivedAt: g.archivedAt ? new Date(g.archivedAt).toISOString() : undefined,
     members,
     createdBy,

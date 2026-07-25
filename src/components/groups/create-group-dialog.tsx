@@ -176,7 +176,7 @@ export function CreateGroupDialog({ buttonVariant, buttonSize}: CreateGroupDialo
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={buttonVariant} size={buttonSize}>
+        <Button variant={buttonVariant} size={buttonSize} className="w-full sm:w-auto">
           <Icons.Add className="mr-2 h-4 w-4" /> New Group
         </Button>
       </DialogTrigger>
