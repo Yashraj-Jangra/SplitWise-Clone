@@ -14,6 +14,15 @@ const pwaPlugin = withPWA({
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Keep these Node.js-only packages out of the browser bundle permanently
+  serverExternalPackages: [
+    'nodemailer',
+    'web-push',
+    'googleapis',
+    'google-auth-library',
+    'oracledb',
+    'nosql',
+  ],
   images: {
     remotePatterns: [
       {

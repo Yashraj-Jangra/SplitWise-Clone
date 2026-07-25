@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useState } from 'react';
-import { broadcastToAll } from '@/lib/notification-service';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -52,7 +51,19 @@ export default function BroadcastPage() {
     
     setIsBroadcasting(true);
     try {
-      await broadcastToAll(values.title, values.message, values.type, userProfile.uid, values.channels);
+      const res = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: values.type,
+          recipientIds: [],
+          title: values.title,
+          body: values.message,
+          actorId: userProfile.uid,
+          target: 'all_users',
+        }),
+      });
+      if (!res.ok) throw new Error('Server error');
       toast({
         title: 'Broadcast Sent',
         description: 'Your broadcast has been successfully dispatched.',

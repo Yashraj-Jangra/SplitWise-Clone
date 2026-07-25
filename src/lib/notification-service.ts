@@ -1,22 +1,20 @@
 /**
  * notification-service.ts
  *
- * Server-side helper that fires notifications for every domain event.
- * Calls serverDispatchNotification() directly — no loopback HTTP call,
- * so the Next.js Content-Length header-forwarding bug can never strike.
+ * ⚠️  This file is imported by BOTH server and client components.
+ *
+ * It MUST stay free of any static top-level imports that pull in
+ * Node.js-only packages (web-push, nodemailer, googleapis, …).
+ *
+ * Strategy:
+ *  • Server path  → dynamic `import('./services/dispatch.service')` at call time.
+ *                   Webpack's static analyser never sees the heavy chain.
+ *  • Client path  → POST to /api/notifications/send via fetch.
  */
 
-import { serverDispatchNotification } from './services/dispatch.service';
 import type { NotificationEventType } from '@/types';
 
-// Re-export the params type so callers don't need to import from dispatch.service
-export type { ServerDispatchParams as DispatchNotificationParams } from './services/dispatch.service';
-
-/**
- * Core dispatcher — call this from anywhere server-side.
- * All helpers below are thin wrappers around this function.
- */
-export async function dispatchNotification(params: {
+export interface DispatchNotificationParams {
   type: NotificationEventType;
   recipientIds: string[];
   title: string;
@@ -33,12 +31,33 @@ export async function dispatchNotification(params: {
   groupName?: string;
   upiUrl?: string;
   actionUrl?: string;
+  disclaimer?: string;
   [key: string]: unknown;
-}): Promise<void> {
+}
+
+export async function dispatchNotification(params: DispatchNotificationParams): Promise<void> {
   try {
-    const result = await serverDispatchNotification(params as any);
-    if (!result.success) {
-      console.error('Failed to dispatch notification:', result.error);
+    if (typeof window === 'undefined') {
+      // ── Server path ──────────────────────────────────────────────────────────
+      // Dynamic import keeps webpack from statically bundling dispatch.service.ts
+      // (and its heavy Node.js deps) into the client bundle.
+      const { serverDispatchNotification } = await import('./services/dispatch.service');
+      const result = await serverDispatchNotification(params as any);
+      if (!result.success) {
+        console.error('Failed to dispatch notification:', result.error);
+      }
+    } else {
+      // ── Client path ──────────────────────────────────────────────────────────
+      // Client components must go through the API route.
+      const response = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to dispatch notification:', errorData);
+      }
     }
   } catch (error) {
     console.error('Error dispatching notification:', error);
@@ -195,7 +214,7 @@ export const notifyPaymentReminder = (
   groupId: string | undefined,
   groupName: string | undefined,
   balanceAmount: number,
-  _forceEmail = false,
+  forceEmail = false,
   actorUpiId?: string,
   actorName?: string,
 ) => {
@@ -220,7 +239,7 @@ export const notifyPaymentReminder = (
     groupName: groupName || 'your group',
     upiUrl: upiUri,
     actionUrl,
-    forceEmail: _forceEmail,
+    forceEmail,
     disclaimer,
-  } as any);
+  });
 };
