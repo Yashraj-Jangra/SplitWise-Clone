@@ -15,6 +15,9 @@ export const auth = betterAuth({
     accountLinking: {
       enabled: true,
       trustedProviders: ["google"],
+      // Allow creating a new linked Google account for existing email/password users.
+      // Without this, old migrated users signing in with Google get `account_not_linked`.
+      allowNewAccountCreation: true,
     },
   },
   emailAndPassword: {

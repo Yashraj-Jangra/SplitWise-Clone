@@ -21,7 +21,7 @@ import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import type { SiteSettings } from "@/types";
-import { Eye, EyeOff, Loader2, Mail, Lock, User, AtSign, UserCheck, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Loader2, Mail, Lock, User, AtSign, UserCheck, ArrowLeft, ShieldCheck, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
@@ -71,6 +71,11 @@ export function AuthCard({
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  // State for the "password reset required" inline banner
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resetEmail, setResetEmail] = useState<string>("");
+  const [hasGoogleHint, setHasGoogleHint] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     if (!loading && userProfile) {
@@ -128,24 +133,27 @@ export function AuthCard({
   }, [signupPassword]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  async function sendResetEmail(email: string): Promise<void> {
+    await fetch("/api/send-password-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async function onLoginSubmit(values: LoginValues) {
     try {
-      // 1. Check if the user exists but requires a password reset (e.g. migrated user)
+      // 1. Check if the user exists but requires a password reset (migrated user)
       const checkRes = await fetch(`/api/auth/check-status?email=${encodeURIComponent(values.email)}`);
       if (checkRes.ok) {
         const checkData = await checkRes.json();
         if (checkData.exists && checkData.requiresReset) {
-          // Trigger the password reset email flow automatically
-          await fetch("/api/send-password-reset", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: values.email }),
-          });
-
-          toast({
-            title: "Password Reset Required",
-            description: "To keep your account secure, please set a new password. We've sent a password reset link to your email.",
-          });
+          // Fire the reset email silently in the background
+          await sendResetEmail(values.email);
+          // Show the inline banner instead of a toast
+          setResetEmail(values.email);
+          setHasGoogleHint(!!checkData.hasGoogleAccount);
+          setResetEmailSent(true);
           return;
         }
       }
@@ -228,6 +236,105 @@ export function AuthCard({
       >
         <Icons.AppLogo className="h-8 w-8 text-primary animate-spin" />
         <p className="text-xs text-muted-foreground font-medium">Redirecting to dashboard...</p>
+      </div>
+    );
+  }
+
+  // ── Password Reset Required Banner ────────────────────────────────────────
+  if (resetEmailSent) {
+    return (
+      <div
+        className="w-full bg-card text-foreground border border-border p-6 sm:p-9 shadow-sm"
+        style={{ borderRadius: 'var(--radius-card)' }}
+      >
+        {/* Back arrow */}
+        <button
+          type="button"
+          onClick={() => setResetEmailSent(false)}
+          className="absolute top-5 left-5 text-muted-foreground hover:text-foreground transition-colors duration-200 p-1"
+          aria-label="Back to login"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+
+        <div className="flex flex-col items-center text-center gap-5 pt-4">
+          {/* Icon */}
+          <div className="h-14 w-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <ShieldCheck className="h-7 w-7 text-primary" />
+          </div>
+
+          {/* Title */}
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-foreground">Password Reset Required</h1>
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-xs">
+              Your account was created before our platform upgrade. For your security, you need to set a new password to continue.
+            </p>
+          </div>
+
+          {/* Email sent confirmation */}
+          <div className="w-full rounded-xl bg-muted/30 border border-border/40 p-4 text-left space-y-1">
+            <p className="text-xs font-semibold text-foreground">Reset link sent to:</p>
+            <p className="text-xs text-primary font-medium break-all">{resetEmail}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Check your inbox (and spam folder) for the reset email.</p>
+          </div>
+
+          {/* Actions */}
+          <div className="w-full space-y-3">
+            <Button
+              asChild
+              className="w-full h-11 rounded-[var(--radius-button)] bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-xs tracking-wider uppercase transition-all shadow-md"
+            >
+              <Link href="/auth/forgot-password">Go to Forgot Password</Link>
+            </Button>
+
+            {/* Resend option */}
+            <button
+              type="button"
+              disabled={isResending}
+              onClick={async () => {
+                setIsResending(true);
+                try {
+                  await sendResetEmail(resetEmail);
+                  toast({ title: "Email resent!", description: "Check your inbox for the new reset link." });
+                } catch {
+                  toast({ variant: "destructive", title: "Failed to resend", description: "Please try again shortly." });
+                } finally {
+                  setIsResending(false);
+                }
+              }}
+              className="w-full h-10 rounded-[var(--radius-button)] border border-border bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+            >
+              {isResending ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending...</>
+              ) : (
+                <><RefreshCw className="h-3.5 w-3.5" /> Resend reset email</>
+              )}
+            </button>
+
+            {/* Google hint if account has Google linked */}
+            {hasGoogleHint && (
+              <>
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="uppercase font-bold tracking-widest">OR</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGoogleAuth}
+                  disabled={isGoogleLoading}
+                  className="w-full h-11 rounded-[var(--radius-button)] bg-background hover:bg-muted border border-border flex items-center justify-center gap-2 transition-colors text-xs font-semibold text-foreground tracking-wider uppercase shadow-sm disabled:opacity-50"
+                >
+                  {isGoogleLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <><Icons.Google className="h-5 w-5" /><span>Continue with Google instead</span></>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     );
   }

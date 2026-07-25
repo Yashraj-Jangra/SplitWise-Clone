@@ -23,12 +23,22 @@ export async function GET(request: Request) {
     // 2. Query for a credentials account linked to this user
     const gsiCred = await queryByGsi<any>(`ACCOUNT#credential#${user.id}`);
     
-    // If user exists, but has no linked credentials (password hash), they need to reset password
-    const requiresReset = gsiCred.length === 0;
+    // 3. Determine if a password reset is required:
+    //    a) No credential account at all (Google-only or migrated without password), OR
+    //    b) Credential account exists but has no valid password hash (failed migration)
+    const hasCredentialAccount = gsiCred.length > 0;
+    const hasValidPasswordHash = hasCredentialAccount && 
+      gsiCred[0]?.password && 
+      typeof gsiCred[0].password === 'string' && 
+      gsiCred[0].password.length > 20; // any real bcrypt/argon2 hash is well above 20 chars
+
+    const requiresReset = !hasValidPasswordHash;
 
     return NextResponse.json({
       exists: true,
       requiresReset,
+      // Surface whether they have Google linked so the UI can hint "try Google instead"
+      hasGoogleAccount: (await queryByGsi<any>(`ACCOUNT#google#${user.id}`)).length > 0,
     });
   } catch (error: any) {
     console.error('Error checking user auth status:', error);
