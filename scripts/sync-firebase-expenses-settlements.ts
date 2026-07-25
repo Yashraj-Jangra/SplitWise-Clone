@@ -8,7 +8,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import admin from 'firebase-admin';
-import { putItem } from '../src/lib/nosql';
+import { putItem, queryByEntityType } from '../src/lib/nosql';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.join(process.cwd(), '.env.local') });
+dotenv.config();
 
 // Initialize Firebase Admin
 const serviceAccountPath = path.join(process.cwd(), 'service-account.json');
@@ -47,7 +51,12 @@ async function syncGroups() {
 
   console.log(`Found ${groupDocs.length} groups and ${memberDocs.length} member records in Firebase.`);
 
-  // Build memberId lookup: groupId → [userId, ...]
+  // Fetch groups already in Oracle so we never overwrite their member data
+  const existingOracleGroups = await queryByEntityType<any>('GROUP');
+  const existingIds = new Set(existingOracleGroups.map((g: any) => g.id).filter(Boolean));
+  console.log(`Oracle already has ${existingIds.size} groups — skipping those, only inserting new ones.`);
+
+  // Build memberId lookup: groupId → [{userId, joinedAt}]
   const memberMap = new Map<string, { userId: string; joinedAt: string }[]>();
   for (const mDoc of memberDocs) {
     const m = mDoc.data();
@@ -60,45 +69,48 @@ async function syncGroups() {
     });
   }
 
-  const BATCH_SIZE = 10;
   let syncedCount = 0;
+  let skippedCount = 0;
 
-  for (let i = 0; i < groupDocs.length; i += BATCH_SIZE) {
-    const batch = groupDocs.slice(i, i + BATCH_SIZE);
-    await Promise.all(batch.map(async (doc) => {
-      const data      = doc.data();
-      const id        = doc.id;
-      const createdById = data.createdById || data.creatorId || data.ownerId || 'UNKNOWN';
-      const members   = memberMap.get(id) || [];
+  for (const doc of groupDocs) {
+    const data        = doc.data();
+    const id          = doc.id;
+    const createdById = data.createdById || data.creatorId || data.ownerId || 'UNKNOWN';
 
-      const groupDoc = {
-        id,
-        name           : data.name           || 'Untitled Group',
-        description    : data.description    || null,
-        coverImageUrl  : data.coverImageUrl  || null,
-        currency       : data.currency       || null,
-        totalExpenses  : Number(data.totalExpenses || 0),
-        createdById,
-        archivedAt     : data.archivedAt ? convertTimestamp(data.archivedAt) : null,
-        createdAt      : convertTimestamp(data.createdAt),
-        members,       // embedded array — same schema as import-oracle-nosql.ts
-      };
+    // ── SAFE: never overwrite a group that already exists in Oracle ──
+    if (existingIds.has(id)) {
+      skippedCount++;
+      continue;
+    }
 
-      // pk=GROUP#<id>  sk=METADATA  gsi1pk=USER#<createdById>  gsi1sk=GROUP#<id>
-      await putItem(
-        `GROUP#${id}`,
-        'METADATA',
-        'GROUP',
-        groupDoc,
-        `USER#${createdById}`,
-        `GROUP#${id}`,
-      );
-      syncedCount++;
-    }));
-    console.log(`  [Groups Progress] ${syncedCount} / ${groupDocs.length}`);
+    const members = memberMap.get(id) || [];
+
+    const groupDoc = {
+      id,
+      name           : data.name           || 'Untitled Group',
+      description    : data.description    || null,
+      coverImageUrl  : data.coverImageUrl  || null,
+      currency       : data.currency       || null,
+      totalExpenses  : Number(data.totalExpenses || 0),
+      createdById,
+      archivedAt     : data.archivedAt ? convertTimestamp(data.archivedAt) : null,
+      createdAt      : convertTimestamp(data.createdAt),
+      members,
+    };
+
+    await putItem(
+      `GROUP#${id}`,
+      'METADATA',
+      'GROUP',
+      groupDoc,
+      `USER#${createdById}`,
+      `GROUP#${id}`,
+    );
+    syncedCount++;
+    console.log(`  ➕ New group synced: [${id}] "${data.name}"`);
   }
 
-  console.log(`✅ Synced ${syncedCount} groups to Oracle Autonomous DB.`);
+  console.log(`✅ Groups: ${syncedCount} new synced, ${skippedCount} existing skipped (preserved).`);
   return syncedCount;
 }
 
