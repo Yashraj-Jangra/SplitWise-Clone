@@ -8,12 +8,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NotificationItem } from '@/components/shared/notification-item';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getNotificationUrl } from '@/lib/notification-utils';
+import type { NotificationV2 } from '@/types';
 import { Settings } from 'lucide-react';
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
+  const router = useRouter();
 
   const handleMarkAllAsRead = async () => {
     setIsMarkingRead(true);
@@ -21,9 +25,14 @@ export function NotificationBell() {
     setIsMarkingRead(false);
   };
 
-  const handleNotificationClick = async (id: string, isRead: boolean) => {
-    if (!isRead) {
-        await markRead(id);
+  const handleNotificationClick = async (notif: NotificationV2) => {
+    if (!notif.isRead) {
+        await markRead(notif.id);
+    }
+    setOpen(false);
+    const url = getNotificationUrl(notif);
+    if (url) {
+        router.push(url);
     }
   };
 
@@ -65,7 +74,8 @@ export function NotificationBell() {
                         <NotificationItem 
                             key={notif.id} 
                             notification={notif} 
-                            onClick={() => handleNotificationClick(notif.id, notif.isRead)} 
+                            onClick={() => handleNotificationClick(notif)} 
+                            onMarkRead={() => markRead(notif.id)}
                         />
                     ))}
                 </div>

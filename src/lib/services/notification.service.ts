@@ -163,6 +163,8 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
     support_reply: { inApp: true, push: true, email: true },
     broadcast_announcement: { inApp: true, push: true, email: false },
     broadcast_critical: { inApp: true, push: true, email: true },
+    monthly_summary: { inApp: true, push: true, email: true },
+    group_inactivity: { inApp: true, push: true, email: false },
   }
 };
 

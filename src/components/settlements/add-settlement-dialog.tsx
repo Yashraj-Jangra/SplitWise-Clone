@@ -46,10 +46,14 @@ interface AddSettlementDialogProps {
   group: Group;
   initialSettlement?: Partial<AddSettlementFormValues>;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddSettlementDialog({ group, initialSettlement, trigger }: AddSettlementDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddSettlementDialog({ group, initialSettlement, trigger, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddSettlementDialogProps) {
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : localOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setLocalOpen;
   const [upiQrOpen, setUpiQrOpen] = useState(false);
   const { toast } = useToast();
   const { userProfile } = useAuth();

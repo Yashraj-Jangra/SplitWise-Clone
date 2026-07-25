@@ -65,6 +65,8 @@ export default function GroupDetailPage() {
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const [showAnalysisHeadsUp, setShowAnalysisHeadsUp] = useState(false);
+  const [settlementDialogOpen, setSettlementDialogOpen] = useState(false);
+  const [initialSettlementVal, setInitialSettlementVal] = useState<any>(undefined);
 
   useEffect(() => {
     if (activeTab === 'analysis' && isMobile) {
@@ -203,14 +205,49 @@ export default function GroupDetailPage() {
     if (!searchParams) return;
     const expId = searchParams.get('expenseId');
     const setDocId = searchParams.get('settlementId');
+    const action = searchParams.get('action');
 
-    if (expId) {
+    if (action === 'settle') {
+      if (setDocId) {
+        // Look up the settlement to pre-fill payer/recipient/amount
+        const found = settlements.find(s => s.id === setDocId);
+        if (found) {
+          setInitialSettlementVal({
+            paidById: userProfile?.uid || '',
+            paidToId: found.paidBy.uid === userProfile?.uid ? found.paidTo.uid : found.paidBy.uid,
+            amount: found.amount,
+            date: new Date(),
+            notes: `Settling reminder for: ${found.notes || 'payment'}`
+          });
+        } else {
+          setInitialSettlementVal({
+            paidById: userProfile?.uid || '',
+            date: new Date()
+          });
+        }
+      } else {
+        setInitialSettlementVal({
+          paidById: userProfile?.uid || '',
+          date: new Date()
+        });
+      }
+      setSettlementDialogOpen(true);
+      
+      // Clean up URL query parameters
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    } else if (expId) {
       setHighlightedItemId(`exp-${expId}`);
       setTargetExpenseId(expId);
       setActiveTab('expenses');
       const timer = setTimeout(() => {
         setHighlightedItemId(null);
       }, 2500);
+      
+      // Clean up URL query parameters
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+      
       return () => clearTimeout(timer);
     } else if (setDocId) {
       setHighlightedItemId(`set-${setDocId}`);
@@ -227,13 +264,17 @@ export default function GroupDetailPage() {
       const highlightTimer = setTimeout(() => {
         setHighlightedItemId(null);
       }, 2500);
+      
+      // Clean up URL query parameters
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
 
       return () => {
         clearTimeout(scrollTimer);
         clearTimeout(highlightTimer);
       };
     }
-  }, [searchParams]);
+  }, [searchParams, settlements, userProfile]);
 
   const handleViewExpense = (expenseId: string) => {
     setTargetExpenseId(expenseId);
@@ -353,9 +394,12 @@ export default function GroupDetailPage() {
                     All settlements made in this group.
                   </CardDescription>
                 </div>
-                {!group.archivedAt && <AddSettlementDialog
-                  group={group}
-                />}
+                 {!group.archivedAt && <AddSettlementDialog
+                   group={group}
+                   open={settlementDialogOpen}
+                   onOpenChange={setSettlementDialogOpen}
+                   initialSettlement={initialSettlementVal}
+                 />}
               </CardHeader>
               <CardContent className="p-0">
                 {settlements.length > 0 ? (

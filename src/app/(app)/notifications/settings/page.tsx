@@ -38,6 +38,8 @@ const EVENTS_LIST: EventConfig[] = [
   { key: 'payment_reminder', label: 'Payment Reminder', description: 'When a member explicitly asks you to settle up' },
   { key: 'balance_reminder', label: 'Balance Reminder', description: 'Periodic reminders of your outstanding balances' },
   { key: 'payment_confirmation_request', label: 'Confirmation Request', description: 'When someone requests confirmation of a settlement' },
+  { key: 'monthly_summary', label: 'Monthly Summary Report', description: 'Monthly summaries of your spending statistics' },
+  { key: 'group_inactivity', label: 'Group Inactivity Nudges', description: 'Reminders for groups that have been inactive for a while' },
   { key: 'support_reply', label: 'Support Reply', description: 'When the admin responds to your support tickets' },
   { key: 'broadcast_announcement', label: 'Announcements', description: 'General system announcements and newsletters' },
   { key: 'broadcast_critical', label: 'Critical Alerts', description: 'Important system updates and security alerts' },

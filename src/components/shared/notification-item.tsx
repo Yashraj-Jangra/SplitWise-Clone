@@ -66,6 +66,18 @@ export function NotificationItem({ notification, onClick, onMarkRead }: Notifica
       bgColor = 'bg-cyan-500/10';
       if (!notification.isRead) borderClass = 'border-l-cyan-500';
       break;
+    case 'monthly_summary':
+      Icon = Icons.Analysis;
+      iconColor = 'text-teal-500';
+      bgColor = 'bg-teal-500/10';
+      if (!notification.isRead) borderClass = 'border-l-teal-500';
+      break;
+    case 'group_inactivity':
+      Icon = Icons.History;
+      iconColor = 'text-amber-500';
+      bgColor = 'bg-amber-500/10';
+      if (!notification.isRead) borderClass = 'border-l-amber-500';
+      break;
   }
 
   return (

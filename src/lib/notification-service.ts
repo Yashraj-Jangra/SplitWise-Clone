@@ -26,15 +26,65 @@ export async function dispatchNotification(params: DispatchNotificationParams): 
     headers['x-internal-secret'] = process.env.INTERNAL_API_SECRET;
   }
 
-  const response = await fetch(`${baseUrl}/api/notifications/send`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(params),
-  });
+  const bodyString = JSON.stringify(params);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error('Failed to dispatch notification:', errorData);
+  try {
+    let ok = false;
+    let errorData = {};
+
+    if (typeof window === 'undefined') {
+      // Use native Node.js HTTP/HTTPS to bypass Next.js patched fetch header-forwarding bugs
+      const { URL } = eval("require('url')");
+      const parsedUrl = new URL(`${baseUrl}/api/notifications/send`);
+      const protocol = parsedUrl.protocol === 'https:' ? eval("require('https')") : eval("require('http')");
+      const port = parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80);
+
+      const res = await new Promise<{ statusCode: number; data: string }>((resolve, reject) => {
+        const req = protocol.request({
+          hostname: parsedUrl.hostname,
+          port,
+          path: parsedUrl.pathname + parsedUrl.search,
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Length': Buffer.byteLength(bodyString),
+          }
+        }, (response: any) => {
+          let data = '';
+          response.on('data', (chunk: any) => { data += chunk; });
+          response.on('end', () => {
+            resolve({ statusCode: response.statusCode || 200, data });
+          });
+        });
+
+        req.on('error', (err: any) => reject(err));
+        req.write(bodyString);
+        req.end();
+      });
+
+      ok = res.statusCode >= 200 && res.statusCode < 300;
+      if (!ok) {
+        try {
+          errorData = JSON.parse(res.data);
+        } catch (_) {}
+      }
+    } else {
+      const response = await fetch(`${baseUrl}/api/notifications/send`, {
+        method: 'POST',
+        headers,
+        body: bodyString,
+      });
+      ok = response.ok;
+      if (!ok) {
+        errorData = await response.json().catch(() => ({}));
+      }
+    }
+
+    if (!ok) {
+      console.error('Failed to dispatch notification:', errorData);
+    }
+  } catch (error) {
+    console.error('Error dispatching notification:', error);
   }
 }
 

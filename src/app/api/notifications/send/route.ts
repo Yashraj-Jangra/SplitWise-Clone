@@ -106,8 +106,9 @@ export async function POST(request: Request) {
     }
 
     // 3. Write In-App Notification to Oracle Autonomous DB
+    let notificationId = `notif_local_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`;
     if (inAppRecipients.length > 0 || target === 'all_users') {
-      await createNotification({
+      notificationId = await createNotification({
         type,
         title,
         body: notifBody,
@@ -128,6 +129,26 @@ export async function POST(request: Request) {
       const allPushSubs = await queryByEntityType<any>('PUSH_SUB');
       const subscriptions = allPushSubs.filter(s => targetUserIdsForPush.includes(s.userId));
 
+      // Build server-side deep link URL matching notification-utils mapping logic
+      let destinationUrl = '/dashboard';
+      if (type === 'monthly_summary') {
+        destinationUrl = '/analysis';
+      } else if (type === 'support_reply') {
+        destinationUrl = '/support';
+      } else if (type.startsWith('broadcast')) {
+        destinationUrl = '/notifications';
+      } else if (groupId) {
+        if (type === 'payment_reminder') {
+          destinationUrl = `/groups/${groupId}?settlementId=${settlementId || ''}&action=settle`;
+        } else if (expenseId && (type === 'expense_added' || type === 'expense_updated')) {
+          destinationUrl = `/groups/${groupId}?expenseId=${expenseId}&action=view`;
+        } else if (settlementId && (type === 'settlement_added' || type === 'payment_confirmation_request')) {
+          destinationUrl = `/groups/${groupId}?settlementId=${settlementId}&action=view`;
+        } else {
+          destinationUrl = `/groups/${groupId}`;
+        }
+      }
+
       const pushPayload = {
         title,
         body: notifBody,
@@ -136,7 +157,9 @@ export async function POST(request: Request) {
           groupId: groupId || '',
           expenseId: expenseId || '',
           settlementId: settlementId || '',
-          url: groupId ? `/groups/${groupId}` : '/'
+          notificationId,
+          url: destinationUrl,
+          markReadUrl: `/api/notifications/${notificationId}/read`
         }
       };
 
@@ -234,6 +257,14 @@ export async function POST(request: Request) {
             case 'balance_reminder':
               emailSubject = `📊 Balance Reminder for ${resolvedGroupName || 'Group'}`;
               emailBodyText = `Here is a friendly update of your outstanding balances in group **"${resolvedGroupName || 'Group'}"**.`;
+              break;
+            case 'monthly_summary':
+              emailSubject = `📊 Your Monthly Spending Summary - ${appName}`;
+              emailBodyText = notifBody;
+              break;
+            case 'group_inactivity':
+              emailSubject = `😴 Dormant Group: Keep splitting with "${resolvedGroupName || 'Group'}"!`;
+              emailBodyText = notifBody;
               break;
           }
 

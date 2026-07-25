@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { Settings } from 'lucide-react';
+import { getNotificationUrl } from '@/lib/notification-utils';
 import type { NotificationV2 } from '@/types';
 
 export default function NotificationsPage() {
@@ -21,17 +22,10 @@ export default function NotificationsPage() {
         await markRead(notif.id);
     }
     
-    // Navigate based on type
-    if (notif.type === 'support_reply') {
-      router.push('/support');
-    } else if (notif.groupId) {
-      if (notif.expenseId) {
-        router.push(`/groups/${notif.groupId}?expenseId=${notif.expenseId}`);
-      } else if (notif.settlementId) {
-        router.push(`/groups/${notif.groupId}?settlementId=${notif.settlementId}`);
-      } else {
-        router.push(`/groups/${notif.groupId}`);
-      }
+    // Navigate using the notification-utils helper
+    const url = getNotificationUrl(notif);
+    if (url) {
+      router.push(url);
     }
   };
 
@@ -60,11 +54,19 @@ export default function NotificationsPage() {
 
   const expensesNotifs = notifications.filter(n => n.type.includes('expense'));
   const settlementsNotifs = notifications.filter(n => n.type.includes('settlement'));
-  const otherNotifs = notifications.filter(n => !n.type.includes('expense') && !n.type.includes('settlement'));
+  const remindersNotifs = notifications.filter(n => 
+    ['payment_reminder', 'balance_reminder', 'payment_confirmation_request', 'monthly_summary', 'group_inactivity'].includes(n.type)
+  );
+  const otherNotifs = notifications.filter(n => 
+    !n.type.includes('expense') && 
+    !n.type.includes('settlement') && 
+    !['payment_reminder', 'balance_reminder', 'payment_confirmation_request', 'monthly_summary', 'group_inactivity'].includes(n.type)
+  );
 
   // Calculate tab unread counts
   const unreadExpenses = expensesNotifs.filter(n => !n.isRead).length;
   const unreadSettlements = settlementsNotifs.filter(n => !n.isRead).length;
+  const unreadReminders = remindersNotifs.filter(n => !n.isRead).length;
   const unreadOther = otherNotifs.filter(n => !n.isRead).length;
 
   return (
@@ -111,6 +113,12 @@ export default function NotificationsPage() {
               Payments
               {unreadSettlements > 0 && (
                 <span className="text-[10px] bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-full font-semibold">{unreadSettlements}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="reminders" className="rounded-lg gap-2 text-sm">
+              Reminders
+              {unreadReminders > 0 && (
+                <span className="text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-full font-semibold">{unreadReminders}</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="other" className="rounded-lg gap-2 text-sm">
@@ -173,6 +181,25 @@ export default function NotificationsPage() {
                         ))
                     ) : (
                         <EmptyState message="No payment notifications yet." />
+                    )}
+                </CardContent>
+            </Card>
+        </TabsContent>
+
+        <TabsContent value="reminders">
+            <Card className="border-border/60 shadow-sm overflow-hidden rounded-2xl">
+                <CardContent className="p-0 divide-y divide-border/50">
+                    {remindersNotifs.length > 0 ? (
+                        remindersNotifs.map(notif => (
+                            <NotificationItem 
+                              key={notif.id} 
+                              notification={notif} 
+                              onClick={() => handleNotificationClick(notif)}
+                              onMarkRead={() => markRead(notif.id)}
+                            />
+                        ))
+                    ) : (
+                        <EmptyState message="No reminder notifications yet." />
                     )}
                 </CardContent>
             </Card>

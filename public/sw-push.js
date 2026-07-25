@@ -5,12 +5,44 @@ self.addEventListener('push', (event) => {
     const body = payload.body || '';
     const data = payload.data || {};
 
+    const actions = [];
+    if (data.type && data.type.includes('expense')) {
+      actions.push({ action: 'view', title: '👁 View Expense' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type === 'settlement_added') {
+      actions.push({ action: 'view', title: '💳 View Settlement' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type === 'payment_reminder') {
+      actions.push({ action: 'settle', title: '💰 Settle Now' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type === 'payment_confirmation_request') {
+      actions.push({ action: 'view', title: '✅ Confirm' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type === 'support_reply') {
+      actions.push({ action: 'view', title: '💬 View Reply' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type === 'monthly_summary') {
+      actions.push({ action: 'view', title: '📊 View Report' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type === 'group_inactivity') {
+      actions.push({ action: 'view', title: '👥 View Group' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type && data.type.startsWith('broadcast')) {
+      actions.push({ action: 'view', title: '📢 View' });
+    } else {
+      actions.push({ action: 'view', title: '👁 View' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    }
+
     const options = {
       body,
       icon: '/icons/icon-192x192.png',
       badge: '/favicon.svg',
+      vibrate: [200, 100, 200], // vibration pattern
+      actions,
       data: {
-        url: data.url || '/'
+        url: data.url || '/',
+        markReadUrl: data.markReadUrl || null
       }
     };
 
@@ -24,8 +56,25 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.url || '/';
 
+  const notificationData = event.notification.data || {};
+  const urlToOpen = notificationData.url || '/';
+  const markReadUrl = notificationData.markReadUrl;
+
+  if (event.action === 'mark_read') {
+    if (markReadUrl) {
+      event.waitUntil(
+        fetch(markReadUrl, { method: 'PATCH' })
+          .then(res => {
+            if (!res.ok) console.warn('Failed background mark read');
+          })
+          .catch(err => console.error('Error marking read from SW:', err))
+      );
+    }
+    return;
+  }
+
+  // Handle standard click or other action clicks by opening/focusing window
   event.waitUntil(
     clients.matchAll({
       type: 'window',

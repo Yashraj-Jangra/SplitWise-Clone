@@ -13,7 +13,9 @@ export type NotificationEventType =
   | 'payment_confirmation_request'
   | 'support_reply'
   | 'broadcast_announcement'
-  | 'broadcast_critical';
+  | 'broadcast_critical'
+  | 'monthly_summary'
+  | 'group_inactivity';
 
 export type NotificationChannel = 'in_app' | 'push' | 'email';
 
