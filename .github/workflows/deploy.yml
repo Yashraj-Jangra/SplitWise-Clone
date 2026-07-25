@@ -97,17 +97,27 @@ jobs:
           OCI_STORAGE_ENDPOINT: ${{ secrets.OCI_STORAGE_ENDPOINT }}
           OCI_S3_ACCESS_KEY: ${{ secrets.OCI_S3_ACCESS_KEY }}
           OCI_S3_SECRET_KEY: ${{ secrets.OCI_S3_SECRET_KEY }}
+          ORA_WALLET_ZIP_B64: ${{ secrets.ORA_WALLET_ZIP_B64 }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          envs: FIREBASE_SERVICE_ACCOUNT,ADMIN_EMAIL,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID,BETTER_AUTH_SECRET,BETTER_AUTH_URL,NEXT_PUBLIC_VAPID_PUBLIC_KEY,VAPID_PRIVATE_KEY,VAPID_EMAIL,NEXT_PUBLIC_APP_URL,ORA_DB_USER,ORA_DB_PASSWORD,ORA_CONNECT_STRING,OCI_REGION,OCI_NAMESPACE,OCI_STORAGE_BUCKET,OCI_STORAGE_ENDPOINT,OCI_S3_ACCESS_KEY,OCI_S3_SECRET_KEY
+          envs: FIREBASE_SERVICE_ACCOUNT,ADMIN_EMAIL,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID,BETTER_AUTH_SECRET,BETTER_AUTH_URL,NEXT_PUBLIC_VAPID_PUBLIC_KEY,VAPID_PRIVATE_KEY,VAPID_EMAIL,NEXT_PUBLIC_APP_URL,ORA_DB_USER,ORA_DB_PASSWORD,ORA_CONNECT_STRING,OCI_REGION,OCI_NAMESPACE,OCI_STORAGE_BUCKET,OCI_STORAGE_ENDPOINT,OCI_S3_ACCESS_KEY,OCI_S3_SECRET_KEY,ORA_WALLET_ZIP_B64
           script: |
             mkdir -p ~/app
             cd ~/app
 
             echo "${{ secrets.DEPLOY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Provision Oracle Wallet if secret is present
+            if [ ! -z "${ORA_WALLET_ZIP_B64}" ]; then
+              echo "Extracting Oracle Wallet..."
+              mkdir -p ~/app/wallet
+              echo "${ORA_WALLET_ZIP_B64}" | base64 -d > ~/app/wallet.zip
+              unzip -o ~/app/wallet.zip -d ~/app/wallet/
+              rm -f ~/app/wallet.zip
+            fi
 
             # Use Python to safely strip surrounding quotes, parse + re-serialize as compact JSON,
             # then base64 encode. Single line to stay within YAML indentation (multiline Python
@@ -118,7 +128,7 @@ jobs:
             # Write docker-compose.yml with ALL env vars baked in directly.
             # No .env file, no volume mount, no dotenv needed - vars go straight into process.env.
             # Using key: value format (not KEY=VALUE list) so special chars in values don't break YAML.
-            printf 'services:\n  web:\n    image: ghcr.io/${{ env.IMAGE_NAME }}:latest\n    ports:\n      - "3231:3231"\n    environment:\n      PORT: "3231"\n      NODE_ENV: production\n      FIREBASE_SERVICE_ACCOUNT_B64: "%s"\n      ADMIN_EMAIL: "%s"\n      GOOGLE_CLIENT_ID: "%s"\n      GOOGLE_CLIENT_SECRET: "%s"\n      NEXT_PUBLIC_FIREBASE_API_KEY: "%s"\n      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "%s"\n      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "%s"\n      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "%s"\n      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "%s"\n      NEXT_PUBLIC_FIREBASE_APP_ID: "%s"\n      BETTER_AUTH_SECRET: "%s"\n      BETTER_AUTH_URL: "%s"\n      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "%s"\n      VAPID_PRIVATE_KEY: "%s"\n      VAPID_EMAIL: "%s"\n      NEXT_PUBLIC_APP_URL: "%s"\n      ORA_DB_USER: "%s"\n      ORA_DB_PASSWORD: "%s"\n      ORA_CONNECT_STRING: "%s"\n      OCI_REGION: "%s"\n      OCI_NAMESPACE: "%s"\n      OCI_STORAGE_BUCKET: "%s"\n      OCI_STORAGE_ENDPOINT: "%s"\n      OCI_S3_ACCESS_KEY: "%s"\n      OCI_S3_SECRET_KEY: "%s"\n    restart: always\n' \
+            printf 'services:\n  web:\n    image: ghcr.io/${{ env.IMAGE_NAME }}:latest\n    ports:\n      - "3231:3231"\n    environment:\n      PORT: "3231"\n      NODE_ENV: production\n      FIREBASE_SERVICE_ACCOUNT_B64: "%s"\n      ADMIN_EMAIL: "%s"\n      GOOGLE_CLIENT_ID: "%s"\n      GOOGLE_CLIENT_SECRET: "%s"\n      NEXT_PUBLIC_FIREBASE_API_KEY: "%s"\n      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "%s"\n      NEXT_PUBLIC_FIREBASE_PROJECT_ID: "%s"\n      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "%s"\n      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "%s"\n      NEXT_PUBLIC_FIREBASE_APP_ID: "%s"\n      BETTER_AUTH_SECRET: "%s"\n      BETTER_AUTH_URL: "%s"\n      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "%s"\n      VAPID_PRIVATE_KEY: "%s"\n      VAPID_EMAIL: "%s"\n      NEXT_PUBLIC_APP_URL: "%s"\n      ORA_DB_USER: "%s"\n      ORA_DB_PASSWORD: "%s"\n      ORA_CONNECT_STRING: "%s"\n      OCI_REGION: "%s"\n      OCI_NAMESPACE: "%s"\n      OCI_STORAGE_BUCKET: "%s"\n      OCI_STORAGE_ENDPOINT: "%s"\n      OCI_S3_ACCESS_KEY: "%s"\n      OCI_S3_SECRET_KEY: "%s"\n    volumes:\n      - ./wallet:/app/wallet\n    restart: always\n' \
               "${SA_B64}" \
               "${ADMIN_EMAIL}" \
               "${GOOGLE_CLIENT_ID}" \
