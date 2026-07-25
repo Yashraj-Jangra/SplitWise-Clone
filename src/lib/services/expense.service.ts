@@ -2,7 +2,7 @@ import { getItem, putItem, queryByPk, queryByEntityType, deleteItem } from '@/li
 import type { Expense, ExpenseDocument, UserProfile, ExpensePayer, ExpenseParticipant } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
-import { notifyExpenseAdded, notifyExpenseUpdated, notifyExpenseDeleted } from './notification.service';
+import { notifyExpenseAdded, notifyExpenseUpdated, notifyExpenseDeleted } from '@/lib/notification-service';
 import { getSiteSettings } from './settings.service';
 import { getMasterCategory } from '../expense-categories';
 import { getFullName } from '../utils';

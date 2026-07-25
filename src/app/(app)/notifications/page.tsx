@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { Settings } from 'lucide-react';
 import type { NotificationV2 } from '@/types';
 
 export default function NotificationsPage() {
@@ -80,11 +81,16 @@ export default function NotificationsPage() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Stay updated with activity across your shared groups.</p>
         </div>
-        {unreadCount > 0 && (
-            <Button onClick={markAllRead} variant="outline" className="shadow-sm gap-2 shrink-0 hover:bg-green-500/10 hover:text-green-500 hover:border-green-500/30 transition-all duration-200">
-                <Icons.Check className="h-4 w-4" /> Mark all as read
+        <div className="flex items-center gap-2 shrink-0">
+          <Button onClick={() => router.push('/notifications/settings')} variant="outline" className="shadow-sm gap-2">
+            <Settings className="h-4 w-4" /> Settings
+          </Button>
+          {unreadCount > 0 && (
+            <Button onClick={markAllRead} variant="outline" className="shadow-sm gap-2 hover:bg-green-500/10 hover:text-green-500 hover:border-green-500/30 transition-all duration-200 animate-fade-in">
+              <Icons.Check className="h-4 w-4" /> Mark all as read
             </Button>
-        )}
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="all" className="w-full">

@@ -2,7 +2,7 @@ import { getItem, putItem, queryByEntityType, deleteItem } from '@/lib/nosql';
 import type { Group, GroupDocument, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
-import { notifyMemberAdded, notifyMemberRemoved } from './notification.service';
+import { notifyMemberAdded, notifyMemberRemoved } from '@/lib/notification-service';
 import { getFullName } from '../utils';
 
 function mapGroupRow(g: any, members: UserProfile[], createdBy: UserProfile): Group {

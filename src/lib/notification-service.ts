@@ -10,6 +10,8 @@ export interface DispatchNotificationParams {
   expenseId?: string;
   settlementId?: string;
   target?: 'all_users' | 'specific_users' | 'group';
+  amount?: number;
+  description?: string;
 }
 
 export async function dispatchNotification(params: DispatchNotificationParams): Promise<void> {
@@ -17,11 +19,16 @@ export async function dispatchNotification(params: DispatchNotificationParams): 
     ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231')
     : '';
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (typeof window === 'undefined' && process.env.INTERNAL_API_SECRET) {
+    headers['x-internal-secret'] = process.env.INTERNAL_API_SECRET;
+  }
+
   const response = await fetch(`${baseUrl}/api/notifications/send`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(params),
   });
 
@@ -48,7 +55,9 @@ export const notifyExpenseAdded = async (
         actorId,
         groupId,
         expenseId,
-        target: 'group'
+        target: 'group',
+        amount,
+        description
     });
 };
 
@@ -67,7 +76,8 @@ export const notifyExpenseUpdated = async (
         actorId,
         groupId,
         expenseId,
-        target: 'group'
+        target: 'group',
+        description
     });
 };
 
@@ -84,7 +94,8 @@ export const notifyExpenseDeleted = async (
         body: `The expense "${description}" was deleted.`,
         actorId,
         groupId,
-        target: 'group'
+        target: 'group',
+        description
     });
 };
 
@@ -93,17 +104,24 @@ export const notifySettlementAdded = async (
     actorId: string, 
     groupId: string, 
     amount: number,
-    settlementId?: string
+    settlementId?: string,
+    groupName?: string
 ) => {
     await dispatchNotification({
         type: 'settlement_added',
         recipientIds: [recipientId],
         title: 'Payment Received',
-        body: `You received a payment of ${amount}.`,
+        body: `You received a payment of ₹${Number(amount || 0).toFixed(2)}${groupName ? ` in "${groupName}"` : ''}.`,
         actorId,
         groupId,
         settlementId,
-        target: 'specific_users'
+        target: 'specific_users',
+        amount,
+        ...({
+            balanceAmount: `₹${Number(amount || 0).toFixed(2)}`,
+            groupName: groupName || '',
+            actionUrl: `/groups/${groupId}`
+        } as any)
     });
 };
 

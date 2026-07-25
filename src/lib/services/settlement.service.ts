@@ -2,7 +2,7 @@ import { getItem, putItem, queryByPk, queryByEntityType, deleteItem } from '@/li
 import type { Settlement, SettlementDocument, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
-import { notifySettlementAdded } from './notification.service';
+import { notifySettlementAdded } from '@/lib/notification-service';
 import { getFullName } from '../utils';
 
 function mapSettlementRow(row: any, paidBy: UserProfile, paidTo: UserProfile): Settlement {
@@ -64,7 +64,7 @@ export async function addSettlement(
   });
 
   if (settlementData.paidToId !== actorId) {
-    await notifySettlementAdded(settlementData.paidToId, actorId, settlementData.groupId, settlementData.amount, settlementId);
+    await notifySettlementAdded(settlementData.paidToId, actorId, settlementData.groupId, settlementData.amount, settlementId, groupDoc?.name || 'your group');
   }
 
   return settlementId;

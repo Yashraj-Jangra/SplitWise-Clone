@@ -144,12 +144,12 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
   emailEnabled: true,
   events: {
     expense_added: { inApp: true, push: true, email: false },
-    expense_updated: { inApp: true, push: false, email: false },
-    expense_deleted: { inApp: true, push: false, email: false },
+    expense_updated: { inApp: true, push: true, email: false },
+    expense_deleted: { inApp: true, push: true, email: false },
     settlement_added: { inApp: true, push: true, email: true },
     member_added: { inApp: true, push: true, email: false },
-    member_removed: { inApp: true, push: false, email: false },
-    balance_reminder: { inApp: true, push: false, email: true },
+    member_removed: { inApp: true, push: true, email: false },
+    balance_reminder: { inApp: true, push: true, email: true },
     payment_reminder: { inApp: true, push: true, email: true },
     payment_confirmation_request: { inApp: true, push: true, email: true },
     support_reply: { inApp: true, push: true, email: true },
@@ -157,6 +157,7 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
     broadcast_critical: { inApp: true, push: true, email: true },
   }
 };
+
 
 export async function getUserNotificationPrefs(userId: string): Promise<UserNotificationPrefsDocument> {
   const prefsDoc = await getItem<any>(`USER#${userId}`, 'NOTIFICATION_PREFS');

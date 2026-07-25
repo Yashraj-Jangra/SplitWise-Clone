@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NotificationItem } from '@/components/shared/notification-item';
 import Link from 'next/link';
+import { Settings } from 'lucide-react';
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications();
@@ -42,7 +43,15 @@ export function NotificationBell() {
       
       <PopoverContent className="w-96 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="font-semibold">Notifications</h3>
+            <div className="flex items-center gap-2">
+                <h3 className="font-semibold">Notifications</h3>
+                <Button asChild variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-muted" onClick={() => setOpen(false)}>
+                    <Link href="/notifications/settings">
+                        <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="sr-only">Notification Settings</span>
+                    </Link>
+                </Button>
+            </div>
             {unreadCount > 0 && (
                 <Button variant="link" size="sm" onClick={handleMarkAllAsRead} disabled={isMarkingRead} className="p-0 h-auto">
                     {isMarkingRead ? "Updating..." : "Mark all as read"}
