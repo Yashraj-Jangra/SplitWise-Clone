@@ -94,19 +94,23 @@ export function nosqlAuthAdapter() {
         const formattedUser = formatAuthItem(userItem);
 
         // Attach linked account documents for Better Auth user joins
+        // After the migration patch, GSI keys use ACCOUNT#<providerId>#<userId> format
         const pkItems = await queryByPk<any>(`USER#${userItem.id}`);
-        const gsiCred = await queryByGsi<any>(`ACCOUNT#credential#${userItem.id}`);
-        const gsiEmail = await queryByGsi<any>(`ACCOUNT#email#${userItem.id}`);
+        const gsiCred   = await queryByGsi<any>(`ACCOUNT#credential#${userItem.id}`);
+        const gsiEmail  = await queryByGsi<any>(`ACCOUNT#email#${userItem.id}`);
         const gsiGoogle = await queryByGsi<any>(`ACCOUNT#google#${userItem.id}`);
 
-        const combinedAccounts = [...pkItems, ...gsiCred, ...gsiEmail, ...gsiGoogle].filter(i => i.providerId || i.accountId);
+        const combinedAccounts = [...pkItems, ...gsiCred, ...gsiEmail, ...gsiGoogle]
+          .filter(i => i.providerId || i.accountId);
         const accountMap = new Map<string, any>();
-        combinedAccounts.forEach(acc => accountMap.set(acc.id || `${acc.providerId}_${acc.accountId}`, acc));
+        combinedAccounts.forEach(acc => accountMap.set(
+          acc.id || `${acc.providerId}_${acc.accountId}`, acc
+        ));
         let accountsList = Array.from(accountMap.values());
 
         if (accountsList.length === 0) {
           const allAccountDocs = await queryByEntityType<any>('ACCOUNT');
-          accountsList = allAccountDocs.filter(a => a.userId === userItem.id);
+          accountsList = allAccountDocs.filter((a: any) => a.userId === userItem.id);
         }
 
         formattedUser.account = accountsList.map(formatAuthItem);
@@ -152,23 +156,28 @@ export function nosqlAuthAdapter() {
         }
         if (fieldMap.has('providerId') && fieldMap.has('accountId')) {
           const providerId = fieldMap.get('providerId');
-          const accountId = fieldMap.get('accountId');
-          const res = await queryByGsi<any>(`ACCOUNT#${providerId}#${accountId}`);
-          if (res.length > 0) return formatAuthItem(res[0]);
+          const accountId  = fieldMap.get('accountId');
+          // Primary: look up by (providerId, accountId) — the direct key
+          const res1 = await queryByGsi<any>(`ACCOUNT#${providerId}#${accountId}`);
+          if (res1.length > 0) return formatAuthItem(res1[0]);
         }
         if (fieldMap.has('userId')) {
-          const userId = fieldMap.get('userId');
+          const userId      = fieldMap.get('userId');
           const reqProvider = fieldMap.get('providerId') || 'credential';
 
+          // Try canonical GSI: ACCOUNT#<provider>#<userId>  (post-patch format)
           let res = await queryByGsi<any>(`ACCOUNT#${reqProvider}#${userId}`);
+
+          // credential ↔ email alias (migrated users use 'email' provider)
           if (res.length === 0 && (reqProvider === 'credential' || reqProvider === 'email')) {
-            const altProvider = reqProvider === 'credential' ? 'email' : 'credential';
-            res = await queryByGsi<any>(`ACCOUNT#${altProvider}#${userId}`);
+            const alt = reqProvider === 'credential' ? 'email' : 'credential';
+            res = await queryByGsi<any>(`ACCOUNT#${alt}#${userId}`);
           }
           if (res.length > 0) return formatAuthItem(res[0]);
 
-          const userItems = await queryByPk<any>(`USER#${userId}`);
-          const accountItems = userItems.filter(i => i.providerId || i.accountId);
+          // Fallback: scan all rows under USER#<userId>
+          const userItems   = await queryByPk<any>(`USER#${userId}`);
+          const accountItems = userItems.filter((i: any) => i.providerId || i.accountId);
           if (accountItems.length > 0) return formatAuthItem(accountItems[0]);
         }
       } else if (model === 'verification') {
@@ -205,24 +214,29 @@ export function nosqlAuthAdapter() {
         const userIdWhere = where?.find(w => w.field === 'userId');
         if (userIdWhere) {
           const userId = userIdWhere.value;
-          const pkItems = await queryByPk<any>(`USER#${userId}`);
-          const gsiCred = await queryByGsi<any>(`ACCOUNT#credential#${userId}`);
-          const gsiEmail = await queryByGsi<any>(`ACCOUNT#email#${userId}`);
+          // After patch: GSI keys are ACCOUNT#<provider>#<userId>
+          const pkItems   = await queryByPk<any>(`USER#${userId}`);
+          const gsiCred   = await queryByGsi<any>(`ACCOUNT#credential#${userId}`);
+          const gsiEmail  = await queryByGsi<any>(`ACCOUNT#email#${userId}`);
           const gsiGoogle = await queryByGsi<any>(`ACCOUNT#google#${userId}`);
 
-          const combined = [...pkItems, ...gsiCred, ...gsiEmail, ...gsiGoogle].filter(i => i.providerId || i.accountId);
+          const combined = [...pkItems, ...gsiCred, ...gsiEmail, ...gsiGoogle]
+            .filter((i: any) => i.providerId || i.accountId);
           const accountMap = new Map<string, any>();
-          combined.forEach(acc => accountMap.set(acc.id || `${acc.providerId}_${acc.accountId}`, acc));
+          combined.forEach((acc: any) => accountMap.set(
+            acc.id || `${acc.providerId}_${acc.accountId}`, acc
+          ));
           let accountsList = Array.from(accountMap.values());
 
           if (accountsList.length === 0) {
             const allAccountDocs = await queryByEntityType<any>('ACCOUNT');
-            accountsList = allAccountDocs.filter(a => a.userId === userId);
+            accountsList = allAccountDocs.filter((a: any) => a.userId === userId);
           }
 
-          const filtered = accountsList.filter(item =>
+          const filtered = accountsList.filter((item: any) =>
             !where || where.every(w => {
               if (w.field === 'userId') return item.userId === userId;
+              // credential and email are equivalent for migrated users
               if (w.field === 'providerId' && (w.value === 'credential' || w.value === 'email')) {
                 return item.providerId === 'credential' || item.providerId === 'email';
               }
