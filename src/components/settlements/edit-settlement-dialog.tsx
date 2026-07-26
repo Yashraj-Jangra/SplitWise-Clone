@@ -1,35 +1,32 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, Settlement, SettlementDocument } from "@/types";
 import { updateSettlement, getGroupById } from "@/lib/firestore.service";
-
-import { cn } from "@/lib/utils";
+import { cn, getFullName, getInitials } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
-import { getFullName } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "../ui/scroll-area";
 import { appEventEmitter } from "@/lib/event-emitter";
+import { CalendarIcon, Pencil, Loader2, ArrowRight } from "lucide-react";
 
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
@@ -56,7 +53,6 @@ interface EditSettlementDialogProps {
 }
 
 export function EditSettlementDialog({ open, onOpenChange, settlement, group: initialGroup, onActionComplete }: EditSettlementDialogProps) {
-  const router = useRouter();
   const { toast } = useToast();
   const { userProfile } = useAuth();
   const [group, setGroup] = useState<Group | null>(initialGroup || null);
@@ -74,6 +70,10 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
     },
   });
 
+  const watchPaidById = form.watch("paidById");
+  const watchPaidToId = form.watch("paidToId");
+  const watchAmount = form.watch("amount");
+
   useEffect(() => {
     if (!initialGroup && open) {
         setIsGroupLoading(true);
@@ -89,15 +89,32 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
   }, [initialGroup, settlement.groupId, open]);
 
   useEffect(() => {
-    form.reset({
-        paidById: settlement.paidBy.uid,
-        paidToId: settlement.paidTo.uid,
-        amount: settlement.amount,
-        date: new Date(settlement.date),
-        notes: settlement.notes || "",
-    });
-  }, [settlement, form]);
+    if (open) {
+      form.reset({
+          paidById: settlement.paidBy.uid,
+          paidToId: settlement.paidTo.uid,
+          amount: settlement.amount,
+          date: new Date(settlement.date),
+          notes: settlement.notes || "",
+      });
+    }
+  }, [settlement, form, open]);
 
+  // Filter recipient list to exclude currently selected payer
+  const availableRecipients = useMemo(() => {
+    return group?.members.filter(m => m.uid !== watchPaidById) || [];
+  }, [group?.members, watchPaidById]);
+
+  // Auto-switch recipient if payer matches current recipient
+  useEffect(() => {
+    if (watchPaidById && watchPaidToId === watchPaidById && group) {
+      const firstOther = availableRecipients[0]?.uid || "";
+      form.setValue("paidToId", firstOther, { shouldValidate: true });
+    }
+  }, [watchPaidById, watchPaidToId, availableRecipients, form, group]);
+
+  const payerMember = group?.members.find(m => m.uid === watchPaidById);
+  const recipientMember = group?.members.find(m => m.uid === watchPaidToId);
 
   async function onSubmit(values: EditSettlementFormValues) {
     if (!userProfile || !group) return;
@@ -122,7 +139,7 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
   }
 
   const renderSkeleton = () => (
-    <div className="space-y-4 pt-4">
+    <div className="space-y-4 pt-4 p-6">
         <div className="grid grid-cols-2 gap-4">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -135,157 +152,278 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
     </div>
   );
 
-  const renderForm = () => (
+  const FormContent = group && (
     <FormProvider {...form}>
-        <form id="edit-settlement-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="paidById"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Who Paid?</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                        {group?.members.map(member => (
-                            <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="paidToId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Who Received?</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select recipient" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                        {group?.members.map(member => (
-                            <SelectItem key={member.uid} value={member.uid}>{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Amount ({CURRENCY_SYMBOL})</FormLabel>
-                    <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => {
-                    const [dateOpen, setDateOpen] = useState(false);
+      <form id="edit-settlement-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        
+        {/* ── Top Flow Banner: Person [Avatar] ➔ Person [Avatar] ────────── */}
+        <div className="flex items-center justify-center gap-3 sm:gap-4 py-1 my-1 text-center flex-wrap">
+          {/* Payer Avatar + Name */}
+          <div className="flex items-center gap-2">
+            <Avatar className="h-9 w-9 border border-primary/50 shrink-0">
+              <AvatarImage src={payerMember?.avatarUrl} />
+              <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                {payerMember ? getInitials(payerMember.firstName, payerMember.lastName) : "?"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-base font-semibold text-foreground">
+              {payerMember ? (watchPaidById === userProfile?.uid ? "You" : payerMember.firstName) : "Payer"}
+            </span>
+          </div>
 
-                    return (
-                        <FormItem>
-                        <FormLabel>Date of Payment</FormLabel>
-                        <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                            <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button
-                                variant={"outline"}
-                                className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                                >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <Icons.Calendar className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={(date) => {
-                                if (date) {
-                                  field.onChange(date);
-                                }
-                                setDateOpen(false);
-                              }}
-                              initialFocus
-                            />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                        </FormItem>
-                    );
-                }}
-                />
-            </div>
-             <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+          {/* Small Arrow Icon */}
+          <ArrowRight className="h-4 w-4 text-primary shrink-0 mx-0.5" />
+
+          {/* Recipient Avatar + Name */}
+          <div className="flex items-center gap-2">
+            <Avatar className="h-9 w-9 border border-emerald-500/50 shrink-0">
+              <AvatarImage src={recipientMember?.avatarUrl} />
+              <AvatarFallback className="text-xs font-bold bg-emerald-500/10 text-emerald-500">
+                {recipientMember ? getInitials(recipientMember.firstName, recipientMember.lastName) : "?"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-base font-semibold text-foreground">
+              {recipientMember ? (watchPaidToId === userProfile?.uid ? "You" : recipientMember.firstName) : "Recipient"}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Centered Amount Input (Exact Clamp Match to ExpenseForm) ────── */}
+        <FormField
+          control={form.control}
+          name="amount"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative border-b-2 border-border/40 pb-2 flex items-center justify-center max-w-[280px] mx-auto focus-within:border-primary transition-colors">
+                  <span className="text-[clamp(2rem,8vw,3rem)] font-bold text-muted-foreground align-baseline leading-none mr-1 select-none">
+                    {CURRENCY_SYMBOL}
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    inputMode="decimal"
+                    pattern="[0-9]*"
+                    placeholder="0.00"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="w-full bg-transparent text-[clamp(2rem,8vw,3rem)] leading-none font-bold text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-none p-0 tracking-tight text-center hide-number-arrows"
+                  />
+                </div>
+              </FormControl>
+              <FormMessage className="text-destructive text-xs mt-1 text-center" />
+            </FormItem>
+          )}
+        />
+
+        {/* ── Dropdown Selectors: "Who paid?" & "To whom?" ──────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          <FormField
+            control={form.control}
+            name="paidById"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-foreground">Who paid?</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <Textarea placeholder="e.g., For Goa trip dinner, Rent May" {...field} />
+                    <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-border/30 text-sm font-normal focus:ring-primary">
+                      <SelectValue placeholder="Select payer" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
+                  <SelectContent className="rounded-xl border-border/30">
+                    {group.members.map(member => (
+                      <SelectItem key={member.uid} value={member.uid}>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-6 w-6 shrink-0">
+                            <AvatarImage src={member.avatarUrl} />
+                            <AvatarFallback className="text-[10px] font-bold">
+                              {getInitials(member.firstName, member.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="paidToId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-foreground">To whom?</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-border/30 text-sm font-normal focus:ring-primary">
+                      <SelectValue placeholder="Select recipient" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="rounded-xl border-border/30">
+                    {availableRecipients.map(member => (
+                      <SelectItem key={member.uid} value={member.uid}>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-6 w-6 shrink-0">
+                            <AvatarImage src={member.avatarUrl} />
+                            <AvatarFallback className="text-[10px] font-bold">
+                              {getInitials(member.firstName, member.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{getFullName(member.firstName, member.lastName)} {member.uid === userProfile?.uid ? "(You)" : ""}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* ── Bottom Pill Inputs: Date & Notes ─────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => {
+              const [dateOpen, setDateOpen] = useState(false);
+
+              return (
+                <FormItem className="flex flex-col">
+                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "h-11 rounded-xl justify-start text-left font-normal text-sm px-4 bg-muted/20 border-border/30 hover:bg-muted/30",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2.5 h-4 w-4 text-muted-foreground shrink-0" />
+                          <span>{field.value ? format(field.value, "MMMM d, yyyy") : "Pick a date"}</span>
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 rounded-2xl border-border/30" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date);
+                          }
+                          setDateOpen(false);
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage className="text-xs" />
                 </FormItem>
-              )}
-            />
-          </form>
+              );
+            }}
+          />
+
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <div className="relative">
+                    <Pencil className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground shrink-0" />
+                    <Input
+                      placeholder="Add notes"
+                      {...field}
+                      className="pl-10 h-11 text-sm font-normal rounded-xl bg-muted/20 border-border/30 focus-visible:ring-0 focus-visible:border-primary"
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        </div>
+
+      </form>
     </FormProvider>
   );
 
-  const MainContent = isGroupLoading || !group ? renderSkeleton() : renderForm();
-  const title = "Edit Settlement";
+  const ActionFooter = (
+    <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 w-full">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full sm:w-auto rounded-xl h-10 text-sm font-medium px-4 hover:bg-muted hover:text-foreground transition-colors"
+        onClick={() => onOpenChange(false)}
+      >
+        Cancel
+      </Button>
+
+      <Button
+        type="submit"
+        form="edit-settlement-form"
+        disabled={form.formState.isSubmitting}
+        className="w-full sm:w-auto rounded-xl h-10 text-sm font-medium px-5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors gap-2"
+      >
+        {form.formState.isSubmitting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+          </>
+        ) : (
+          "Save Changes"
+        )}
+      </Button>
+    </div>
+  );
+
   const formId = "edit-settlement-form";
 
-  if(isMobile) {
+  if (isMobile) {
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="bottom" className="glass-pane h-[80vh] flex flex-col rounded-t-2xl border-border/20 p-0">
-                <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="text-center text-lg font-semibold">{title}</SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="flex-1">
-                    <div className="p-4">{MainContent}</div>
-                </ScrollArea>
-                <SheetFooter className="p-4 bg-background/50 border-t">
-                    <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading} className="w-full" size="lg">
-                        {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
-                    </Button>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
-    )
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0 bg-background">
+          <SheetHeader className="p-4 border-b border-border/20">
+            <SheetTitle className="text-center text-lg font-semibold">Edit Settlement</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="flex-1">
+            <div className="p-6">
+              {isGroupLoading || !group ? renderSkeleton() : FormContent}
+            </div>
+          </ScrollArea>
+          <SheetFooter className="p-4 bg-background/50 border-t border-border/20">
+            {!isGroupLoading && group && ActionFooter}
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    );
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-pane sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-headline">{title}</DialogTitle>
-          <DialogDescription>
-            Update the details of this payment.
-          </DialogDescription>
-        </DialogHeader>
-        {MainContent}
-        <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" form={formId} disabled={form.formState.isSubmitting || isGroupLoading}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-        </DialogFooter>
+      <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-border/20 rounded-2xl shadow-2xl bg-background">
+        <div className="flex flex-col h-full">
+          <div className="p-6">
+            <DialogHeader className="mb-4 text-left">
+              <DialogTitle className="text-lg font-semibold">Edit Settlement</DialogTitle>
+              <DialogDescription className="sr-only">
+                Update the details of this payment.
+              </DialogDescription>
+            </DialogHeader>
+            {isGroupLoading || !group ? renderSkeleton() : FormContent}
+          </div>
+
+          <DialogFooter className="p-6 pt-0 flex flex-row items-center justify-end gap-2">
+            {!isGroupLoading && group && ActionFooter}
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
