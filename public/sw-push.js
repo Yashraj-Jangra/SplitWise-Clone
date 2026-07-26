@@ -37,7 +37,7 @@ self.addEventListener('push', (event) => {
     const options = {
       body,
       icon: '/icons/icon-192x192.png',
-      badge: '/favicon.svg',
+      badge: '/icons/favicon.svg',
       vibrate: [200, 100, 200], // vibration pattern
       actions,
       data: {
