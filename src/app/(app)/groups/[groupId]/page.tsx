@@ -367,7 +367,7 @@ export default function GroupDetailPage() {
                          <Button
                            variant="ghost"
                            size="sm"
-                           className="text-xs text-muted-foreground hover:text-foreground"
+                           className="text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50"
                            onClick={() => setVisibleActivityCount(prev => Math.min(prev + BATCH_SIZE, activityItems.length))}
                          >
                            Showing {visibleActivityItems.length} of {activityItems.length} records — Scroll or tap to load more...
