@@ -187,7 +187,7 @@ export default function GroupDetailPage() {
 
   // Unified choreographed transition sequence (scroll -> open -> highlight)
   useEffect(() => {
-    if (activeTab === 'expenses' && targetItemId) {
+    if (!loading && activeTab === 'expenses' && targetItemId) {
       const targetId = targetItemId;
 
       // 1. Immediately reset scroll to top and ensure accordion item starts closed
@@ -212,12 +212,11 @@ export default function GroupDetailPage() {
         setHighlightedItemId(targetId);
       }, 1300);
 
-      // 5. Clear highlight once double-blink animation finishes
+      // 5. Clear highlight and targetItemId once double-blink animation finishes
       const clearTimer = setTimeout(() => {
         setHighlightedItemId(null);
+        setTargetItemId(null);
       }, 3600);
-
-      setTargetItemId(null);
 
       return () => {
         clearTimeout(scrollTimer);
@@ -226,7 +225,7 @@ export default function GroupDetailPage() {
         clearTimeout(clearTimer);
       };
     }
-  }, [activeTab, targetItemId]);
+  }, [activeTab, targetItemId, loading]);
 
   useEffect(() => {
     if (!searchParams) return;
