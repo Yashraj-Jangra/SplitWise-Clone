@@ -52,20 +52,20 @@ export function NotificationBell() {
       
       <PopoverContent className="w-96 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-2">
-                <h3 className="font-semibold">Notifications</h3>
-                <Button asChild variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-muted" onClick={() => setOpen(false)}>
+            <h3 className="font-semibold">Notifications</h3>
+            <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                    <Button variant="link" size="sm" onClick={handleMarkAllAsRead} disabled={isMarkingRead} className="p-0 h-auto text-xs">
+                        {isMarkingRead ? "Updating..." : "Mark all as read"}
+                    </Button>
+                )}
+                <Button asChild variant="ghost" size="icon" className="h-7 w-7 rounded-md hover:bg-muted" onClick={() => setOpen(false)}>
                     <Link href="/notifications/settings">
-                        <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Settings className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                         <span className="sr-only">Notification Settings</span>
                     </Link>
                 </Button>
             </div>
-            {unreadCount > 0 && (
-                <Button variant="link" size="sm" onClick={handleMarkAllAsRead} disabled={isMarkingRead} className="p-0 h-auto">
-                    {isMarkingRead ? "Updating..." : "Mark all as read"}
-                </Button>
-            )}
         </div>
         <ScrollArea className="h-[400px]">
             {notifications.length > 0 ? (
