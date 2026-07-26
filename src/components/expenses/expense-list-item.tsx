@@ -464,7 +464,7 @@ export function ExpenseListItem({ expense, currentUserId, group, groupHistory, i
         value={`exp-${expense.id}`}
         className={cn(
           "border-b border-border/50 transition-colors duration-1000",
-          isHighlighted && "bg-primary/10 dark:bg-primary/20"
+          isHighlighted && "animate-highlight-blink"
         )}
       >
           <AccordionTrigger

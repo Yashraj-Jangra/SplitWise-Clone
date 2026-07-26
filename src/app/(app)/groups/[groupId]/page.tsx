@@ -60,7 +60,7 @@ export default function GroupDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState('expenses');
-  const [targetExpenseId, setTargetExpenseId] = useState<string | null>(null);
+  const [targetItemId, setTargetItemId] = useState<string | null>(null);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -156,18 +156,18 @@ export default function GroupDetailPage() {
     return activityItems.slice(0, visibleActivityCount);
   }, [activityItems, visibleActivityCount]);
 
-  // Expand visible bounds if deep-linked item is beyond initial batch
+  // Expand visible bounds if deep-linked item or target expense is beyond initial batch
   useEffect(() => {
     const expId = searchParams?.get('expenseId');
     const setDocId = searchParams?.get('settlementId');
-    const targetId = expId ? `exp-${expId}` : setDocId ? `set-${setDocId}` : null;
-    if (targetId) {
-      const idx = activityItems.findIndex(i => i.id === targetId);
+    const currentTargetId = targetItemId || (expId ? `exp-${expId}` : setDocId ? `set-${setDocId}` : null);
+    if (currentTargetId) {
+      const idx = activityItems.findIndex(i => i.id === currentTargetId);
       if (idx !== -1 && idx >= visibleActivityCount) {
         setVisibleActivityCount(idx + 10);
       }
     }
-  }, [searchParams, activityItems, visibleActivityCount]);
+  }, [searchParams, targetItemId, activityItems, visibleActivityCount]);
 
   // Infinite Scroll IntersectionObserver
   useEffect(() => {
@@ -185,21 +185,48 @@ export default function GroupDetailPage() {
     return () => observer.disconnect();
   }, [activityItems.length, visibleActivityCount]);
 
-
+  // Unified choreographed transition sequence (scroll -> open -> highlight)
   useEffect(() => {
-    if (activeTab === 'expenses' && targetExpenseId) {
-      setActiveAccordionItem(`exp-${targetExpenseId}`);
-      const timer = setTimeout(() => {
-        const element = document.getElementById(`exp-${targetExpenseId}`);
+    if (activeTab === 'expenses' && targetItemId) {
+      const targetId = targetItemId;
+
+      // 1. Immediately reset scroll to top and ensure accordion item starts closed
+      window.scrollTo({ top: 0 });
+      setActiveAccordionItem(undefined);
+
+      // 2. Scroll smoothly to the closed item (transition from the top)
+      const scrollTimer = setTimeout(() => {
+        const element = document.getElementById(targetId);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        setTargetExpenseId(null);
-      }, 100);
+      }, 300);
 
-      return () => clearTimeout(timer);
+      // 3. Open (expand) the accordion item smoothly after scroll completes
+      const expandTimer = setTimeout(() => {
+        setActiveAccordionItem(targetId);
+      }, 1000);
+
+      // 4. Trigger the double-blink highlight animation once expanded
+      const highlightTimer = setTimeout(() => {
+        setHighlightedItemId(targetId);
+      }, 1300);
+
+      // 5. Clear highlight once double-blink animation finishes
+      const clearTimer = setTimeout(() => {
+        setHighlightedItemId(null);
+      }, 3600);
+
+      setTargetItemId(null);
+
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(expandTimer);
+        clearTimeout(highlightTimer);
+        clearTimeout(clearTimer);
+      };
     }
-  }, [activeTab, targetExpenseId]);
+  }, [activeTab, targetItemId]);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -237,47 +264,24 @@ export default function GroupDetailPage() {
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
     } else if (expId) {
-      setHighlightedItemId(`exp-${expId}`);
-      setTargetExpenseId(expId);
+      setTargetItemId(`exp-${expId}`);
       setActiveTab('expenses');
-      const timer = setTimeout(() => {
-        setHighlightedItemId(null);
-      }, 2500);
       
       // Clean up URL query parameters
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
-      
-      return () => clearTimeout(timer);
     } else if (setDocId) {
-      setHighlightedItemId(`set-${setDocId}`);
-      setActiveAccordionItem(`set-${setDocId}`);
+      setTargetItemId(`set-${setDocId}`);
       setActiveTab('expenses');
-      
-      const scrollTimer = setTimeout(() => {
-        const element = document.getElementById(`set-${setDocId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 150);
-
-      const highlightTimer = setTimeout(() => {
-        setHighlightedItemId(null);
-      }, 2500);
       
       // Clean up URL query parameters
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
-
-      return () => {
-        clearTimeout(scrollTimer);
-        clearTimeout(highlightTimer);
-      };
     }
   }, [searchParams, settlements, userProfile]);
 
   const handleViewExpense = (expenseId: string) => {
-    setTargetExpenseId(expenseId);
+    setTargetItemId(`exp-${expenseId}`);
     setActiveTab('expenses');
   };
   

@@ -231,7 +231,7 @@ export function SettlementListItem({ settlement, currentUserId, group, groupHist
         value={`set-${settlement.id}`}
         className={cn(
           "border-b border-border/50 transition-colors duration-1000",
-          isHighlighted && "bg-primary/10 dark:bg-primary/20"
+          isHighlighted && "animate-highlight-blink"
         )}
       >
         <AccordionTrigger className="p-3 hover:bg-muted/50 transition-colors hover:no-underline [&[data-state=open]]:bg-muted/50">
