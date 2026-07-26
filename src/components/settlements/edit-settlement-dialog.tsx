@@ -119,7 +119,8 @@ export function EditSettlementDialog({ open, onOpenChange, settlement, group: in
   async function onSubmit(values: EditSettlementFormValues) {
     if (!userProfile || !group) return;
 
-    const updatedSettlementData: Partial<SettlementDocument> = {
+    const updatedSettlementData: Partial<SettlementDocument> & { groupId: string } = {
+        groupId: group.id,
         paidById: values.paidById,
         paidToId: values.paidToId,
         amount: values.amount,
