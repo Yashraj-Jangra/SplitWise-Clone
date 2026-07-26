@@ -1,13 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Balance, UserProfile } from '@/types';
 
-// Mock the firebase module to avoid initialization errors in non-browser environments
-vi.mock('@/lib/firebase', () => ({
-  db: {} as any,
-  auth: {} as any,
-  storage: {} as any,
-  firebaseError: null,
-}));
 
 import { simplifyDebts } from '@/lib/firestore.service';
 
