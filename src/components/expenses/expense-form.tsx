@@ -71,7 +71,10 @@ import type { Group, Expense, UserProfile } from '@/types';
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required.').max(100),
-  amount: z.coerce.number({ invalid_type_error: "Amount is required." }).positive('Amount must be positive.'),
+  amount: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : val),
+    z.coerce.number({ invalid_type_error: "Amount is required." }).positive('Amount must be positive.')
+  ),
   date: z.date({ required_error: 'Date is required.' }),
   notes: z.string().max(200, 'Notes must be 200 characters or less.').optional(),
   payerType: z.enum(['single', 'multiple']).default('single'),
@@ -307,7 +310,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                       placeholder="0.00"
                       {...field}
                       value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
+                      onChange={(e) => field.onChange(e.target.value)}
                       className="pl-2 text-[clamp(2rem,8vw,3rem)] leading-none font-bold border-x-0 border-t-0 rounded-none border-b-2 !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
                     />
                   </div>

@@ -32,7 +32,10 @@ import { QrCode, HandCoins, CalendarIcon, Pencil, Loader2, ArrowRight } from "lu
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
   paidToId: z.string().min(1, "Recipient is required."),
-  amount: z.coerce.number({ invalid_type_error: "Enter an amount" }).positive("Amount must be positive."),
+  amount: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : val),
+    z.coerce.number({ invalid_type_error: "Enter an amount" }).positive("Amount must be positive.")
+  ),
   date: z.date({ required_error: "Date is required." }),
   notes: z.string().max(100, "Notes cannot exceed 100 characters.").optional(),
 }).refine(data => data.paidById !== data.paidToId, {
@@ -195,7 +198,7 @@ export function AddSettlementDialog({ group, initialSettlement, trigger, open: c
                     placeholder="0.00"
                     {...field}
                     value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
+                    onChange={(e) => field.onChange(e.target.value)}
                     className="w-full bg-transparent text-[clamp(2rem,8vw,3rem)] leading-none font-bold text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-none p-0 tracking-tight text-center hide-number-arrows"
                   />
                 </div>

@@ -34,7 +34,10 @@ import { appEventEmitter } from "@/lib/event-emitter";
 const settlementSchema = z.object({
   paidById: z.string().min(1, "Payer is required."),
   paidToId: z.string().min(1, "Recipient is required."),
-  amount: z.coerce.number().positive("Amount must be positive."),
+  amount: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : val),
+    z.coerce.number({ invalid_type_error: "Amount is required." }).positive("Amount must be positive.")
+  ),
   date: z.date({ required_error: "Date is required."}),
   notes: z.string().max(100, "Notes too long").optional(),
 }).refine(data => data.paidById !== data.paidToId, {
