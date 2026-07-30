@@ -1,134 +1,168 @@
-# Welcome to SplitIt - A Full-Stack SplitWise Clone
+<div align="center">
 
-**SplitIt** is a full-stack expense-splitting web application designed to simplify shared finances for roommates, trips, vacations, and group events. 
+# 💸 SplitIt — Premium Full-Stack Expense Splitting Engine
 
-Built on **Next.js App Router**, **Oracle Autonomous Database**, **Better Auth**, and **Tailwind CSS**, it features smart debt simplification, real-time balances, interactive spending graphs, transactional email templates, and native OS push notifications.
+SplitIt is a state-of-the-art, high-density bill-splitting application designed to remove the complexity from shared finances for trips, vacations, roommates, and projects. 
 
-> **Note**: Check out the [live production version](https://split.cvweb.tech) for the latest features and live demonstration.
+Built on the **Next.js App Router**, **Oracle Autonomous Database**, **Better Auth**, and **Tailwind CSS**, it features native OS push notifications, granular settings, spending dashboards, and transactional templates.
 
----
+[![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Oracle Database](https://img.shields.io/badge/Oracle-Autonomous_DB-red?style=for-the-badge&logo=oracle)](https://www.oracle.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS_3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Better Auth](https://img.shields.io/badge/Better_Auth-1.6-orange?style=for-the-badge)](https://www.better-auth.com/)
 
-## Table of Contents
+> 🌐 Check out the [live production version](https://split.cvweb.tech) for the latest features.
 
-- [Core Features Walkthrough](#core-features-walkthrough)
-- [Database Architecture & NoSQL Mapping](#database-architecture--nosql-mapping)
-- [Tech Stack & Library Integrations](#tech-stack--library-integrations)
-- [Performance, Caching & Security Enhancements](#performance-caching--security-enhancements)
-- [Getting Started](#getting-started)
-- [Environment Configuration](#environment-configuration)
-- [Project Structure](#project-structure)
+</div>
 
 ---
 
-## Core Features Walkthrough
+## 🗺️ Architectural Overview
 
-### 💸 Financial Splitting Engine
-- **Flexible Split Configurations**: Split costs multiple ways depending on the scenario:
-  - **Equally**: Costs split evenly among participants. Handles penny-rounding correction gracefully (adjusting the remainder to the first payer).
-  - **Unequally**: Specify precise local currency amounts owed per person. Ensures the sum of individual shares matches the total.
-  - **By Shares**: Split proportionally by weights/shares (e.g. Roommate A has 2 shares, Roommate B has 1).
-  - **By Percentage**: Allocate costs based on percentage targets (e.g., one person pays 60%, another 40%).
-- **Multiple Payers**: Supports multiple members contributing different amounts to a single expense (e.g. Person A paid ₹1000 and Person B paid ₹500 for a ₹1500 bill).
-- **Smart Debt Simplification**: Uses a netting reduction algorithm that aggregates all group balances and resolves them in the minimum possible number of individual transactions (e.g., instead of A paying B and B paying C, A pays C directly).
-- **Real-Time Balances**: Aggregates obligations immediately on save to show who owes you and who you owe across all groups.
+### System Data Flows & Infrastructure
+SplitIt runs on Next.js Server Components and API endpoints that connect to an Oracle Autonomous Database via Node.js Thin Driver connections. Below is a map demonstrating the flow from user action to background push notification dispatch:
 
-### 📱 Premium User Experience (UX)
-- **Personal Dashboard**: High-density neutral theme showing net credit/debit balances, active obligations, and recent activities.
-- **Interactive Spending Analytics**: View categorized spending breakdowns, trends over time, and budget performance charts.
-- **Native Push Notifications**: Category-specific OS push notifications (using VAPID protocol) with action buttons (e.g. "Settle Now", "View Expense").
-- **Notification Preferences**: Granular settings interface enabling users to toggle email, in-app, or push channels individually per event type.
-- **Global Command Search**: Quick search interface (`Ctrl+K` / `⌘K`) to query groups, expenses, and members instantly.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Client PWA
+    participant Next as Next.js Server / API
+    participant DB as Oracle NoSQL (SplitItDB Table)
+    participant VAPID as Web Push Service (VAPID)
+    participant SW as Service Worker (sw-push.js)
+    participant OS as OS Notification Center
 
-### 🛡️ Admin Panel & Controls
-- **Big Picture Statistics**: Get site-wide metrics on total registered users, groups, transactions, and ticket volumes.
-- **Data Migration & Merge Tools**: Cleanly merge duplicate credentials and migrate database profiles.
-- **Content Management**: Update branding parameters, site name, logos, landing page layouts, and legal documents.
-- **System Configs**: Configure dynamic color themes, custom expense categories, and SMTP mail servers.
-- **Support System**: Manage client-reported issues with an integrated ticket-handling system.
-- **Global Broadcasts**: Dispatch bulk in-app announcements or global email broadcasts to all users.
+    User->>Next: Adds Expense / Settlement
+    Next->>DB: putItem (Evicts in-memory Cache)
+    Next->>Next: serverDispatchNotification (local trigger)
+    Next->>VAPID: Sign & Post encrypted payload
+    VAPID-->>SW: Push Event Listener Fired
+    SW->>SW: getNotificationIcon(data.type)
+    SW->>OS: showNotification(title, options)
+    OS->>User: Displays Notification (Dynamic Right-Side Icon)
+```
 
 ---
 
-## Database Architecture & NoSQL Mapping
+## 🎨 Core Features In-Depth
 
-SplitIt utilizes **Oracle Autonomous Database** as its primary persistent store. Rather than traditional complex multi-table SQL joins, the database layer is implemented using a **single-table NoSQL Document Store** mapping approach (`src/lib/nosql.ts`).
+### 💸 Financial Engines & Splitting Splits
+- **Multiple Splitting Schemes**:
+  - **Equally**: Costs split evenly. Features a penny-rounding algorithm (allocating the remaining remainder to the primary payer so totals match exactly).
+  - **Unequally**: Specify precise local currency amounts owed per participant.
+  - **By Shares**: Split proportionally by custom weights/shares.
+  - **By Percentage**: Allocate costs based on percentage targets (e.g. 60/40 splits).
+- **Multiple Payers**: Supports multiple members contributing different amounts to a single expense.
+- **Smart Debt Simplification**: Solves a flow reduction problem to minimize individual transactions. It aggregates all group balances and resolves them in the minimum possible number of individual transfers.
+- **Dynamic Multi-Currency support**: Supports dynamic local currency formats (₹, $, €, £, ¥, etc.) across different groups.
 
-### Data Model & Table Schema
-All application entities (users, groups, expenses, settlements, user preferences) are stored in a single Oracle table `SplitItDB` with a key-document schema:
-- **`PK` (Primary Key)**: A string identifying the unique record or container (e.g. `USER#usr_123`, `GROUP#grp_456`, `EXPENSE#exp_789`).
-- **`SK` (Sort Key)**: Distinguishes metadata or indexes (e.g. `METADATA`, `PROFILE`, `PREFS`).
-- **`ENTITY_TYPE`**: Used for Global Secondary Index (GSI) filtering (e.g. `USER`, `GROUP`, `EXPENSE`, `SETTLEMENT`, `TICKET`).
-- **`DATA`**: A CLOB containing JSON document payloads.
-- **`GSI1_PK` / `GSI1_SK`**: Global Secondary Indexes used to resolve relational mappings (like listing all expenses in a group or all members associated with a user).
+### 📱 Notification Preference Settings & Channels
+- **Web Push (VAPID)**: Background push notifications mapped to category-specific visual icons.
+- **Granular Toggle Matrix**: Users can enable/disable In-App notifications, OS Push notifications, and Emails separately for each event type (expenses, settlements, reminders, broadcasts, support replies).
+- **In-App Notification Feed**: Popover bell containing unread counts, settings, and filter tabs (All, Groups, Payments, System, Reminders).
 
-### In-Memory Read Cache
-To bypass Oracle Network round-trip latency on static configurations and frequent lookups, SplitIt implements a transparent **15-second TTL (Time-To-Live) In-Memory Read Cache** (`readCache`) in the backend. 
-- Automatically caches queries for `getItem`, `queryByPk`, and GSI reads.
-- Performs automatic cache invalidation (eviction) on write operations (`putItem`, `deleteItem`), ensuring client sessions always receive consistent data on updates.
-
----
-
-## Tech Stack & Library Integrations
-
-- **Framework**: [Next.js](https://nextjs.org/) (App Router, Server Actions, API Routes)
-- **Database Driver**: [oracledb](https://node-oracledb.github.io/node-oracledb/) (Thin Connection Mode leveraging Oracle Instant Client configurations and credential wallets)
-- **Authentication**: [Better Auth](https://www.better-auth.com/) (session-based credentials and Google OAuth with automatic account linking)
-- **Push System**: Native **VAPID Web Push** (implemented via `web-push` and client service worker)
-- **Styling**: **Tailwind CSS** (curated solid neutral design tokens)
-- **Forms & Validation**: **React Hook Form** with **Zod** schema validations
-- **Charts**: **Recharts** (highly interactive SVGs)
-- **Email Delivery**: **Nodemailer** with custom compiler templates supporting responsive buttons and UPI bridges
+### 🛠️ High-Density Admin Panel
+- **Branding Panel**: Customize the application name, icons, and legal documents.
+- **Dynamic Theming Editor**: Manage CSS theme custom variables that render globally for users.
+- **SMTP Mail Configuration**: Direct mail relays or Gmail OAuth setups to compile test mails and dispatch automated transactional alerts.
+- **Broadcast System**: Dispatch bulk messages or critical system alerts via email or in-app popovers.
+- **Ticketing Console**: View and reply to user-submitted help and support issues.
 
 ---
 
-## Performance, Caching & Security Enhancements
+## 🗄️ Database Architecture & Key-Document Model
 
-- **No Loopback HTTP Calls**: Decoupled notification dispatch into clean local services. Both in-app routines and background API routes trigger email/push dispatches directly through server modules, eliminating loops and headers mismatches.
-- **Clickable UPI Email Actions**: Generated an HTTP bridge route (`/api/pay-upi`) allowing email clients to trigger deep-link `upi://` payment actions on mobile devices without client-side parsing filters stripping custom URI schemes.
-- **Cursor-Based Pagination**: Admin tables cursor-paginate records 10 at a time, ensuring fast load times regardless of user base size.
-- **Choreographed Record Highlighting**: Built dynamic transition routes that scroll target records into view, expand details, and trigger CSS highlighting keyframes upon navigating from notification badges.
-- **Better Auth Adapter & Session Fixes**: Fixed `nosqlAuthAdapter` to populate attached `account` arrays on `findOne({ model: 'user' })` and attached `user` profiles on `findOne({ model: 'session' })`. Enforced strict boolean parsing for `emailVerified`.
-- **Admin Panel Compatibility Crash Patch**: Configured a compatibility `getIdToken()` async method stub on mock client users, preventing legacy Firebase scripts from throwing exceptions on Admin pages.
+SplitIt stores all documents in a single table `SplitItDB` in the **Oracle Autonomous Database** using a key-document schema. Relational lookups are mapped through Partition Keys (`PK`), Sort Keys (`SK`), and Global Secondary Indexes (`GSI1_PK`/`GSI1_SK`).
 
----
+```mermaid
+graph TD
+    subgraph Oracle Autonomous Database (SplitItDB Table)
+        U["PK: USER#usr_101<br>SK: PROFILE<br>Entity: USER<br>(Profile, Active settings, Role)"]
+        G["PK: GROUP#grp_202<br>SK: METADATA<br>Entity: GROUP<br>(Name, Created date, Member IDs)"]
+        E["PK: EXPENSE#exp_303<br>SK: METADATA<br>Entity: EXPENSE<br>(Payer, Split weights, Description)"]
+        S["PK: SETTLEMENT#set_404<br>SK: METADATA<br>Entity: SETTLEMENT<br>(From/To, Amount, Status)"]
+    end
+    U -->|Member of| G
+    G -->|Contains| E
+    G -->|Contains| S
+```
 
-## Getting Started
+### Table Mappings Matrix
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v18 or later recommended)
-- Access to an Oracle Autonomous Database instance (with connection credentials and client wallet ZIP file)
-- A Google Cloud Developer Console application (for Google OAuth and/or Gmail API integration)
+| Entity Type | PK Format | SK Format | GSI1_PK | GSI1_SK | Payload Attributes (`DATA` JSON) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **USER** | `USER#<userId>` | `PROFILE` | `USER_EMAIL#<email>` | N/A | `firstName`, `lastName`, `email`, `role`, `upiId` |
+| **GROUP** | `GROUP#<groupId>` | `METADATA` | N/A | N/A | `name`, `members` `[ {userId, role} ]`, `archived` |
+| **EXPENSE** | `EXPENSE#<expenseId>` | `METADATA` | `GROUP#<groupId>` | `EXPENSE#<expenseId>` | `amount`, `payerId`, `splitType`, `participants`, `date` |
+| **SETTLEMENT** | `SETTLEMENT#<id>` | `METADATA` | `GROUP#<groupId>` | `SETTLEMENT#<id>` | `amount`, `fromUserId`, `toUserId`, `date`, `notes` |
+| **PREFERENCES** | `USER#<userId>` | `PREFS` | N/A | N/A | `emailEnabled`, `pushEnabled`, `events { type: { push, email } }` |
 
-### Local Installation & Setup
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Yashraj-Jangra/SplitIt-SplitWise_Clone.git
-   cd SplitWise-Clone
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Establish your local environment variables**:
-   Create a `.env.local` file in the root directory. Copy and configure the parameters from [Environment Configuration](#environment-configuration).
-
-4. **Add your Oracle Wallet**:
-   Unpack your database wallet ZIP folder into a directory in the workspace (e.g. `./wallet`) and ensure `tnsnames.ora` points to your Oracle Autonomous Database instance.
-
-5. **Run the local development server**:
-   ```bash
-   npm run dev
-   ```
-   Open `http://localhost:3231` in your browser.
+### Database Read Cache (15s TTL)
+To maximize throughput and bypass network latency:
+- A transparent caching layer (`readCache`) is implemented in `src/lib/nosql.ts`.
+- It caches successful `getItem` and GSI query responses.
+- Write actions (`putItem` and `deleteItem`) automatically evict corresponding cache keys to maintain 100% data consistency.
 
 ---
 
-## Environment Configuration
+## 🖼️ Application Interfaces & Screenshots
 
-Configure the following variables in your `.env.local` file:
+Below are the screenshots of SplitIt's dashboards and management consoles:
+
+### 📱 Client Application
+<div align="center">
+
+![SplitIt Dashboard Screenshot](public/screenshots/dashboard.png)
+*App Dashboard — net balance dashboard, quick stats, obligations card.*
+
+![Group Dashboard](public/screenshots/group-activity.png)
+*Group Details — real-time group activity feed, members, and transactions.*
+
+![Group Analytics](public/screenshots/group-analytics.png)
+*Group Spendings — category distributions and trends over time.*
+
+![Add Expense Form](public/screenshots/expense-form.png)
+*Expense Builder — equal splits, shares, and custom percentages split selectors.*
+
+</div>
+
+### 🛠️ Admin Management Panel
+<div align="center">
+
+![Admin Site Settings](public/screenshots/admin-site-settings.png)
+*Site Customizations — branding, logos, legal page content configurations.*
+
+![Admin Mail Configuration](public/screenshots/admin-mail-config.png)
+*SMTP Mailer — mail relay parameters, dynamic port setup, and connection verifications.*
+
+![Admin Theme Customization](public/screenshots/admin-theme-customization.png)
+*Dynamic Themes — setup, customize, and deploy CSS var-based themes.*
+
+![Admin Ticket System](public/screenshots/admin-ticket-system.png)
+*Ticketing Console — manage user support requests and ticket feeds.*
+
+</div>
+
+---
+
+## ⚡ Key Optimizations & Security Layers
+
+1. **Better Auth Adapter & Session Fixes**:
+   The custom adapter `nosqlAuthAdapter` hydrates sessions, handles credential and Google OAuth profiles, links accounts automatically, and stores tokens in the Oracle DB.
+2. **Dynamic UPI Bridges**:
+   Implements an HTTP redirect route `/api/pay-upi` resolving standard `upi://` schemes, enabling tap-to-pay deep links to work in modern email clients.
+3. **No Loopback HTTP Calls**:
+   Server-side modules invoke the notification service via local Dynamic Imports, bypassing HTTP overhead and preventing connection errors.
+4. **CSS Double-Blink Choreography**:
+   Combines `useWatch` inputs and dynamic query caches to scroll, expand, and visually highlight target deep-linked items upon navigating from notifications.
+5. **No Firebase Messaging Overhead**:
+   Entirely clean of external notification modules. Web push is delivered directly via standard VAPID servers.
+
+---
+
+## ⚙️ Environment Configuration
+
+Configure the following variables in your local `.env.local` file:
 
 ```env
 # ─── APPLICATION SETTINGS ──────────────────────────────────────────────────
@@ -168,23 +202,20 @@ INTERNAL_API_SECRET=your_shared_background_cron_key_secret
 
 ---
 
-## Project Structure
+## 🚀 Local Installation
 
-```
-/
-├── public/
-│   ├── icons/          # Core PWAs assets and favicons
-│   ├── notif-icons/    # Custom SVGs for category push notifications
-│   ├── screenshots/    # Application demo screenshots
-│   └── sw-push.js      # VAPID push listener service worker
-├── src/
-│   ├── app/            # Next.js App Router (Layouts, Pages, API Routes)
-│   ├── components/     # UI, Auth, Dashboard, and Shared components
-│   ├── contexts/       # Auth, Theme, Settings and Notification state providers
-│   ├── hooks/          # Custom hooks (data queries, long press, pull-to-refresh)
-│   ├── lib/            # Auth configs, Nosql DB wrappers, and API services
-│   └── types/          # TypeScript definitions
-├── tsconfig.json       # TypeScript configuration
-├── vitest.config.ts    # Test suite config
-└── README.md           # You are here!
-```
+1. **Clone & Install**:
+   ```bash
+   git clone https://github.com/Yashraj-Jangra/SplitIt-SplitWise_Clone.git
+   cd SplitWise-Clone
+   npm install
+   ```
+
+2. **Add Wallet & Connection**:
+   Unzip your Oracle Database connection wallet folder into `./wallet`. Ensure your `.env.local` has the matching password and connection descriptors.
+
+3. **Run Dev Instance**:
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:3231` in your browser.
