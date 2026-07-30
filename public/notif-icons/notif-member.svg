@@ -1,0 +1,18 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="memberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#dd6b20"/>
+    </linearGradient>
+  </defs>
+  <!-- Back user -->
+  <circle cx="21" cy="21" r="6.5" fill="url(#memberGrad)" opacity="0.55"/>
+  <path d="M10 41 c0 -8.5 5 -12.5 11 -12.5 s11 4 11 12.5 Z" fill="url(#memberGrad)" opacity="0.55"/>
+  <!-- Front user -->
+  <circle cx="32" cy="25" r="7.5" fill="url(#memberGrad)"/>
+  <path d="M19 47 c0 -9.5 6 -14 13 -14 s13 4.5 13 14 Z" fill="url(#memberGrad)"/>
+  <!-- Plus badge -->
+  <circle cx="48" cy="43" r="10.5" fill="#dd6b20"/>
+  <line x1="48" y1="38.5" x2="48" y2="47.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="43.5" y1="43" x2="52.5" y2="43" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

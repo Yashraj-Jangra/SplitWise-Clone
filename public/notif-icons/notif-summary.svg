@@ -1,0 +1,17 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="summaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <!-- Baseline -->
+  <line x1="8" y1="50" x2="56" y2="50" stroke="url(#summaryGrad)" stroke-width="2.4" stroke-linecap="round"/>
+  <!-- Bars -->
+  <rect x="12" y="38" width="8" height="12" rx="1.5" fill="url(#summaryGrad)"/>
+  <rect x="25" y="30" width="8" height="20" rx="1.5" fill="url(#summaryGrad)"/>
+  <rect x="38" y="19" width="8" height="31" rx="1.5" fill="url(#summaryGrad)"/>
+  <!-- Upward trend arrow -->
+  <path d="M12 27 L23 16 L31 22 L48 6" fill="none" stroke="url(#summaryGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M39 6 h9 v9" fill="none" stroke="url(#summaryGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

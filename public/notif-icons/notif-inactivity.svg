@@ -1,0 +1,16 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="inactivityGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+  </defs>
+  <!-- Crescent moon -->
+  <path d="M39 10 a19 19 0 1 0 0 38 a15 15 0 0 1 0 -38 Z" fill="url(#inactivityGrad)"/>
+  <!-- Sleep zzz -->
+  <g fill="none" stroke="url(#inactivityGrad)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M42 6 h8 l-8 8 h8"/>
+    <path d="M49 16 h6.5 l-6.5 6.5 h6.5"/>
+    <path d="M54 25 h5 l-5 5 h5"/>
+  </g>
+</svg>

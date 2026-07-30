@@ -1,0 +1,18 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="settlementGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <!-- Receipt with torn bottom edge (paid) -->
+  <path d="M15 9 L41 9 L41 42 L36.7 38.8 L32.3 42 L28.0 38.8 L23.7 42 L19.3 38.8 L15 42 Z"
+    fill="url(#settlementGrad)"/>
+  <!-- Receipt text lines, struck through by paid tick -->
+  <line x1="19.5" y1="16" x2="36.5" y2="16" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="19.5" y1="21.5" x2="36.5" y2="21.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="19.5" y1="27" x2="30" y2="27" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <!-- Settled / paid checkmark badge -->
+  <circle cx="46" cy="43" r="12" fill="#047857"/>
+  <path d="M40.5 43 l4 4 7.5 -8" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,19 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="expenseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <!-- Receipt with torn bottom edge -->
+  <path d="M15 9 L41 9 L41 42 L36.7 38.8 L32.3 42 L28.0 38.8 L23.7 42 L19.3 38.8 L15 42 Z"
+    fill="url(#expenseGrad)"/>
+  <!-- Receipt text lines -->
+  <line x1="19.5" y1="16" x2="36.5" y2="16" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="19.5" y1="21.5" x2="36.5" y2="21.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <line x1="19.5" y1="27" x2="30" y2="27" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+  <!-- New-item plus badge -->
+  <circle cx="46" cy="43" r="12" fill="#1d4ed8"/>
+  <line x1="46" y1="38" x2="46" y2="48" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="41" y1="43" x2="51" y2="43" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

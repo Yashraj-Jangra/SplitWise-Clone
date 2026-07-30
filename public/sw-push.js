@@ -1,3 +1,17 @@
+function getNotificationIcon(type) {
+  if (!type) return '/icons/favicon.svg';
+  if (type.includes('expense')) return '/notif-icons/notif-expense.svg';
+  if (type === 'settlement_added') return '/notif-icons/notif-settlement.svg';
+  if (type === 'payment_reminder' || type === 'payment_confirmation_request') return '/notif-icons/notif-reminder.svg';
+  if (type === 'member_added' || type === 'member_removed') return '/notif-icons/notif-member.svg';
+  if (type === 'support_reply') return '/notif-icons/notif-support.svg';
+  if (type === 'monthly_summary') return '/notif-icons/notif-summary.svg';
+  if (type === 'group_inactivity') return '/notif-icons/notif-inactivity.svg';
+  if (type === 'broadcast_critical') return '/notif-icons/notif-critical.svg';
+  if (type === 'broadcast_announcement') return '/notif-icons/notif-announcement.svg';
+  return '/icons/favicon.svg';
+}
+
 self.addEventListener('push', (event) => {
   try {
     const payload = event.data?.json() || {};
@@ -36,7 +50,7 @@ self.addEventListener('push', (event) => {
 
     const options = {
       body,
-      icon: '/icons/icon-192x192.png',
+      icon: getNotificationIcon(data.type),
       badge: '/icons/favicon.svg',
       vibrate: [200, 100, 200], // vibration pattern
       actions,

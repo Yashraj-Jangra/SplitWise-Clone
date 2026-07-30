@@ -1,0 +1,14 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="criticalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield -->
+  <path d="M32 6 l19 7 v16 c0 14.5 -8.5 24 -19 29 c-10.5 -5 -19 -14.5 -19 -29 v-16 Z"
+    fill="url(#criticalGrad)"/>
+  <!-- Exclamation -->
+  <rect x="29.3" y="19" width="5.4" height="18" rx="2.7" fill="#ffffff"/>
+  <circle cx="32" cy="43" r="3" fill="#ffffff"/>
+</svg>

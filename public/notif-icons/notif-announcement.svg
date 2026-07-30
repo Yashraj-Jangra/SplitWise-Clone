@@ -1,0 +1,16 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="announcementGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+  </defs>
+  <!-- Megaphone body -->
+  <path d="M9 27 v10 a2.5 2.5 0 0 0 2.5 2.5 h4 l18 10 v-35 l-18 10 h-4 a2.5 2.5 0 0 0 -2.5 2.5 Z"
+    fill="url(#announcementGrad)"/>
+  <!-- Handle -->
+  <path d="M15.5 39.5 v8 a3.2 3.2 0 0 0 6.4 0 v-5.8" fill="none" stroke="url(#announcementGrad)" stroke-width="2.8" stroke-linecap="round"/>
+  <!-- Sound waves -->
+  <path d="M39 21 a12.5 12.5 0 0 1 0 20" fill="none" stroke="url(#announcementGrad)" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M45 15 a20.5 20.5 0 0 1 0 32" fill="none" stroke="url(#announcementGrad)" stroke-width="2.8" stroke-linecap="round"/>
+</svg>
