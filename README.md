@@ -10,25 +10,26 @@ Built on **Next.js App Router**, **Oracle Autonomous Database**, **Better Auth**
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Architecture & Performance Highlights](#architecture--performance-highlights)
+- [Core Features Walkthrough](#core-features-walkthrough)
+- [Database Architecture & NoSQL Mapping](#database-architecture--nosql-mapping)
+- [Tech Stack & Library Integrations](#tech-stack--library-integrations)
+- [Performance, Caching & Security Enhancements](#performance-caching--security-enhancements)
 - [Getting Started](#getting-started)
 - [Environment Configuration](#environment-configuration)
 - [Project Structure](#project-structure)
 
 ---
 
-## Key Features
+## Core Features Walkthrough
 
-### 💸 Core Financial Engines
-- **Flexible Expense Splitting**: Split costs multiple ways to mirror real-life scenarios:
-  - **Equally**: Costs split evenly among participants.
-  - **Unequally**: Specify precise currency amounts owed per person.
-  - **By Shares**: Split proportionally by weights/shares.
-  - **By Percentage**: Split by percentages (e.g. 60/40 splits).
-- **Multiple Payers**: Supports multiple members contributing different amounts to a single expense.
-- **Smart Debt Simplification**: Computes the minimum number of individual transactions needed to settle all debts within a group.
+### 💸 Financial Splitting Engine
+- **Flexible Split Configurations**: Split costs multiple ways depending on the scenario:
+  - **Equally**: Costs split evenly among participants. Handles penny-rounding correction gracefully (adjusting the remainder to the first payer).
+  - **Unequally**: Specify precise local currency amounts owed per person. Ensures the sum of individual shares matches the total.
+  - **By Shares**: Split proportionally by weights/shares (e.g. Roommate A has 2 shares, Roommate B has 1).
+  - **By Percentage**: Allocate costs based on percentage targets (e.g., one person pays 60%, another 40%).
+- **Multiple Payers**: Supports multiple members contributing different amounts to a single expense (e.g. Person A paid ₹1000 and Person B paid ₹500 for a ₹1500 bill).
+- **Smart Debt Simplification**: Uses a netting reduction algorithm that aggregates all group balances and resolves them in the minimum possible number of individual transactions (e.g., instead of A paying B and B paying C, A pays C directly).
 - **Real-Time Balances**: Aggregates obligations immediately on save to show who owes you and who you owe across all groups.
 
 ### 📱 Premium User Experience (UX)
@@ -48,10 +49,29 @@ Built on **Next.js App Router**, **Oracle Autonomous Database**, **Better Auth**
 
 ---
 
-## Tech Stack
+## Database Architecture & NoSQL Mapping
+
+SplitIt utilizes **Oracle Autonomous Database** as its primary persistent store. Rather than traditional complex multi-table SQL joins, the database layer is implemented using a **single-table NoSQL Document Store** mapping approach (`src/lib/nosql.ts`).
+
+### Data Model & Table Schema
+All application entities (users, groups, expenses, settlements, user preferences) are stored in a single Oracle table `SplitItDB` with a key-document schema:
+- **`PK` (Primary Key)**: A string identifying the unique record or container (e.g. `USER#usr_123`, `GROUP#grp_456`, `EXPENSE#exp_789`).
+- **`SK` (Sort Key)**: Distinguishes metadata or indexes (e.g. `METADATA`, `PROFILE`, `PREFS`).
+- **`ENTITY_TYPE`**: Used for Global Secondary Index (GSI) filtering (e.g. `USER`, `GROUP`, `EXPENSE`, `SETTLEMENT`, `TICKET`).
+- **`DATA`**: A CLOB containing JSON document payloads.
+- **`GSI1_PK` / `GSI1_SK`**: Global Secondary Indexes used to resolve relational mappings (like listing all expenses in a group or all members associated with a user).
+
+### In-Memory Read Cache
+To bypass Oracle Network round-trip latency on static configurations and frequent lookups, SplitIt implements a transparent **15-second TTL (Time-To-Live) In-Memory Read Cache** (`readCache`) in the backend. 
+- Automatically caches queries for `getItem`, `queryByPk`, and GSI reads.
+- Performs automatic cache invalidation (eviction) on write operations (`putItem`, `deleteItem`), ensuring client sessions always receive consistent data on updates.
+
+---
+
+## Tech Stack & Library Integrations
 
 - **Framework**: [Next.js](https://nextjs.org/) (App Router, Server Actions, API Routes)
-- **Database**: [Oracle Autonomous Database](https://www.oracle.com/autonomous-database/) (relational tables structured in a NoSQL key-document mapping layer)
+- **Database Driver**: [oracledb](https://node-oracledb.github.io/node-oracledb/) (Thin Connection Mode leveraging Oracle Instant Client configurations and credential wallets)
 - **Authentication**: [Better Auth](https://www.better-auth.com/) (session-based credentials and Google OAuth with automatic account linking)
 - **Push System**: Native **VAPID Web Push** (implemented via `web-push` and client service worker)
 - **Styling**: **Tailwind CSS** (curated solid neutral design tokens)
@@ -61,13 +81,14 @@ Built on **Next.js App Router**, **Oracle Autonomous Database**, **Better Auth**
 
 ---
 
-## Architecture & Performance Highlights
+## Performance, Caching & Security Enhancements
 
-- **Oracle NoSQL In-Memory Read Cache**: To minimize read latency from the database, we built an in-memory cache layer in the database utility. It caches item reads with a 15-second TTL and automatically flushes on write actions.
 - **No Loopback HTTP Calls**: Decoupled notification dispatch into clean local services. Both in-app routines and background API routes trigger email/push dispatches directly through server modules, eliminating loops and headers mismatches.
 - **Clickable UPI Email Actions**: Generated an HTTP bridge route (`/api/pay-upi`) allowing email clients to trigger deep-link `upi://` payment actions on mobile devices without client-side parsing filters stripping custom URI schemes.
 - **Cursor-Based Pagination**: Admin tables cursor-paginate records 10 at a time, ensuring fast load times regardless of user base size.
 - **Choreographed Record Highlighting**: Built dynamic transition routes that scroll target records into view, expand details, and trigger CSS highlighting keyframes upon navigating from notification badges.
+- **Better Auth Adapter & Session Fixes**: Fixed `nosqlAuthAdapter` to populate attached `account` arrays on `findOne({ model: 'user' })` and attached `user` profiles on `findOne({ model: 'session' })`. Enforced strict boolean parsing for `emailVerified`.
+- **Admin Panel Compatibility Crash Patch**: Configured a compatibility `getIdToken()` async method stub on mock client users, preventing legacy Firebase scripts from throwing exceptions on Admin pages.
 
 ---
 
