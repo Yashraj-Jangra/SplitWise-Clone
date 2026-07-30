@@ -76,7 +76,7 @@ SplitIt stores all documents in a single table `SplitItDB` in the **Oracle Auton
 
 ```mermaid
 graph TD
-    subgraph Oracle Autonomous Database (SplitItDB Table)
+    subgraph "Oracle Autonomous Database (SplitItDB Table)"
         U["PK: USER#usr_101<br>SK: PROFILE<br>Entity: USER<br>(Profile, Active settings, Role)"]
         G["PK: GROUP#grp_202<br>SK: METADATA<br>Entity: GROUP<br>(Name, Created date, Member IDs)"]
         E["PK: EXPENSE#exp_303<br>SK: METADATA<br>Entity: EXPENSE<br>(Payer, Split weights, Description)"]
