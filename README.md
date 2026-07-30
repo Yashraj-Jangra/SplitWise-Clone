@@ -30,7 +30,6 @@ Built on **Next.js App Router**, **Oracle Autonomous Database**, **Better Auth**
 - **Multiple Payers**: Supports multiple members contributing different amounts to a single expense.
 - **Smart Debt Simplification**: Computes the minimum number of individual transactions needed to settle all debts within a group.
 - **Real-Time Balances**: Aggregates obligations immediately on save to show who owes you and who you owe across all groups.
-- **Dynamic Multi-Currency Support**: Configure custom group-specific currencies (₹, $, €, £, ¥, etc.) with locale-aware decimal formatting.
 
 ### 📱 Premium User Experience (UX)
 - **Personal Dashboard**: High-density neutral theme showing net credit/debit balances, active obligations, and recent activities.
