@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       photoURL: user.image || user.avatarUrl,
       emailVerified: user.emailVerified,
       providerData: sessionData.session ? [{ providerId: 'better-auth' }] : [],
+      getIdToken: async () => "", // Backward compatibility stub for Admin Panel
     };
   }, [sessionData]);
 
