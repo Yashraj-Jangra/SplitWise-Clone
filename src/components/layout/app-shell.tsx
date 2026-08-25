@@ -124,19 +124,52 @@ function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: ()
         <TooltipProvider>
             <div className="flex h-full max-h-screen flex-col gap-2 sticky top-0">
             <div className={cn(
-                "flex h-[60px] items-center border-b px-4",
-                isCollapsed ? "justify-center px-2" : "justify-between"
+                "flex h-[60px] items-center border-b transition-all duration-200",
+                isCollapsed ? "justify-center px-2" : "justify-between px-4"
               )}>
-                {!isCollapsed && (
-                  <Link href="/dashboard" className="flex items-center gap-2 font-semibold mr-auto" aria-label={settings.appName}>
-                      <Icons.Logo className="h-8 w-8 text-primary" />
-                      {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold">{settings.appName}</span>}
-                  </Link>
+                {isCollapsed ? (
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={onToggle}
+                        className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label="Expand sidebar"
+                      >
+                        {/* Brand Icon (Visible by default, fades out on hover) */}
+                        <Icons.Logo className="h-7 w-7 text-primary transition-all duration-200 group-hover:opacity-0 group-hover:scale-75" />
+
+                        {/* Expand Button (Hidden by default, reveals on hover) */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 text-muted-foreground group-hover:text-foreground">
+                          <Icons.PanelLeftOpen className="h-5 w-5" />
+                        </div>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Expand sidebar</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <>
+                    <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold mr-auto group" aria-label={settings.appName}>
+                      <Icons.Logo className="h-7 w-7 text-primary group-hover:scale-105 transition-transform duration-200" />
+                      {loading ? <Skeleton className="h-6 w-32" /> : <span className="text-xl font-bold tracking-tight">{settings.appName}</span>}
+                    </Link>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                          onClick={onToggle}
+                          aria-label="Collapse sidebar"
+                        >
+                          <Icons.PanelLeftClose className="h-4.5 w-4.5" />
+                          <span className="sr-only">Collapse sidebar</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">Collapse sidebar</TooltipContent>
+                    </Tooltip>
+                  </>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50" onClick={onToggle}>
-                    <Icons.Filter className="h-5 w-5" />
-                    <span className="sr-only">Toggle sidebar</span>
-                </Button>
               </div>
             <div className="flex-1 overflow-y-auto py-2">
                 <nav className={cn("grid items-start text-sm font-medium", isCollapsed ? "px-2 justify-center" : "px-4")}>
