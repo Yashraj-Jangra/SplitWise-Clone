@@ -367,10 +367,10 @@ export function SetBudgetDialog({
           <div className="flex items-center gap-2">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
-              className="h-10 rounded-xl text-sm font-medium px-4"
+              className="h-10 rounded-xl text-sm font-medium px-4 hover:bg-muted hover:text-foreground transition-colors border-border/40"
             >
               Cancel
             </Button>
