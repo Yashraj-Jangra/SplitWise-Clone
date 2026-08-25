@@ -583,48 +583,50 @@ export function SetBudgetDialog({
   // ── Expanded Category View (Right Pane on Desktop, Slide-in on Mobile) ──
   const CategoryExpandedPane = (
     <div className="flex flex-col h-full bg-background">
-      {/* Pane Header */}
-      <div className="p-4 px-6 border-b border-border/30 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-md bg-muted text-foreground">
-            <Icons.PieChart className="h-4 w-4" />
+      {/* Pane Header (Desktop only since mobile uses SheetHeader) */}
+      {!isMobile && (
+        <div className="p-4 px-6 border-b border-border/30 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-muted text-foreground">
+              <Icons.PieChart className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Category Caps</h3>
+              <p className="text-[11px] text-muted-foreground">
+                {categoryAllocations.list.length} of {MASTER_CATEGORIES.length} allocated
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Category Caps</h3>
-            <p className="text-[11px] text-muted-foreground">
-              {categoryAllocations.list.length} of {MASTER_CATEGORIES.length} allocated
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {categoryAllocations.list.length > 0 && (
+          <div className="flex items-center gap-2">
+            {categoryAllocations.list.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const emptyCats = Object.fromEntries(MASTER_CATEGORIES.map((c) => [c.key, '']));
+                  form.setValue('categories', emptyCats);
+                }}
+                className="h-7 text-[11px] text-muted-foreground hover:text-foreground px-2"
+              >
+                Clear All
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              onClick={() => {
-                const emptyCats = Object.fromEntries(MASTER_CATEGORIES.map((c) => [c.key, '']));
-                form.setValue('categories', emptyCats);
-              }}
-              className="h-7 text-[11px] text-muted-foreground hover:text-foreground px-2"
+              size="icon"
+              onClick={() => setIsCategoryExpanded(false)}
+              className="h-7 w-7 rounded-md hover:bg-muted"
+              title="Collapse panel"
             >
-              Clear All
+              <Icons.Close className="h-4 w-4" />
+              <span className="sr-only">Close category panel</span>
             </Button>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCategoryExpanded(false)}
-            className="h-7 w-7 rounded-md hover:bg-muted"
-            title="Collapse panel"
-          >
-            <Icons.Close className="h-4 w-4" />
-            <span className="sr-only">Close category panel</span>
-          </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Category List */}
       <ScrollArea className="flex-1 px-6 py-3 overflow-y-auto">
@@ -705,9 +707,16 @@ export function SetBudgetDialog({
           type="button"
           size="sm"
           onClick={() => setIsCategoryExpanded(false)}
-          className="h-8 px-4"
+          className="h-8 px-3 gap-1.5 font-medium"
         >
-          Done
+          {isMobile ? (
+            <>
+              <Icons.ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Budget</span>
+            </>
+          ) : (
+            'Done'
+          )}
         </Button>
       </div>
     </div>
@@ -744,11 +753,39 @@ export function SetBudgetDialog({
       <Sheet open={open} onOpenChange={setOpen}>
         {trigger && <SheetTrigger asChild>{dialogTrigger}</SheetTrigger>}
         <SheetContent side="bottom" className="h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0 bg-background overflow-hidden">
-          <SheetHeader className="p-4 border-b border-border/20 text-left shrink-0">
-            <SheetTitle className="text-lg font-bold font-headline flex items-center gap-2">
-              <Icons.Currency className="h-5 w-5 text-muted-foreground" />
-              Monthly Budget
-            </SheetTitle>
+          <SheetHeader className="p-4 border-b border-border/20 text-left shrink-0 flex flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {isCategoryExpanded && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsCategoryExpanded(false)}
+                  className="h-8 w-8 rounded-md hover:bg-muted shrink-0"
+                  title="Back to monthly budget"
+                >
+                  <Icons.ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <SheetTitle className="text-lg font-bold font-headline flex items-center gap-2 truncate">
+                <Icons.Currency className="h-5 w-5 text-muted-foreground shrink-0" />
+                <span>{isCategoryExpanded ? 'Category Caps' : 'Monthly Budget'}</span>
+              </SheetTitle>
+            </div>
+            {isCategoryExpanded && categoryAllocations.list.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const emptyCats = Object.fromEntries(MASTER_CATEGORIES.map((c) => [c.key, '']));
+                  form.setValue('categories', emptyCats);
+                }}
+                className="h-7 text-[11px] text-muted-foreground hover:text-foreground px-2 shrink-0"
+              >
+                Clear All
+              </Button>
+            )}
           </SheetHeader>
           <FormProvider {...form}>
             <form id="set-budget-form" onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-hidden flex flex-col">
