@@ -184,31 +184,31 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-border/20 rounded-2xl shadow-2xl bg-background">
-        <div className="p-6 pb-2 border-b border-border/20">
+      <DialogContent className="sm:max-w-[460px] p-0 overflow-hidden border border-border rounded-xl shadow-xl bg-card">
+        <div className="p-4 border-b border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold font-headline flex items-center gap-2">
-              <Icons.Currency className="h-5 w-5 text-primary" />
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <Icons.Currency className="h-4 w-4 text-foreground/80" />
               Monthly Group Budget
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Set a monthly spending target for {group.name} to track pace and daily allowances.
+            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+              Configure spending targets and alert benchmarks for {group.name}.
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 pt-2 space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-4">
             {/* Enable/Disable Toggle */}
             <FormField
               control={form.control}
               name="enabled"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-xl bg-muted/20 border border-border/30 p-3.5 space-y-0">
+                <FormItem className="flex items-center justify-between rounded-lg bg-muted/30 border border-border p-3 space-y-0">
                   <div>
-                    <FormLabel className="text-sm font-medium">Enable Budget Tracking</FormLabel>
-                    <FormDescription className="text-xs text-muted-foreground">
-                      Calculate burn rates and safe limits
+                    <FormLabel className="text-xs font-bold text-foreground">Enable Budget Tracking</FormLabel>
+                    <FormDescription className="text-[11px] text-muted-foreground">
+                      Track spending velocity and safe burn rates
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -224,35 +224,35 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
               name="monthlyLimit"
               render={({ field }) => (
                 <FormItem className="space-y-1.5">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Monthly Budget Target
+                  <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Monthly Target
                   </FormLabel>
-                  <div className="flex items-baseline gap-1 border-b-2 border-border/40 focus-within:border-primary transition-colors pb-1">
-                    <span className="text-2xl font-bold text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                  <div className="flex items-baseline gap-1 border-b border-border focus-within:border-foreground transition-colors pb-1">
+                    <span className="text-2xl font-bold font-mono text-muted-foreground">{CURRENCY_SYMBOL}</span>
                     <FormControl>
                       <Input
                         type="number"
                         placeholder="25000"
                         {...field}
                         value={field.value ?? ''}
-                        className="text-[clamp(2rem,6vw,2.75rem)] font-bold text-foreground border-none !bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        className="text-3xl font-black font-mono tracking-tight text-foreground border-none !bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                     </FormControl>
                   </div>
                   <FormMessage className="text-xs" />
 
                   {/* Preset Amount Chips */}
-                  <div className="flex flex-wrap gap-1.5 pt-2">
+                  <div className="flex flex-wrap gap-1.5 pt-1.5">
                     {QUICK_PRESETS.map((preset) => (
                       <button
                         key={preset}
                         type="button"
                         onClick={() => form.setValue('monthlyLimit', preset, { shouldValidate: true })}
                         className={cn(
-                          'px-2.5 py-1 text-xs rounded-lg font-medium transition-colors border',
+                          'px-2.5 py-1 text-xs font-mono font-bold rounded-md transition-colors border',
                           form.watch('monthlyLimit') === preset
-                            ? 'bg-primary/20 text-primary border-primary/30 font-semibold'
-                            : 'bg-muted/30 text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted/60'
+                            ? 'bg-foreground text-background border-foreground font-bold'
+                            : 'bg-muted/40 text-muted-foreground border-border hover:text-foreground hover:bg-muted'
                         )}
                       >
                         {CURRENCY_SYMBOL}{preset.toLocaleString('en-IN')}
@@ -264,11 +264,11 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
             />
 
             {/* Notification Thresholds */}
-            <div className="space-y-2 rounded-xl bg-muted/20 border border-border/30 p-3.5">
-              <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+            <div className="space-y-2 rounded-lg bg-muted/30 border border-border p-3">
+              <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
                 Alert Thresholds
               </FormLabel>
-              <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
                 {[
                   { name: 'threshold75', label: '75% Caution' },
                   { name: 'threshold90', label: '90% Warning' },
@@ -281,17 +281,17 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
                     render={({ field }) => (
                       <label
                         className={cn(
-                          'flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-colors',
+                          'flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-xs font-medium cursor-pointer transition-colors select-none',
                           field.value
-                            ? 'bg-primary/15 text-primary border-primary/30'
-                            : 'bg-background/50 text-muted-foreground border-border/40 hover:bg-muted/40'
+                            ? 'bg-muted text-foreground border-foreground/40 font-semibold'
+                            : 'bg-background text-muted-foreground border-border hover:bg-muted/30'
                         )}
                       >
                         <input
                           type="checkbox"
                           checked={field.value}
                           onChange={field.onChange}
-                          className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                          className="rounded border-border text-foreground focus:ring-0 h-3.5 w-3.5"
                         />
                         <span>{t.label}</span>
                       </label>
@@ -302,30 +302,30 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
             </div>
 
             {/* Optional Category Allocations */}
-            <Accordion type="single" collapsible className="border border-border/30 rounded-xl px-3.5 bg-muted/10">
+            <Accordion type="single" collapsible className="border border-border rounded-lg px-3 bg-muted/20">
               <AccordionItem value="categories" className="border-none">
-                <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 hover:no-underline">
-                  <div className="flex items-center gap-2">
-                    <Icons.PieChart className="h-4 w-4 text-primary" />
+                <AccordionTrigger className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-2.5 hover:no-underline">
+                  <div className="flex items-center gap-1.5">
+                    <Icons.PieChart className="h-3.5 w-3.5 text-muted-foreground" />
                     <span>Category Allocations (Optional)</span>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-3 space-y-2.5">
-                  <p className="text-xs text-muted-foreground">
-                    Set target limits for specific categories to detect category spikes early.
+                <AccordionContent className="pt-1 pb-3 space-y-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    Set target caps for specific categories to detect spikes.
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-44 overflow-y-auto pr-1">
                     {masterCategoryKeys.slice(0, 8).map((cat) => (
-                      <div key={cat} className="flex items-center gap-2 bg-background/60 p-2 rounded-lg border border-border/30">
+                      <div key={cat} className="flex items-center gap-1.5 bg-background p-1.5 rounded-md border border-border">
                         <span className="text-xs font-medium truncate flex-1">{cat}</span>
-                        <div className="flex items-center gap-1 w-24">
-                          <span className="text-xs text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                        <div className="flex items-center gap-1 w-20">
+                          <span className="text-xs text-muted-foreground font-mono">{CURRENCY_SYMBOL}</span>
                           <Input
                             type="number"
                             placeholder="0"
                             value={form.watch(`categories.${cat}`) || ''}
                             onChange={(e) => form.setValue(`categories.${cat}`, e.target.value)}
-                            className="h-7 text-xs px-1.5 text-right rounded-md bg-muted/30"
+                            className="h-6 text-xs font-mono px-1 text-right rounded bg-muted/30 border-border"
                           />
                         </div>
                       </div>
@@ -336,7 +336,7 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
             </Accordion>
 
             {/* Action Buttons */}
-            <DialogFooter className="flex flex-row items-center justify-between sm:justify-between pt-2 border-t border-border/20 gap-2">
+            <DialogFooter className="flex flex-row items-center justify-between sm:justify-between pt-3 border-t border-border gap-2">
               {initialBudget?.monthlyLimit ? (
                 <Button
                   type="button"
@@ -344,9 +344,9 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
                   size="sm"
                   onClick={handleDisableBudget}
                   disabled={isSubmitting}
-                  className="h-10 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive px-3 rounded-xl"
+                  className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive px-2 rounded-md"
                 >
-                  Disable Budget
+                  Turn Off
                 </Button>
               ) : (
                 <div />
@@ -354,19 +354,21 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setOpen(false)}
                   disabled={isSubmitting}
-                  className="h-10 rounded-xl text-sm font-medium px-4"
+                  className="h-8 rounded-md text-xs font-bold uppercase tracking-wider px-3 border-border"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
+                  size="sm"
                   disabled={isSubmitting}
-                  className="h-10 rounded-xl text-sm font-medium px-5"
+                  className="h-8 rounded-md text-xs font-bold uppercase tracking-wider px-4"
                 >
-                  {isSubmitting ? 'Saving...' : 'Save Budget'}
+                  {isSubmitting ? 'Saving...' : 'Save Target'}
                 </Button>
               </div>
             </DialogFooter>

@@ -153,49 +153,48 @@ export function GroupDetailHeader({ group, user, currentUserBalance, expenses = 
       </div>
       
       {/* Compact Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/50 bg-background/50">
-        <div className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">Total Spent</p>
-            <p className="font-bold text-lg">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border bg-card">
+        <div className="p-2.5 sm:p-3 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Spent</p>
+            <p className="font-bold font-mono text-base sm:text-lg text-foreground">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
         </div>
-        <div className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">Members</p>
-            <p className="font-bold text-lg">{group.members.length}</p>
+        <div className="p-2.5 sm:p-3 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Members</p>
+            <p className="font-bold font-mono text-base sm:text-lg text-foreground">{group.members.length}</p>
         </div>
-        <div className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">Your Balance</p>
+        <div className="p-2.5 sm:p-3 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Your Balance</p>
             <p className={cn(
-                "font-bold text-lg",
-                currentUserBalance > 0.01 ? 'text-green-500' : currentUserBalance < -0.01 ? 'text-red-500' : 'text-foreground'
+                "font-bold font-mono text-base sm:text-lg",
+                currentUserBalance > 0.01 ? 'text-emerald-400' : currentUserBalance < -0.01 ? 'text-rose-400' : 'text-foreground'
             )}>
                 {currentUserBalance >= 0 ? '' : '-'}{getGroupCurrencySymbol(group)}{Math.abs(currentUserBalance).toFixed(2)}
             </p>
         </div>
         <div
-          className="p-3 text-center cursor-pointer hover:bg-muted/30 transition-colors group/budget"
+          className="p-2.5 sm:p-3 text-center cursor-pointer hover:bg-muted/40 transition-colors group/budget"
           onClick={onNavigateToBudget}
           title="View Budget Details"
         >
             <div className="flex items-center justify-center gap-1">
-              <p className="text-xs text-muted-foreground">Monthly Budget</p>
-              <Icons.Currency className="h-3 w-3 text-primary opacity-70 group-hover/budget:opacity-100" />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monthly Budget</p>
             </div>
             {budgetStats.isEnabled ? (
               <p className={cn(
-                "font-bold text-lg truncate",
+                "font-bold font-mono text-base sm:text-lg truncate",
                 budgetStats.status === 'healthy' && "text-emerald-400",
                 budgetStats.status === 'caution' && "text-amber-400",
                 budgetStats.status === 'warning' && "text-orange-400",
                 budgetStats.status === 'overbudget' && "text-rose-400",
               )}>
                 {budgetStats.percentageUsed.toFixed(0)}%
-                <span className="text-xs font-normal text-muted-foreground ml-1">
-                  ({CURRENCY_SYMBOL}{budgetStats.remainingBudget >= 0 ? `${(budgetStats.remainingBudget / 1000).toFixed(1)}k left` : 'over'})
+                <span className="text-[11px] font-normal text-muted-foreground ml-1">
+                  ({CURRENCY_SYMBOL}{budgetStats.remainingBudget >= 0 ? `${(budgetStats.remainingBudget / 1000).toFixed(1)}k` : 'over'})
                 </span>
               </p>
             ) : (
-              <p className="text-sm font-semibold text-primary pt-0.5 group-hover/budget:underline">
-                + Set Target
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground pt-1 group-hover/budget:underline">
+                + Set Budget
               </p>
             )}
         </div>
