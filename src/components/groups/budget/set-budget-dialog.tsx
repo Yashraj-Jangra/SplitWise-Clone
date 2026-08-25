@@ -78,7 +78,7 @@ const MASTER_CATEGORIES: CategoryMeta[] = [
   { key: 'Education', name: 'Education', icon: 'Education', color: '#6366f1' },
   { key: 'Gifts and Donations', name: 'Gifts & Donations', icon: 'Gift', color: '#eab308' },
   { key: 'Travel', name: 'Travel', icon: 'Plane', color: '#14b8a6' },
-  { key: 'Other', name: 'Other / Misc', icon: 'Wallet', color: '#64748b' },
+  { key: 'Other', name: 'Miscellaneous', icon: 'Wallet', color: '#64748b' },
 ];
 
 interface SetBudgetDialogProps {
@@ -288,7 +288,7 @@ export function SetBudgetDialog({
   const DistributionMeter = (
     <div className="rounded-md border border-border/30 bg-muted/20 p-3 space-y-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-foreground">Distribution</span>
+        <span className="font-medium text-foreground">Budget Allocation</span>
         <span
           className={cn(
             'text-[11px] font-mono',
@@ -297,7 +297,7 @@ export function SetBudgetDialog({
         >
           {categoryAllocations.isOverTotal
             ? `Over by ${CURRENCY_SYMBOL}${categoryAllocations.diff.toLocaleString('en-IN')}`
-            : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} of ${CURRENCY_SYMBOL}${currentTotal.toLocaleString('en-IN')} assigned`}
+            : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} capped • ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')} flexible pool`}
         </span>
       </div>
 
@@ -321,7 +321,7 @@ export function SetBudgetDialog({
               <div
                 style={{ width: `${unallocatedPct}%` }}
                 className="h-full bg-muted/40 transition-all duration-300 last:rounded-r-full"
-                title={`Unallocated buffer: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')}`}
+                title={`Flexible group pool: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')} (${unallocatedPct.toFixed(0)}%)`}
               />
             )}
           </>
@@ -355,6 +355,12 @@ export function SetBudgetDialog({
               <span className="font-mono text-muted-foreground/70">({item.pctOfTotal.toFixed(0)}%)</span>
             </div>
           ))}
+          {unallocatedAmount > 0 && currentTotal > 0 && (
+            <div className="flex items-center gap-1 text-muted-foreground/80 font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
+              <span>Flexible Pool ({unallocatedPct.toFixed(0)}%)</span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -479,8 +485,8 @@ export function SetBudgetDialog({
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {categoryAllocations.list.length > 0
-                      ? `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} configured`
-                      : 'Set optional limits per category'}
+                      ? `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} capped • ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')} flexible pool`
+                      : 'Optional caps per category • All expenses share the budget'}
                   </p>
                 </div>
               </div>
@@ -622,9 +628,17 @@ export function SetBudgetDialog({
 
       {/* Category List */}
       <ScrollArea className="flex-1 px-6 py-3 overflow-y-auto">
-        <div className="space-y-1.5 pb-2">
+        <div className="space-y-2.5 pb-2">
           {/* Top Live Distribution Meter inside category pane */}
           {DistributionMeter}
+
+          {/* Micro Explainer Note */}
+          <div className="flex items-start gap-2 p-2.5 rounded-md bg-muted/20 border border-border/20 text-xs text-muted-foreground">
+            <Icons.Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-relaxed">
+              Category caps are optional. Any unallocated amount stays in your <span className="font-medium text-foreground">flexible group pool</span> for other expenses.
+            </p>
+          </div>
 
           {/* Category Input Rows */}
           <div className="divide-y divide-border/20 pt-1">
@@ -679,7 +693,7 @@ export function SetBudgetDialog({
       {/* Pane Footer Summary */}
       <div className="p-4 px-6 border-t border-border/30 bg-background flex items-center justify-between text-xs shrink-0">
         <div className="space-y-0.5">
-          <p className="text-[11px] text-muted-foreground">Total Assigned</p>
+          <p className="text-[11px] text-muted-foreground">Total Capped</p>
           <p className="text-sm font-semibold text-foreground font-mono">
             {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
             <span className="text-xs font-normal text-muted-foreground ml-1">
