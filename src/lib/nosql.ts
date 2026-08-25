@@ -38,12 +38,12 @@ async function getOraclePool() {
         configDir: walletDir,
         walletLocation: walletDir,
         walletPassword: dbPassword,
-        poolMin: 0, // Avoid holding stale idle connections across cloud firewall timeouts
-        poolMax: 10,
-        poolIncrement: 1,
-        poolTimeout: 60, // Close idle connections after 60 seconds
+        poolMin: 1, // Keep 1 warm connection ready for immediate query response
+        poolMax: 20, // Accommodate high concurrent requests without queueing
+        poolIncrement: 2, // Scale pool quickly during simultaneous page loads
+        poolTimeout: 120, // Keep idle connections alive longer
         poolPingInterval: 60, // Validate connection health before handing out of pool
-        queueTimeout: 30000,
+        queueTimeout: 60000, // 60s queue allowance for mTLS handshakes
         enableStatistics: false,
       });
     })().catch((err) => {
@@ -62,10 +62,13 @@ function isRecoverableOracleError(err: any): boolean {
   return (
     code === 'NJS-500' ||
     code === 'NJS-521' ||
+    code === 'NJS-040' ||
     msg.includes('NJS-500') ||
     msg.includes('NJS-521') ||
+    msg.includes('NJS-040') ||
     msg.includes('CLOSED OR BROKEN') ||
     msg.includes('END-OF-FILE ON COMMUNICATION CHANNEL') ||
+    msg.includes('QUEUE TIMEOUT') ||
     msg.includes('ORA-03113') ||
     msg.includes('ORA-03114') ||
     msg.includes('ORA-03135')
