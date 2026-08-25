@@ -165,6 +165,8 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
     broadcast_critical: { inApp: true, push: true, email: true },
     monthly_summary: { inApp: true, push: true, email: true },
     group_inactivity: { inApp: true, push: true, email: false },
+    budget_alert: { inApp: true, push: true, email: true },
+    budget_exceeded: { inApp: true, push: true, email: true },
   }
 };
 

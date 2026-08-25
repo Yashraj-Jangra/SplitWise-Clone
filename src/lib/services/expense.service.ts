@@ -2,11 +2,88 @@ import { getItem, putItem, queryByPk, queryByEntityType, deleteItem } from '@/li
 import type { Expense, ExpenseDocument, UserProfile, ExpensePayer, ExpenseParticipant } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
-import { notifyExpenseAdded, notifyExpenseUpdated, notifyExpenseDeleted } from '@/lib/notification-service';
+import { notifyExpenseAdded, notifyExpenseUpdated, notifyExpenseDeleted, notifyBudgetAlert } from '@/lib/notification-service';
 import { getSiteSettings } from './settings.service';
 import { getMasterCategory } from '../expense-categories';
 import { getFullName } from '../utils';
 import { format } from 'date-fns';
+
+async function checkAndNotifyBudgetThreshold(
+  groupId: string,
+  groupDoc: any,
+  actorId: string,
+  expenseDate: Date,
+  deltaAmount: number
+) {
+  try {
+    const budget = groupDoc.budget;
+    if (!budget || !budget.enabled || !budget.monthlyLimit || budget.monthlyLimit <= 0) {
+      return;
+    }
+
+    const targetYear = expenseDate.getFullYear();
+    const targetMonth = expenseDate.getMonth();
+
+    const expenseDocs = await queryByPk<any>(`GROUP#${groupId}`);
+    const monthExpenses = expenseDocs.filter((r: any) => {
+      if (r.entityType !== 'EXPENSE' || !r.date) return false;
+      const d = new Date(r.date);
+      return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+    });
+
+    const currentTotal = monthExpenses.reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+    const previousTotal = Math.max(0, currentTotal - deltaAmount);
+    const limit = Number(budget.monthlyLimit);
+
+    const prevPct = (previousTotal / limit) * 100;
+    const newPct = (currentTotal / limit) * 100;
+
+    const enabledThresholds: number[] = budget.alertThresholds || [75, 90, 100];
+
+    const currentMembers: any[] = groupDoc.members || [];
+    const memberIds = [...new Set(currentMembers.map((m: any) => (typeof m === 'string' ? m : m.userId)).filter(Boolean))];
+    if (groupDoc.createdById && !memberIds.includes(groupDoc.createdById)) {
+      memberIds.push(groupDoc.createdById);
+    }
+
+    if (enabledThresholds.includes(100) && prevPct < 100 && newPct >= 100) {
+      await notifyBudgetAlert(
+        memberIds,
+        actorId,
+        groupId,
+        groupDoc.name,
+        100,
+        currentTotal,
+        limit,
+        true
+      );
+    } else if (enabledThresholds.includes(90) && prevPct < 90 && newPct >= 90) {
+      await notifyBudgetAlert(
+        memberIds,
+        actorId,
+        groupId,
+        groupDoc.name,
+        90,
+        currentTotal,
+        limit,
+        false
+      );
+    } else if (enabledThresholds.includes(75) && prevPct < 75 && newPct >= 75) {
+      await notifyBudgetAlert(
+        memberIds,
+        actorId,
+        groupId,
+        groupDoc.name,
+        75,
+        currentTotal,
+        limit,
+        false
+      );
+    }
+  } catch (err) {
+    console.error('Failed checking budget threshold:', err);
+  }
+}
 
 function mapExpenseRow(row: any, payers: ExpensePayer[], participants: ExpenseParticipant[], creator: UserProfile): Expense {
   return {
@@ -85,6 +162,15 @@ export async function addExpense(
     await notifyExpenseAdded(recipientIds, actorId, expenseData.groupId, expenseId, expenseData.description, expenseData.amount);
   }
 
+  // Budget threshold checks
+  await checkAndNotifyBudgetThreshold(
+    expenseData.groupId,
+    groupDoc,
+    actorId,
+    expenseData.date,
+    expenseData.amount
+  );
+
   return expenseId;
 }
 
@@ -124,14 +210,24 @@ export async function updateExpense(
     `EXPENSE#${expenseId}`
   );
 
-  // Adjust group total
+  // Adjust group total & check budget
   const diff = expenseData.amount - oldAmount;
-  if (Math.abs(diff) > 0.001) {
-    const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
-    if (groupDoc) {
+  const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
+  if (groupDoc) {
+    if (Math.abs(diff) > 0.001) {
       groupDoc.totalExpenses = (groupDoc.totalExpenses || 0) + diff;
       groupDoc.updatedAt = new Date().toISOString();
       await putItem(`GROUP#${expenseData.groupId}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupDoc.createdById}`, `GROUP#${expenseData.groupId}`);
+    }
+
+    if (diff > 0) {
+      await checkAndNotifyBudgetThreshold(
+        expenseData.groupId,
+        groupDoc,
+        actorId,
+        expenseData.date,
+        diff
+      );
     }
   }
 

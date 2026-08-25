@@ -5,7 +5,7 @@ function getNotificationIcon(type) {
   if (type === 'payment_reminder' || type === 'payment_confirmation_request') return '/notif-icons/notif-reminder.svg';
   if (type === 'member_added' || type === 'member_removed') return '/notif-icons/notif-member.svg';
   if (type === 'support_reply') return '/notif-icons/notif-support.svg';
-  if (type === 'monthly_summary') return '/notif-icons/notif-summary.svg';
+  if (type === 'monthly_summary' || type === 'budget_alert' || type === 'budget_exceeded') return '/notif-icons/notif-summary.svg';
   if (type === 'group_inactivity') return '/notif-icons/notif-inactivity.svg';
   if (type === 'broadcast_critical') return '/notif-icons/notif-critical.svg';
   if (type === 'broadcast_announcement') return '/notif-icons/notif-announcement.svg';
@@ -22,6 +22,9 @@ self.addEventListener('push', (event) => {
     const actions = [];
     if (data.type && data.type.includes('expense')) {
       actions.push({ action: 'view', title: '👁 View Expense' });
+      actions.push({ action: 'mark_read', title: '✓ Mark Read' });
+    } else if (data.type === 'budget_alert' || data.type === 'budget_exceeded') {
+      actions.push({ action: 'view', title: '📊 View Budget' });
       actions.push({ action: 'mark_read', title: '✓ Mark Read' });
     } else if (data.type === 'settlement_added') {
       actions.push({ action: 'view', title: '💳 View Settlement' });

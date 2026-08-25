@@ -78,6 +78,18 @@ export function NotificationItem({ notification, onClick, onMarkRead }: Notifica
       bgColor = 'bg-amber-500/10';
       if (!notification.isRead) borderClass = 'border-l-amber-500';
       break;
+    case 'budget_alert':
+      Icon = Icons.Currency;
+      iconColor = 'text-amber-500';
+      bgColor = 'bg-amber-500/10';
+      if (!notification.isRead) borderClass = 'border-l-amber-500';
+      break;
+    case 'budget_exceeded':
+      Icon = Icons.Currency;
+      iconColor = 'text-rose-500';
+      bgColor = 'bg-rose-500/10';
+      if (!notification.isRead) borderClass = 'border-l-rose-500';
+      break;
   }
 
   return (

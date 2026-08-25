@@ -39,6 +39,8 @@ const EVENTS_LIST: EventConfig[] = [
   { key: 'balance_reminder', label: 'Balance Reminder', description: 'Periodic reminders of your outstanding balances' },
   { key: 'payment_confirmation_request', label: 'Confirmation Request', description: 'When someone requests confirmation of a settlement' },
   { key: 'monthly_summary', label: 'Monthly Summary Report', description: 'Monthly summaries of your spending statistics' },
+  { key: 'budget_alert', label: 'Budget Approaching Limit', description: 'When a group reaches 75% or 90% of its monthly spending target' },
+  { key: 'budget_exceeded', label: 'Budget Exceeded', description: 'When group spending surpasses 100% of the monthly budget limit' },
   { key: 'group_inactivity', label: 'Group Inactivity Nudges', description: 'Reminders for groups that have been inactive for a while' },
   { key: 'support_reply', label: 'Support Reply', description: 'When the admin responds to your support tickets' },
   { key: 'broadcast_announcement', label: 'Announcements', description: 'General system announcements and newsletters' },

@@ -142,7 +142,9 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
     } else if (type.startsWith('broadcast')) {
       destinationUrl = '/notifications';
     } else if (groupId) {
-      if (type === 'payment_reminder') {
+      if (type === 'budget_alert' || type === 'budget_exceeded') {
+        destinationUrl = `/groups/${groupId}?tab=budget`;
+      } else if (type === 'payment_reminder') {
         destinationUrl = `/groups/${groupId}?settlementId=${settlementId || ''}&action=settle`;
       } else if (expenseId && (type === 'expense_added' || type === 'expense_updated')) {
         destinationUrl = `/groups/${groupId}?expenseId=${expenseId}&action=view`;
@@ -270,6 +272,14 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
             break;
           case 'group_inactivity':
             emailSubject = `😴 Dormant Group: Keep splitting with "${resolvedGroupName || 'Group'}"!`;
+            break;
+          case 'budget_alert':
+            emailSubject = `⚠️ Budget Alert: ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nReview category limits and track safe daily burn rates directly in the app.`;
+            break;
+          case 'budget_exceeded':
+            emailSubject = `🚨 Budget Exceeded: ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nYour group has exceeded the monthly budget ceiling. Review expenses and settle outstanding balances in the app.`;
             break;
         }
 

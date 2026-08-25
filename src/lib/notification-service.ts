@@ -243,3 +243,40 @@ export const notifyPaymentReminder = (
     disclaimer,
   });
 };
+
+export const notifyBudgetAlert = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  groupName: string,
+  threshold: number,
+  spentAmount: number,
+  monthlyLimit: number,
+  isExceeded: boolean,
+) => {
+  const type: NotificationEventType = isExceeded ? 'budget_exceeded' : 'budget_alert';
+  const percentStr = `${Math.round((spentAmount / monthlyLimit) * 100)}%`;
+  const spentFormatted = `₹${spentAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  const limitFormatted = `₹${monthlyLimit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
+  const title = isExceeded
+    ? `🚨 Budget Exceeded: "${groupName}"`
+    : `⚠️ Budget Alert: "${groupName}" reached ${threshold}%`;
+
+  const body = isExceeded
+    ? `Group "${groupName}" has exceeded its monthly limit of ${limitFormatted}. Total spend is currently ${spentFormatted} (${percentStr}).`
+    : `Group "${groupName}" has reached ${threshold}% of its monthly budget (${spentFormatted} of ${limitFormatted}).`;
+
+  return dispatchNotification({
+    type,
+    recipientIds,
+    title,
+    body,
+    actorId,
+    groupId,
+    target: 'specific_users',
+    groupName,
+    amount: spentAmount,
+    actionUrl: `/groups/${groupId}?tab=budget`,
+  });
+};

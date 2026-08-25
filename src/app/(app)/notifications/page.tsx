@@ -55,12 +55,12 @@ export default function NotificationsPage() {
   const expensesNotifs = notifications.filter(n => n.type.includes('expense'));
   const settlementsNotifs = notifications.filter(n => n.type.includes('settlement'));
   const remindersNotifs = notifications.filter(n => 
-    ['payment_reminder', 'balance_reminder', 'payment_confirmation_request', 'monthly_summary', 'group_inactivity'].includes(n.type)
+    ['payment_reminder', 'balance_reminder', 'payment_confirmation_request', 'monthly_summary', 'group_inactivity', 'budget_alert', 'budget_exceeded'].includes(n.type)
   );
   const otherNotifs = notifications.filter(n => 
     !n.type.includes('expense') && 
     !n.type.includes('settlement') && 
-    !['payment_reminder', 'balance_reminder', 'payment_confirmation_request', 'monthly_summary', 'group_inactivity'].includes(n.type)
+    !['payment_reminder', 'balance_reminder', 'payment_confirmation_request', 'monthly_summary', 'group_inactivity', 'budget_alert', 'budget_exceeded'].includes(n.type)
   );
 
   // Calculate tab unread counts

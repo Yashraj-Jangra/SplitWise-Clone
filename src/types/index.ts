@@ -12,6 +12,8 @@ export type NotificationEventType =
   | 'payment_reminder'
   | 'payment_confirmation_request'
   | 'support_reply'
+  | 'budget_alert'
+  | 'budget_exceeded'
   | 'broadcast_announcement'
   | 'broadcast_critical'
   | 'monthly_summary'

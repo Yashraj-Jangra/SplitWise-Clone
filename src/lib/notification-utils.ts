@@ -30,6 +30,10 @@ export function getNotificationUrl(notification: NotificationV2): string | null 
     case 'group_inactivity':
       return groupId ? `/groups/${groupId}` : null;
 
+    case 'budget_alert':
+    case 'budget_exceeded':
+      return groupId ? `/groups/${groupId}?tab=budget` : null;
+
     case 'payment_reminder':
       if (groupId && settlementId) {
         return `/groups/${groupId}?settlementId=${settlementId}&action=settle`;
