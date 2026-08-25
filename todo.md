@@ -1,0 +1,132 @@
+# Session Progress & Context Preservation
+
+## Work Completed
+- **Oracle Autonomous DB Migration**: Exported 4,555 PostgreSQL records into 2,258 single-table documents in table `SplitItDB`.
+- **Database Connection Verified**: Diagnostic test confirmed live connection to Oracle Autonomous Database (35 users, 36 accounts, 2 sessions, 19 groups, 749 expenses, 141 settlements, 1 settings document).
+- **Service Layer Migration**: Refactored `settings`, `user`, `group`, `expense`, `settlement`, `history`, `notification`, and `ticket` services to use `src/lib/nosql.ts`.
+- **Better Auth Adapter & Session Fixes**: Fixed `nosqlAuthAdapter` to populate attached `account` arrays on `findOne({ model: 'user' })` and attached `user` profiles on `findOne({ model: 'session' })`. Enforced strict boolean parsing for `emailVerified` and fixed `databaseHooks.user.create.before` return contract. Verified 100% end-to-end `signUpEmail`, `signInEmail`, and cookie session validation (`get-session`) returning HTTP 200.
+- **Admin High-Density Modern Minimalist Theme Redesign**:
+  - Overhauled [`design-system.md`](file:///d:/Projects/SplitWise-Clone/design-system.md) to establish the **High-Density Solid Modern Minimalist System**.
+  - Restored glassmorphism backdrop blur on the top header navbar (`AdminHeader`: `sticky top-0 z-40 bg-background/70 border-b border-border/40 backdrop-blur-md`) for scrolling parity with the main app navbar.
+  - Purged generic AI shiny card overlays, gradient cards, and glowing rainbow borders across directory tables and stat panels.
+  - Applied solid neutral surfaces (`bg-card`, `bg-background`, `bg-muted`), tight corner radii (`rounded-md` / `rounded-lg`), and crisp borders (`border-border`).
+  - Flattened DOM structures, removing redundant div wrappers across headers, stat cards, control bars, and data tables.
+  - Adjusted table row paddings (`py-3`), font sizes (`text-sm font-bold` user/group names), and expanded sidebar navigation width (`260px`) and item font size (`text-sm font-medium`) for comfortable, effortless legibility.
+  - Updated default [`Input`](file:///d:/Projects/SplitWise-Clone/src/components/ui/input.tsx) and [`Textarea`](file:///d:/Projects/SplitWise-Clone/src/components/ui/textarea.tsx) components with explicit hover, focus, and active whole-box background color transitions without border outline rings.
+  - Squashed all incremental UI redesign commits into a single atomic commit: `🎨 redesign admin panel layout with high-density solid theme and input state transitions`.
+- **Dashboard Balance Widget Calculation Fix**:
+  - Unified [`loadDashboardData`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx#L120-L155) to compute user balances directly by aggregating simplified group debts from [`getGroupBalances`](file:///d:/Projects/SplitWise-Clone/src/lib/services/balance.service.ts#L6).
+  - Aligned [`ObligationsCard`](file:///d:/Projects/SplitWise-Clone/src/components/dashboard/obligations-card.tsx#L43-L55) filtering logic: `type === 'owed'` filters positive balances (`> 0.01`, people who owe you), while `type === 'owes'` filters negative balances (`< -0.01`, people you owe).
+  - Ensures 100% mathematical parity between Group Balances pages (`/groups/[groupId]`) and Dashboard widgets (`/dashboard`).
+- **SSE Notification Stream Race Condition Fix**:
+  - Resolved `TypeError: Invalid state: Controller is already closed (ERR_INVALID_STATE)` in [`stream/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/notifications/stream/route.ts). Added lifecycle guards (`isClosed` & `request.signal.aborted` checks) before `enqueue()`, `close()`, and async database fetches when a client closes or navigates away.
+  - Created HTTP bridge endpoint [`/api/pay-upi`](file:///d:/Projects/SplitWise-Clone/src/app/api/pay-upi/route.ts) for email links so email clients (Gmail, Outlook, Yahoo Mail) never strip custom `upi://` schemes, rendering 100% clickable payment buttons that automatically trigger GPay/PhonePe/Paytm on tap.
+  - Fixed email template compiler link regex in [`compiler.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/email-templates/compiler.ts) to parse links and render them as styled green payment buttons alongside an **`Open Settle Up in App`** primary CTA button.
+  - Added explicit zero-fee platform disclaimers to the modal, notifications, and emails clarifying that Splitwise is a 100% free platform with zero usage fees that does not track or process banking payments directly, and reminding users to manually record settlements once paid.
+  - Upgraded [`upi-qr-modal.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/settlements/upi-qr-modal.tsx) UI to follow the dark-mode glass-pane minimal design system (`design-system.md`).
+- **Mobile Page Side Padding Reduction**:
+  - Reduced outer left and right layout margins on mobile screens (`< sm`) from `px-4` / `px-6` (16px–24px) down to `px-2` / `px-2.5` (8px–10px) in [`app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx#L161-L284) and [`admin-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/admin-shell.tsx#L231).
+  - Maximized horizontal screen real estate for all cards, tables, expense lists, group details, and forms on mobile devices while keeping desktop/tablet paddings (`sm:px-4 lg:p-6`) unchanged.
+- **Group Header Desktop Name Positioning**:
+  - Updated [`group-detail-header.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-detail-header.tsx#L109-L117) to position group title and description at `bottom-left` on desktop (`md:bottom-3 md:left-4`) while preserving `top-left` positioning on mobile screens.
+- **Live Split Price Calculation Fix**:
+  - Replaced standard `watch('participants')` with `useWatch({ control, name: 'participants' })` in [`ExpenseForm`](file:///d:/Projects/SplitWise-Clone/src/components/expenses/expense-form.tsx) and [`SplitView`](file:///d:/Projects/SplitWise-Clone/src/components/expenses/expense-form.tsx#L567-L715).
+  - Checking/unchecking participants or modifying shares/percentages in the advanced expanded split view now triggers immediate, real-time recalculation of split prices, net balance summaries (`splitViewNetText`), and remaining amounts without needing to toggle tabs.
+- **Unified Dashboard Search Box Hover/Focus State**:
+  - Updated the header container in [`search-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/search-dialog.tsx#L212-L220) with `bg-muted/20 hover:bg-muted/40 focus-within:bg-muted/60 transition-colors` and set the inner `<Input>` to `!bg-transparent`. The hover/focus background state now spans full-width across the left magnifying glass `🔍`, the search input, and the close `✕` button.
+- **Add Expense Dialog Input Styling Exception**:
+  - Applied `!bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent` overrides specifically to the **Description** and **Amount** fields inside [`ExpenseForm`](file:///d:/Projects/SplitWise-Clone/src/components/expenses/expense-form.tsx) in the Add Expense Dialog box, completely eliminating the grey rectangular background box on hover/active/focus.
+  - Updated [`src/globals.css`](file:///d:/Projects/SplitWise-Clone/src/globals.css) with `-webkit-appearance: none` rules to hide browser spinner arrows on the Amount field across Chrome, Edge, and Safari.
+- **Official Google Brand Logo Integration**:
+  - Updated [`Icons.Google`](file:///d:/Projects/SplitWise-Clone/src/components/icons.tsx#L303-L311) to render the official 4-color Google logo SVG (`#EA4335`, `#4285F4`, `#FBBC05`, `#34A853`).
+- **Blazing Fast Performance Optimization**:
+  - **Oracle NoSQL In-Memory Read Cache** ([`src/lib/nosql.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql.ts)): Implemented a 15-second TTL in-memory read cache (`readCache`) for `getItem`, `queryByPk`, `queryByEntityType`, and `queryByGsi`. Automatically cleared on writes (`putItem`, `deleteItem`).
+  - **Eliminated N+1 Dashboard Balance Queries** ([`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/%28app%29/dashboard/page.tsx)): Replaced 15+ sequential DB fetches with an in-memory balance calculation (`calculateUserBalances`) operating directly on user expenses and settlements.
+- **Authentication Page Theme Redesign**:
+  - Overhauled [`layout.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/auth/layout.tsx) to implement a modern, high-contrast split-screen design.
+  - Left pane displays the configurable background/cover image with typography overlay for large screens.
+  - Right pane presents forms directly on the active theme's background (`bg-background`).
+  - Added a responsive top banner using the cover image for mobile screens to retain visual assets.
+  - Updated [`auth-card.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/auth/auth-card.tsx) and [`forgot-password-form.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/auth/forgot-password-form.tsx) cards to use standard theme background (`bg-card`), dynamic border radius (`rounded-[var(--radius-card)]`), crisp borders (`border-border`), and dynamic input/button values (`rounded-[var(--radius-input)]`, `rounded-[var(--radius-button)]`).
+  - Styled social Google sign-in to be a modern full-width action button.
+- **Docker Containerization and Local Testing**:
+  - Excluded the `scripts` folder in [`tsconfig.json`](file:///d:/Projects/SplitWise-Clone/tsconfig.json) to avoid typechecking errors during Next.js builds.
+  - Added memory space settings (`--max-old-space-size=4096`) in Stage 2 of [`Dockerfile`](file:///d:/Projects/SplitWise-Clone/Dockerfile) to avoid heap allocation crashes.
+  - Copied the `wallet` directory into the production runner of [`Dockerfile`](file:///d:/Projects/SplitWise-Clone/Dockerfile) to provide database connection metadata (`tnsnames.ora`).
+  - Added port overrides in [`docker-compose.yml`](file:///d:/Projects/SplitWise-Clone/docker-compose.yml) to support dynamic Better Auth and public app redirects on mapped ports.
+- **Groups Page Layout Cleanup**: Removed the redundant search bar and select dropdown box from the Groups page list header.
+- **`account_not_linked` Google Auth Fix**:
+  - Root cause: `accountLinking` in [`auth.server.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/auth.server.ts) was missing `allowNewAccountCreation: true`. Without this flag, Better Auth found the existing user by email but threw `account_not_linked` instead of creating a new Google account row for them.
+  - Fix 1: Added `allowNewAccountCreation: true` to `accountLinking` — old migrated users can now sign in with Google; their existing user data (expenses, groups, settlements) is fully preserved.
+  - Fix 2: Enhanced [`check-status/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/auth/check-status/route.ts) to also detect credential accounts with invalid/missing password hashes (bcrypt length check `> 20` chars), correctly flagging all old users who cannot sign in with a password.
+  - Fix 3: Replaced the basic toast with a full **inline banner** in [`auth-card.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/auth/auth-card.tsx) for the `requiresReset` flow. Banner includes: reset email confirmation, resend button, and a "Continue with Google instead" option if the account has Google linked.
+- **Theme-Inherit Dropdown Highlight**: Swapped default destructive red accent highlights on dropdown item hovers with a clean neutral hover state (`focus:bg-muted/40 focus:text-foreground`).
+- **Global Search Redesign & Overlap Fix**: Rebuilt the search dialog for full mobile screen compatibility and hid the default absolute close button using `[&>button]:hidden` on `DialogContent` to prevent overlay conflicts. Built a dedicated close button inline next to the ESC keyboard badge.
+- **Categorized Search Result Panels**: Formatted global search results to group expenses and settlements under their respective parent groups dynamically.
+- **Full Notifications System Overhaul**:
+  - Built per-user preference controls (in-app / push / email per event type) at `/notifications/settings`.
+  - Added dedicated tabs: **All**, **Groups**, **Payments**, **System**, **Reminders** on `/notifications`.
+  - Wired VAPID push subscriptions via a service worker (`sw-push.js`) supporting OS-level action buttons (View / Settle / Mark Read).
+  - Created deep-link routing matrix (`notification-utils.ts`) — clicking any notification navigates to the exact group/expense/settlement and auto-opens the relevant drawer.
+  - Built `/api/reminders/trigger` route for scheduled monthly summaries and group inactivity nudges.
+  - Fixed broadcast notification sort bug (stuck at top) by patching the Oracle record's `createdAt` field and adding defensive `isNaN` sort guards.
+- **Notification Dispatch Refactor (critical bug fix)**:
+  - **Root cause**: `notification-service.ts` was making a loopback HTTP POST to `/api/notifications/send` from within Next.js route handlers. Next.js's patched `fetch` (via undici) was forwarding the *incoming* request's `Content-Length` header to the outgoing notification call, causing `UND_ERR_REQ_CONTENT_LENGTH_MISMATCH` — `TypeError: fetch failed` — on every expense and settlement creation.
+  - **Fix**: Extracted all dispatch logic into `src/lib/services/dispatch.service.ts` (`serverDispatchNotification`). Both `notification-service.ts` (server-side callers) and `/api/notifications/send` route handler now call `serverDispatchNotification` directly — zero HTTP round-trips, zero header forwarding, zero mismatch errors.
+- **Amount Input Cleared State Bug Fix**:
+  - **Root cause**: Clearing the amount input field set the form value to `undefined`. On re-render (triggered by `calculateSplits` updating participant amounts), React Hook Form reverted the field to its initial/default value (e.g. from the edited expense) because `undefined` is treated as "no value".
+  - **Fix**: Modified `onChange` on the Amount field inside `ExpenseForm` and `AddSettlementDialog` to pass `e.target.value` (which is `""` when empty) directly instead of converting it to `undefined`. Updated `expenseSchema` and `settlementSchema` (across both `AddSettlementDialog` and `EditSettlementDialog`) to use Zod `z.preprocess` to map empty/null/undefined values to `undefined` before validation, keeping correct error messages ("Amount is required" / "Enter an amount").
+- **Load More Button Neutral Hover**:
+  - **Fix**: Added `hover:bg-muted/50` to the "Scroll or tap to load more" button in [page.tsx](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx#L370) to override the default accent hover color (which was red due to `--accent` configuration) with a neutral muted gray.
+- **Choreographed Record Highlighting & Smooth Transition**:
+  - **Fix**: Replaced the immediate accordion expand and static highlight with a unified choreographed sequence in `page.tsx` for deep-linked records (via notifications or viewing from group history tab). Added a `!loading` guard to wait until the dynamic group data is loaded and the elements are in the DOM before scrolling/animating. Resets scroll to top, scrolls smoothly to target, expands accordion item, and triggers keyframe CSS double-blink animation (`animate-highlight-blink`). Deferred state reset to the end of the animation to prevent React Hook Form / dependency re-runs from instantly clearing scroll/expand timers.
+- **Edit Settlement Dialog Overhaul**:
+  - **Fix**: Re-coded [edit-settlement-dialog.tsx](file:///d:/Projects/SplitWise-Clone/src/components/settlements/edit-settlement-dialog.tsx) to completely match the visual language of the new Add Settlement Dialog modal (Dark-Mode Glass-Pane Modal layout, Avatar arrow top flow banner, clamped amount input, custom dropdown selectors, calendar date, notes with pencil prefix) excluding QR code components as requested. Also resolved an update payload failure by adding the missing `groupId` inside `updatedSettlementData`.
+- **Notification Panel Settings Layout**:
+  - **Fix**: Relocated the Settings icon button in [notification-bell.tsx](file:///d:/Projects/SplitWise-Clone/src/components/layout/notification-bell.tsx#L52-L68) to the right-hand action group of the panel header next to the "Mark all as read" button.
+- **Dynamic Category Push Notification Icons & Firebase Cleanup**:
+  - **Fix**: Updated `sw-push.js` background notification listener to map specific event types (e.g. `expense`, `settlement`, `reminder`) to individual custom SVGs inside the `/public/notif-icons/` directory, falling back to `/icons/favicon.svg`.
+  - **Cleanup**: Deleted the obsolete `public/firebase-messaging-sw.js` file; the application has been fully migrated to native VAPID web-push (via `sw-push.js`) and Better Auth, making the Firebase service worker obsolete.
+  - **Fix**: Patched [auth-context.tsx](file:///d:/Projects/SplitWise-Clone/src/contexts/auth-context.tsx) to attach an async `getIdToken()` compatibility stub method to `firebaseUser` to prevent Admin Panel settings pages (mail test send and data tools) from crashing on execution. Verified the 9 custom uploaded SVGs.
+- **Mobile Side Nav Redesign & Centralized Versioning System**:
+  - Built centralized single source of truth for versioning and build metadata in [`src/lib/version.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/version.ts) (`APP_VERSION`, `APP_NAME`, `BUILD_NUMBER`, `BUILD_CHANNEL`, `BUILD_DATE`, `APP_EDITION`, `getAppVersionDisplay()`, `getBuildInfoDisplay()`).
+  - Redesigned the mobile side navigation drawer (`SheetContent side="left"`) in [`app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx) to eliminate empty bottom space:
+    - Added high-contrast User Profile Card showing user avatar with fallback initials, full name, email, and admin badge.
+    - Added quick action shortcuts for Settings (`/settings`), Help & Support (`/support`), Admin Panel (`/admin/dashboard` for admins), and an interactive direct Log Out button.
+    - Updated `MainNav` to accept `onLinkClick` to smoothly dismiss the mobile drawer on link tap.
+    - Added version number and build metadata footer (`v0.2.0-beta • Build 2026.08.25`).
+  - Updated desktop sidebar and admin shell footers in [`admin-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/admin-shell.tsx) to utilize centralized version helpers.
+- **INR Currency Standardization**:
+  - Completely removed multi-currency select dropdown and form schema validation from [`create-group-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/create-group-dialog.tsx).
+  - Enforced Indian Rupee (`₹`) across all group services and database mappings in [`group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts).
+  - Updated [`getGroupCurrencySymbol`](file:///d:/Projects/SplitWise-Clone/src/lib/constants.ts) to strictly return `CURRENCY_SYMBOL` (`₹`), guaranteeing that all views (headers, balances, debts, settlements, and history) render in INR uniformly.
+- **Group Monthly Budget System**:
+  - **Data Schema & Types**: Added `GroupBudget` type definition to [`types/index.ts`](file:///d:/Projects/SplitWise-Clone/src/types/index.ts) with `monthlyLimit`, `enabled`, `alertThresholds`, `categoryLimits`, `updatedAt`, and `updatedBy`.
+  - **Analytics & Calculations Engine**: Created [`budget-utils.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/budget-utils.ts) to compute month-to-date group spending, remaining balances, status classifications (`healthy`, `caution`, `warning`, `overbudget`), dynamic daily safe-to-spend allowances, month-end projections, and intelligent recommendations (exhaustion forecasts, category spikes).
+  - **Service & History Integration**: Updated [`group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts) to map, persist, and log group budget changes in the audit trail.
+  - **Dark-Mode Glass-Pane Modal & Sheet Parity**: Rebuilt [`set-budget-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/set-budget-dialog.tsx) following the Add/Edit Expense Dialog design philosophy (`isMobile ? <Sheet side="bottom"> : <Dialog>`) with clamped hero amount input, quick preset chips (`₹10k`, `₹25k`, `₹50k`, `₹100k`), enable/disable switch, alert threshold chips, category allocations accordion, and neutral hover Cancel button.
+  - **Focused Centerpiece Budget Tab**: Redesigned [`group-budget-tab.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/group-budget-tab.tsx) with a unified Hero Centerpiece Card (Remaining funds, progress gauge, inline 3-metric ribbon for Spent, Safe Daily Burn, and Projected Finish with interactive `i` info hover tooltips).
+  - **Budget Notifications System**:
+    - Implemented automatic threshold crossing detection in [`expense.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/expense.service.ts) (`addExpense` & `updateExpense`) for **75% Caution**, **90% Warning**, and **100% Exceeded** benchmarks.
+    - Added multi-channel dispatch via [`notification-service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/notification-service.ts) and [`dispatch.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/dispatch.service.ts) supporting In-App notifications, Web Push with `📊 View Budget` action, and formatted HTML Alert emails.
+    - Added channel-level user controls in [`notifications/settings/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/notifications/settings/page.tsx) allowing users to independently toggle In-App, Push, and Email per budget event.
+    - Integrated deep-link routing in [`notification-utils.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/notification-utils.ts) straight to `/groups/[groupId]?tab=budget`.
+  - **Category-Wise Budgeting & Minimalist Modal Redesign**:
+    - **Visual Allocation Comparison Graph**: Integrated multi-colored segmented distribution bar displaying proportional allocations across all 12 categories vs unallocated buffers (`₹18k of ₹25k assigned (72%) • ₹7k unallocated`).
+    - **Smart Display Rules**: Distribution meter is hidden when no category caps are set and panel is closed, appears live when expanded, and persists on the main view once configured.
+    - **Over-Budget Enforcement & Auto-Sum**: Enforced that total category caps cannot exceed monthly budget. Added dynamic live auto-summing and a 1-click `Sync to ₹[Sum]` button.
+    - **Sideways Expandable Panel**: Modal smoothly transitions from 480px to 900px on desktop with `framer-motion` sliding in the category allocations panel; mobile seamlessly switches to the dedicated category view.
+    - **Sleek Minimalist Styling**: Eliminated heavy card-like div nesting in favor of flat divided list rows (`divide-y divide-border/20`), neutral icon badges (`bg-muted/60 text-muted-foreground`), right-aligned input fields, and neutral active/selected states (`bg-muted text-foreground border-border/70`) without loud accent color fills.
+    - **Allocation Clarifications & Flexible Pool**: Renamed category `"Other"` to `"Miscellaneous"`, labeled unassigned funds as `"Flexible Pool"`, and added contextual explainer notes in the category panel and main overview trigger.
+    - **Mobile Back Navigation**: Added header back button (`‹`) and sticky footer `Back to Budget` button in the mobile Category Caps sheet to return to the monthly budget overview.
+    - **Settings Cross-Link**: Added direct link banner/button in [`settings/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/settings/page.tsx) (`/settings?tab=notifications`) taking users directly to the granular [`/notifications/settings`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/notifications/settings/page.tsx) page.
+    - **Desktop Sidebar Toggle Refinement**: Updated collapsed desktop navbar to display the brand logo by default, smoothly transitioning into a dedicated `PanelLeftOpen` expand button on hover, and added a dedicated `PanelLeftClose` button for collapsing the expanded navbar.
+    - **Oracle Database Connection Resilience**: Fixed transient `NJS-500` / `NJS-521` end-of-file idle disconnects by configuring `SQLNET.EXPIRE_TIME=1` TCP keep-alive, enabling `poolPingInterval: 60` / `poolMin: 0` in `node-oracledb`, and adding automatic retry handling for recoverable severed sockets.
+
+## Next Steps
+- Verify end-to-end group budget configuration and spend updates across user sessions.
+- Verify expense/settlement/budget notifications fire correctly end-to-end (in-app + push + email).
+- Set up monthly cron job on VPS to call `/api/reminders/trigger` for monthly summaries and inactivity checks.
+- Production deployment to Oracle Cloud Infrastructure (OCI).
+
+

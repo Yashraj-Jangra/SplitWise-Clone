@@ -1,7 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-package-lock.json
 /node_modules
 /.pnp
 .pnp.*
@@ -36,20 +35,15 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 .genkit/*
 .env*
+!.env.example
 PROJECT_KNOWLEDGE.md
-service-account.json
 
 # firebase
 firebase-debug.log
 firestore-debug.log
-
-# local session tracking files
-todo.md
-progress.md
 
 # secrets and data exports
 service-account.json
@@ -57,4 +51,3 @@ scripts/exports/
 oracle_migration_data/
 wallet/
 Wallet*.zip
-
