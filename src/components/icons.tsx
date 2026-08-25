@@ -103,6 +103,7 @@ import {
   Megaphone,
   Archive,
   BellRing,
+  Info,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -243,6 +244,7 @@ export const Icons = {
   PieChart,
   Baseline,
   Help: LifeBuoy,
+  Info,
   LineChart,
   Check,
   Calendar,

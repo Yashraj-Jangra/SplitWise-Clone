@@ -13,6 +13,7 @@ import { getInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { defaultExpenseCategories } from '@/lib/expense-categories';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface GroupBudgetTabProps {
   group: Group;
@@ -218,32 +219,72 @@ export function GroupBudgetTab({ group, expenses }: GroupBudgetTabProps) {
             </div>
 
             {/* Bottom 3-Column Stats Ribbon */}
-            <div className="grid grid-cols-3 divide-x divide-border/40 border-t border-border/40 bg-muted/15 py-3 px-2 text-center">
-              <div>
-                <p className="text-[11px] text-muted-foreground font-medium">Spent So Far</p>
-                <p className="text-sm sm:text-base font-bold text-foreground mt-0.5">
-                  {CURRENCY_SYMBOL}{stats.totalSpentThisMonth.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </p>
+            <TooltipProvider delayDuration={150}>
+              <div className="grid grid-cols-3 divide-x divide-border/40 border-t border-border/40 bg-muted/15 py-3 px-2 text-center">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="cursor-help group/stat flex flex-col items-center px-1">
+                      <div className="flex items-center justify-center gap-1">
+                        <p className="text-[11px] text-muted-foreground font-medium group-hover/stat:text-foreground transition-colors">
+                          Spent So Far
+                        </p>
+                        <Icons.Info className="h-3 w-3 text-muted-foreground/60 group-hover/stat:text-foreground transition-colors" />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-foreground mt-0.5 font-sans">
+                        {CURRENCY_SYMBOL}{stats.totalSpentThisMonth.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-center text-xs p-2">
+                    Total amount spent by group members in {stats.monthName}.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="cursor-help group/stat flex flex-col items-center px-1">
+                      <div className="flex items-center justify-center gap-1">
+                        <p className="text-[11px] text-muted-foreground font-medium group-hover/stat:text-foreground transition-colors">
+                          Safe Daily Burn
+                        </p>
+                        <Icons.Info className="h-3 w-3 text-muted-foreground/60 group-hover/stat:text-foreground transition-colors" />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-foreground mt-0.5 font-sans">
+                        {CURRENCY_SYMBOL}{stats.dailySafeLimit.toFixed(0)}
+                        <span className="text-[10px] text-muted-foreground font-normal">/day</span>
+                      </p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-center text-xs p-2">
+                    Maximum recommended daily spend over the remaining {stats.daysRemaining} days to stay under budget.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="cursor-help group/stat flex flex-col items-center px-1">
+                      <div className="flex items-center justify-center gap-1">
+                        <p className="text-[11px] text-muted-foreground font-medium group-hover/stat:text-foreground transition-colors">
+                          Projected Finish
+                        </p>
+                        <Icons.Info className="h-3 w-3 text-muted-foreground/60 group-hover/stat:text-foreground transition-colors" />
+                      </div>
+                      <p
+                        className={cn(
+                          'text-sm sm:text-base font-bold mt-0.5 font-sans',
+                          stats.projectedVariance <= 0 ? 'text-foreground' : 'text-orange-400'
+                        )}
+                      >
+                        {CURRENCY_SYMBOL}{stats.projectedMonthEndSpend.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-center text-xs p-2">
+                    Estimated total month-end expenditure calculated from your group's average velocity ({CURRENCY_SYMBOL}{stats.averageDailySpend.toFixed(0)}/day).
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground font-medium">Safe Daily Burn</p>
-                <p className="text-sm sm:text-base font-bold text-foreground mt-0.5">
-                  {CURRENCY_SYMBOL}{stats.dailySafeLimit.toFixed(0)}
-                  <span className="text-[10px] text-muted-foreground font-normal">/day</span>
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground font-medium">Projected Finish</p>
-                <p
-                  className={cn(
-                    'text-sm sm:text-base font-bold mt-0.5',
-                    stats.projectedVariance <= 0 ? 'text-foreground' : 'text-orange-400'
-                  )}
-                >
-                  {CURRENCY_SYMBOL}{stats.projectedMonthEndSpend.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </p>
-              </div>
-            </div>
+            </TooltipProvider>
           </Card>
 
           {/* Smart Pacing Banner (Single prioritized recommendation) */}
