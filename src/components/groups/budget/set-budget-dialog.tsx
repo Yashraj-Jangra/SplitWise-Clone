@@ -4,24 +4,31 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -33,13 +40,14 @@ import { useAuth } from '@/contexts/auth-context';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { defaultExpenseCategories } from '@/lib/expense-categories';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { Group, GroupBudget } from '@/types';
 import { cn } from '@/lib/utils';
 
 const budgetSchema = z.object({
   monthlyLimit: z.preprocess(
-    (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
-    z.number({ required_error: 'Please enter a budget amount.' }).min(100, 'Minimum budget is ₹100').max(10000000, 'Budget too high')
+    (val) => (val === '' || val === undefined || val === null ? undefined : val),
+    z.coerce.number({ invalid_type_error: 'Please enter a budget amount.' }).min(100, 'Minimum budget is ₹100').max(10000000, 'Budget too high')
   ),
   enabled: z.boolean().default(true),
   threshold75: z.boolean().default(true),
@@ -57,14 +65,24 @@ interface SetBudgetDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  buttonVariant?: ButtonProps['variant'];
+  buttonSize?: ButtonProps['size'];
 }
 
-export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenChange }: SetBudgetDialogProps) {
+export function SetBudgetDialog({
+  group,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+  buttonVariant = 'outline',
+  buttonSize = 'sm',
+}: SetBudgetDialogProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? onOpenChange! : setInternalOpen;
 
+  const isMobile = useIsMobile();
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -85,7 +103,6 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
     },
   });
 
-  // Re-sync when group updates or dialog opens
   React.useEffect(() => {
     if (open) {
       const b = group.budget;
@@ -139,7 +156,7 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
         title: 'Budget Saved',
         description: values.enabled
           ? `Monthly budget set to ${CURRENCY_SYMBOL}${Number(values.monthlyLimit).toLocaleString('en-IN')}.`
-          : 'Monthly budget has been disabled.',
+          : 'Monthly budget disabled.',
       });
 
       appEventEmitter.emit('data-changed');
@@ -171,7 +188,7 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
         },
         userProfile.uid
       );
-      toast({ title: 'Budget Disabled', description: 'Group budget tracking has been turned off.' });
+      toast({ title: 'Budget Disabled', description: 'Group budget tracking turned off.' });
       appEventEmitter.emit('data-changed');
       setOpen(false);
     } catch (error: any) {
@@ -181,199 +198,223 @@ export function SetBudgetDialog({ group, trigger, open: controlledOpen, onOpenCh
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[460px] p-0 overflow-hidden border border-border rounded-xl shadow-xl bg-card">
-        <div className="p-4 border-b border-border bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
-              <Icons.Currency className="h-4 w-4 text-foreground/80" />
-              Monthly Group Budget
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-              Configure spending targets and alert benchmarks for {group.name}.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
+  const dialogTrigger = trigger || (
+    <Button variant={buttonVariant} size={buttonSize} className="gap-1.5 font-medium rounded-xl">
+      <Icons.Currency className="h-4 w-4" />
+      <span>{initialBudget?.enabled ? 'Edit Budget' : 'Set Budget'}</span>
+    </Button>
+  );
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-4">
-            {/* Enable/Disable Toggle */}
-            <FormField
-              control={form.control}
-              name="enabled"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg bg-muted/30 border border-border p-3 space-y-0">
-                  <div>
-                    <FormLabel className="text-xs font-bold text-foreground">Enable Budget Tracking</FormLabel>
-                    <FormDescription className="text-[11px] text-muted-foreground">
-                      Track spending velocity and safe burn rates
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+  const formBody = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Enable / Disable Switch */}
+        <FormField
+          control={form.control}
+          name="enabled"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-xl bg-muted/20 border border-border/40 p-3 space-y-0">
+              <div>
+                <FormLabel className="text-sm font-medium">Enable monthly tracking</FormLabel>
+                <FormDescription className="text-xs text-muted-foreground">
+                  Calculate burn rates and safe limits
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
-            {/* Hero Amount Input */}
-            <FormField
-              control={form.control}
-              name="monthlyLimit"
-              render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Monthly Target
-                  </FormLabel>
-                  <div className="flex items-baseline gap-1 border-b border-border focus-within:border-foreground transition-colors pb-1">
-                    <span className="text-2xl font-bold font-mono text-muted-foreground">{CURRENCY_SYMBOL}</span>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="25000"
-                        {...field}
-                        value={field.value ?? ''}
-                        className="text-3xl font-black font-mono tracking-tight text-foreground border-none !bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
-                    </FormControl>
-                  </div>
-                  <FormMessage className="text-xs" />
-
-                  {/* Preset Amount Chips */}
-                  <div className="flex flex-wrap gap-1.5 pt-1.5">
-                    {QUICK_PRESETS.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => form.setValue('monthlyLimit', preset, { shouldValidate: true })}
-                        className={cn(
-                          'px-2.5 py-1 text-xs font-mono font-bold rounded-md transition-colors border',
-                          form.watch('monthlyLimit') === preset
-                            ? 'bg-foreground text-background border-foreground font-bold'
-                            : 'bg-muted/40 text-muted-foreground border-border hover:text-foreground hover:bg-muted'
-                        )}
-                      >
-                        {CURRENCY_SYMBOL}{preset.toLocaleString('en-IN')}
-                      </button>
-                    ))}
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {/* Notification Thresholds */}
-            <div className="space-y-2 rounded-lg bg-muted/30 border border-border p-3">
-              <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                Alert Thresholds
+        {/* Hero Amount Input */}
+        <FormField
+          control={form.control}
+          name="monthlyLimit"
+          render={({ field }) => (
+            <FormItem className="space-y-1">
+              <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Monthly Spending Limit
               </FormLabel>
-              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                {[
-                  { name: 'threshold75', label: '75% Caution' },
-                  { name: 'threshold90', label: '90% Warning' },
-                  { name: 'threshold100', label: '100% Limit' },
-                ].map((t) => (
-                  <FormField
-                    key={t.name}
-                    control={form.control}
-                    name={t.name as any}
-                    render={({ field }) => (
-                      <label
-                        className={cn(
-                          'flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-xs font-medium cursor-pointer transition-colors select-none',
-                          field.value
-                            ? 'bg-muted text-foreground border-foreground/40 font-semibold'
-                            : 'bg-background text-muted-foreground border-border hover:bg-muted/30'
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={field.onChange}
-                          className="rounded border-border text-foreground focus:ring-0 h-3.5 w-3.5"
-                        />
-                        <span>{t.label}</span>
-                      </label>
-                    )}
+              <div className="relative flex items-baseline border-b-2 border-border/40 focus-within:border-primary transition-colors pb-1">
+                <span className="text-[clamp(2rem,8vw,2.75rem)] font-bold text-muted-foreground align-baseline leading-none">
+                  {CURRENCY_SYMBOL}
+                </span>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="100"
+                    placeholder="25000"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="pl-2 text-[clamp(2rem,8vw,2.75rem)] leading-none font-bold border-none !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
                   />
+                </FormControl>
+              </div>
+              <FormMessage className="text-xs" />
+
+              {/* Preset Chips */}
+              <div className="flex flex-wrap gap-1.5 pt-2">
+                {QUICK_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => form.setValue('monthlyLimit', preset, { shouldValidate: true })}
+                    className={cn(
+                      'px-2.5 py-1 text-xs rounded-lg font-medium transition-colors border',
+                      form.watch('monthlyLimit') === preset
+                        ? 'bg-primary/20 text-primary border-primary/30 font-semibold'
+                        : 'bg-muted/30 text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted/60'
+                    )}
+                  >
+                    {CURRENCY_SYMBOL}{preset.toLocaleString('en-IN')}
+                  </button>
                 ))}
               </div>
-            </div>
+            </FormItem>
+          )}
+        />
 
-            {/* Optional Category Allocations */}
-            <Accordion type="single" collapsible className="border border-border rounded-lg px-3 bg-muted/20">
-              <AccordionItem value="categories" className="border-none">
-                <AccordionTrigger className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground py-2.5 hover:no-underline">
-                  <div className="flex items-center gap-1.5">
-                    <Icons.PieChart className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>Category Allocations (Optional)</span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-1 pb-3 space-y-2">
-                  <p className="text-[11px] text-muted-foreground">
-                    Set target caps for specific categories to detect spikes.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-44 overflow-y-auto pr-1">
-                    {masterCategoryKeys.slice(0, 8).map((cat) => (
-                      <div key={cat} className="flex items-center gap-1.5 bg-background p-1.5 rounded-md border border-border">
-                        <span className="text-xs font-medium truncate flex-1">{cat}</span>
-                        <div className="flex items-center gap-1 w-20">
-                          <span className="text-xs text-muted-foreground font-mono">{CURRENCY_SYMBOL}</span>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            value={form.watch(`categories.${cat}`) || ''}
-                            onChange={(e) => form.setValue(`categories.${cat}`, e.target.value)}
-                            className="h-6 text-xs font-mono px-1 text-right rounded bg-muted/30 border-border"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+        {/* Alert Thresholds */}
+        <div className="space-y-1.5 pt-1">
+          <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+            Alert Benchmarks
+          </FormLabel>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { name: 'threshold75', label: '75% Warning' },
+              { name: 'threshold90', label: '90% Caution' },
+              { name: 'threshold100', label: '100% Limit' },
+            ].map((t) => (
+              <FormField
+                key={t.name}
+                control={form.control}
+                name={t.name as any}
+                render={({ field }) => (
+                  <label
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border text-xs font-medium cursor-pointer transition-colors select-none',
+                      field.value
+                        ? 'bg-primary/15 text-primary border-primary/30 font-semibold'
+                        : 'bg-muted/20 text-muted-foreground border-border/30 hover:bg-muted/40'
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={field.onChange}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                    />
+                    <span>{t.label}</span>
+                  </label>
+                )}
+              />
+            ))}
+          </div>
+        </div>
 
-            {/* Action Buttons */}
-            <DialogFooter className="flex flex-row items-center justify-between sm:justify-between pt-3 border-t border-border gap-2">
-              {initialBudget?.monthlyLimit ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDisableBudget}
-                  disabled={isSubmitting}
-                  className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive px-2 rounded-md"
-                >
-                  Turn Off
-                </Button>
-              ) : (
-                <div />
-              )}
+        {/* Category Allocations Accordion */}
+        <Accordion type="single" collapsible className="border border-border/30 rounded-xl px-3 bg-muted/10">
+          <AccordionItem value="categories" className="border-none">
+            <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-2.5 hover:no-underline">
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setOpen(false)}
-                  disabled={isSubmitting}
-                  className="h-8 rounded-md text-xs font-bold uppercase tracking-wider px-3 border-border"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSubmitting}
-                  className="h-8 rounded-md text-xs font-bold uppercase tracking-wider px-4"
-                >
-                  {isSubmitting ? 'Saving...' : 'Save Target'}
-                </Button>
+                <Icons.PieChart className="h-4 w-4 text-primary" />
+                <span>Category Limits (Optional)</span>
               </div>
-            </DialogFooter>
-          </form>
-        </Form>
+            </AccordionTrigger>
+            <AccordionContent className="pt-1 pb-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Set spending targets for specific categories.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                {masterCategoryKeys.slice(0, 8).map((cat) => (
+                  <div key={cat} className="flex items-center gap-2 bg-background p-2 rounded-lg border border-border/30">
+                    <span className="text-xs font-medium truncate flex-1">{cat}</span>
+                    <div className="flex items-center gap-1 w-20">
+                      <span className="text-xs text-muted-foreground">{CURRENCY_SYMBOL}</span>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={form.watch(`categories.${cat}`) || ''}
+                        onChange={(e) => form.setValue(`categories.${cat}`, e.target.value)}
+                        className="h-7 text-xs px-1.5 text-right rounded-md bg-muted/30"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/20 gap-2">
+          {initialBudget?.monthlyLimit ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleDisableBudget}
+              disabled={isSubmitting}
+              className="h-10 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive px-3 rounded-xl"
+            >
+              Turn Off
+            </Button>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={isSubmitting}
+              className="h-10 rounded-xl text-sm font-medium px-4"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-10 rounded-xl text-sm font-medium px-5"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Budget'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Form>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        {trigger && <SheetTrigger asChild>{dialogTrigger}</SheetTrigger>}
+        <SheetContent side="bottom" className="h-auto max-h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-6 bg-background overflow-y-auto">
+          <SheetHeader className="mb-2 text-left">
+            <SheetTitle className="text-xl font-bold font-headline flex items-center gap-2">
+              <Icons.Currency className="h-5 w-5 text-primary" />
+              Monthly Budget
+            </SheetTitle>
+          </SheetHeader>
+          {formBody}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      {trigger && <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>}
+      <DialogContent className="sm:max-w-[460px] p-6 border-border/20 rounded-2xl shadow-2xl bg-background">
+        <DialogHeader className="mb-2 text-left">
+          <DialogTitle className="text-xl font-bold font-headline flex items-center gap-2">
+            <Icons.Currency className="h-5 w-5 text-primary" />
+            Monthly Budget
+          </DialogTitle>
+        </DialogHeader>
+        {formBody}
       </DialogContent>
     </Dialog>
   );
