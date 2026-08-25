@@ -122,6 +122,7 @@
     - **Settings Cross-Link**: Added direct link banner/button in [`settings/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/settings/page.tsx) (`/settings?tab=notifications`) taking users directly to the granular [`/notifications/settings`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/notifications/settings/page.tsx) page.
     - **Desktop Sidebar Toggle Refinement**: Updated collapsed desktop navbar to display the brand logo by default, smoothly transitioning into a dedicated `PanelLeftOpen` expand button on hover, and added a dedicated `PanelLeftClose` button for collapsing the expanded navbar.
     - **Oracle Database Connection Resilience**: Fixed transient `NJS-500` / `NJS-521` end-of-file idle disconnects by configuring `SQLNET.EXPIRE_TIME=1` TCP keep-alive, enabling `poolPingInterval: 60` / `poolMin: 0` in `node-oracledb`, and adding automatic retry handling for recoverable severed sockets.
+    - **Documentation & Environment Templates**: Created [`.env.example`](file:///d:/Projects/SplitWise-Clone/.env.example) with detailed inline guides and updated [`README.md`](file:///d:/Projects/SplitWise-Clone/README.md) with modern architecture diagrams, category budgeting engines, and multi-channel notifications.
 
 ## Next Steps
 - Verify end-to-end group budget configuration and spend updates across user sessions.
