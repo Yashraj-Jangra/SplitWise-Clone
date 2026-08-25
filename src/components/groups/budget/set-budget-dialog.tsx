@@ -275,6 +275,8 @@ export function SetBudgetDialog({
   const currentTotal = Number(watchMonthlyLimit) || 0;
   const unallocatedAmount = Math.max(0, currentTotal - categoryAllocations.sum);
   const unallocatedPct = currentTotal > 0 ? (unallocatedAmount / currentTotal) * 100 : 0;
+  const showDistributionGraph =
+    categoryAllocations.list.length > 0 || isCategoryExpanded || categoryAllocations.isOverTotal;
 
   const dialogTrigger = trigger || (
     <Button variant={buttonVariant} size={buttonSize} className="gap-1.5 font-medium rounded-xl">
@@ -369,87 +371,89 @@ export function SetBudgetDialog({
             )}
           />
 
-          {/* Visual Allocation Meter */}
-          <div className="rounded-xl border border-border/40 bg-muted/15 p-3.5 space-y-2.5 shadow-sm">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-foreground flex items-center gap-1.5">
-                <Icons.PieChart className="h-3.5 w-3.5 text-primary" />
-                Distribution
-              </span>
-              <span
-                className={cn(
-                  'font-medium text-[11px]',
-                  categoryAllocations.isOverTotal ? 'text-rose-400 font-bold' : 'text-muted-foreground'
-                )}
-              >
-                {categoryAllocations.isOverTotal
-                  ? `Over-allocated by ${CURRENCY_SYMBOL}${categoryAllocations.diff.toLocaleString('en-IN')}`
-                  : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} / ${CURRENCY_SYMBOL}${currentTotal.toLocaleString('en-IN')} assigned`}
-              </span>
-            </div>
-
-            {/* Segmented Bar */}
-            <div className="h-3 w-full bg-muted/60 rounded-full overflow-hidden flex border border-border/30">
-              {categoryAllocations.isOverTotal ? (
-                <div
-                  className="h-full w-full bg-rose-500 animate-pulse flex items-center justify-center text-[9px] text-white font-bold tracking-wider"
-                  title={`Allocations exceed total budget`}
-                >
-                  EXCEEDED BY {CURRENCY_SYMBOL}{categoryAllocations.diff.toLocaleString('en-IN')}
-                </div>
-              ) : (
-                <>
-                  {categoryAllocations.list.map((item) => (
-                    <div
-                      key={item.cat.key}
-                      style={{ width: `${Math.max(1, item.pctOfTotal)}%`, backgroundColor: item.cat.color }}
-                      className="h-full transition-all duration-300 relative group cursor-pointer first:rounded-l-full"
-                      title={`${item.cat.name}: ${CURRENCY_SYMBOL}${item.amount.toLocaleString('en-IN')} (${item.pctOfTotal.toFixed(0)}%)`}
-                    />
-                  ))}
-                  {unallocatedPct > 0 && currentTotal > 0 && (
-                    <div
-                      style={{ width: `${unallocatedPct}%` }}
-                      className="h-full bg-muted/40 transition-all duration-300 last:rounded-r-full"
-                      title={`Unallocated buffer: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')}`}
-                    />
+          {/* Visual Allocation Meter (Shown when configured or when panel is expanded) */}
+          {showDistributionGraph && (
+            <div className="rounded-xl border border-border/40 bg-muted/15 p-3.5 space-y-2.5 shadow-sm animate-fade-in">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Icons.PieChart className="h-3.5 w-3.5 text-primary" />
+                  Distribution
+                </span>
+                <span
+                  className={cn(
+                    'font-medium text-[11px]',
+                    categoryAllocations.isOverTotal ? 'text-rose-400 font-bold' : 'text-muted-foreground'
                   )}
-                </>
+                >
+                  {categoryAllocations.isOverTotal
+                    ? `Over-allocated by ${CURRENCY_SYMBOL}${categoryAllocations.diff.toLocaleString('en-IN')}`
+                    : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} / ${CURRENCY_SYMBOL}${currentTotal.toLocaleString('en-IN')} assigned`}
+                </span>
+              </div>
+
+              {/* Segmented Bar */}
+              <div className="h-3 w-full bg-muted/60 rounded-full overflow-hidden flex border border-border/30">
+                {categoryAllocations.isOverTotal ? (
+                  <div
+                    className="h-full w-full bg-rose-500 animate-pulse flex items-center justify-center text-[9px] text-white font-bold tracking-wider"
+                    title={`Allocations exceed total budget`}
+                  >
+                    EXCEEDED BY {CURRENCY_SYMBOL}{categoryAllocations.diff.toLocaleString('en-IN')}
+                  </div>
+                ) : (
+                  <>
+                    {categoryAllocations.list.map((item) => (
+                      <div
+                        key={item.cat.key}
+                        style={{ width: `${Math.max(1, item.pctOfTotal)}%`, backgroundColor: item.cat.color }}
+                        className="h-full transition-all duration-300 relative group cursor-pointer first:rounded-l-full"
+                        title={`${item.cat.name}: ${CURRENCY_SYMBOL}${item.amount.toLocaleString('en-IN')} (${item.pctOfTotal.toFixed(0)}%)`}
+                      />
+                    ))}
+                    {unallocatedPct > 0 && currentTotal > 0 && (
+                      <div
+                        style={{ width: `${unallocatedPct}%` }}
+                        className="h-full bg-muted/40 transition-all duration-300 last:rounded-r-full"
+                        title={`Unallocated buffer: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')}`}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Over allocation banner */}
+              {categoryAllocations.isOverTotal && (
+                <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                  <span className="leading-tight text-[11px]">
+                    Category caps exceed monthly budget limit.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAutoSumFromCategories}
+                    className="px-2 py-1 rounded bg-rose-500 text-white font-semibold text-[10px] shrink-0 hover:bg-rose-600 transition-colors"
+                  >
+                    Sync to {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
+                  </button>
+                </div>
+              )}
+
+              {/* Dynamic Legend */}
+              {categoryAllocations.list.length > 0 && !categoryAllocations.isOverTotal && (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[10px] text-muted-foreground">
+                  {categoryAllocations.list.map((item) => (
+                    <div key={item.cat.key} className="flex items-center gap-1">
+                      <span
+                        className="h-2 w-2 rounded-full shrink-0"
+                        style={{ backgroundColor: item.cat.color }}
+                      />
+                      <span className="font-medium text-foreground">{item.cat.name}</span>
+                      <span>({item.pctOfTotal.toFixed(0)}%)</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-
-            {/* Over allocation banner */}
-            {categoryAllocations.isOverTotal && (
-              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-                <span className="leading-tight text-[11px]">
-                  Category caps exceed monthly budget limit.
-                </span>
-                <button
-                  type="button"
-                  onClick={handleAutoSumFromCategories}
-                  className="px-2 py-1 rounded bg-rose-500 text-white font-semibold text-[10px] shrink-0 hover:bg-rose-600 transition-colors"
-                >
-                  Sync to {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
-                </button>
-              </div>
-            )}
-
-            {/* Dynamic Legend */}
-            {categoryAllocations.list.length > 0 && !categoryAllocations.isOverTotal && (
-              <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[10px] text-muted-foreground">
-                {categoryAllocations.list.map((item) => (
-                  <div key={item.cat.key} className="flex items-center gap-1">
-                    <span
-                      className="h-2 w-2 rounded-full shrink-0"
-                      style={{ backgroundColor: item.cat.color }}
-                    />
-                    <span className="font-medium text-foreground">{item.cat.name}</span>
-                    <span>({item.pctOfTotal.toFixed(0)}%)</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
 
           {/* ── Category Wise Budget Expander Trigger (Sideways expansion) ── */}
           <div className="space-y-1.5">
@@ -629,7 +633,68 @@ export function SetBudgetDialog({
 
       {/* Category List */}
       <ScrollArea className="flex-1 px-4 sm:px-6 py-4 overflow-y-auto">
-        <div className="space-y-2.5 pb-4">
+        <div className="space-y-3 pb-4">
+          {/* Live Distribution Bar in Category View */}
+          <div className="rounded-xl border border-border/40 bg-background/80 p-3 space-y-2 shadow-xs">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-foreground flex items-center gap-1.5">
+                <Icons.PieChart className="h-3.5 w-3.5 text-primary" />
+                Live Distribution
+              </span>
+              <span
+                className={cn(
+                  'font-medium text-[11px]',
+                  categoryAllocations.isOverTotal ? 'text-rose-400 font-bold' : 'text-muted-foreground'
+                )}
+              >
+                {categoryAllocations.isOverTotal
+                  ? `Over by ${CURRENCY_SYMBOL}${categoryAllocations.diff.toLocaleString('en-IN')}`
+                  : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} of ${CURRENCY_SYMBOL}${currentTotal.toLocaleString('en-IN')}`}
+              </span>
+            </div>
+
+            <div className="h-2.5 w-full bg-muted/60 rounded-full overflow-hidden flex border border-border/30">
+              {categoryAllocations.isOverTotal ? (
+                <div className="h-full w-full bg-rose-500 animate-pulse flex items-center justify-center text-[9px] text-white font-bold tracking-wider">
+                  EXCEEDED BY {CURRENCY_SYMBOL}{categoryAllocations.diff.toLocaleString('en-IN')}
+                </div>
+              ) : (
+                <>
+                  {categoryAllocations.list.map((item) => (
+                    <div
+                      key={item.cat.key}
+                      style={{ width: `${Math.max(1, item.pctOfTotal)}%`, backgroundColor: item.cat.color }}
+                      className="h-full transition-all duration-300 relative group first:rounded-l-full"
+                      title={`${item.cat.name}: ${CURRENCY_SYMBOL}${item.amount.toLocaleString('en-IN')} (${item.pctOfTotal.toFixed(0)}%)`}
+                    />
+                  ))}
+                  {unallocatedPct > 0 && currentTotal > 0 && (
+                    <div
+                      style={{ width: `${unallocatedPct}%` }}
+                      className="h-full bg-muted/40 transition-all duration-300 last:rounded-r-full"
+                      title={`Unallocated buffer: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')}`}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+
+            {categoryAllocations.isOverTotal && (
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                <span className="leading-tight text-[11px]">
+                  Exceeds total monthly budget limit.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAutoSumFromCategories}
+                  className="px-2 py-1 rounded bg-rose-500 text-white font-semibold text-[10px] shrink-0 hover:bg-rose-600 transition-colors"
+                >
+                  Sync to {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
+                </button>
+              </div>
+            )}
+          </div>
+
           {MASTER_CATEGORIES.map((cat) => {
             const IconComp = Icons[cat.icon] || Icons.Wallet;
             const currentVal = form.watch(`categories.${cat.key}`) || '';
