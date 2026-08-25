@@ -15,6 +15,7 @@ import { useSiteSettings } from '@/contexts/site-settings-context';
 import { Skeleton } from '../ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { NotificationBell } from './notification-bell';
+import { getAppVersionDisplay, BUILD_NUMBER } from '@/lib/version';
 
 const adminNavItems: NavItem[] = [
   {
@@ -182,11 +183,17 @@ function MobileNav({ items }: { items: NavItem[] }) {
         <div className="flex-1 overflow-y-auto p-3">
           <MainNav items={mainItems} onLinkClick={() => setOpen(false)} />
         </div>
-        {footerItem && (
-          <div className="mt-auto p-3 border-t border-border">
-            <MainNav items={[footerItem]} onLinkClick={() => setOpen(false)} />
+        <div className="mt-auto border-t border-border bg-card p-3 space-y-2">
+          {footerItem && (
+            <div className="pb-1">
+              <MainNav items={[footerItem]} onLinkClick={() => setOpen(false)} />
+            </div>
+          )}
+          <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground/70 pt-2 border-t border-border/50">
+            <span>{getAppVersionDisplay(true)}</span>
+            <span>Build {BUILD_NUMBER}</span>
           </div>
-        )}
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -214,15 +221,16 @@ export function AdminShell({ children }: AdminShellProps) {
           <div className="flex-1 overflow-y-auto p-3">
             <MainNav items={mainItems} />
           </div>
-          <div className="mt-auto p-3 border-t border-border bg-card">
+          <div className="mt-auto p-3 border-t border-border bg-card space-y-2">
             {footerItem && (
-              <div className="pb-1">
+              <div>
                 <MainNav items={[footerItem]} />
               </div>
             )}
-            <p className="text-[11px] text-muted-foreground text-center pt-2 border-t border-border/50 font-mono">
-              Admin &copy; <DynamicYear />
-            </p>
+            <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground/70 pt-2 border-t border-border/50">
+              <span>{getAppVersionDisplay(true)}</span>
+              <span>Admin &copy; <DynamicYear /></span>
+            </div>
           </div>
         </div>
       </div>
