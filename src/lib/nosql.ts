@@ -6,7 +6,8 @@ dotenv.config();
 
 /**
  * Oracle Autonomous Database Helper for Single-Table `SplitItDB`
- * Provides connection pooling, document fetching, and single-table CRUD operations.
+ * Provides connection pooling with automatic keep-alive, dead socket eviction,
+ * auto-reconnect, and seamless query retries for transient cloud network disconnects.
  */
 
 let poolPromise: Promise<any> | null = null;
@@ -37,16 +38,41 @@ async function getOraclePool() {
         configDir: walletDir,
         walletLocation: walletDir,
         walletPassword: dbPassword,
-        poolMin: 1,
+        poolMin: 0, // Avoid holding stale idle connections across cloud firewall timeouts
         poolMax: 10,
         poolIncrement: 1,
+        poolTimeout: 60, // Close idle connections after 60 seconds
+        poolPingInterval: 60, // Validate connection health before handing out of pool
+        queueTimeout: 30000,
+        enableStatistics: false,
       });
-    })();
+    })().catch((err) => {
+      poolPromise = null; // Ensure future attempts can try reconnecting
+      throw err;
+    });
   }
   return poolPromise;
 }
 
-export async function executeOracleQuery<T = any>(sql: string, params: any = {}): Promise<T[]> {
+function isRecoverableOracleError(err: any): boolean {
+  if (!err) return false;
+  if (err.isRecoverable) return true;
+  const msg = (err.message || '').toUpperCase();
+  const code = (err.code || '').toUpperCase();
+  return (
+    code === 'NJS-500' ||
+    code === 'NJS-521' ||
+    msg.includes('NJS-500') ||
+    msg.includes('NJS-521') ||
+    msg.includes('CLOSED OR BROKEN') ||
+    msg.includes('END-OF-FILE ON COMMUNICATION CHANNEL') ||
+    msg.includes('ORA-03113') ||
+    msg.includes('ORA-03114') ||
+    msg.includes('ORA-03135')
+  );
+}
+
+export async function executeOracleQuery<T = any>(sql: string, params: any = {}, retries = 1): Promise<T[]> {
   try {
     const pool = await getOraclePool();
     const connection = await pool.getConnection();
@@ -54,9 +80,18 @@ export async function executeOracleQuery<T = any>(sql: string, params: any = {})
       const result = await connection.execute(sql, params);
       return (result.rows || []) as T[];
     } finally {
-      await connection.close();
+      try {
+        await connection.close();
+      } catch {
+        // Safe ignore on already-closed connection
+      }
     }
   } catch (err: any) {
+    if (retries > 0 && isRecoverableOracleError(err)) {
+      console.warn(`Oracle connection severed (${err.code || 'recoverable'}), refreshing pool and retrying query...`);
+      poolPromise = null;
+      return executeOracleQuery<T>(sql, params, retries - 1);
+    }
     console.error('Oracle Query Error:', err.message || err);
     throw err;
   }
