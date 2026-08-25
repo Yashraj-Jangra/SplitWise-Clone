@@ -37,6 +37,15 @@ export interface UserProfile {
 
 // --- Firestore Document Types ---
 
+export interface GroupBudget {
+  monthlyLimit: number;
+  enabled: boolean;
+  alertThresholds?: number[]; // e.g. [75, 90, 100]
+  categoryLimits?: Record<string, number>; // e.g. { 'Food and Drink': 12000, 'Travel': 5000 }
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface GroupDocument {
   name: string;
   description?: string;
@@ -48,6 +57,7 @@ export interface GroupDocument {
   coverImageUrl?: string;
   archivedAt?: Date;
   currency?: string; // e.g. "INR" or symbol like "₹", "$", "€"
+  budget?: GroupBudget;
 }
 
 export interface ExpensePayerDocument {

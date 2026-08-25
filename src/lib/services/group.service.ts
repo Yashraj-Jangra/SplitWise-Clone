@@ -13,6 +13,14 @@ function mapGroupRow(g: any, members: UserProfile[], createdBy: UserProfile): Gr
     coverImageUrl: g.coverImageUrl || undefined,
     currency: '₹',
     totalExpenses: g.totalExpenses || 0,
+    budget: g.budget ? {
+      monthlyLimit: Number(g.budget.monthlyLimit || 0),
+      enabled: g.budget.enabled !== false,
+      alertThresholds: g.budget.alertThresholds || [75, 90, 100],
+      categoryLimits: g.budget.categoryLimits || undefined,
+      updatedAt: g.budget.updatedAt,
+      updatedBy: g.budget.updatedBy,
+    } : undefined,
     createdAt: g.createdAt ? new Date(g.createdAt).toISOString() : new Date().toISOString(),
     updatedAt: g.updatedAt ? new Date(g.updatedAt).toISOString() : undefined,
     archivedAt: g.archivedAt ? new Date(g.archivedAt).toISOString() : undefined,
@@ -36,6 +44,7 @@ export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | '
     members,
     createdAt: new Date().toISOString(),
     archivedAt: null,
+    budget: groupData.budget || null,
   };
 
   await putItem(`GROUP#${id}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupData.createdById}`, `GROUP#${id}`);
@@ -59,56 +68,40 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
 
 export async function getGroupsByUserId(userId: string): Promise<Group[]> {
   const allGroups = await queryByEntityType<any>('GROUP');
-
-  const userGroups = allGroups.filter(g => {
-    if (g.archivedAt) return false;
-    const memberIds = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
-    return memberIds.includes(userId);
+  const userGroups = allGroups.filter((g: any) => {
+    if (!g.members) return false;
+    return g.members.some((m: any) => (typeof m === 'string' ? m : m.userId) === userId);
   });
 
-  const allUserIds = new Set<string>();
-  userGroups.forEach(g => {
-    allUserIds.add(g.createdById);
-    (g.members || []).forEach((m: any) => allUserIds.add(typeof m === 'string' ? m : m.userId));
-  });
+  const hydrated = await Promise.all(
+    userGroups.map(async (g: any) => {
+      const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+      const [members, createdBy] = await Promise.all([
+        hydrateUsers(memberIds),
+        getUserProfile(g.createdById)
+      ]);
+      if (!createdBy) return null;
+      return mapGroupRow(g, members, createdBy);
+    })
+  );
 
-  const allUsers = await hydrateUsers(Array.from(allUserIds));
-  const userMap = new Map(allUsers.map(u => [u.uid, u]));
-
-  return userGroups.map(g => {
-    const createdBy = userMap.get(g.createdById);
-    if (!createdBy) return null;
-    const memberIds = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
-    const members = memberIds
-      .map((id: string) => userMap.get(id))
-      .filter((u: any): u is UserProfile => u !== undefined);
-
-    return mapGroupRow(g, members, createdBy);
-  }).filter((g: any): g is Group => g !== null);
+  return hydrated.filter(Boolean) as Group[];
 }
 
 export async function getAllGroups(): Promise<Group[]> {
   const allGroups = await queryByEntityType<any>('GROUP');
-
-  const allUserIds = new Set<string>();
-  allGroups.forEach(g => {
-    allUserIds.add(g.createdById);
-    (g.members || []).forEach((m: any) => allUserIds.add(typeof m === 'string' ? m : m.userId));
-  });
-
-  const allUsers = await hydrateUsers(Array.from(allUserIds));
-  const userMap = new Map(allUsers.map(u => [u.uid, u]));
-
-  return allGroups.map(g => {
-    const createdBy = userMap.get(g.createdById);
-    if (!createdBy) return null;
-    const memberIds = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
-    const members = memberIds
-      .map((id: string) => userMap.get(id))
-      .filter((u: any): u is UserProfile => u !== undefined);
-
-    return mapGroupRow(g, members, createdBy);
-  }).filter((g): g is Group => g !== null);
+  const hydrated = await Promise.all(
+    allGroups.map(async (g: any) => {
+      const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+      const [members, createdBy] = await Promise.all([
+        hydrateUsers(memberIds),
+        getUserProfile(g.createdById)
+      ]);
+      if (!createdBy) return null;
+      return mapGroupRow(g, members, createdBy);
+    })
+  );
+  return hydrated.filter(Boolean) as Group[];
 }
 
 export async function addMembersToGroup(groupId: string, memberIds: string[], actorId: string): Promise<void> {
@@ -145,38 +138,32 @@ export async function addMembersToGroup(groupId: string, memberIds: string[], ac
   }
 }
 
+export async function addMemberToGroup(groupId: string, newMemberUserId: string, actorId: string): Promise<void> {
+  return addMembersToGroup(groupId, [newMemberUserId], actorId);
+}
+
 export async function removeMemberFromGroup(groupId: string, memberIdToRemove: string, actorId: string): Promise<void> {
   const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found.");
 
-  const [actor, memberToRemoveProfile, balances] = await Promise.all([
-    getUserProfile(actorId),
-    getUserProfile(memberIdToRemove),
-    getGroupBalances(groupId),
-  ]);
-
-  if (!actor || !memberToRemoveProfile) {
-    throw new Error("Could not find user profiles for this action.");
-  }
-
-  const memberBalance = balances.find(b => b.user.uid === memberIdToRemove)?.netBalance || 0;
-  if (Math.abs(memberBalance) > 0.01) {
-    throw new Error(`${getFullName(memberToRemoveProfile.firstName, memberToRemoveProfile.lastName)} has an outstanding balance of ${Math.abs(memberBalance).toFixed(2)} and cannot be removed. Please settle all debts first.`);
-  }
-
-  groupDoc.members = (groupDoc.members || []).filter((m: any) => {
-    const id = typeof m === 'string' ? m : m.userId;
-    return id !== memberIdToRemove;
-  });
+  let currentMembers: any[] = groupDoc.members || [];
+  currentMembers = currentMembers.filter(m => (typeof m === 'string' ? m : m.userId) !== memberIdToRemove);
+  groupDoc.members = currentMembers;
   groupDoc.updatedAt = new Date().toISOString();
 
   await putItem(`GROUP#${groupId}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupDoc.createdById}`, `GROUP#${groupId}`);
 
-  const actorName = getFullName(actor.firstName, actor.lastName);
-  const memberName = getFullName(memberToRemoveProfile.firstName, memberToRemoveProfile.lastName);
-  const description = `${actorName} removed ${memberName} from the group.`;
+  const [actor, removedUser] = await Promise.all([
+    getUserProfile(actorId),
+    getUserProfile(memberIdToRemove)
+  ]);
+  const actorName = getFullName(actor?.firstName, actor?.lastName);
+  const removedUserName = getFullName(removedUser?.firstName, removedUser?.lastName);
 
-  await logHistoryEvent(groupId, 'member_removed', actorId, description, { removedMemberId: memberIdToRemove });
+  await logHistoryEvent(groupId, 'member_removed', actorId, `${actorName} removed ${removedUserName} from the group.`, {
+    removedUserId: memberIdToRemove,
+    removedUserName,
+  });
 
   if (memberIdToRemove !== actorId) {
     await notifyMemberRemoved(memberIdToRemove, actorId, groupId, groupDoc.name || 'a group');
@@ -193,6 +180,13 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
     ...(data.description !== undefined && { description: data.description }),
     ...(data.coverImageUrl !== undefined && { coverImageUrl: data.coverImageUrl }),
     ...(data.currency !== undefined && { currency: data.currency }),
+    ...(data.budget !== undefined && {
+      budget: {
+        ...data.budget,
+        updatedAt: new Date().toISOString(),
+        updatedBy: actorId,
+      },
+    }),
     updatedAt: new Date().toISOString(),
   };
 
@@ -207,6 +201,11 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
   }
   if (data.description !== undefined && data.description !== (oldData.description || '')) {
     changes.push({ field: 'Description', from: `"${oldData.description || ''}"`, to: `"${data.description || ''}"` });
+  }
+  if (data.budget !== undefined) {
+    const oldLimit = oldData.budget?.monthlyLimit ? `₹${oldData.budget.monthlyLimit}` : 'None';
+    const newLimit = data.budget?.monthlyLimit ? `₹${data.budget.monthlyLimit}` : 'Disabled';
+    changes.push({ field: 'Monthly Budget', from: oldLimit, to: newLimit });
   }
 
   if (changes.length > 0) {

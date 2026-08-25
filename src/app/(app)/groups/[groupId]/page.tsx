@@ -31,12 +31,14 @@ import GroupDetailLoading from '@/app/(app)/groups/[groupId]/loading';
 import { GroupAnalysisCharts } from '@/components/groups/group-analysis-charts';
 import { GroupHistoryTab } from '@/components/groups/group-history';
 import { GroupSettingsTab } from '@/components/groups/group-settings-tab';
+import { GroupBudgetTab } from '@/components/groups/budget/group-budget-tab';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PullToRefresh } from '@/components/shared/pull-to-refresh';
 
 const TABS: { value: string; label: string; icon: IconName }[] = [
     { value: 'expenses', label: 'Activity', icon: 'History' },
+    { value: 'budget', label: 'Budget', icon: 'Currency' },
     { value: 'settlements', label: 'Settlements', icon: 'Settle' },
     { value: 'balances', label: 'Balances', icon: 'Wallet' },
     { value: 'analysis', label: 'Analysis', icon: 'Analysis' },
@@ -276,6 +278,11 @@ export default function GroupDetailPage() {
       // Clean up URL query parameters
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
+    } else {
+      const tabParam = searchParams.get('tab');
+      if (tabParam && TABS.some(t => t.value === tabParam)) {
+        setActiveTab(tabParam);
+      }
     }
   }, [searchParams, settlements, userProfile]);
 
@@ -303,10 +310,12 @@ export default function GroupDetailPage() {
           group={group}
           user={userProfile}
           currentUserBalance={currentUserBalance}
+          expenses={expenses}
+          onNavigateToBudget={() => setActiveTab('budget')}
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex md:justify-start">
+          <TabsList className="grid w-full grid-cols-7 md:w-auto md:inline-flex md:justify-start">
             {TABS.map((tab) => {
               const Icon = Icons[tab.icon];
               return (
@@ -360,7 +369,7 @@ export default function GroupDetailPage() {
                                         groupHistory={groupHistory}
                                         isHighlighted={highlightedItemId === `set-${settlement.id}`}
                                         showGroupName={false}
-                                    />
+                                     />
                                 )
                             }
                         })}
@@ -386,6 +395,13 @@ export default function GroupDetailPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="budget" className="mt-4">
+            <GroupBudgetTab
+              group={group}
+              expenses={expenses}
+            />
           </TabsContent>
 
           <TabsContent value="settlements" className="mt-4">

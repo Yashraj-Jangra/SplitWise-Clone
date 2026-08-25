@@ -1,9 +1,9 @@
 "use client";
-import type { Group, UserProfile } from "@/types";
+import type { Group, UserProfile, Expense } from "@/types";
 import { Icons } from "@/components/icons";
 import Image from "next/image";
-import { getGroupCurrencySymbol } from "@/lib/constants";
-import { useState, useEffect } from "react";
+import { getGroupCurrencySymbol, CURRENCY_SYMBOL } from "@/lib/constants";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "../ui/button";
 import {
   Popover,
@@ -13,6 +13,7 @@ import {
 
 import { useToast } from "@/hooks/use-toast";
 import { updateGroup, getSiteSettings } from "@/lib/firestore.service";
+import { calculateGroupBudgetStats } from "@/lib/budget-utils";
 
 
 import { Skeleton } from "../ui/skeleton";
@@ -25,13 +26,19 @@ interface GroupDetailHeaderProps {
   group: Group;
   user: UserProfile;
   currentUserBalance: number;
+  expenses?: Expense[];
+  onNavigateToBudget?: () => void;
 }
 
-export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDetailHeaderProps) {
+export function GroupDetailHeader({ group, user, currentUserBalance, expenses = [], onNavigateToBudget }: GroupDetailHeaderProps) {
   const { toast } = useToast();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [coversLoading, setCoversLoading] = useState(true);
+
+  const budgetStats = useMemo(() => {
+    return calculateGroupBudgetStats(group, expenses);
+  }, [group, expenses]);
 
   // Fetch cover images only when the popover is about to open
   useEffect(() => {
@@ -146,7 +153,7 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
       </div>
       
       {/* Compact Stats Bar */}
-      <div className="grid grid-cols-3 divide-x divide-border/50 bg-background/50">
+      <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/50 bg-background/50">
         <div className="p-3 text-center">
             <p className="text-xs text-muted-foreground">Total Spent</p>
             <p className="font-bold text-lg">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
@@ -163,6 +170,34 @@ export function GroupDetailHeader({ group, user, currentUserBalance }: GroupDeta
             )}>
                 {currentUserBalance >= 0 ? '' : '-'}{getGroupCurrencySymbol(group)}{Math.abs(currentUserBalance).toFixed(2)}
             </p>
+        </div>
+        <div
+          className="p-3 text-center cursor-pointer hover:bg-muted/30 transition-colors group/budget"
+          onClick={onNavigateToBudget}
+          title="View Budget Details"
+        >
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-xs text-muted-foreground">Monthly Budget</p>
+              <Icons.Currency className="h-3 w-3 text-primary opacity-70 group-hover/budget:opacity-100" />
+            </div>
+            {budgetStats.isEnabled ? (
+              <p className={cn(
+                "font-bold text-lg truncate",
+                budgetStats.status === 'healthy' && "text-emerald-400",
+                budgetStats.status === 'caution' && "text-amber-400",
+                budgetStats.status === 'warning' && "text-orange-400",
+                budgetStats.status === 'overbudget' && "text-rose-400",
+              )}>
+                {budgetStats.percentageUsed.toFixed(0)}%
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  ({CURRENCY_SYMBOL}{budgetStats.remainingBudget >= 0 ? `${(budgetStats.remainingBudget / 1000).toFixed(1)}k left` : 'over'})
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm font-semibold text-primary pt-0.5 group-hover/budget:underline">
+                + Set Target
+              </p>
+            )}
         </div>
       </div>
     </div>

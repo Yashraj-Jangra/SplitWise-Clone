@@ -29,6 +29,8 @@ import {
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { appEventEmitter } from '@/lib/event-emitter';
 import { getFullName } from '@/lib/utils';
+import { CURRENCY_SYMBOL } from '@/lib/constants';
+import { SetBudgetDialog } from './budget/set-budget-dialog';
 
 
 const settingsSchema = z.object({
@@ -179,6 +181,46 @@ export function GroupSettingsTab({ group }: GroupSettingsTabProps) {
             </CardFooter>
           </form>
         </Form>
+      </Card>
+
+      {/* Monthly Budget Management Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Icons.Currency className="h-5 w-5 text-primary" />
+                Monthly Budget
+              </CardTitle>
+              <CardDescription>
+                Configure spending targets and alert thresholds for this group.
+              </CardDescription>
+            </div>
+            {group.budget?.enabled && (
+              <span className="text-xs font-bold font-mono px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {CURRENCY_SYMBOL}{Number(group.budget.monthlyLimit).toLocaleString('en-IN')}/mo
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {group.budget?.enabled
+              ? `Budget tracking is active with a monthly target of ${CURRENCY_SYMBOL}${Number(group.budget.monthlyLimit).toLocaleString('en-IN')}.`
+              : 'No budget target is currently active for this group.'}
+          </p>
+        </CardContent>
+        <CardFooter className="border-t px-6 py-4 flex justify-between items-center">
+          <SetBudgetDialog
+            group={group}
+            trigger={
+              <Button variant="outline" size="sm" disabled={!isCreator || isArchived} className="gap-1.5">
+                <Icons.Settings className="h-4 w-4" />
+                <span>{group.budget?.enabled ? 'Modify Budget' : 'Configure Budget'}</span>
+              </Button>
+            }
+          />
+        </CardFooter>
       </Card>
       
       <GroupMembers members={group.members} group={group} />
