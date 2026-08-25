@@ -7,6 +7,7 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { cn, getFullName, getInitials } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -834,6 +835,29 @@ export default function SettingsPage() {
                           </div>
                         )}
                       />
+                    </div>
+
+                    {/* Detailed Management Link Button */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-muted/20 border border-border/30 hover:border-border/60 transition-colors">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold flex items-center gap-2">
+                          <Bell className="h-4 w-4 text-primary" /> Detailed Event Management
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Configure granular in-app, push, and email delivery rules per individual event type (expenses, settlements, reminders, budgets, etc.)
+                        </p>
+                      </div>
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl text-xs gap-1.5 shrink-0 hover:bg-muted"
+                      >
+                        <Link href="/notifications/settings">
+                          <span>Manage All Events</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
                     </div>
                   </form>
                 </Form>
