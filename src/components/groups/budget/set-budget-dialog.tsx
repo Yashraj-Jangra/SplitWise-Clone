@@ -64,22 +64,21 @@ interface CategoryMeta {
   name: string;
   icon: keyof typeof Icons;
   color: string;
-  bgLight: string;
 }
 
 const MASTER_CATEGORIES: CategoryMeta[] = [
-  { key: 'Food and Drink', name: 'Food & Drink', icon: 'Food', color: '#3b82f6', bgLight: 'bg-blue-500/15 text-blue-400' },
-  { key: 'Transportation', name: 'Transportation', icon: 'Car', color: '#8b5cf6', bgLight: 'bg-violet-500/15 text-violet-400' },
-  { key: 'Housing', name: 'Housing', icon: 'Home', color: '#10b981', bgLight: 'bg-emerald-500/15 text-emerald-400' },
-  { key: 'Utilities', name: 'Utilities', icon: 'Electricity', color: '#f59e0b', bgLight: 'bg-amber-500/15 text-amber-400' },
-  { key: 'Entertainment', name: 'Entertainment', icon: 'Movie', color: '#ec4899', bgLight: 'bg-pink-500/15 text-pink-400' },
-  { key: 'Shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#06b6d4', bgLight: 'bg-cyan-500/15 text-cyan-400' },
-  { key: 'Health and Wellness', name: 'Health & Wellness', icon: 'HeartPulse', color: '#ef4444', bgLight: 'bg-red-500/15 text-red-400' },
-  { key: 'Personal Care', name: 'Personal Care', icon: 'Wallet', color: '#a855f7', bgLight: 'bg-purple-500/15 text-purple-400' },
-  { key: 'Education', name: 'Education', icon: 'Education', color: '#6366f1', bgLight: 'bg-indigo-500/15 text-indigo-400' },
-  { key: 'Gifts and Donations', name: 'Gifts & Donations', icon: 'Gift', color: '#eab308', bgLight: 'bg-yellow-500/15 text-yellow-400' },
-  { key: 'Travel', name: 'Travel', icon: 'Plane', color: '#14b8a6', bgLight: 'bg-teal-500/15 text-teal-400' },
-  { key: 'Other', name: 'Other / Misc', icon: 'Wallet', color: '#64748b', bgLight: 'bg-slate-500/15 text-slate-400' },
+  { key: 'Food and Drink', name: 'Food & Drink', icon: 'Food', color: '#3b82f6' },
+  { key: 'Transportation', name: 'Transportation', icon: 'Car', color: '#8b5cf6' },
+  { key: 'Housing', name: 'Housing', icon: 'Home', color: '#10b981' },
+  { key: 'Utilities', name: 'Utilities', icon: 'Electricity', color: '#f59e0b' },
+  { key: 'Entertainment', name: 'Entertainment', icon: 'Movie', color: '#ec4899' },
+  { key: 'Shopping', name: 'Shopping', icon: 'ShoppingBag', color: '#06b6d4' },
+  { key: 'Health and Wellness', name: 'Health & Wellness', icon: 'HeartPulse', color: '#ef4444' },
+  { key: 'Personal Care', name: 'Personal Care', icon: 'Wallet', color: '#a855f7' },
+  { key: 'Education', name: 'Education', icon: 'Education', color: '#6366f1' },
+  { key: 'Gifts and Donations', name: 'Gifts & Donations', icon: 'Gift', color: '#eab308' },
+  { key: 'Travel', name: 'Travel', icon: 'Plane', color: '#14b8a6' },
+  { key: 'Other', name: 'Other / Misc', icon: 'Wallet', color: '#64748b' },
 ];
 
 interface SetBudgetDialogProps {
@@ -279,25 +278,101 @@ export function SetBudgetDialog({
     categoryAllocations.list.length > 0 || isCategoryExpanded || categoryAllocations.isOverTotal;
 
   const dialogTrigger = trigger || (
-    <Button variant={buttonVariant} size={buttonSize} className="gap-1.5 font-medium rounded-xl">
+    <Button variant={buttonVariant} size={buttonSize} className="gap-1.5 font-medium">
       <Icons.Currency className="h-4 w-4" />
       <span>{initialBudget?.enabled ? 'Edit Budget' : 'Set Budget'}</span>
     </Button>
   );
 
+  // ── Distribution Progress Bar ──
+  const DistributionMeter = (
+    <div className="rounded-md border border-border/30 bg-muted/20 p-3 space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-foreground">Distribution</span>
+        <span
+          className={cn(
+            'text-[11px] font-mono',
+            categoryAllocations.isOverTotal ? 'text-destructive font-semibold' : 'text-muted-foreground'
+          )}
+        >
+          {categoryAllocations.isOverTotal
+            ? `Over by ${CURRENCY_SYMBOL}${categoryAllocations.diff.toLocaleString('en-IN')}`
+            : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} of ${CURRENCY_SYMBOL}${currentTotal.toLocaleString('en-IN')} assigned`}
+        </span>
+      </div>
+
+      <div className="h-2 w-full bg-muted/60 rounded-full overflow-hidden flex">
+        {categoryAllocations.isOverTotal ? (
+          <div
+            className="h-full w-full bg-destructive animate-pulse"
+            title="Allocations exceed total budget"
+          />
+        ) : (
+          <>
+            {categoryAllocations.list.map((item) => (
+              <div
+                key={item.cat.key}
+                style={{ width: `${Math.max(1, item.pctOfTotal)}%`, backgroundColor: item.cat.color }}
+                className="h-full transition-all duration-300 relative group first:rounded-l-full"
+                title={`${item.cat.name}: ${CURRENCY_SYMBOL}${item.amount.toLocaleString('en-IN')} (${item.pctOfTotal.toFixed(0)}%)`}
+              />
+            ))}
+            {unallocatedPct > 0 && currentTotal > 0 && (
+              <div
+                style={{ width: `${unallocatedPct}%` }}
+                className="h-full bg-muted/40 transition-all duration-300 last:rounded-r-full"
+                title={`Unallocated buffer: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')}`}
+              />
+            )}
+          </>
+        )}
+      </div>
+
+      {categoryAllocations.isOverTotal && (
+        <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+          <span className="text-[11px]">Category caps exceed monthly limit.</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            onClick={handleAutoSumFromCategories}
+            className="h-6 px-2 text-[11px]"
+          >
+            Sync to {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
+          </Button>
+        </div>
+      )}
+
+      {categoryAllocations.list.length > 0 && !categoryAllocations.isOverTotal && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[10px] text-muted-foreground">
+          {categoryAllocations.list.map((item) => (
+            <div key={item.cat.key} className="flex items-center gap-1">
+              <span
+                className="h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: item.cat.color }}
+              />
+              <span>{item.cat.name}</span>
+              <span className="font-mono text-muted-foreground/70">({item.pctOfTotal.toFixed(0)}%)</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   // ── Main Form View (Left Pane) ──
   const MainView = (
     <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 px-5 sm:px-6 py-4 overflow-y-auto">
-        <div className="space-y-5 pb-2">
+      <ScrollArea className="flex-1 px-6 py-4 overflow-y-auto">
+        <div className="space-y-4 pb-2">
           {/* Enable / Disable Switch */}
           <FormField
             control={form.control}
             name="enabled"
             render={({ field }) => (
-              <FormItem className="flex items-center justify-between rounded-xl bg-muted/20 border border-border/40 p-3 space-y-0 shadow-sm">
+              <FormItem className="flex items-center justify-between rounded-md bg-muted/20 border border-border/30 p-3 space-y-0">
                 <div>
-                  <FormLabel className="text-sm font-medium">Monthly tracking</FormLabel>
+                  <FormLabel className="text-sm font-medium">Monthly budget tracking</FormLabel>
                   <FormDescription className="text-xs text-muted-foreground">
                     Calculate safe daily burn rates & pacing
                   </FormDescription>
@@ -316,14 +391,14 @@ export function SetBudgetDialog({
             render={({ field }) => (
               <FormItem className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <FormLabel className="text-xs font-medium text-muted-foreground">
                     Total Monthly Budget
                   </FormLabel>
                   {categoryAllocations.sum > 0 && categoryAllocations.sum !== currentTotal && (
                     <button
                       type="button"
                       onClick={handleAutoSumFromCategories}
-                      className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                      className="text-[11px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 hover:underline"
                     >
                       <Icons.Sparkles className="h-3 w-3" />
                       Sum ({CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')})
@@ -331,8 +406,8 @@ export function SetBudgetDialog({
                   )}
                 </div>
 
-                <div className="relative flex items-baseline border-b-2 border-border/40 focus-within:border-primary transition-colors pb-1">
-                  <span className="text-[clamp(2rem,8vw,2.75rem)] font-bold text-muted-foreground align-baseline leading-none">
+                <div className="relative flex items-baseline border-b-2 border-border/40 hover:border-primary/60 focus-within:border-primary transition-colors pb-1">
+                  <span className="text-[clamp(1.75rem,7vw,2.5rem)] font-semibold text-muted-foreground align-baseline leading-none">
                     {CURRENCY_SYMBOL}
                   </span>
                   <FormControl>
@@ -343,160 +418,74 @@ export function SetBudgetDialog({
                       {...field}
                       value={field.value ?? ''}
                       onChange={(e) => field.onChange(e.target.value)}
-                      className="pl-2 text-[clamp(2rem,8vw,2.75rem)] leading-none font-bold border-none !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent shadow-none px-0 focus:border-primary h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
+                      className="pl-2 text-[clamp(1.75rem,7vw,2.5rem)] leading-none font-semibold border-none !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent !focus-visible:bg-transparent shadow-none px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 hide-number-arrows"
                     />
                   </FormControl>
                 </div>
                 <FormMessage className="text-xs" />
 
                 {/* Preset Chips */}
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                <div className="flex flex-wrap gap-1.5 pt-1">
                   {QUICK_PRESETS.map((preset) => (
-                    <button
+                    <Button
                       key={preset}
                       type="button"
+                      variant={currentTotal === preset ? 'default' : 'outline'}
+                      size="sm"
                       onClick={() => form.setValue('monthlyLimit', preset, { shouldValidate: true })}
                       className={cn(
-                        'px-2.5 py-1 text-xs rounded-lg font-medium transition-colors border',
-                        currentTotal === preset
-                          ? 'bg-primary/20 text-primary border-primary/30 font-semibold'
-                          : 'bg-muted/30 text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted/60'
+                        'h-7 text-xs px-2.5',
+                        currentTotal === preset && 'font-semibold'
                       )}
                     >
                       {CURRENCY_SYMBOL}{preset.toLocaleString('en-IN')}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </FormItem>
             )}
           />
 
-          {/* Visual Allocation Meter (Shown when configured or when panel is expanded) */}
-          {showDistributionGraph && (
-            <div className="rounded-xl border border-border/40 bg-muted/15 p-3.5 space-y-2.5 shadow-sm animate-fade-in">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Icons.PieChart className="h-3.5 w-3.5 text-primary" />
-                  Distribution
-                </span>
-                <span
-                  className={cn(
-                    'font-medium text-[11px]',
-                    categoryAllocations.isOverTotal ? 'text-rose-400 font-bold' : 'text-muted-foreground'
-                  )}
-                >
-                  {categoryAllocations.isOverTotal
-                    ? `Over-allocated by ${CURRENCY_SYMBOL}${categoryAllocations.diff.toLocaleString('en-IN')}`
-                    : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} / ${CURRENCY_SYMBOL}${currentTotal.toLocaleString('en-IN')} assigned`}
-                </span>
-              </div>
-
-              {/* Segmented Bar */}
-              <div className="h-3 w-full bg-muted/60 rounded-full overflow-hidden flex border border-border/30">
-                {categoryAllocations.isOverTotal ? (
-                  <div
-                    className="h-full w-full bg-rose-500 animate-pulse flex items-center justify-center text-[9px] text-white font-bold tracking-wider"
-                    title={`Allocations exceed total budget`}
-                  >
-                    EXCEEDED BY {CURRENCY_SYMBOL}{categoryAllocations.diff.toLocaleString('en-IN')}
-                  </div>
-                ) : (
-                  <>
-                    {categoryAllocations.list.map((item) => (
-                      <div
-                        key={item.cat.key}
-                        style={{ width: `${Math.max(1, item.pctOfTotal)}%`, backgroundColor: item.cat.color }}
-                        className="h-full transition-all duration-300 relative group cursor-pointer first:rounded-l-full"
-                        title={`${item.cat.name}: ${CURRENCY_SYMBOL}${item.amount.toLocaleString('en-IN')} (${item.pctOfTotal.toFixed(0)}%)`}
-                      />
-                    ))}
-                    {unallocatedPct > 0 && currentTotal > 0 && (
-                      <div
-                        style={{ width: `${unallocatedPct}%` }}
-                        className="h-full bg-muted/40 transition-all duration-300 last:rounded-r-full"
-                        title={`Unallocated buffer: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')}`}
-                      />
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Over allocation banner */}
-              {categoryAllocations.isOverTotal && (
-                <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-                  <span className="leading-tight text-[11px]">
-                    Category caps exceed monthly budget limit.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleAutoSumFromCategories}
-                    className="px-2 py-1 rounded bg-rose-500 text-white font-semibold text-[10px] shrink-0 hover:bg-rose-600 transition-colors"
-                  >
-                    Sync to {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
-                  </button>
-                </div>
-              )}
-
-              {/* Dynamic Legend */}
-              {categoryAllocations.list.length > 0 && !categoryAllocations.isOverTotal && (
-                <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[10px] text-muted-foreground">
-                  {categoryAllocations.list.map((item) => (
-                    <div key={item.cat.key} className="flex items-center gap-1">
-                      <span
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: item.cat.color }}
-                      />
-                      <span className="font-medium text-foreground">{item.cat.name}</span>
-                      <span>({item.pctOfTotal.toFixed(0)}%)</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Visual Allocation Meter (Conditionally rendered) */}
+          {showDistributionGraph && DistributionMeter}
 
           {/* ── Category Wise Budget Expander Trigger (Sideways expansion) ── */}
-          <div className="space-y-1.5">
-            <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-              Category Wise Budget
+          <div className="space-y-1">
+            <FormLabel className="text-xs font-medium text-muted-foreground block">
+              Category Allocation
             </FormLabel>
             <button
               type="button"
               onClick={() => setIsCategoryExpanded(!isCategoryExpanded)}
               className={cn(
-                'w-full flex items-center justify-between p-3.5 rounded-xl border text-left transition-all duration-200 group',
+                'w-full flex items-center justify-between p-3 rounded-md border text-left transition-colors',
                 isCategoryExpanded
-                  ? 'bg-primary/10 border-primary/40 shadow-sm'
-                  : 'bg-muted/15 border-border/40 hover:bg-muted/30 hover:border-border/60'
+                  ? 'bg-muted/40 border-border/60 text-foreground'
+                  : 'bg-muted/20 border-border/30 hover:bg-muted/40 text-muted-foreground hover:text-foreground'
               )}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className={cn(
-                    'p-2 rounded-lg transition-colors',
-                    isCategoryExpanded ? 'bg-primary text-primary-foreground' : 'bg-primary/15 text-primary'
-                  )}
-                >
+                <div className="p-1.5 rounded-md bg-muted text-foreground">
                   <Icons.PieChart className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <span>Category Allocations</span>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    <span>Category Caps</span>
                     {categoryAllocations.list.length > 0 && (
-                      <span className="text-[10px] font-semibold bg-primary/20 text-primary px-1.5 py-0.2 rounded-full">
+                      <span className="text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
                         {categoryAllocations.list.length} active
                       </span>
                     )}
                   </p>
-                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                  <p className="text-xs text-muted-foreground truncate">
                     {categoryAllocations.list.length > 0
-                      ? `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} assigned across ${categoryAllocations.list.length} categories`
-                      : 'Set optional spending limits per category'}
+                      ? `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} configured`
+                      : 'Set optional limits per category'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0 pl-2">
+              <div className="flex items-center gap-1 text-xs font-medium text-foreground shrink-0 pl-2">
                 <span>{isCategoryExpanded ? 'Collapse' : 'Configure'}</span>
                 <Icons.ArrowRight
                   className={cn(
@@ -510,7 +499,7 @@ export function SetBudgetDialog({
 
           {/* Alert Thresholds */}
           <div className="space-y-1.5 pt-1">
-            <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+            <FormLabel className="text-xs font-medium text-muted-foreground block">
               Notification Benchmarks
             </FormLabel>
             <div className="grid grid-cols-3 gap-2">
@@ -526,9 +515,9 @@ export function SetBudgetDialog({
                   render={({ field }) => (
                     <label
                       className={cn(
-                        'flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border text-xs font-medium cursor-pointer transition-colors select-none',
+                        'flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-md border text-xs font-medium cursor-pointer transition-colors select-none',
                         field.value
-                          ? 'bg-primary/15 text-primary border-primary/30 font-semibold'
+                          ? 'bg-muted/60 text-foreground border-border/60 font-semibold'
                           : 'bg-muted/20 text-muted-foreground border-border/30 hover:bg-muted/40'
                       )}
                     >
@@ -536,7 +525,7 @@ export function SetBudgetDialog({
                         type="checkbox"
                         checked={field.value}
                         onChange={field.onChange}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                        className="rounded border-border text-foreground focus:ring-ring h-3.5 w-3.5"
                       />
                       <span>{t.label}</span>
                     </label>
@@ -549,7 +538,7 @@ export function SetBudgetDialog({
       </ScrollArea>
 
       {/* Main Footer Actions */}
-      <div className="flex items-center justify-between p-4 sm:px-6 border-t border-border/20 bg-background/95 backdrop-blur-sm gap-2 shrink-0">
+      <DialogFooter className="p-6 pt-3 flex items-center justify-between border-t border-border/20 bg-background">
         {initialBudget?.monthlyLimit ? (
           <Button
             type="button"
@@ -557,7 +546,7 @@ export function SetBudgetDialog({
             size="sm"
             onClick={handleDisableBudget}
             disabled={isSubmitting}
-            className="h-10 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive px-3 rounded-xl"
+            className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             Turn Off
           </Button>
@@ -570,7 +559,6 @@ export function SetBudgetDialog({
             variant="outline"
             onClick={() => setOpen(false)}
             disabled={isSubmitting}
-            className="h-10 rounded-xl text-sm font-medium px-4 hover:bg-muted hover:text-foreground transition-colors border-border/40"
           >
             Cancel
           </Button>
@@ -578,26 +566,25 @@ export function SetBudgetDialog({
             type="submit"
             form="set-budget-form"
             disabled={isSubmitting || categoryAllocations.isOverTotal}
-            className="h-10 rounded-xl text-sm font-medium px-5"
           >
             {isSubmitting ? 'Saving...' : 'Save Budget'}
           </Button>
         </div>
-      </div>
+      </DialogFooter>
     </div>
   );
 
   // ── Expanded Category View (Right Pane on Desktop, Slide-in on Mobile) ──
   const CategoryExpandedPane = (
-    <div className="flex flex-col h-full bg-muted/20">
+    <div className="flex flex-col h-full bg-background">
       {/* Pane Header */}
-      <div className="p-4 sm:px-6 border-b border-border/30 flex items-center justify-between shrink-0 bg-background/60 backdrop-blur-sm">
+      <div className="p-4 px-6 border-b border-border/30 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/15 text-primary">
+          <div className="p-1.5 rounded-md bg-muted text-foreground">
             <Icons.PieChart className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground">Category Caps</h3>
+            <h3 className="text-sm font-semibold text-foreground">Category Caps</h3>
             <p className="text-[11px] text-muted-foreground">
               {categoryAllocations.list.length} of {MASTER_CATEGORIES.length} allocated
             </p>
@@ -606,23 +593,25 @@ export function SetBudgetDialog({
 
         <div className="flex items-center gap-2">
           {categoryAllocations.list.length > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 const emptyCats = Object.fromEntries(MASTER_CATEGORIES.map((c) => [c.key, '']));
                 form.setValue('categories', emptyCats);
               }}
-              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors font-medium px-2 py-1"
+              className="h-7 text-[11px] text-muted-foreground hover:text-foreground px-2"
             >
               Clear All
-            </button>
+            </Button>
           )}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={() => setIsCategoryExpanded(false)}
-            className="h-7 w-7 rounded-lg hover:bg-muted"
+            className="h-7 w-7 rounded-md hover:bg-muted"
             title="Collapse panel"
           >
             <Icons.Close className="h-4 w-4" />
@@ -632,139 +621,69 @@ export function SetBudgetDialog({
       </div>
 
       {/* Category List */}
-      <ScrollArea className="flex-1 px-4 sm:px-6 py-4 overflow-y-auto">
-        <div className="space-y-3 pb-4">
-          {/* Live Distribution Bar in Category View */}
-          <div className="rounded-xl border border-border/40 bg-background/80 p-3 space-y-2 shadow-xs">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-foreground flex items-center gap-1.5">
-                <Icons.PieChart className="h-3.5 w-3.5 text-primary" />
-                Live Distribution
-              </span>
-              <span
-                className={cn(
-                  'font-medium text-[11px]',
-                  categoryAllocations.isOverTotal ? 'text-rose-400 font-bold' : 'text-muted-foreground'
-                )}
-              >
-                {categoryAllocations.isOverTotal
-                  ? `Over by ${CURRENCY_SYMBOL}${categoryAllocations.diff.toLocaleString('en-IN')}`
-                  : `${CURRENCY_SYMBOL}${categoryAllocations.sum.toLocaleString('en-IN')} of ${CURRENCY_SYMBOL}${currentTotal.toLocaleString('en-IN')}`}
-              </span>
-            </div>
+      <ScrollArea className="flex-1 px-6 py-3 overflow-y-auto">
+        <div className="space-y-1.5 pb-2">
+          {/* Top Live Distribution Meter inside category pane */}
+          {DistributionMeter}
 
-            <div className="h-2.5 w-full bg-muted/60 rounded-full overflow-hidden flex border border-border/30">
-              {categoryAllocations.isOverTotal ? (
-                <div className="h-full w-full bg-rose-500 animate-pulse flex items-center justify-center text-[9px] text-white font-bold tracking-wider">
-                  EXCEEDED BY {CURRENCY_SYMBOL}{categoryAllocations.diff.toLocaleString('en-IN')}
-                </div>
-              ) : (
-                <>
-                  {categoryAllocations.list.map((item) => (
-                    <div
-                      key={item.cat.key}
-                      style={{ width: `${Math.max(1, item.pctOfTotal)}%`, backgroundColor: item.cat.color }}
-                      className="h-full transition-all duration-300 relative group first:rounded-l-full"
-                      title={`${item.cat.name}: ${CURRENCY_SYMBOL}${item.amount.toLocaleString('en-IN')} (${item.pctOfTotal.toFixed(0)}%)`}
-                    />
-                  ))}
-                  {unallocatedPct > 0 && currentTotal > 0 && (
-                    <div
-                      style={{ width: `${unallocatedPct}%` }}
-                      className="h-full bg-muted/40 transition-all duration-300 last:rounded-r-full"
-                      title={`Unallocated buffer: ${CURRENCY_SYMBOL}${unallocatedAmount.toLocaleString('en-IN')}`}
-                    />
-                  )}
-                </>
-              )}
-            </div>
+          {/* Category Input Rows */}
+          <div className="divide-y divide-border/20 pt-1">
+            {MASTER_CATEGORIES.map((cat) => {
+              const IconComp = Icons[cat.icon] || Icons.Wallet;
+              const currentVal = form.watch(`categories.${cat.key}`) || '';
+              const numVal = Number(currentVal) || 0;
+              const pct = currentTotal > 0 && numVal > 0 ? (numVal / currentTotal) * 100 : 0;
 
-            {categoryAllocations.isOverTotal && (
-              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
-                <span className="leading-tight text-[11px]">
-                  Exceeds total monthly budget limit.
-                </span>
-                <button
-                  type="button"
-                  onClick={handleAutoSumFromCategories}
-                  className="px-2 py-1 rounded bg-rose-500 text-white font-semibold text-[10px] shrink-0 hover:bg-rose-600 transition-colors"
+              return (
+                <div
+                  key={cat.key}
+                  className="flex items-center justify-between py-2 px-1 rounded-md hover:bg-muted/20 transition-colors group"
                 >
-                  Sync to {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
-                </button>
-              </div>
-            )}
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="p-1.5 rounded-md bg-muted/60 text-muted-foreground group-hover:text-foreground transition-colors shrink-0">
+                      <IconComp className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{cat.name}</p>
+                      {pct > 0 ? (
+                        <p className="text-[10px] text-muted-foreground font-mono">
+                          {pct.toFixed(0)}% of budget
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground/60">No cap</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {CURRENCY_SYMBOL}
+                    </span>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={currentVal}
+                      onChange={(e) => {
+                        form.setValue(`categories.${cat.key}`, e.target.value);
+                      }}
+                      className="h-8 w-24 text-sm px-2 text-right rounded-md bg-muted/20 border-border/30 hover:bg-background focus:bg-background text-foreground font-medium hide-number-arrows"
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          {MASTER_CATEGORIES.map((cat) => {
-            const IconComp = Icons[cat.icon] || Icons.Wallet;
-            const currentVal = form.watch(`categories.${cat.key}`) || '';
-            const numVal = Number(currentVal) || 0;
-            const pct = currentTotal > 0 && numVal > 0 ? (numVal / currentTotal) * 100 : 0;
-
-            return (
-              <div
-                key={cat.key}
-                className={cn(
-                  'flex items-center justify-between gap-2 p-2.5 rounded-xl border transition-all duration-200',
-                  numVal > 0
-                    ? 'bg-background border-border/80 shadow-xs'
-                    : 'bg-background/50 border-border/30 hover:border-border/60'
-                )}
-              >
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className={cn('p-2 rounded-lg shrink-0', cat.bgLight)}>
-                    <IconComp className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">{cat.name}</p>
-                    {pct > 0 ? (
-                      <p className="text-[10px] text-muted-foreground font-mono font-medium">
-                        {pct.toFixed(0)}% of monthly budget
-                      </p>
-                    ) : (
-                      <p className="text-[10px] text-muted-foreground">No cap set</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 w-28 shrink-0">
-                  <span className="text-xs text-muted-foreground font-semibold">
-                    {CURRENCY_SYMBOL}
-                  </span>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={currentVal}
-                    onChange={(e) => {
-                      form.setValue(`categories.${cat.key}`, e.target.value);
-                    }}
-                    className="h-8 text-xs px-2 text-right rounded-lg bg-muted/20 border-border/40 focus:border-primary font-medium"
-                  />
-                  {numVal > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => form.setValue(`categories.${cat.key}`, '')}
-                      className="text-muted-foreground hover:text-foreground text-xs p-1"
-                      title="Clear cap"
-                    >
-                      <Icons.Close className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
         </div>
       </ScrollArea>
 
       {/* Pane Footer Summary */}
-      <div className="p-3.5 sm:px-6 border-t border-border/30 bg-background/80 backdrop-blur-sm flex items-center justify-between text-xs shrink-0">
+      <div className="p-4 px-6 border-t border-border/30 bg-background flex items-center justify-between text-xs shrink-0">
         <div className="space-y-0.5">
-          <p className="text-[11px] text-muted-foreground font-medium">Total Allocated</p>
-          <p className="text-sm font-bold text-foreground font-sans">
+          <p className="text-[11px] text-muted-foreground">Total Assigned</p>
+          <p className="text-sm font-semibold text-foreground font-mono">
             {CURRENCY_SYMBOL}{categoryAllocations.sum.toLocaleString('en-IN')}
             <span className="text-xs font-normal text-muted-foreground ml-1">
-              of {CURRENCY_SYMBOL}{currentTotal.toLocaleString('en-IN')}
+              / {CURRENCY_SYMBOL}{currentTotal.toLocaleString('en-IN')}
             </span>
           </p>
         </div>
@@ -772,7 +691,7 @@ export function SetBudgetDialog({
           type="button"
           size="sm"
           onClick={() => setIsCategoryExpanded(false)}
-          className="h-8 rounded-xl text-xs font-semibold px-4"
+          className="h-8 px-4"
         >
           Done
         </Button>
@@ -797,7 +716,7 @@ export function SetBudgetDialog({
             animate={{ width: 420, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden flex flex-col border-l border-border/40"
+            className="overflow-hidden flex flex-col border-l border-border/30 bg-background"
           >
             {CategoryExpandedPane}
           </motion.div>
@@ -811,9 +730,9 @@ export function SetBudgetDialog({
       <Sheet open={open} onOpenChange={setOpen}>
         {trigger && <SheetTrigger asChild>{dialogTrigger}</SheetTrigger>}
         <SheetContent side="bottom" className="h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0 bg-background overflow-hidden">
-          <SheetHeader className="p-4 sm:p-6 pb-3 border-b border-border/20 text-left shrink-0">
-            <SheetTitle className="text-xl font-bold font-headline flex items-center gap-2">
-              <Icons.Currency className="h-5 w-5 text-primary" />
+          <SheetHeader className="p-4 border-b border-border/20 text-left shrink-0">
+            <SheetTitle className="text-lg font-bold font-headline flex items-center gap-2">
+              <Icons.Currency className="h-5 w-5 text-muted-foreground" />
               Monthly Budget
             </SheetTitle>
           </SheetHeader>
@@ -842,8 +761,8 @@ export function SetBudgetDialog({
         }}
       >
         <DialogHeader className="p-6 pb-3 border-b border-border/20 text-left shrink-0">
-          <DialogTitle className="text-xl font-bold font-headline flex items-center gap-2">
-            <Icons.Currency className="h-5 w-5 text-primary" />
+          <DialogTitle className="text-lg font-bold font-headline flex items-center gap-2">
+            <Icons.Currency className="h-5 w-5 text-muted-foreground" />
             Monthly Budget
           </DialogTitle>
         </DialogHeader>
