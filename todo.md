@@ -1,6 +1,11 @@
 # Session Progress & Context Preservation
 
 ## Work Completed
+- **Repository Branching Rules Enforced (`dev` → `master` only)** ✅:
+  - `main` branch was identified as introduced on **Aug 25, 2026** (branched from `dev` at `a0e427f`). It should NOT be used for development.
+  - Strict branching rules added to [`.agents/AGENTS.md`](file:///d:/Projects/SplitWise-Clone/.agents/AGENTS.md): all commits go to `dev`, deploys via PR to `master`.
+  - Local `dev` branch re-synced to `origin/dev` to resolve the unrelated histories divergence caused by `git branch -f dev main`.
+
 - **Oracle Autonomous DB Migration**: Exported 4,555 PostgreSQL records into 2,258 single-table documents in table `SplitItDB`.
 - **Database Connection Verified**: Diagnostic test confirmed live connection to Oracle Autonomous Database (35 users, 36 accounts, 2 sessions, 19 groups, 749 expenses, 141 settlements, 1 settings document).
 - **Service Layer Migration**: Refactored `settings`, `user`, `group`, `expense`, `settlement`, `history`, `notification`, and `ticket` services to use `src/lib/nosql.ts`.
