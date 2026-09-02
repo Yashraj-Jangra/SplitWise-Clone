@@ -16,3 +16,18 @@ All modals, dialogs, drawers, and form cards in this codebase MUST follow the **
    `h-10 rounded-xl text-sm font-medium px-4` (ghost/cancel) and `px-5` (primary).
 6. **Mobile Parity**:
    `SheetContent side="bottom" className="h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0 bg-background"`
+
+## Branching & Deployment Strategy (Dev/Master Workflow)
+
+This project strictly adheres to a two-branch git model (`dev` and `master`):
+
+1. **Active Development Branch (`dev`)**:
+   - All feature development, bug fixes, refactoring, UI updates, and day-to-day commits MUST happen exclusively on the `dev` branch.
+   - Never commit feature or fix changes directly to `master`.
+   - Do NOT use or create a `main` branch; only `dev` and `master` branches are permitted.
+
+2. **Production & Deployment Branch (`master`)**:
+   - `master` reflects production-ready, deployable code.
+   - When features/fixes on `dev` are complete and ready to deploy, open a Pull Request (PR) to merge `dev` into `master`.
+   - Automated/production deployment is triggered only after the PR is approved and merged into `master`.
+
