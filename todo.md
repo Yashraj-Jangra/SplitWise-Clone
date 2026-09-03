@@ -1,5 +1,11 @@
 # Session Progress & Context Preservation
 
+  - **AI & RAG Hardening Phase 3 — Zero-Hallucination Math via Server Context** ✅:
+    - Created [`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts): `buildFinancialSnapshot()` computes authoritative ledger facts on the server (exact net balances, debts via `simplifyDebts`, current month spending, recent 5 transactions, and group budget).
+    - Integrated authoritative financial facts into [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts) with strict LLM directives forbidding guessing or recalculating balances from raw transaction lists.
+    - Updated [`src/app/api/ai/insights/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/insights/route.ts) to ground personal spending insights in verified ledger figures and net balance status.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **AI & RAG Hardening Phase 2 — Prompt Injection & Security Hardening** ✅:
     - Added group membership validation in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): returns 403 Forbidden if user requests group scope for a group they are not a member of.
     - Added user message length cap (1,000 chars) and sanitization to prevent prompt bloat.

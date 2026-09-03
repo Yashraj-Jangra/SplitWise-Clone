@@ -36,8 +36,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Aggregate user's recent financial numbers
-    const expenses = await getExpensesByUserId(session.user.id);
+    // 2. Aggregate user's recent financial numbers & net balances
+    const { getAllUserBalances } = await import('@/lib/services/balance.service');
+    const [expenses, userBalances] = await Promise.all([
+      getExpensesByUserId(session.user.id).catch(() => []),
+      getAllUserBalances(session.user.id).catch(() => []),
+    ]);
+
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
 
@@ -57,6 +62,13 @@ export async function POST(request: Request) {
       }
     }
 
+    const netBalance = userBalances.reduce((sum, b) => sum + b.netBalance, 0);
+    const netStatusStr = netBalance > 0.01
+      ? `Net Owed to You: ₹${netBalance.toFixed(0)} (others owe you)`
+      : netBalance < -0.01
+      ? `Net You Owe: ₹${Math.abs(netBalance).toFixed(0)} (you have pending debts)`
+      : 'Net Balance: ₹0 (all settled up)';
+
     const sortedCats = Array.from(categoryMap.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
@@ -71,10 +83,11 @@ Your job is to provide concise, friendly, and actionable financial summaries bas
     const userPrompt = `USER FINANCIAL METRICS:
 - Total Personal Spend This Month: ₹${totalMonthSpent.toFixed(0)}
 - Top Categories: ${categoriesStr}
+- Overall Balance Status: ${netStatusStr}
 - Current Month: ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}
 
 INSTRUCTIONS:
-1. Summarize their spending trend in 2-3 short, engaging sentences.
+1. Summarize their spending trend and balance status in 2-3 short, engaging sentences.
 2. Highlight their biggest category and suggest one practical action (e.g. setting a budget or settling shared tabs).
 3. Format all currency numbers using ₹.
 4. Keep the entire response under 80 words.`;
