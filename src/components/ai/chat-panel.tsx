@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { MessageBubble } from './message-bubble';
+import type { AIStreamStatus } from './status-pill';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
@@ -38,6 +39,7 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [streamStatus, setStreamStatus] = useState<AIStreamStatus>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -90,6 +92,7 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
     setMessages(updatedMessages);
 
     setIsStreaming(true);
+    setStreamStatus('retrieving');
 
     try {
       const response = await fetch('/api/ai/chat', {
@@ -134,7 +137,10 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
           if (trimmed.startsWith('data: ')) {
             try {
               const data = JSON.parse(trimmed.slice(6));
-              if (data.token) {
+              if (data.status === 'retrieving' || data.status === 'thinking') {
+                setStreamStatus(data.status);
+              } else if (data.token) {
+                setStreamStatus(null);
                 assistantContent += data.token;
                 setMessages((prev) => {
                   const updated = [...prev];
@@ -162,6 +168,7 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
         },
       ]);
     } finally {
+      setStreamStatus(null);
       setIsStreaming(false);
     }
   };
@@ -285,6 +292,7 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
                 message={msg}
                 userName={userProfile?.firstName || 'You'}
                 isStreaming={isStreaming && idx === messages.length - 1 && msg.role === 'assistant'}
+                status={isStreaming && idx === messages.length - 1 && msg.role === 'assistant' ? streamStatus : null}
               />
             ))}
             <div ref={messagesEndRef} />

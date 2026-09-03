@@ -54,36 +54,47 @@ export async function POST(request: Request) {
       }
     }
 
-    // 1. Fetch server-calculated authoritative financial snapshot & generate query vector
-    let contextBlock = 'No relevant prior financial records found.';
-    const [snapshot, queryVector] = await Promise.all([
-      buildFinancialSnapshot(session.user.id, groupId).catch((err) => {
-        console.warn('[Financial Context] Snapshot note:', err.message || err);
-        return null;
-      }),
-      embed(message).catch((err) => {
-        console.warn('[RAG Chat] Embedding note:', err.message || err);
-        return null;
-      }),
-    ]);
+    // 1. Stream response via SSE with live lifecycle status events
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          // Emit initial status: searching records
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ status: 'retrieving' })}\n\n`));
 
-    // 2. Vector search against user's partition in Oracle 23ai
-    if (queryVector) {
-      try {
-        const chunks = await retrieveSimilar(queryVector, session.user.id, {
-          groupId,
-          topK: 8,
-        });
-        if (chunks.length > 0) {
-          contextBlock = buildContextBlock(chunks);
-        }
-      } catch (retrievalErr: any) {
-        console.warn('[RAG Chat] Vector retrieval note:', retrievalErr.message || retrievalErr);
-      }
-    }
+          // Fetch authoritative ledger figures & query vector in parallel
+          let contextBlock = 'No relevant prior financial records found.';
+          const [snapshot, queryVector] = await Promise.all([
+            buildFinancialSnapshot(session.user.id, groupId).catch((err) => {
+              console.warn('[Financial Context] Snapshot note:', err.message || err);
+              return null;
+            }),
+            embed(message).catch((err) => {
+              console.warn('[RAG Chat] Embedding note:', err.message || err);
+              return null;
+            }),
+          ]);
 
-    // 3. Construct system prompt
-    const systemPrompt = `You are SplitIt AI, the intelligent financial assistant for the SplitIt group expense-sharing app.
+          // Vector search against user's partition in Oracle 23ai
+          if (queryVector) {
+            try {
+              const chunks = await retrieveSimilar(queryVector, session.user.id, {
+                groupId,
+                topK: 8,
+              });
+              if (chunks.length > 0) {
+                contextBlock = buildContextBlock(chunks);
+              }
+            } catch (retrievalErr: any) {
+              console.warn('[RAG Chat] Vector retrieval note:', retrievalErr.message || retrievalErr);
+            }
+          }
+
+          // Emit next status: thinking / generating response
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ status: 'thinking' })}\n\n`));
+
+          // Construct system prompt
+          const systemPrompt = `You are SplitIt AI, the intelligent financial assistant for the SplitIt group expense-sharing app.
 You help users understand their spending, debts, group finances, and balances using their actual verified records.
 
 SECURITY & INTEGRITY RULES:
@@ -114,20 +125,15 @@ GUIDELINES:
 4. If the records do not have enough detail to answer a specific question, answer honestly based on what is available and offer helpful guidance.
 5. Keep your response concise, well-structured with markdown bullets, and easy to read on mobile.`;
 
-    const fullMessages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      ...history.map((m) => ({
-        role: m.role,
-        content: String(m.content || ''),
-      })),
-      { role: 'user', content: message },
-    ];
+          const fullMessages: ChatMessage[] = [
+            { role: 'system', content: systemPrompt },
+            ...history.map((m) => ({
+              role: m.role,
+              content: String(m.content || ''),
+            })),
+            { role: 'user', content: message },
+          ];
 
-    // 4. Stream response via SSE
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        try {
           for await (const token of streamCompletion(fullMessages)) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token })}\n\n`));
           }

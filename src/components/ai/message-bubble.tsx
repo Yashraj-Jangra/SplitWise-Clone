@@ -5,16 +5,19 @@ import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { FormattedMarkdown } from './formatted-markdown';
+import { StatusPill, type AIStreamStatus } from './status-pill';
 import type { ChatMessage } from '@/types/ai';
 
 interface MessageBubbleProps {
   message: ChatMessage;
   userName?: string;
   isStreaming?: boolean;
+  status?: AIStreamStatus;
 }
 
-export function MessageBubble({ message, userName = 'You', isStreaming }: MessageBubbleProps) {
+export function MessageBubble({ message, userName = 'You', isStreaming, status }: MessageBubbleProps) {
   const isUser = message.role === 'user';
+  const showStatusPill = !isUser && !message.content && (isStreaming || Boolean(status));
 
   return (
     <div
@@ -36,20 +39,26 @@ export function MessageBubble({ message, userName = 'You', isStreaming }: Messag
         </AvatarFallback>
       </Avatar>
 
-      <div
-        className={cn(
-          'rounded-2xl px-4 py-2.5 text-sm transition-all shadow-2xs',
-          isUser
-            ? 'bg-primary text-primary-foreground rounded-tr-xs leading-relaxed whitespace-pre-wrap break-words font-normal'
-            : 'bg-muted/25 text-foreground border border-border/30 rounded-tl-xs w-full'
-        )}
-      >
-        {isUser ? (
-          message.content
-        ) : (
-          <FormattedMarkdown content={message.content} isStreaming={isStreaming} />
-        )}
-      </div>
+      {showStatusPill ? (
+        <div className="pt-0.5">
+          <StatusPill status={status || 'thinking'} />
+        </div>
+      ) : (
+        <div
+          className={cn(
+            'rounded-2xl px-4 py-2.5 text-sm transition-all shadow-2xs',
+            isUser
+              ? 'bg-primary text-primary-foreground rounded-tr-xs leading-relaxed whitespace-pre-wrap break-words font-normal'
+              : 'bg-muted/25 text-foreground border border-border/30 rounded-tl-xs w-full'
+          )}
+        >
+          {isUser ? (
+            message.content
+          ) : (
+            <FormattedMarkdown content={message.content} isStreaming={isStreaming} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

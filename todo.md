@@ -1,5 +1,11 @@
 # Session Progress & Context Preservation
 
+  - **AI & RAG Hardening Phase 6 — UI Live Status & Animated Feedback** ✅:
+    - Created [`src/components/ai/status-pill.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/status-pill.tsx): modern, sleek status pill matching the minimalist dialog theme, featuring animated cycling loading dots, dynamic icon transitions, and live status states (`Searching records...` vs. `Thinking...`).
+    - Integrated lifecycle SSE streaming in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): streams `status: 'retrieving'` immediately upon request, followed by `status: 'thinking'` during generation, and real-time tokens.
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) and [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to seamlessly display live status feedback and transition into formatted markdown without visual jumps.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **AI & RAG Hardening Phase 5 — Retriever & Embedder Improvements** ✅:
     - Updated [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts) with `DEFAULT_TOP_K = 10` and tuned `DEFAULT_MIN_SIMILARITY = 0.40` for broader semantic recall on conversational expense queries.
     - Enhanced [`src/lib/ai/embedder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/embedder.ts): raised normalization limit from 512 to 768 characters and added regex filtering for control characters.
