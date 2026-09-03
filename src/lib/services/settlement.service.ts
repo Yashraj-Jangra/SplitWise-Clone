@@ -4,6 +4,7 @@ import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifySettlementAdded } from '@/lib/notification-service';
 import { getFullName } from '../utils';
+import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 
 function mapSettlementRow(row: any, paidBy: UserProfile, paidTo: UserProfile): Settlement {
   return {
@@ -67,6 +68,7 @@ export async function addSettlement(
     await notifySettlementAdded(settlementData.paidToId, actorId, settlementData.groupId, settlementData.amount, settlementId, groupDoc?.name || 'your group');
   }
 
+  queueVectorEmbedding(settlementId, settlementData.groupId, 'settlement', 'upsert');
   return settlementId;
 }
 
@@ -153,6 +155,8 @@ export async function updateSettlement(
     `SETTLEMENT#${settlementId}`
   );
 
+  queueVectorEmbedding(settlementId, oldData.groupId, 'settlement', 'upsert');
+
   const [actor, newPaidBy, newPaidTo, oldPaidBy, oldPaidTo] = await Promise.all([
     getUserProfile(actorId),
     getUserProfile(data.paidById || oldData.paidById),
@@ -178,4 +182,5 @@ export async function updateSettlement(
 
 export async function deleteSettlement(settlementId: string, groupId: string, actorId: string): Promise<void> {
   await deleteItem(`GROUP#${groupId}`, `SETTLEMENT#${settlementId}`);
+  queueVectorEmbedding(settlementId, groupId, 'settlement', 'delete');
 }

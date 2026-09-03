@@ -7,6 +7,7 @@ import { getSiteSettings } from './settings.service';
 import { getMasterCategory } from '../expense-categories';
 import { getFullName } from '../utils';
 import { format } from 'date-fns';
+import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 
 async function checkAndNotifyBudgetThreshold(
   groupId: string,
@@ -171,6 +172,7 @@ export async function addExpense(
     expenseData.amount
   );
 
+  queueVectorEmbedding(expenseId, expenseData.groupId, 'expense', 'upsert');
   return expenseId;
 }
 
@@ -209,6 +211,8 @@ export async function updateExpense(
     `USER#${actorId}`,
     `EXPENSE#${expenseId}`
   );
+
+  queueVectorEmbedding(expenseId, expenseData.groupId, 'expense', 'upsert');
 
   // Adjust group total & check budget
   const diff = expenseData.amount - oldAmount;
@@ -287,6 +291,8 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   if (recipientIds.length > 0) {
     await notifyExpenseDeleted(recipientIds, actorId, groupId, expense.description);
   }
+
+  queueVectorEmbedding(expenseId, groupId, 'expense', 'delete');
 }
 
 export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> {

@@ -25,6 +25,7 @@ import { listenForForegroundMessages } from "@/lib/push-service";
 import { UpdateBanner } from "@/components/shared/update-banner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAppVersionDisplay, BUILD_NUMBER } from "@/lib/version";
+import { AIChatWidget } from "@/components/ai/ai-chat-widget";
 
 
 const mainNavItems: NavItem[] = [
@@ -33,6 +34,7 @@ const mainNavItems: NavItem[] = [
   { title: "Expenses", href: "/expenses", icon: "Expense" },
   { title: "Settlements", href: "/settlements", icon: "Settle" },
   { title: "Analysis", href: "/analysis", icon: "Analysis" },
+  { title: "Assistant", href: "/assistant", icon: "Sparkles" },
 ];
 
 const settingsNavItem: NavItem = {
@@ -442,6 +444,7 @@ export function AppShell({ children }: AppShellProps) {
             {children}
           </main>
           <BottomNavBar />
+          <AIChatWidget />
       </div>
     </div>
   );
