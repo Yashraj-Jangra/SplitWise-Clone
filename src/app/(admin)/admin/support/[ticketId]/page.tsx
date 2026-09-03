@@ -23,7 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { getFullName, getInitials, cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 
 
 const replySchema = z.object({
@@ -53,11 +53,43 @@ export default function TicketDetailPage() {
 
     const [ticket, setTicket] = useState<SupportTicket | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isDraftingReply, setIsDraftingReply] = useState(false);
 
     const replyForm = useForm<ReplyFormValues>({
         resolver: zodResolver(replySchema),
         defaultValues: { message: '' },
     });
+
+    const handleDraftAiReply = async () => {
+        setIsDraftingReply(true);
+        try {
+            const res = await fetch('/api/ai/draft-reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketId }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to draft reply');
+            }
+            const data = await res.json();
+            if (data?.draft) {
+                replyForm.setValue('message', data.draft, { shouldValidate: true, shouldDirty: true });
+                toast({
+                    title: '✨ AI Reply Drafted',
+                    description: 'Draft generated. Please review and edit before sending.',
+                });
+            }
+        } catch (err: any) {
+            toast({
+                title: 'Drafting Failed',
+                description: err.message || 'Could not generate reply draft.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsDraftingReply(false);
+        }
+    };
 
     useEffect(() => {
         async function fetchTicket() {
@@ -157,8 +189,29 @@ export default function TicketDetailPage() {
                 </Card>
 
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
                         <CardTitle>Your Reply</CardTitle>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isDraftingReply || replyForm.formState.isSubmitting}
+                            onClick={handleDraftAiReply}
+                            className="h-8 gap-1.5 rounded-full text-xs font-medium border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary transition-all active:scale-95"
+                            title="Generate a polite, contextual draft reply with AI"
+                        >
+                            {isDraftingReply ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Drafting...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Icons.Sparkles className="w-3.5 h-3.5 text-primary" />
+                                    <span>Draft AI Reply</span>
+                                </>
+                            )}
+                        </Button>
                     </CardHeader>
                     <CardContent>
                         <Form {...replyForm}>
