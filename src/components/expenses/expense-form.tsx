@@ -18,6 +18,7 @@ import { addExpense, updateExpense } from '@/lib/mock-data';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useSuggestCategory } from '@/hooks/use-suggest-category';
 
 // UI Components
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -121,6 +122,7 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
   const watchCategory = watch('category');
   const watchDescription = watch('description');
 
+  const { suggestion: aiSuggestion, isLoading: isAiSuggesting } = useSuggestCategory(watchDescription || '');
   const debouncedDescription = useDebounce(watchDescription, 300);
 
   // Effect for auto-categorization
@@ -292,6 +294,31 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
               </FormItem>
             )}
           />
+          <AnimatePresence>
+            {aiSuggestion && aiSuggestion.category !== watchCategory && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="mt-1.5 flex items-center gap-1.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setValue('category', aiSuggestion.category, { shouldValidate: true, shouldDirty: true });
+                    setUserOverriddenCategory(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 transition-all shadow-xs active:scale-95"
+                  title={`Apply suggested category: ${aiSuggestion.category} (${aiSuggestion.masterCategory})`}
+                >
+                  <Icons.Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <span>Category: <strong>{aiSuggestion.category}</strong></span>
+                  <span className="text-[10px] text-muted-foreground">({aiSuggestion.masterCategory})</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <FormField
             control={control}
             name="amount"
