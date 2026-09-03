@@ -15,9 +15,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ skipped: true, reason: 'Embedding queue is disabled' });
     }
 
-    // Security check
+    // Security check: internal secret validation
     const authHeader = request.headers.get('Authorization') || request.headers.get('x-internal-secret');
     const token = authHeader?.replace(/^Bearer\s+/i, '');
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd && (!INTERNAL_API_SECRET || token !== INTERNAL_API_SECRET)) {
+      return NextResponse.json({ error: 'Unauthorized queue caller' }, { status: 401 });
+    }
     if (INTERNAL_API_SECRET && token !== INTERNAL_API_SECRET) {
       return NextResponse.json({ error: 'Unauthorized queue caller' }, { status: 401 });
     }
@@ -25,13 +29,20 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const { id, groupId, entityType, action = 'upsert' } = body;
 
-    if (!id || !entityType) {
-      return NextResponse.json({ error: 'Missing id or entityType' }, { status: 400 });
+    if (!id || typeof id !== 'string' || id.length > 120) {
+      return NextResponse.json({ error: 'Invalid or missing id' }, { status: 400 });
+    }
+    if (!entityType || !['expense', 'settlement', 'group'].includes(entityType)) {
+      return NextResponse.json({ error: 'Invalid or unsupported entityType' }, { status: 400 });
+    }
+    if (!['upsert', 'delete'].includes(action)) {
+      return NextResponse.json({ error: 'Invalid action parameter' }, { status: 400 });
     }
 
     if (action === 'delete') {
       await deleteVector(`EXPENSE#${id}`);
       await deleteVector(`SETTLEMENT#${id}`);
+      await deleteVector(`GROUP#${id}`);
       return NextResponse.json({ success: true, action: 'deleted' });
     }
 

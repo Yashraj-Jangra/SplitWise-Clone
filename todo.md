@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **AI & RAG Hardening Phase 2 — Prompt Injection & Security Hardening** ✅:
+    - Added group membership validation in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): returns 403 Forbidden if user requests group scope for a group they are not a member of.
+    - Added user message length cap (1,000 chars) and sanitization to prevent prompt bloat.
+    - Added anti-prompt injection and jailbreak defense system instructions to enforce assistant role boundaries and prevent leaking secrets/keys.
+    - Hardened [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) with production `INTERNAL_API_SECRET` verification and strict payload type and action validation.
+    - Capped support ticket thread history to last 10 messages with anti-jailbreak safeguards in [`src/app/api/ai/draft-reply/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/draft-reply/route.ts).
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **AI & RAG Hardening Phase 1 — Native Vector Store & Backfill** ✅:
     - Fixed Oracle 23ai native vector dimension to 2048 (`VECTOR(2048, FLOAT32)`) in [`scripts/setup-vector-table.ts`](file:///d:/Projects/SplitWise-Clone/scripts/setup-vector-table.ts) to match the configured embedding model (`nvidia/llama-nemotron-embed-vl-1b-v2:free`).
     - Fixed vector binding in [`src/lib/ai/vector-store.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/vector-store.ts) and [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts) to bind `Float32Array` directly to Oracle 23ai vector columns and `VECTOR_DISTANCE(embedding, :vec, COSINE)` (bypassing ORA-01461 string length limits).
