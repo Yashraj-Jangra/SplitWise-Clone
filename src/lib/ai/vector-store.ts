@@ -9,7 +9,7 @@ export async function upsertVector(record: VectorRecord): Promise<void> {
     throw new Error('Invalid vector record for upsert');
   }
 
-  const vecStr = `[${record.embedding.join(',')}]`;
+  const embeddingVec = new Float32Array(record.embedding);
 
   const sql = `
     MERGE INTO SPLITITVECTORS dst
@@ -21,11 +21,11 @@ export async function upsertVector(record: VectorRecord): Promise<void> {
         dst.groupId = :groupId,
         dst.entityType = :entityType,
         dst.textChunk = :textChunk,
-        dst.embedding = TO_VECTOR(:vecStr),
+        dst.embedding = :embedding,
         dst.updatedAt = CURRENT_TIMESTAMP
     WHEN NOT MATCHED THEN
       INSERT (id, userId, groupId, entityType, textChunk, embedding)
-      VALUES (:id, :userId, :groupId, :entityType, :textChunk, TO_VECTOR(:vecStr))
+      VALUES (:id, :userId, :groupId, :entityType, :textChunk, :embedding)
   `;
 
   await executeOracleQuery(sql, {
@@ -34,7 +34,7 @@ export async function upsertVector(record: VectorRecord): Promise<void> {
     groupId: record.groupId || null,
     entityType: record.entityType,
     textChunk: record.textChunk.slice(0, 4000),
-    vecStr,
+    embedding: embeddingVec,
   });
 }
 

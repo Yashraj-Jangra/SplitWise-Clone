@@ -22,18 +22,18 @@ export async function retrieveSimilar(
 
   const topK = opts?.topK ?? DEFAULT_TOP_K;
   const minSimilarity = opts?.minSimilarity ?? DEFAULT_MIN_SIMILARITY;
-  const vecStr = `[${queryEmbedding.join(',')}]`;
+  const embeddingVec = new Float32Array(queryEmbedding);
 
   let sql = `
     SELECT id, entityType, textChunk,
-           VECTOR_DISTANCE(embedding, TO_VECTOR(:vecStr), COSINE) AS distance
+           VECTOR_DISTANCE(embedding, :vec, COSINE) AS distance
     FROM SPLITITVECTORS
     WHERE userId = :userId
   `;
 
   const params: Record<string, any> = {
     userId,
-    vecStr,
+    vec: embeddingVec,
   };
 
   if (opts?.groupId) {

@@ -14,11 +14,17 @@ export class AIClientError extends Error {
   }
 }
 
+function getBaseUrl(): string {
+  return process.env.AI_BASE_URL || AI_BASE_URL;
+}
+
 function getHeaders(): HeadersInit {
+  const apiKey = process.env.AI_API_KEY || AI_API_KEY;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL;
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${AI_API_KEY}`,
-    'HTTP-Referer': APP_URL,
+    'Authorization': `Bearer ${apiKey}`,
+    'HTTP-Referer': appUrl,
     'X-Title': 'SplitIt Financial Intelligence',
   };
 }
@@ -79,7 +85,7 @@ export async function chatCompletion(
     payload.response_format = options.response_format;
   }
 
-  const res = await fetchWithRetry(`${AI_BASE_URL}/chat/completions`, {
+  const res = await fetchWithRetry(`${getBaseUrl()}/chat/completions`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload),
@@ -113,7 +119,7 @@ export async function* streamCompletion(
     stream: true,
   };
 
-  const res = await fetch(`${AI_BASE_URL}/chat/completions`, {
+  const res = await fetch(`${getBaseUrl()}/chat/completions`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload),
@@ -189,7 +195,7 @@ export async function visionCompletion(
     },
   ];
 
-  const res = await fetchWithRetry(`${AI_BASE_URL}/chat/completions`, {
+  const res = await fetchWithRetry(`${getBaseUrl()}/chat/completions`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({
@@ -209,7 +215,7 @@ export async function visionCompletion(
 }
 
 /**
- * Generate 1024-dimension float vector embedding using the configured embedding model
+ * Generate 2048-dimension float vector embedding using the configured embedding model
  */
 export async function generateEmbedding(
   text: string,
@@ -217,7 +223,7 @@ export async function generateEmbedding(
 ): Promise<number[]> {
   const model = options?.model || AI_EMBEDDING_MODEL;
 
-  const res = await fetchWithRetry(`${AI_BASE_URL}/embeddings`, {
+  const res = await fetchWithRetry(`${getBaseUrl()}/embeddings`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({

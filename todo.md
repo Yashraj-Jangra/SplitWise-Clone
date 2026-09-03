@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **AI & RAG Hardening Phase 1 — Native Vector Store & Backfill** ✅:
+    - Fixed Oracle 23ai native vector dimension to 2048 (`VECTOR(2048, FLOAT32)`) in [`scripts/setup-vector-table.ts`](file:///d:/Projects/SplitWise-Clone/scripts/setup-vector-table.ts) to match the configured embedding model (`nvidia/llama-nemotron-embed-vl-1b-v2:free`).
+    - Fixed vector binding in [`src/lib/ai/vector-store.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/vector-store.ts) and [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts) to bind `Float32Array` directly to Oracle 23ai vector columns and `VECTOR_DISTANCE(embedding, :vec, COSINE)` (bypassing ORA-01461 string length limits).
+    - Upgraded [`scripts/backfill-embeddings.ts`](file:///d:/Projects/SplitWise-Clone/scripts/backfill-embeddings.ts) with CLI flags `--dry-run`, `--group <id>`, `--concurrency <num>`, and `--limit <count>`.
+    - Added in-memory caching to hydrate payer names, participant names, and group names into vector text chunks so records are searchable by human names.
+    - Verified live embedding generation and native cosine similarity search in `SPLITITVECTORS` table.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **Chat Send Button & Interface Copy Refinement** ✅:
     - Redesigned chat input send button to be fixed height (`h-8 w-8 min-h-[32px] max-h-[32px]`) and minimal: transparent default background (`bg-transparent`), neutral hover background (`hover:bg-muted/70`), and primary accent color icon transition on hover (`group-hover:text-primary`).
     - Anchored send button cleanly at bottom-right of textarea container so it stays fixed in height when text wraps.
