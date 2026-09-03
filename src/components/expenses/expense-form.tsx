@@ -334,12 +334,12 @@ function MainExpenseForm({ setView, group, setValue, userOverriddenCategory, set
                     setValue('category', aiSuggestion.category, { shouldValidate: true, shouldDirty: true });
                     setUserOverriddenCategory(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 transition-all shadow-xs active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-muted/40 hover:bg-muted/70 text-foreground border border-border/40 transition-all active:scale-95"
                   title={`Apply suggested category: ${aiSuggestion.category} (${aiSuggestion.masterCategory})`}
                 >
-                  <Icons.Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <Icons.Sparkles className="w-3 h-3 text-muted-foreground" />
                   <span>Category: <strong>{aiSuggestion.category}</strong></span>
-                  <span className="text-[10px] text-muted-foreground">({aiSuggestion.masterCategory})</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">({aiSuggestion.masterCategory})</span>
                 </button>
               </motion.div>
             )}

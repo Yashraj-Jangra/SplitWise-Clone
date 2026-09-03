@@ -197,17 +197,17 @@ export default function TicketDetailPage() {
                             size="sm"
                             disabled={isDraftingReply || replyForm.formState.isSubmitting}
                             onClick={handleDraftAiReply}
-                            className="h-8 gap-1.5 rounded-full text-xs font-medium border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary transition-all active:scale-95"
+                            className="h-7 px-2.5 gap-1.5 rounded-md text-xs font-medium border-border/40 bg-muted/20 hover:bg-muted/40 text-foreground transition-all active:scale-95"
                             title="Generate a polite, contextual draft reply with AI"
                         >
                             {isDraftingReply ? (
                                 <>
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
                                     <span>Drafting...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Icons.Sparkles className="w-3.5 h-3.5 text-primary" />
+                                    <Icons.Bot className="w-3.5 h-3.5 text-muted-foreground" />
                                     <span>Draft AI Reply</span>
                                 </>
                             )}

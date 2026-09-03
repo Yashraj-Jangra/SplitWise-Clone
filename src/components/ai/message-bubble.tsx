@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { FormattedMarkdown } from './formatted-markdown';
 import type { ChatMessage } from '@/types/ai';
 
 interface MessageBubbleProps {
@@ -19,26 +20,34 @@ export function MessageBubble({ message, userName = 'You', isStreaming }: Messag
     <div
       className={cn(
         'flex gap-2.5 my-2.5 items-start',
-        isUser ? 'flex-row-reverse self-end ml-auto' : 'flex-row self-start mr-auto'
+        isUser ? 'flex-row-reverse self-end ml-auto max-w-[88%] sm:max-w-[80%]' : 'flex-row self-start mr-auto max-w-[95%] sm:max-w-[88%]'
       )}
     >
-      <Avatar className={cn('w-7 h-7 flex-shrink-0 text-xs mt-0.5', isUser ? 'bg-primary/20 text-primary' : 'bg-muted border border-border')}>
-        <AvatarFallback className="text-[11px] font-semibold">
-          {isUser ? userName.slice(0, 1).toUpperCase() : <Icons.Sparkles className="w-3.5 h-3.5 text-primary" />}
+      <Avatar
+        className={cn(
+          'w-7 h-7 flex-shrink-0 rounded-lg text-xs mt-0.5 border',
+          isUser
+            ? 'bg-muted/40 border-border/40 text-foreground'
+            : 'bg-muted/50 border-border/40 text-foreground'
+        )}
+      >
+        <AvatarFallback className="rounded-lg text-[11px] font-semibold">
+          {isUser ? userName.slice(0, 1).toUpperCase() : <Icons.Bot className="w-3.5 h-3.5 text-foreground" />}
         </AvatarFallback>
       </Avatar>
 
       <div
         className={cn(
-          'max-w-[85%] sm:max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words transition-all shadow-xs',
+          'rounded-2xl px-4 py-2.5 text-sm transition-all shadow-2xs',
           isUser
-            ? 'bg-primary text-primary-foreground rounded-tr-xs'
-            : 'bg-card text-foreground border border-border/70 rounded-tl-xs'
+            ? 'bg-primary text-primary-foreground rounded-tr-xs leading-relaxed whitespace-pre-wrap break-words font-normal'
+            : 'bg-muted/25 text-foreground border border-border/30 rounded-tl-xs w-full'
         )}
       >
-        {message.content}
-        {isStreaming && (
-          <span className="inline-block w-1.5 h-3.5 ml-1 bg-primary animate-pulse align-middle" />
+        {isUser ? (
+          message.content
+        ) : (
+          <FormattedMarkdown content={message.content} isStreaming={isStreaming} />
         )}
       </div>
     </div>

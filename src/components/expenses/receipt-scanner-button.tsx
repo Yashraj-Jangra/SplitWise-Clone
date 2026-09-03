@@ -93,7 +93,7 @@ export function ReceiptScannerButton({
       onScanComplete(scanResult, imageUrl);
 
       toast({
-        title: '✨ Receipt Scanned!',
+        title: 'Receipt Scanned',
         description: scanResult.title
           ? `Extracted "${scanResult.title}" — review details before saving.`
           : 'Receipt parsed — details pre-filled in form.',
@@ -126,17 +126,17 @@ export function ReceiptScannerButton({
         size="sm"
         disabled={disabled || isScanning}
         onClick={handleButtonClick}
-        className="h-8 gap-1.5 rounded-full text-xs font-medium border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary transition-all active:scale-95"
+        className="h-8 px-2.5 gap-1.5 rounded-lg text-xs font-medium border-border/40 bg-muted/20 hover:bg-muted/40 text-foreground transition-all active:scale-95"
         title="Scan paper bill or digital receipt using AI"
       >
         {isScanning ? (
           <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-            <span>Scanning Receipt...</span>
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+            <span>Scanning...</span>
           </>
         ) : (
           <>
-            <Icons.Sparkles className="w-3.5 h-3.5 text-primary" />
+            <Icons.Receipt className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Scan Receipt</span>
           </>
         )}
