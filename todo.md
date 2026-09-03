@@ -1,6 +1,35 @@
 # Session Progress & Context Preservation
 
-## Work Completed
+- **AI & RAG Intelligence Suite Implemented (All 5 Phases Complete)** ✅:
+  - **Architecture & Infrastructure**:
+    - Created unified OpenRouter AI client ([`src/lib/ai/client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/client.ts)) supporting chat completion, SSE streaming, multimodal vision, and 1024-dimensional float vector embeddings with exponential retry resilience.
+    - Created LRU in-memory cached embedder ([`src/lib/ai/embedder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/embedder.ts)) with text normalization.
+    - Setup Oracle 23ai native `SPLITITVECTORS` table (`VECTOR(1024, FLOAT32)`) and HNSW Neighbor Partition vector index ([`scripts/setup-vector-table.ts`](file:///d:/Projects/SplitWise-Clone/scripts/setup-vector-table.ts)).
+    - Built vector store CRUD service ([`src/lib/ai/vector-store.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/vector-store.ts)).
+    - Built native `VECTOR_DISTANCE(..., COSINE)` similarity search retriever ([`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts)).
+  - **Phase 1 — Smart Auto-Categorization**:
+    - Endpoint [`POST /api/ai/suggest-category`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/suggest-category/route.ts) maps natural language descriptions to approved sub/master categories with confidence scoring.
+    - Created debounced client hook ([`src/hooks/use-suggest-category.ts`](file:///d:/Projects/SplitWise-Clone/src/hooks/use-suggest-category.ts)).
+    - Integrated animated AI suggestion chip (`✨ Category: X (Y)`) in [`expense-form.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/expenses/expense-form.tsx).
+  - **Phase 2 — Receipt / Bill OCR Scanner**:
+    - Endpoint [`POST /api/ai/scan-receipt`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/scan-receipt/route.ts) parses bill images using `minimax/minimax-m3:free` vision with S3-to-base64 fallback for local/cloud parity.
+    - Created [`ReceiptScannerButton`](file:///d:/Projects/SplitWise-Clone/src/components/expenses/receipt-scanner-button.tsx) mounted in expense modal header with camera upload and field auto-fill.
+  - **Phase 3 — RAG Spending Assistant Chatbot (Page + Floating Widget)**:
+    - Built semantic chunk serializers in [`context-builder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/context-builder.ts).
+    - Streaming SSE chat endpoint [`POST /api/ai/chat`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts) retrieving user-scoped financial records.
+    - Built [`ChatPanel`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with starter chips, markdown rendering, and local persistence.
+    - Dedicated full page [`/assistant`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/assistant/page.tsx) and floating [`AIChatWidget`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx) on all app pages (sheet on mobile, popover on desktop).
+    - Added background embedding queue ([`embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts), [`queue-helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/queue-helper.ts)) wired fire-and-forget into `expense.service.ts` and `settlement.service.ts`.
+  - **Phase 4 — AI Monthly Financial Insights**:
+    - Endpoint [`POST /api/ai/insights`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/insights/route.ts) with 6-hour Oracle DB cache per user.
+    - Created [`AIInsightsCard`](file:///d:/Projects/SplitWise-Clone/src/components/ai/insights-card.tsx) mounted in dashboard middle row replacing static component.
+  - **Phase 5 — Admin Support Ticket AI Reply Draft**:
+    - Endpoint [`POST /api/ai/draft-reply`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/draft-reply/route.ts) generating empathetic, solution-oriented replies from ticket conversation history.
+    - Integrated "✨ Draft AI Reply" button in [`admin/support/[ticketId]`](file:///d:/Projects/SplitWise-Clone/src/app/(admin)/admin/support/[ticketId]/page.tsx).
+  - **Backfill Script**:
+    - Created [`scripts/backfill-embeddings.ts`](file:///d:/Projects/SplitWise-Clone/scripts/backfill-embeddings.ts) to vectorize and index historical expenses and settlements into Oracle 23ai `SPLITITVECTORS`.
+  - **TypeScript Verification**: All phases verified with `npx tsc --noEmit` exiting 0 without warnings.
+
 - **Repository Branching Rules Enforced (`dev` → `master` only)** ✅:
   - `main` branch was identified as introduced on **Aug 25, 2026** (branched from `dev` at `a0e427f`). It should NOT be used for development.
   - Strict branching rules added to [`.agents/AGENTS.md`](file:///d:/Projects/SplitWise-Clone/.agents/AGENTS.md): all commits go to `dev`, deploys via PR to `master`.
@@ -137,6 +166,7 @@
   - **TypeScript**: `npx tsc --noEmit` exits 0 — no type errors.
 
 ## Next Steps
+- Run `npx tsx scripts/backfill-embeddings.ts` to vectorize historical expenses and settlements in Oracle DB.
 - Test end-to-end password reset flow with a real email: `/auth/forgot-password` → email → `/auth/reset-password?token=...` → submit → redirect to login.
 - Verify expense/settlement/budget notifications fire correctly end-to-end (in-app + push + email).
 - Set up monthly cron job on VPS to call `/api/reminders/trigger` for monthly summaries and inactivity checks.
