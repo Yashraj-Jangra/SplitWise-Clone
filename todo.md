@@ -128,11 +128,17 @@
     - **Desktop Sidebar Toggle Refinement**: Updated collapsed desktop navbar to display the brand logo by default, smoothly transitioning into a dedicated `PanelLeftOpen` expand button on hover, and added a dedicated `PanelLeftClose` button for collapsing the expanded navbar.
     - **Oracle Database Connection Resilience**: Fixed transient `NJS-500` / `NJS-521` end-of-file idle disconnects by configuring `SQLNET.EXPIRE_TIME=1` TCP keep-alive, enabling `poolPingInterval: 60` / `poolMin: 0` in `node-oracledb`, and adding automatic retry handling for recoverable severed sockets.
     - **Documentation & Environment Templates**: Created [`.env.example`](file:///d:/Projects/SplitWise-Clone/.env.example) with detailed inline guides and updated [`README.md`](file:///d:/Projects/SplitWise-Clone/README.md) with modern architecture diagrams, category budgeting engines, and multi-channel notifications.
+- **Password Reset Flow Fix (complete)**:
+  - **Root cause**: `POST /api/send-password-reset` was not in the `publicPaths` whitelist in [`middleware.ts`](file:///d:/Projects/SplitWise-Clone/src/middleware.ts), causing Next.js to redirect unauthenticated API calls to the login page (HTML), which the client then tried to parse as JSON → `Unexpected token '<', "<!DOCTYPE"` SyntaxError.
+  - **Fix 1 — Middleware**: Added `/auth/reset-password`, `/api/send-password-reset`, and `/sw-push.js` to `publicPaths`; added `sw-push.js` to matcher exclusions.
+  - **Fix 2 — Hardcoded ports**: Corrected fallback `localhost:3235` → `localhost:3231` in 5 files: `send-password-reset/route.ts`, `support/ticket/route.ts`, `support/reply/route.ts`, `admin/notify-new-ticket/route.ts`, `admin/notify-ticket-reply/route.ts`.
+  - **Fix 3 — JSON safety**: Hardened `forgot-password-form.tsx` `onSubmit` to check `Content-Type: application/json` before calling `.json()` — no more raw SyntaxError toasts from HTML responses.
+  - **New page**: Created [`src/app/auth/reset-password/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/auth/reset-password/page.tsx) + [`reset-password-form.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/auth/reset-password-form.tsx) with token validation, 4-level strength meter, confirm password, Better Auth `resetPassword` integration, success view, and invalid-token error view.
+  - **TypeScript**: `npx tsc --noEmit` exits 0 — no type errors.
 
 ## Next Steps
-- Verify end-to-end group budget configuration and spend updates across user sessions.
+- Test end-to-end password reset flow with a real email: `/auth/forgot-password` → email → `/auth/reset-password?token=...` → submit → redirect to login.
 - Verify expense/settlement/budget notifications fire correctly end-to-end (in-app + push + email).
 - Set up monthly cron job on VPS to call `/api/reminders/trigger` for monthly summaries and inactivity checks.
 - Production deployment to Oracle Cloud Infrastructure (OCI).
-
 

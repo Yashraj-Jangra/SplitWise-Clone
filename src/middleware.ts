@@ -19,17 +19,20 @@ export function middleware(request: NextRequest) {
     '/auth/login',
     '/auth/signup',
     '/auth/forgot-password',
+    '/auth/reset-password',
     '/auth/verify-email',
     '/(info)',
     '/privacy',
     '/terms',
-    '/api/public',      // Public settings endpoint
-    '/api/auth',        // Session create/delete
+    '/api/public',              // Public settings endpoint
+    '/api/auth',                // Better Auth endpoints & session
+    '/api/send-password-reset', // Password reset request endpoint
     '/_next',
     '/favicon.ico',
     '/icons',
     '/manifest.json',
     '/sw.js',
+    '/sw-push.js',
   ];
 
   const isPublicPath = publicPaths.some(p => pathname.startsWith(p));
@@ -57,6 +60,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   // Match all routes except static files and Next.js internals
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|sw-push.js|workbox-).*)',
   ],
 };

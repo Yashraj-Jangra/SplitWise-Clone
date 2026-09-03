@@ -53,10 +53,20 @@ export function ForgotPasswordForm({
         body: JSON.stringify({ email: values.email }),
       });
 
-      const result = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      let result: any = null;
+
+      if (contentType.includes("application/json")) {
+        result = await response.json();
+      }
 
       if (!response.ok) {
-        throw new Error(result.error || "An unknown error occurred.");
+        throw new Error(
+          result?.error ||
+          (response.status === 404
+            ? "Password reset service is temporarily unavailable."
+            : "Failed to send reset link. Please try again.")
+        );
       }
 
       setSubmitted(true);

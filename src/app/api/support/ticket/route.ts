@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     });
 
     // Trigger admin notification asynchronously
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
     fetch(`${appUrl}/api/admin/notify-new-ticket`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

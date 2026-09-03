@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
         const subject = template.subject.replace(/{appName}/g, appName).replace(/{ticketId}/g, ticket.id.slice(0, 8));
 
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
         const ticketLink = isAdminReply ? `${appUrl}/support` : `${appUrl}/admin/support/${ticket.id}`;
 
         const body = template.body
