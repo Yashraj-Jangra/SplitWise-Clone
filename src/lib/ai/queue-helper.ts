@@ -4,7 +4,7 @@
 export function queueVectorEmbedding(
   id: string,
   groupId: string,
-  entityType: 'expense' | 'settlement',
+  entityType: 'expense' | 'settlement' | 'group',
   action: 'upsert' | 'delete' = 'upsert'
 ): void {
   if (process.env.AI_EMBEDDING_QUEUE_ENABLED === 'false') return;

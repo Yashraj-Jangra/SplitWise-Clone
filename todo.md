@@ -1,5 +1,12 @@
 # Session Progress & Context Preservation
 
+  - **AI & RAG Hardening Phase 4 — Vector Coverage Expansion** ✅:
+    - Added `buildGroupMetaChunk()` and `buildBalanceSnapshotChunk()` in [`src/lib/ai/context-builder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/context-builder.ts) to structure group metadata and balance summaries into semantically searchable vector chunks.
+    - Updated [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) with `entityType === 'group'` indexing to vectorize group names, descriptions, member rosters, and budget limits across all member partitions.
+    - Added background vector embedding triggers in [`src/lib/services/group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts) for group creation, member additions/removals, metadata updates, and permanent deletions.
+    - Updated [`src/lib/ai/queue-helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/queue-helper.ts) to support the `group` entity type.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **AI & RAG Hardening Phase 3 — Zero-Hallucination Math via Server Context** ✅:
     - Created [`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts): `buildFinancialSnapshot()` computes authoritative ledger facts on the server (exact net balances, debts via `simplifyDebts`, current month spending, recent 5 transactions, and group budget).
     - Integrated authoritative financial facts into [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts) with strict LLM directives forbidding guessing or recalculating balances from raw transaction lists.

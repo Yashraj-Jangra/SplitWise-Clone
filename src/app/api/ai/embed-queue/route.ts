@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getItem } from '@/lib/nosql';
 import { embed } from '@/lib/ai/embedder';
 import { upsertVector, deleteVector } from '@/lib/ai/vector-store';
-import { buildExpenseChunk, buildSettlementChunk } from '@/lib/ai/context-builder';
+import { buildExpenseChunk, buildSettlementChunk, buildGroupMetaChunk } from '@/lib/ai/context-builder';
 import { getUserProfile } from '@/lib/services/user.service';
 import { getFullName } from '@/lib/utils';
 
@@ -141,6 +141,47 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ success: true, usersIndexed: uids.length });
+    }
+
+    if (entityType === 'group') {
+      const groupDoc = await getItem<any>(`GROUP#${id}`, 'METADATA');
+      if (!groupDoc) {
+        return NextResponse.json({ error: 'Group document not found' }, { status: 404 });
+      }
+
+      const memberIds: string[] = (groupDoc.members || [])
+        .map((m: any) => (typeof m === 'string' ? m : m.userId))
+        .filter(Boolean);
+
+      const memberNames: string[] = [];
+      for (const uid of memberIds) {
+        const profile = await getUserProfile(uid);
+        memberNames.push(getFullName(profile?.firstName, profile?.lastName) || profile?.username || 'Member');
+      }
+
+      const textChunk = buildGroupMetaChunk({
+        id,
+        name: groupDoc.name,
+        description: groupDoc.description,
+        memberNames,
+        totalExpenses: Number(groupDoc.totalExpenses || 0),
+        budgetLimit: groupDoc.budget?.monthlyLimit ? Number(groupDoc.budget.monthlyLimit) : undefined,
+      });
+
+      const embedding = await embed(textChunk);
+
+      for (const uid of memberIds) {
+        await upsertVector({
+          id: `GROUP#${id}#${uid}`,
+          userId: uid,
+          groupId: id,
+          entityType: 'group',
+          textChunk,
+          embedding,
+        });
+      }
+
+      return NextResponse.json({ success: true, usersIndexed: memberIds.length });
     }
 
     return NextResponse.json({ skipped: true, reason: 'Unsupported entityType' });

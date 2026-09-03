@@ -4,6 +4,7 @@ import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifyMemberAdded, notifyMemberRemoved } from '@/lib/notification-service';
 import { getFullName } from '../utils';
+import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 
 function mapGroupRow(g: any, members: UserProfile[], createdBy: UserProfile): Group {
   return {
@@ -48,6 +49,7 @@ export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | '
   };
 
   await putItem(`GROUP#${id}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupData.createdById}`, `GROUP#${id}`);
+  queueVectorEmbedding(id, id, 'group', 'upsert');
   return id;
 }
 
@@ -136,6 +138,8 @@ export async function addMembersToGroup(groupId: string, memberIds: string[], ac
   if (recipientIds.length > 0) {
     await notifyMemberAdded(recipientIds, actorId, groupId, groupDoc.name || 'your group');
   }
+
+  queueVectorEmbedding(groupId, groupId, 'group', 'upsert');
 }
 
 export async function addMemberToGroup(groupId: string, newMemberUserId: string, actorId: string): Promise<void> {
@@ -168,6 +172,8 @@ export async function removeMemberFromGroup(groupId: string, memberIdToRemove: s
   if (memberIdToRemove !== actorId) {
     await notifyMemberRemoved(memberIdToRemove, actorId, groupId, groupDoc.name || 'a group');
   }
+
+  queueVectorEmbedding(groupId, groupId, 'group', 'upsert');
 }
 
 export async function updateGroup(groupId: string, data: Partial<GroupDocument>, actorId: string): Promise<void> {
@@ -213,6 +219,8 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
     const description = `${actorName} updated the group ${changeSummary}.`;
     await logHistoryEvent(groupId, 'group_updated', actorId, description, { changes });
   }
+
+  queueVectorEmbedding(groupId, groupId, 'group', 'upsert');
 }
 
 export async function archiveGroup(groupId: string, actorId: string): Promise<void> {
@@ -239,10 +247,12 @@ export async function restoreGroup(groupId: string, actorId: string): Promise<vo
   const actorName = getFullName(actor?.firstName, actor?.lastName);
   const description = `${actorName} restored the group.`;
   await logHistoryEvent(groupId, 'group_updated', actorId, description, { changes: [{ field: 'Status', from: 'Archived', to: 'Active' }] });
+  queueVectorEmbedding(groupId, groupId, 'group', 'upsert');
 }
 
 export async function deleteGroupPermanently(groupId: string): Promise<void> {
   await deleteItem(`GROUP#${groupId}`, 'METADATA');
+  queueVectorEmbedding(groupId, groupId, 'group', 'delete');
 }
 
 export async function verifyGroupMembership(groupId: string, userId: string): Promise<boolean> {
