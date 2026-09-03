@@ -17,8 +17,8 @@ const DynamicSpendingChart = dynamic(
   () => import('@/components/dashboard/dynamic-spending-chart').then(m => ({ default: m.DynamicSpendingChart })),
   { ssr: false, loading: () => <Skeleton className="h-80 w-full" /> }
 );
-const PredictiveInsights = dynamic(
-  () => import('@/components/dashboard/predictive-insights').then(m => ({ default: m.PredictiveInsights })),
+const AIInsightsCard = dynamic(
+  () => import('@/components/ai/insights-card').then(m => ({ default: m.AIInsightsCard })),
   { ssr: false, loading: () => <Skeleton className="h-80 w-full" /> }
 );
 
@@ -164,7 +164,7 @@ export default function DashboardPage() {
               </div>
               <div className="lg:col-span-1">
                   <ErrorBoundary>
-                      <PredictiveInsights expenses={expenses} />
+                      <AIInsightsCard />
                   </ErrorBoundary>
               </div>
           </div>
