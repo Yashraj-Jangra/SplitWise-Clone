@@ -1,8 +1,8 @@
 import { executeOracleQuery } from '@/lib/nosql';
 import type { RetrievedChunk } from '@/types/ai';
 
-const DEFAULT_TOP_K = parseInt(process.env.AI_VECTOR_TOP_K || '6', 10);
-const DEFAULT_MIN_SIMILARITY = parseFloat(process.env.AI_VECTOR_MIN_SIMILARITY || '0.55');
+const DEFAULT_TOP_K = parseInt(process.env.AI_VECTOR_TOP_K || '10', 10);
+const DEFAULT_MIN_SIMILARITY = parseFloat(process.env.AI_VECTOR_MIN_SIMILARITY || '0.40');
 
 interface RetrieveOptions {
   groupId?: string;

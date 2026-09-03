@@ -1,5 +1,10 @@
 # Session Progress & Context Preservation
 
+  - **AI & RAG Hardening Phase 5 — Retriever & Embedder Improvements** ✅:
+    - Updated [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts) with `DEFAULT_TOP_K = 10` and tuned `DEFAULT_MIN_SIMILARITY = 0.40` for broader semantic recall on conversational expense queries.
+    - Enhanced [`src/lib/ai/embedder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/embedder.ts): raised normalization limit from 512 to 768 characters and added regex filtering for control characters.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **AI & RAG Hardening Phase 4 — Vector Coverage Expansion** ✅:
     - Added `buildGroupMetaChunk()` and `buildBalanceSnapshotChunk()` in [`src/lib/ai/context-builder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/context-builder.ts) to structure group metadata and balance summaries into semantically searchable vector chunks.
     - Updated [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) with `entityType === 'group'` indexing to vectorize group names, descriptions, member rosters, and budget limits across all member partitions.
