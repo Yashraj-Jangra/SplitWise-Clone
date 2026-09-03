@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, Trash2, ArrowRight } from 'lucide-react';
+import { Loader2, Send, Trash2, ArrowRight, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { ChatMessage } from '@/types/ai';
 
 const STARTER_PROMPTS = [
@@ -98,7 +104,7 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to connect to AI assistant');
+        throw new Error(err.error || 'Failed to connect to assistant');
       }
 
       if (!response.body) {
@@ -178,28 +184,54 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold tracking-tight text-foreground truncate">
-                Financial Assistant
+                {groupName ? `${groupName} Assistant` : 'Financial Assistant'}
               </h3>
-              <Badge variant="outline" className="rounded-md text-[10px] font-bold uppercase tracking-wider bg-muted text-foreground border-border/40 px-1.5 py-0">
-                {groupName ? groupName : 'Oracle 23ai'}
-              </Badge>
+              {groupName && (
+                <Badge variant="outline" className="rounded-md text-[10px] font-medium bg-muted/40 text-muted-foreground border-border/40 px-1.5 py-0">
+                  {groupName}
+                </Badge>
+              )}
             </div>
             <p className="text-[11px] text-muted-foreground truncate">
-              Private vector-grounded expense analysis
+              Ask about your spending, balances, and shared debts
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors flex items-center justify-center"
+                  aria-label="Assistant information"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                align="end"
+                className="max-w-xs text-xs p-3 rounded-xl border border-border/40 bg-popover text-popover-foreground shadow-xl leading-relaxed"
+              >
+                <p className="font-semibold text-foreground mb-1">Financial Assistant</p>
+                <p className="text-muted-foreground text-[11px]">
+                  Answers questions using your recorded transactions, balances, and group expenses. Calculations and insights are performed securely and kept private to your account.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {messages.length > 0 && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-red-500 dark:hover:text-red-400 hover:bg-transparent active:bg-transparent transition-colors"
               onClick={handleClearHistory}
               title="Clear chat history"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4 transition-colors" />
             </Button>
           )}
           {onClose && (
@@ -227,7 +259,7 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
               Welcome{userProfile?.firstName ? `, ${userProfile.firstName}` : ''}
             </h4>
             <p className="text-xs text-muted-foreground mt-1 mb-5 leading-relaxed">
-              Ask about your monthly spending, balances, split debts, or group summaries. Answers are grounded in your private records.
+              Ask about your monthly spending, balances, or who owes you money. All answers are based securely on your personal and group records.
             </p>
 
             {/* Quick Prompt Cards matching the dialog style */}
@@ -268,27 +300,59 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask anything about your expenses..."
+            placeholder="Ask anything about your expenses or balances..."
             rows={1}
             disabled={isStreaming}
             className="min-h-[44px] max-h-[120px] resize-none border-0 !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent shadow-none px-3.5 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 leading-relaxed placeholder:text-muted-foreground/60"
           />
-          <div className="p-1.5 flex-shrink-0">
+          <div className="p-1.5 flex-shrink-0 self-end">
             <Button
               type="button"
               size="icon"
+              variant="ghost"
               disabled={!input.trim() || isStreaming}
               onClick={() => handleSend()}
-              className="h-8 w-8 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-30"
+              className="h-8 w-8 min-h-[32px] max-h-[32px] rounded-lg bg-transparent text-muted-foreground hover:bg-muted/70 hover:text-primary transition-colors disabled:opacity-25 disabled:pointer-events-none disabled:hover:bg-transparent disabled:hover:text-muted-foreground group"
               title="Send message"
+              aria-label="Send message"
             >
-              {isStreaming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {isStreaming ? (
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              ) : (
+                <Send className="w-4 h-4 transition-colors group-hover:text-primary" />
+              )}
             </Button>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground text-center mt-2 opacity-70">
-          Powered by Oracle 23ai Native Vector Retrieval & Gemini
-        </p>
+
+        <div className="flex items-center justify-center gap-1.5 mt-2">
+          <span className="text-[11px] text-muted-foreground/75 text-center">
+            Insights based on your expense history
+          </span>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center h-4 w-4 rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors focus:outline-none"
+                  aria-label="How insights are generated"
+                >
+                  <Info className="w-3 h-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                align="center"
+                className="max-w-xs text-xs p-2.5 rounded-xl border border-border/40 bg-popover text-popover-foreground shadow-xl leading-relaxed"
+              >
+                <p className="font-semibold text-foreground mb-0.5">Private Context Retrieval</p>
+                <p className="text-muted-foreground text-[11px]">
+                  Answers are generated strictly from your personal expense history and shared group balances using private search. No personal financial data is shared or used for model training.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     </div>
   );

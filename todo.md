@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **Chat Send Button & Interface Copy Refinement** ✅:
+    - Redesigned chat input send button to be fixed height (`h-8 w-8 min-h-[32px] max-h-[32px]`) and minimal: transparent default background (`bg-transparent`), neutral hover background (`hover:bg-muted/70`), and primary accent color icon transition on hover (`group-hover:text-primary`).
+    - Anchored send button cleanly at bottom-right of textarea container so it stays fixed in height when text wraps.
+    - Rewrote top and bottom chat texts to eliminate robotic, AI-generated phrasing: replaced `"Private vector-grounded expense analysis"` with natural human copy (`"Ask about your spending, balances, and shared debts"`), and removed model/technology name hardcoding (`"Oracle 23ai"`, `"Gemini"`).
+    - Integrated interactive info `(i)` button (`Info` icon) with hover tooltip in both the footer ("Insights based on your expense history") and header explaining private context retrieval without model branding.
+    - Updated clear chat button: hover turns icon red (`text-red-500`) with zero background change (`hover:bg-transparent`).
+    - Cleaned metadata in [`assistant/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/assistant/page.tsx). Verified `npx tsc --noEmit` exits 0.
+
   - **UI/UX Refinement & Output Formatting (Minimalist Dialog Theme)** ✅:
     - Installed `react-markdown` and `remark-gfm`.
     - Created [`FormattedMarkdown`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx) rendering structured markdown, headers, bullet/numbered lists, inline code, code blocks, tables, bold text, blockquotes, and streaming pulse indicator.

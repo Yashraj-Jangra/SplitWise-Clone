@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import { ChatPanel } from '@/components/ai/chat-panel';
 
 export const metadata: Metadata = {
-  title: 'AI Financial Assistant — SplitIt',
-  description: 'Grounded question answering for your spending, group balances, and split debts powered by Oracle 23ai and Gemini.',
+  title: 'Financial Assistant — SplitIt',
+  description: 'Instant answers and spending analysis for your personal expenses, group balances, and split debts.',
 };
 
 export default function AssistantPage() {
