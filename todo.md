@@ -1,7 +1,18 @@
 # Session Progress & Context Preservation
 
+  - **Realistic & Functional Live AI Status Feedback** ✅:
+    - Updated [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts) with functional query intent analysis:
+      - Automatically detects pure drafting, composing, and conversational queries vs. balance calculations vs. semantic expense searches.
+      - Never runs unneeded vector searches or displays fake "Searching your records" when the user asks to draft or compose answers.
+      - Emits accurate, functional live stages via SSE: `drafting` ("Drafting response..."), `calculating` ("Checking ledger & balances..."), `searching` ("Searching expense records..."), or `analyzing` ("Understanding request...").
+    - Updated [`src/components/ai/status-pill.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/status-pill.tsx) and [`src/components/ai/thinking-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/thinking-bubble.tsx):
+      - Replaced hardcoded status checks with dynamic `resolveStatus` supporting `analyzing`, `searching`, `calculating`, and `drafting`.
+      - Added dedicated live status icons: `Sparkles` for analyzing, `Database` for expense searching, `Calculator` for ledger balancing, and `PenLine` for drafting answers.
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with optimistic client-side intent recognition at $t=0\text{ms}$ and dynamic server SSE stage consumption.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **AI Replying UX Overhaul (Stop Button & In-Bubble Thinking)** ✅:
-    - Created [`src/components/ai/thinking-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/thinking-bubble.tsx): sleek in-bubble loading state featuring dynamic status icons (`Database` for record retrieval, `Sparkles` for thinking), cycling bouncing dots, dynamic status labels ("Searching your records" vs. "Thinking & calculating"), and shimmering skeleton preview lines.
+    - Created [`src/components/ai/thinking-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/thinking-bubble.tsx): sleek in-bubble loading state featuring dynamic status icons, cycling bouncing dots, dynamic status labels, and shimmering skeleton preview lines.
     - Updated [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to mount `ThinkingBubble` when assistant content is empty and stream/status is active, transitioning smoothly into `FormattedMarkdown` once the first token streams in.
     - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx):
       - Instant mount at 0ms: user message and empty assistant placeholder mount simultaneously to eliminate perceived network lag.

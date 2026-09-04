@@ -131,7 +131,24 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
     setMessages([...updatedMessages, { role: 'assistant', content: '' }]);
 
     setIsStreaming(true);
-    setStreamStatus('retrieving');
+
+    // Realistic client-side initial intent status
+    const lower = textToSend.toLowerCase();
+    const isExplicitDraft =
+      /^(draft|write|compose|suggest (a )?reply|say to|craft|pen|prepare a message|prepare an email)\b/i.test(textToSend.trim()) ||
+      /\b(draft (an?|the|a response|an answer)|write (an?|the|a message|an email|a note))\b/i.test(textToSend);
+    const isBalance = /(balance|owe|owed|debt|dues|who owes|settle|net balance)/i.test(lower);
+    const isExpense = /(spend|spent|expense|cost|receipt|bill|category|hotel|flight|food|dinner|lunch|groceries|trip)/i.test(lower);
+
+    if (isExplicitDraft) {
+      setStreamStatus({ stage: 'drafting', label: 'Drafting response...' });
+    } else if (isBalance) {
+      setStreamStatus({ stage: 'calculating', label: 'Checking ledger & balances...' });
+    } else if (isExpense || groupId) {
+      setStreamStatus({ stage: 'searching', label: 'Searching expense records...' });
+    } else {
+      setStreamStatus({ stage: 'analyzing', label: 'Understanding request...' });
+    }
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -178,8 +195,11 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
           if (trimmed.startsWith('data: ')) {
             try {
               const data = JSON.parse(trimmed.slice(6));
-              if (data.status === 'retrieving' || data.status === 'thinking') {
-                setStreamStatus(data.status);
+              if (data.status) {
+                setStreamStatus({
+                  stage: data.status,
+                  label: data.message,
+                });
               } else if (data.token) {
                 setStreamStatus(null);
                 assistantContent += data.token;

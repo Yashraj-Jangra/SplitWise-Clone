@@ -41,7 +41,7 @@ export function MessageBubble({ message, userName = 'You', isStreaming, status }
       </Avatar>
 
       {showThinkingState ? (
-        <ThinkingBubble status={status || 'thinking'} />
+        <ThinkingBubble status={status || 'analyzing'} />
       ) : (
         <div
           className={cn(

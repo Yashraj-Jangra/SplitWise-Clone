@@ -2,16 +2,30 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Database, Sparkles } from 'lucide-react';
-import type { AIStreamStatus } from './status-pill';
+import { Database, Sparkles, Calculator, PenLine } from 'lucide-react';
+import { resolveStatus, type AIStreamStatus, type AIStreamStage } from './status-pill';
 
 interface ThinkingBubbleProps {
   status?: AIStreamStatus;
   className?: string;
 }
 
-export function ThinkingBubble({ status = 'thinking', className }: ThinkingBubbleProps) {
-  const isRetrieving = status === 'retrieving';
+function renderStatusIcon(stage: AIStreamStage) {
+  switch (stage) {
+    case 'searching':
+      return <Database className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 animate-pulse flex-shrink-0" />;
+    case 'calculating':
+      return <Calculator className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 animate-pulse flex-shrink-0" />;
+    case 'drafting':
+      return <PenLine className="w-3.5 h-3.5 text-primary animate-pulse flex-shrink-0" />;
+    case 'analyzing':
+    default:
+      return <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse flex-shrink-0" />;
+  }
+}
+
+export function ThinkingBubble({ status = 'analyzing', className }: ThinkingBubbleProps) {
+  const { stage, label } = resolveStatus(status);
 
   return (
     <div
@@ -20,15 +34,11 @@ export function ThinkingBubble({ status = 'thinking', className }: ThinkingBubbl
         className
       )}
     >
-      {/* Top Status Header with Icon & Dots */}
+      {/* Top Status Header with Dynamic Icon, Real Label & Bouncing Dots */}
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {isRetrieving ? (
-          <Database className="w-3.5 h-3.5 text-muted-foreground animate-pulse flex-shrink-0" />
-        ) : (
-          <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse flex-shrink-0" />
-        )}
-        <span className="truncate">
-          {isRetrieving ? 'Searching your records' : 'Thinking & calculating'}
+        {renderStatusIcon(stage)}
+        <span className="truncate text-foreground/90 font-medium">
+          {label}
         </span>
         <span className="inline-flex items-center gap-0.5 ml-auto flex-shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:-0.3s]" />
