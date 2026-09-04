@@ -1,5 +1,10 @@
 # Session Progress & Context Preservation
 
+  - **AI Assistant Info Tooltip & Model Branding Removal** ✅:
+    - Enriched [`AssistantInfoTooltipContent`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with capability breakdowns (Zero math hallucinations, Semantic expense search, Private by design, and pipeline architecture).
+    - Removed all third-party model branding ("Powered by Gemini", "Gemini synthesises the answer", and model tags), replacing them with neutral copy ("Private & RAG-grounded", "AI synthesises the answer", and `['AI', 'Oracle 23ai', 'RAG']`).
+    - Verified with `npx tsc --noEmit --skipLibCheck` exiting 0 without errors.
+
   - **Floating AI Assistant Widget Redesign (Matching Assistant Page)** ✅:
     - Overhauled [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx):
       - **Trigger FAB Button**: Enhanced with glassmorphic backdrop-blur (`bg-background/90 dark:bg-background/80 backdrop-blur-md border border-border/40`), animated live status presence ring (`animate-ping` ping ring + emerald dot), active open state, and subtle micro-interactions.
