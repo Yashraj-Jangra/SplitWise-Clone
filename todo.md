@@ -1,11 +1,13 @@
 # Session Progress & Context Preservation
 
-  - **Sticky Floating Chat Header & Input with Glassmorphism Passthrough** ✅:
-    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) to make both the top header and bottom send area floating sticky overlays hovering over the chat stream:
-      - **Sticky Header**: `absolute top-0 left-0 right-0 z-20` with `backdrop-blur-md bg-background/80 border-b border-border/20`. Assistant title, bot icon, group badge, info tooltip `(i)`, and clear history `Trash2` button remain pinned and fully interactive while messages smoothly scroll underneath.
-      - **Continuous Full-Height Canvas**: Chat scroll container spans the complete 100% height (`flex-1 h-full w-full overflow-y-auto`) with `pt-16 pb-36` padding buffers so the top and bottom messages are never obscured.
-      - **Floating Input Overlay**: `absolute bottom-0 left-0 right-0 z-20` with gradient and blur (`bg-gradient-to-t from-background via-background/90 to-transparent`). Container is `pointer-events-none` so background clicks and scrolling pass through, while the centered input card is `pointer-events-auto` with a floating glass card aesthetic (`bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg`).
-      - Verified clean empty state vertical centering with `min-h-[calc(100dvh-17rem)]`.
+  - **Sticky Floating Chat Header & Input with Glassmorphism Passthrough (/assistant)** ✅:
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx):
+      - **Dedicated to `/assistant` (`variant="full"`)**:
+        - **Sticky Floating Header**: `absolute top-0 left-0 right-0 z-20` with `backdrop-blur-md bg-background/80 border-b border-border/20`. Assistant title, bot icon, group badge, info tooltip `(i)`, and clear history `Trash2` button remain pinned and fully interactive while messages smoothly scroll underneath.
+        - **Continuous Full-Height Canvas**: Chat scroll container spans the complete 100% height (`flex-1 h-full w-full overflow-y-auto`) with `pt-16 pb-36` padding buffers so the top and bottom messages are never obscured.
+        - **Floating Input Overlay**: `absolute bottom-0 left-0 right-0 z-20` with gradient and blur (`bg-gradient-to-t from-background via-background/90 to-transparent`). Container is `pointer-events-none` so background clicks and scrolling pass through, while the centered input card is `pointer-events-auto` with a floating glass card aesthetic (`bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg`).
+        - Verified clean empty state vertical centering with `min-h-[calc(100dvh-17rem)]`.
+      - **Restored Standard Widget (`variant="widget"`)**: Preserved clean, standard flex in-flow header, scroll area, and footer layout for the floating popup / mobile sheet widget without absolute positioning overlays.
     - Verified with `npx tsc --noEmit` exiting 0 without errors.
 
   - **Full-Page Assistant UI Redesign (Centered Canvas & Zero Div Box)** ✅:

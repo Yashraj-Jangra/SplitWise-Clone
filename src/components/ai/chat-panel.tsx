@@ -260,8 +260,14 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   const isFullPage = variant === 'full';
 
   return (
-    <div className={`relative flex flex-col h-full w-full bg-background overflow-hidden ${className || ''}`}>
-      {/* ── Top Floating Header (Glassmorphic Passthrough) ───────────── */}
+    <div
+      className={
+        isFullPage
+          ? `relative flex flex-col h-full w-full bg-background overflow-hidden ${className || ''}`
+          : `flex flex-col h-full bg-background ${className || ''}`
+      }
+    >
+      {/* ── Top Header (Floating Glass Overlay for Full Page vs. Fixed Header for Widget) ── */}
       {isFullPage ? (
         <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-border/20 bg-background/80 backdrop-blur-md">
           <div className="flex items-center gap-2.5">
@@ -319,7 +325,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
           </div>
         </div>
       ) : (
-        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 py-3.5 border-b border-border/30 bg-background/80 backdrop-blur-md">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/30 bg-background flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted/30 border border-border/40 text-foreground flex-shrink-0">
               <Icons.Bot className="w-4 h-4" />
@@ -392,13 +398,13 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
         </div>
       )}
 
-      {/* ── Messages Scroll Area (Full Height Canvas) ───────────────────── */}
-      <div className="flex-1 h-full w-full overflow-y-auto">
+      {/* ── Messages Scroll Area ───────────────────────────────────────── */}
+      <div className={isFullPage ? "flex-1 h-full w-full overflow-y-auto" : "flex-1 overflow-y-auto"}>
         <div
           className={
             isFullPage
               ? "max-w-3xl mx-auto w-full px-4 sm:px-6 pt-16 pb-36 space-y-4"
-              : "p-4 sm:p-5 pt-20 pb-28 space-y-2"
+              : "p-4 sm:p-5 space-y-2"
           }
         >
           {messages.length === 0 ? (
@@ -429,7 +435,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 </div>
               </div>
             ) : (
-              <div className="h-full min-h-[280px] flex flex-col items-center justify-center text-center p-4 max-w-sm mx-auto">
+              <div className="h-full flex flex-col items-center justify-center text-center p-4 max-w-sm mx-auto">
                 <div className="h-12 w-12 rounded-2xl bg-muted/30 border border-border/30 flex items-center justify-center text-foreground mb-3 shadow-2xs">
                   <Icons.Bot className="w-6 h-6" />
                 </div>
@@ -473,16 +479,84 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
         </div>
       </div>
 
-      {/* ── Input Box (Floating Glass Overlay) ─────────────────────────── */}
-      <div
-        className={
-          isFullPage
-            ? "absolute bottom-0 left-0 right-0 z-20 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent pt-6 pb-4 sm:pb-6"
-            : "absolute bottom-0 left-0 right-0 z-20 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent pt-4 pb-3 sm:pb-4 border-t border-border/20 backdrop-blur-[2px]"
-        }
-      >
-        <div className={isFullPage ? "max-w-3xl mx-auto w-full px-4 sm:px-6 pointer-events-auto" : "px-3.5 sm:px-4 pointer-events-auto"}>
-          <div className="relative flex items-end rounded-2xl bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg focus-within:border-border/60 focus-within:bg-background focus-within:shadow-xl transition-all">
+      {/* ── Input Box (Floating Glass Overlay for Full Page vs. Fixed Box for Widget) ── */}
+      {isFullPage ? (
+        <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent pt-6 pb-4 sm:pb-6">
+          <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 pointer-events-auto">
+            <div className="relative flex items-end rounded-2xl bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg focus-within:border-border/60 focus-within:bg-background focus-within:shadow-xl transition-all">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask anything about your expenses or balances..."
+                rows={1}
+                disabled={isStreaming}
+                className="min-h-[46px] max-h-[140px] resize-none border-0 !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent shadow-none px-4 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 leading-relaxed placeholder:text-muted-foreground/60"
+              />
+              <div className="p-1.5 flex-shrink-0 self-end">
+                {isStreaming ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleStop}
+                    className="h-8 w-8 min-h-[32px] max-h-[32px] rounded-lg bg-muted/40 text-foreground hover:bg-muted/70 hover:text-red-500 transition-all flex items-center justify-center group"
+                    title="Stop generating (Esc)"
+                    aria-label="Stop generating"
+                  >
+                    <Square className="w-3 h-3 fill-current text-foreground group-hover:text-red-500 transition-colors" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    disabled={!input.trim()}
+                    onClick={() => handleSend()}
+                    className="h-8 w-8 min-h-[32px] max-h-[32px] rounded-lg bg-transparent text-muted-foreground hover:bg-muted/70 hover:text-primary transition-colors disabled:opacity-25 disabled:pointer-events-none disabled:hover:bg-transparent disabled:hover:text-muted-foreground group"
+                    title="Send message"
+                    aria-label="Send message"
+                  >
+                    <Send className="w-4 h-4 transition-colors group-hover:text-primary" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-1.5 mt-2">
+              <span className="text-[11px] text-muted-foreground/75 text-center">
+                Insights based on your expense history
+              </span>
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center h-4 w-4 rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors focus:outline-none"
+                      aria-label="How insights are generated"
+                    >
+                      <Info className="w-3 h-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    align="center"
+                    className="max-w-xs text-xs p-2.5 rounded-xl border border-border/40 bg-popover text-popover-foreground shadow-xl leading-relaxed"
+                  >
+                    <p className="font-semibold text-foreground mb-0.5">Private Context Retrieval</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Answers are generated strictly from your personal expense history and shared group balances using private search. No personal financial data is shared or used for model training.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-3.5 sm:p-4 border-t border-border/30 bg-background flex-shrink-0">
+          <div className="relative flex items-end rounded-2xl bg-muted/20 border border-border/30 focus-within:border-border/60 focus-within:bg-background focus-within:shadow-sm transition-all">
             <Textarea
               ref={textareaRef}
               value={input}
@@ -552,7 +626,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
             </TooltipProvider>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
