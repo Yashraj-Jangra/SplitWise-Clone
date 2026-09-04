@@ -9,7 +9,16 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { AnimatePresence, motion, useDragControls } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-function MobileDrawerContent({ onClose }: { onClose: () => void }) {
+// Only show the floating AI financial assistant on core financial & expense tracking surfaces
+const ALLOWED_FINANCIAL_ROUTES = [
+  '/dashboard',
+  '/groups',
+  '/expenses',
+  '/settlements',
+  '/analysis',
+];
+
+function MobileDrawerContent({ onClose, groupId }: { onClose: () => void; groupId?: string }) {
   const dragControls = useDragControls();
   const [isDragging, setIsDragging] = useState(false);
 
@@ -48,7 +57,7 @@ function MobileDrawerContent({ onClose }: { onClose: () => void }) {
         />
       </div>
 
-      <ChatPanel onClose={onClose} className="flex-1" />
+      <ChatPanel groupId={groupId} onClose={onClose} className="flex-1" />
     </motion.div>
   );
 }
@@ -58,10 +67,19 @@ export function AIChatWidget() {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Do not show the floating widget on the full /assistant page or admin/auth routes
-  if (pathname === '/assistant' || pathname.startsWith('/auth') || pathname.startsWith('/admin')) {
+  // Strict route guard: only render where financial assistance makes contextual sense
+  // (excludes /settings, /admin, /notifications, /support, /assistant, /auth, etc.)
+  const isAllowedRoute = ALLOWED_FINANCIAL_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (!isAllowedRoute) {
     return null;
   }
+
+  // Extract group context when on a group details page
+  const groupMatch = pathname.match(/^\/groups\/([^/]+)/);
+  const currentGroupId = groupMatch ? groupMatch[1] : undefined;
 
   return (
     <>
@@ -101,7 +119,7 @@ export function AIChatWidget() {
             onOpenAutoFocus={(e) => e.preventDefault()}
             className="h-[88vh] max-h-[88dvh] flex flex-col rounded-t-2xl border-t border-border/30 p-0 bg-background/95 backdrop-blur-xl overflow-hidden overflow-x-hidden [&>button]:hidden shadow-2xl"
           >
-            <MobileDrawerContent onClose={() => setIsOpen(false)} />
+            <MobileDrawerContent onClose={() => setIsOpen(false)} groupId={currentGroupId} />
           </SheetContent>
         </Sheet>
       ) : (
@@ -115,7 +133,7 @@ export function AIChatWidget() {
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="fixed bottom-20 right-6 z-50 w-[430px] max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100dvh-110px)] rounded-2xl border border-border/30 dark:border-border/20 shadow-2xl shadow-black/15 dark:shadow-black/50 overflow-hidden overflow-x-hidden bg-background/95 backdrop-blur-xl flex flex-col ring-1 ring-border/20"
             >
-              <ChatPanel onClose={() => setIsOpen(false)} className="flex-1" />
+              <ChatPanel groupId={currentGroupId} onClose={() => setIsOpen(false)} className="flex-1" />
             </motion.div>
           )}
         </AnimatePresence>

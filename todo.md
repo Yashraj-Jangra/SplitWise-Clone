@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **Scope AI Assistant Widget to Financial Surfaces** 🛡️ ✅:
+    - **Issue**: The floating AI assistant widget was rendering indiscriminately on non-financial routes such as User Settings, Admin Panels, Support, and Notifications.
+    - **Fix Applied**:
+      - Replaced negative route exclusions in [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx) with an explicit allowlist of core financial surfaces: `/dashboard`, `/groups`, `/expenses`, `/settlements`, `/analysis`.
+      - Automatically suppressed the floating widget on `/settings`, `/admin`, `/notifications`, `/support`, and `/assistant`.
+      - Added automatic `groupId` extraction from URL path to scope financial RAG context when browsing group detail pages.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Version Bump** 📌: Bumped application version to `0.3.2` across `package.json`, `package-lock.json`, and `src/lib/version.ts`.
 
   - **AI Assistant Mobile Gestures & Top Header Activity Filter Slider** ✨ ✅:
