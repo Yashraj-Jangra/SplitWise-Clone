@@ -167,47 +167,48 @@ export function GroupDetailHeader({
       </div>
       
       {/* Compact Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border bg-card">
-        <div className="p-2.5 sm:p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Spent</p>
-            <p className="font-bold font-mono text-base sm:text-lg text-foreground">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
+      {/* Compact Stats Bar */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 divide-x divide-border bg-card">
+        <div className="p-2 sm:p-3 text-center min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">Total Spent</p>
+            <p className="font-bold font-mono text-sm sm:text-lg text-foreground truncate">{getGroupCurrencySymbol(group)}{group.totalExpenses.toFixed(2)}</p>
         </div>
-        <div className="p-2.5 sm:p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Members</p>
-            <p className="font-bold font-mono text-base sm:text-lg text-foreground">{group.members.length}</p>
+        <div className="hidden sm:block p-2 sm:p-3 text-center min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">Members</p>
+            <p className="font-bold font-mono text-base sm:text-lg text-foreground truncate">{group.members.length}</p>
         </div>
-        <div className="p-2.5 sm:p-3 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Your Balance</p>
+        <div className="p-2 sm:p-3 text-center min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">Your Balance</p>
             <p className={cn(
-                "font-bold font-mono text-base sm:text-lg",
+                "font-bold font-mono text-sm sm:text-lg truncate",
                 currentUserBalance > 0.01 ? 'text-emerald-400' : currentUserBalance < -0.01 ? 'text-rose-400' : 'text-foreground'
             )}>
                 {currentUserBalance >= 0 ? '' : '-'}{getGroupCurrencySymbol(group)}{Math.abs(currentUserBalance).toFixed(2)}
             </p>
         </div>
         <div
-          className="p-2.5 sm:p-3 text-center cursor-pointer hover:bg-muted/40 transition-colors group/budget"
+          className="p-2 sm:p-3 text-center cursor-pointer hover:bg-muted/40 transition-colors group/budget min-w-0"
           onClick={onNavigateToBudget}
           title="View Budget Details"
         >
             <div className="flex items-center justify-center gap-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monthly Budget</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">Monthly Budget</p>
             </div>
             {budgetStats.isEnabled ? (
               <p className={cn(
-                "font-bold font-mono text-base sm:text-lg truncate",
+                "font-bold font-mono text-sm sm:text-lg truncate",
                 budgetStats.status === 'healthy' && "text-emerald-400",
                 budgetStats.status === 'caution' && "text-amber-400",
                 budgetStats.status === 'warning' && "text-orange-400",
                 budgetStats.status === 'overbudget' && "text-rose-400",
               )}>
                 {budgetStats.percentageUsed.toFixed(0)}%
-                <span className="text-[11px] font-normal text-muted-foreground ml-1">
+                <span className="text-[10px] sm:text-[11px] font-normal text-muted-foreground ml-1">
                   ({CURRENCY_SYMBOL}{budgetStats.remainingBudget >= 0 ? `${(budgetStats.remainingBudget / 1000).toFixed(1)}k` : 'over'})
                 </span>
               </p>
             ) : (
-              <p className="text-xs font-bold uppercase tracking-wider text-foreground pt-1 group-hover/budget:underline">
+              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-foreground pt-0.5 sm:pt-1 group-hover/budget:underline">
                 + Set Budget
               </p>
             )}

@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **Group Header Stats Bar Mobile Optimization (Hide Members, 3-Col Layout)** 🎨 ✅:
+    - **Issue**: On mobile viewports, the group header stats bar rendered 4 items in a 2x2 grid (`grid-cols-2 divide-y`), consuming excessive vertical height and prominently showing the members count under the cover image.
+    - **Fix Applied**:
+      - Updated the stats bar in [`src/components/groups/group-detail-header.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-detail-header.tsx) to `grid-cols-3 sm:grid-cols-4 divide-x`.
+      - Hidden the Members count on mobile view (`hidden sm:block`) so that mobile renders only the 3 primary financial metrics (Total Spent, Your Balance, Monthly Budget) in a single compact horizontal row.
+      - Added responsive typography (`text-sm sm:text-lg truncate`) so large numbers fit comfortably on 3-column mobile displays without overflowing.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Remove Vercel Analytics and Speed Insights** 🧹 ✅:
     - **Issue**: `@vercel/analytics` and `@vercel/speed-insights` were mounted in `RootLayout` and installed in dependencies despite the application being self-hosted with Docker/Oracle.
     - **Fix Applied**:
