@@ -28,9 +28,21 @@ interface GroupDetailHeaderProps {
   currentUserBalance: number;
   expenses?: Expense[];
   onNavigateToBudget?: () => void;
+  settlementOpen?: boolean;
+  onSettlementOpenChange?: (open: boolean) => void;
+  initialSettlement?: any;
 }
 
-export function GroupDetailHeader({ group, user, currentUserBalance, expenses = [], onNavigateToBudget }: GroupDetailHeaderProps) {
+export function GroupDetailHeader({
+  group,
+  user,
+  currentUserBalance,
+  expenses = [],
+  onNavigateToBudget,
+  settlementOpen,
+  onSettlementOpenChange,
+  initialSettlement,
+}: GroupDetailHeaderProps) {
   const { toast } = useToast();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [coverImages, setCoverImages] = useState<string[]>([]);
@@ -139,6 +151,9 @@ export function GroupDetailHeader({ group, user, currentUserBalance, expenses = 
               />
               <AddSettlementDialog
                 group={group}
+                open={settlementOpen}
+                onOpenChange={onSettlementOpenChange}
+                initialSettlement={initialSettlement}
                 trigger={
                   <Button size="sm" className="rounded-l-none">
                     <Icons.Settle className="mr-1 h-4 w-4" />

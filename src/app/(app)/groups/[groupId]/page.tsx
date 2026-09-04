@@ -8,7 +8,6 @@ import { GroupDetailHeader } from '@/components/groups/group-detail-header';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
 import { GroupBalances } from '@/components/groups/group-balances';
-import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
 import {
   Card,
   CardContent,
@@ -330,16 +329,15 @@ export default function GroupDetailPage() {
           currentUserBalance={currentUserBalance}
           expenses={expenses}
           onNavigateToBudget={() => setActiveTab('budget')}
+          settlementOpen={settlementDialogOpen}
+          onSettlementOpenChange={(open) => {
+            setSettlementDialogOpen(open);
+            if (!open) {
+              setInitialSettlementVal(undefined);
+            }
+          }}
+          initialSettlement={initialSettlementVal}
         />
-
-        {!group.archivedAt && (
-          <AddSettlementDialog
-            group={group}
-            open={settlementDialogOpen}
-            onOpenChange={setSettlementDialogOpen}
-            initialSettlement={initialSettlementVal}
-          />
-        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex md:justify-start">

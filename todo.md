@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **Remove Redundant Settlement Button in Group Activity & Consolidate with Header** 🎨 ✅:
+    - **Issue**: After consolidating Activity and removing the Settlements tab, a standalone `<AddSettlementDialog />` was mounted at the top of the tab content to handle deep-linked `?action=settle` events. Because `trigger` was not provided, the component rendered its fallback trigger button ("Record Settlement") directly above the activity tabs, resulting in a duplicate button alongside the existing "Settle" button in the group header.
+    - **Fix Applied**:
+      - Passed `settlementOpen`, `onSettlementOpenChange`, and `initialSettlement` directly to [`src/components/groups/group-detail-header.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-detail-header.tsx) to control its existing "Settle" button dialog.
+      - Removed the standalone `<AddSettlementDialog />` and its unused import from [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx).
+      - Added safety checks to [`src/components/settlements/add-settlement-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/settlements/add-settlement-dialog.tsx) so `trigger={null}` can suppress the trigger button and only render `DialogTrigger` / `SheetTrigger` when `dialogTrigger` is truthy.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean).
+
   - **Fix Oracle DB Pool Exhaustion & Timeout Errors in Development** ⚡ ✅:
     - **Root Cause Diagnosed**: Next.js Fast Refresh / HMR re-evaluates server modules on file changes. Without `globalThis`, `poolPromise` was re-initialized on every reload, abandoning open Oracle connection pools in memory without closing them. Additionally, the default connection string used `splititdb_high` (which limits concurrency to 3 sessions on Free Tier ATP), and dev attempted to allocate up to 20 connections (`poolMax: 20`), directly competing with the production server for Oracle's 20-session limit.
     - **Fix Applied**:
