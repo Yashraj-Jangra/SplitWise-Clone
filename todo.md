@@ -1,5 +1,8 @@
 # Session Progress & Context Preservation
 
+  - **Configure GitHub Deployments** ✅:
+    - Added `environment: production` and `deployments: write` permission to the CI/CD workflow in [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) so GitHub tracks deployments and populates the Deployments widget on the repository homepage.
+
   - **AI Chat Widget Horizontal Overflow Fix & Minimal Tooltip Polish** ✅:
     - Fixed AI assistant trigger button hover state in [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx): replaced semi-transparent `hover:bg-muted/40` with fully opaque `hover:bg-muted` over `bg-background dark:bg-card` so the button background does not become transparent on hover.
     - Fixed horizontal scrolling in [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx): converted assistant message container to `flex-1 min-w-0 [overflow-wrap:anywhere]` to eliminate flexbox expansion past 100% width.
