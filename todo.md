@@ -1,10 +1,10 @@
 # Session Progress & Context Preservation
 
-  - **AI Assistant Info Tooltip & Header Action Alignment** ✅:
-    - Enriched [`AssistantInfoTooltipContent`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with generous width (`w-[305px]` widget / `w-[340px]` full), clean row separators (`divide-y divide-border/15`), colored icon badges, relaxed line height, and a structured 3-step pipeline pill sequence (`Ledger math` → `Vector search` → `Live stream`) replacing dense run-on text.
-    - Removed all third-party model branding ("Powered by Gemini", "Gemini synthesises the answer", and model tags), replacing them with neutral copy ("Private & RAG-grounded", "AI synthesises the answer", and `['AI', 'Oracle 23ai', 'RAG']`).
-    - Unified header action buttons (`Maximize2`, `Info`, `Trash2`, `Close`): replaced oversized `Button size="icon"` (which had 44px min-width) with uniform `h-8 w-8` buttons and consistent `gap-1` spacing.
-    - Added matching Radix tooltips with 150ms delay to all header buttons (`Expand to full page`, info popup, `Clear chat history`, and `Close`).
+  - **AI Chat Widget Horizontal Overflow Fix & Minimal Tooltip Polish** ✅:
+    - Fixed horizontal scrolling in [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx): converted assistant message container to `flex-1 min-w-0 [overflow-wrap:anywhere]` to eliminate flexbox expansion past 100% width.
+    - Added `overflow-x-hidden` and `min-w-0 max-w-full` across [`chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx), [`ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx), and [`formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx).
+    - Fixed tooltip visibility in [`src/components/ui/tooltip.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ui/tooltip.tsx) by wrapping `TooltipContent` in `<TooltipPrimitive.Portal>` so tooltips mount directly to `document.body` without being clipped by parent `overflow-hidden` containers.
+    - Polished [`AssistantInfoTooltipContent`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with a divider line after the header and a divider line before the footer, preserving the clean, minimal, sleek content layout.
     - Verified with `npx tsc --noEmit --skipLibCheck` exiting 0 without errors.
 
   - **Floating AI Assistant Widget Redesign (Matching Assistant Page)** ✅:
