@@ -1,6 +1,19 @@
 # Session Progress & Context Preservation
 
-  - **Sticky Floating Chat Header & Input with Glassmorphism Passthrough (/assistant)** ✅:
+  - **Floating AI Assistant Widget Redesign (Matching Assistant Page)** ✅:
+    - Overhauled [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx):
+      - **Trigger FAB Button**: Enhanced with glassmorphic backdrop-blur (`bg-background/90 dark:bg-background/80 backdrop-blur-md border border-border/40`), animated live status presence ring (`animate-ping` ping ring + emerald dot), active open state, and subtle micro-interactions.
+      - **Desktop Popover Container**: Elevated to match the modal design system with glassmorphic surface (`bg-background/95 backdrop-blur-xl border border-border/30 dark:border-border/20 shadow-2xl ring-1 ring-border/20 w-[430px] h-[600px] rounded-2xl`).
+      - **Mobile Bottom Sheet Parity**: Added sleek drag handle pill, `backdrop-blur-xl bg-background/95`, and suppressed the default Radix close button (`[&>button]:hidden`) to let the chat panel header handle navigation cleanly.
+    - Upgraded [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) for `variant="widget"`:
+      - **Floating Glass Header**: Transformed the widget header to a sticky glass overlay (`absolute top-0 left-0 right-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/20`) allowing messages to glide smoothly underneath.
+      - **One-Click Maximize**: Added a header shortcut (`Maximize2` icon) linking directly to `/assistant` with tooltip so users can transition from popup to full page instantly.
+      - **Refined Empty Welcome**: Replaced the bulky welcome block with a clean centered greeting ("How can I help you today?"), bot avatar, and interactive quick-start cards matching the assistant page.
+      - **Floating Glass Input**: Replaced the rigid bottom bar with a gradient glass overlay (`bg-gradient-to-t from-background via-background/95 to-transparent`) with rounded glass textarea container and minimal privacy retrieval indicator.
+    - Updated [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx):
+      - Unboxed assistant messages in widget mode (`text-foreground leading-relaxed w-full pt-0.5`), removing heavy gray card borders so markdown, tables, lists, and bold text flow naturally just like the `/assistant` page.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
     - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx):
       - **Dedicated to `/assistant` (`variant="full"`)**:
         - **Sticky Floating Header**: `absolute top-0 left-0 right-0 z-20` with `backdrop-blur-md bg-background/80 border-b border-border/20`. Assistant title, bot icon, group badge, info tooltip `(i)`, and clear history `Trash2` button remain pinned and fully interactive while messages smoothly scroll underneath.

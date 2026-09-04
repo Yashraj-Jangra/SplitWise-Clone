@@ -53,9 +53,7 @@ export function MessageBubble({ message, userName = 'You', isStreaming, status, 
             'text-sm transition-all',
             isUser
               ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-xs px-4 py-2.5 leading-relaxed whitespace-pre-wrap break-words font-normal shadow-2xs'
-              : isFullPage
-              ? 'text-foreground leading-relaxed w-full pt-0.5'
-              : 'bg-muted/25 text-foreground border border-border/30 rounded-2xl rounded-tl-xs px-4 py-2.5 shadow-2xs w-full'
+              : 'text-foreground leading-relaxed w-full pt-0.5'
           )}
         >
           {isUser ? (
