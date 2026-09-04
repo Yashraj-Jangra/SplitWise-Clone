@@ -1,8 +1,10 @@
 # Session Progress & Context Preservation
 
-  - **AI Assistant Info Tooltip & Model Branding Removal** ✅:
-    - Enriched [`AssistantInfoTooltipContent`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with capability breakdowns (Zero math hallucinations, Semantic expense search, Private by design, and pipeline architecture).
+  - **AI Assistant Info Tooltip & Header Action Alignment** ✅:
+    - Enriched [`AssistantInfoTooltipContent`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with generous width (`w-[305px]` widget / `w-[340px]` full), clean row separators (`divide-y divide-border/15`), colored icon badges, relaxed line height, and a structured 3-step pipeline pill sequence (`Ledger math` → `Vector search` → `Live stream`) replacing dense run-on text.
     - Removed all third-party model branding ("Powered by Gemini", "Gemini synthesises the answer", and model tags), replacing them with neutral copy ("Private & RAG-grounded", "AI synthesises the answer", and `['AI', 'Oracle 23ai', 'RAG']`).
+    - Unified header action buttons (`Maximize2`, `Info`, `Trash2`, `Close`): replaced oversized `Button size="icon"` (which had 44px min-width) with uniform `h-8 w-8` buttons and consistent `gap-1` spacing.
+    - Added matching Radix tooltips with 150ms delay to all header buttons (`Expand to full page`, info popup, `Clear chat history`, and `Close`).
     - Verified with `npx tsc --noEmit --skipLibCheck` exiting 0 without errors.
 
   - **Floating AI Assistant Widget Redesign (Matching Assistant Page)** ✅:
