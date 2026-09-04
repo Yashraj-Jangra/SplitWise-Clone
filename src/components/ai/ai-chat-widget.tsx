@@ -54,7 +54,7 @@ export function AIChatWidget() {
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetContent
             side="bottom"
-            className="h-[88vh] max-h-[88dvh] flex flex-col rounded-t-2xl border-t border-border/30 p-0 bg-background/95 backdrop-blur-xl overflow-hidden [&>button]:hidden shadow-2xl"
+            className="h-[88vh] max-h-[88dvh] flex flex-col rounded-t-2xl border-t border-border/30 p-0 bg-background/95 backdrop-blur-xl overflow-hidden overflow-x-hidden [&>button]:hidden shadow-2xl"
           >
             <div className="w-9 h-1 rounded-full bg-muted-foreground/30 mx-auto mt-2.5 mb-1 flex-shrink-0" />
             <ChatPanel onClose={() => setIsOpen(false)} className="flex-1" />
@@ -69,7 +69,7 @@ export function AIChatWidget() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.96 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed bottom-20 right-6 z-50 w-[430px] max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100dvh-110px)] rounded-2xl border border-border/30 dark:border-border/20 shadow-2xl shadow-black/15 dark:shadow-black/50 overflow-hidden bg-background/95 backdrop-blur-xl flex flex-col ring-1 ring-border/20"
+              className="fixed bottom-20 right-6 z-50 w-[430px] max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100dvh-110px)] rounded-2xl border border-border/30 dark:border-border/20 shadow-2xl shadow-black/15 dark:shadow-black/50 overflow-hidden overflow-x-hidden bg-background/95 backdrop-blur-xl flex flex-col ring-1 ring-border/20"
             >
               <ChatPanel onClose={() => setIsOpen(false)} className="flex-1" />
             </motion.div>

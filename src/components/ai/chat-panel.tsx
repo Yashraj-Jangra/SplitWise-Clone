@@ -36,81 +36,59 @@ interface ChatPanelProps {
 function AssistantInfoTooltipContent({ variant = 'full' }: { variant?: 'widget' | 'full' }) {
   const isWidget = variant === 'widget';
   return (
-    <div className={isWidget ? 'w-[305px]' : 'w-[340px]'}>
-      {/* Header with icon and status */}
-      <div className="flex items-center gap-2.5 pb-2.5 mb-1 border-b border-border/25">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 flex-shrink-0 text-primary">
-          <Sparkles className="w-3.5 h-3.5" />
+    <div className={isWidget ? 'w-72' : 'w-80'}>
+      {/* Header */}
+      <div className="flex items-center gap-2 pb-2.5 mb-2.5 border-b border-border/20">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-foreground text-xs leading-none">Financial Assistant</p>
-          <p className="text-[10px] text-muted-foreground mt-1 leading-none">Private & RAG-grounded</p>
+        <div>
+          <p className="font-semibold text-foreground text-[12px] leading-tight">Financial Assistant</p>
+          <p className="text-[10px] text-muted-foreground leading-tight">Private & RAG-grounded</p>
         </div>
       </div>
 
-      {/* Feature Rows with clean dividers and spacing */}
-      <div className="divide-y divide-border/15">
-        <div className="py-2.5 flex gap-2.5 items-start">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 border border-emerald-500/20 flex-shrink-0 mt-0.5">
-            <Calculator className="w-3 h-3 text-emerald-500" />
-          </div>
-          <div className="min-w-0 flex-1">
+      {/* Body with original text and spacing */}
+      <div className="space-y-2.5">
+        <div className="flex gap-2.5 items-start">
+          <Calculator className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+          <div>
             <p className="text-[11px] font-semibold text-foreground leading-tight">Zero math hallucinations</p>
-            <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
-              Balances, debts, and totals are computed server-side directly from ledger records — the AI never estimates numbers.
-            </p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Balances, debts, and totals are computed server-side from your actual records — the AI never guesses or recalculates numbers.</p>
           </div>
         </div>
 
-        <div className="py-2.5 flex gap-2.5 items-start">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500/10 border border-blue-500/20 flex-shrink-0 mt-0.5">
-            <Database className="w-3 h-3 text-blue-500" />
-          </div>
-          <div className="min-w-0 flex-1">
+        <div className="flex gap-2.5 items-start">
+          <Database className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
+          <div>
             <p className="text-[11px] font-semibold text-foreground leading-tight">Semantic expense search</p>
-            <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
-              Expenses are indexed into high-dimensional vectors to retrieve receipts by contextual meaning, not just exact keywords.
-            </p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Your expenses are indexed as vectors. Relevant records are retrieved by meaning, not just keywords, before answering.</p>
           </div>
         </div>
 
-        <div className="py-2.5 flex gap-2.5 items-start">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10 border border-violet-500/20 flex-shrink-0 mt-0.5">
-            <ShieldCheck className="w-3 h-3 text-violet-500" />
-          </div>
-          <div className="min-w-0 flex-1">
+        <div className="flex gap-2.5 items-start">
+          <ShieldCheck className="w-3.5 h-3.5 text-violet-500 flex-shrink-0 mt-0.5" />
+          <div>
             <p className="text-[11px] font-semibold text-foreground leading-tight">Private by design</p>
-            <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
-              Data is strictly scoped to your account and group permissions. Your records are never shared or used for model training.
-            </p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Data never leaves your account scope. Group queries are access-controlled and your history is never used for model training.</p>
           </div>
         </div>
 
-        <div className="py-2.5 flex gap-2.5 items-start">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-orange-500/10 border border-orange-500/20 flex-shrink-0 mt-0.5">
-            <Cpu className="w-3 h-3 text-orange-500" />
-          </div>
-          <div className="min-w-0 flex-1">
+        <div className="flex gap-2.5 items-start">
+          <Cpu className="w-3.5 h-3.5 text-orange-500 flex-shrink-0 mt-0.5" />
+          <div>
             <p className="text-[11px] font-semibold text-foreground leading-tight">How it works</p>
-            <div className="mt-1.5 flex items-center gap-1 flex-wrap text-[9px] font-medium text-muted-foreground">
-              <span className="px-1.5 py-0.5 rounded bg-muted/60 border border-border/30 text-foreground/80">Ledger math</span>
-              <span className="text-muted-foreground/40">→</span>
-              <span className="px-1.5 py-0.5 rounded bg-muted/60 border border-border/30 text-foreground/80">Vector search</span>
-              <span className="text-muted-foreground/40">→</span>
-              <span className="px-1.5 py-0.5 rounded bg-muted/60 border border-border/30 text-foreground/80">Live stream</span>
-            </div>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Question → server computes exact ledger facts → semantic vector search → AI synthesises the answer → streamed back live.</p>
           </div>
         </div>
       </div>
 
-      {/* Tech pills footer */}
-      <div className="mt-1 pt-2.5 border-t border-border/25 flex items-center justify-between">
-        <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider font-semibold">Tech</span>
+      {/* Footer with divider line before it */}
+      <div className="mt-2.5 pt-2.5 border-t border-border/20 flex items-center justify-between">
+        <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider font-medium">Tech</span>
         <div className="flex items-center gap-1.5">
           {['AI', 'Oracle 23ai', 'RAG'].map((tag) => (
-            <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted/60 border border-border/30 text-muted-foreground">
-              {tag}
-            </span>
+            <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted/50 border border-border/30 text-muted-foreground">{tag}</span>
           ))}
         </div>
       </div>
@@ -370,8 +348,8 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <TooltipProvider delayDuration={150}>
+          <TooltipProvider delayDuration={150}>
+            <div className="flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -390,10 +368,8 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   <AssistantInfoTooltipContent variant="full" />
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
 
-            {messages.length > 0 && (
-              <TooltipProvider delayDuration={150}>
+              {messages.length > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -413,9 +389,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                     Clear chat history
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
+              )}
+            </div>
+          </TooltipProvider>
         </div>
       ) : (
         <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3.5 sm:px-4 py-2.5 border-b border-border/20 bg-background/85 backdrop-blur-md">
@@ -436,8 +412,8 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
             </div>
           </div>
 
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <TooltipProvider delayDuration={150}>
+          <TooltipProvider delayDuration={150}>
+            <div className="flex items-center gap-1 flex-shrink-0">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
@@ -457,9 +433,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   Open full page
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
 
-            <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -478,10 +452,8 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   <AssistantInfoTooltipContent variant="widget" />
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
 
-            {messages.length > 0 && (
-              <TooltipProvider delayDuration={150}>
+              {messages.length > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -501,11 +473,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                     Clear chat history
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            )}
+              )}
 
-            {onClose && (
-              <TooltipProvider delayDuration={150}>
+              {onClose && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -525,19 +495,19 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                     Close
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
+              )}
+            </div>
+          </TooltipProvider>
         </div>
       )}
 
       {/* ── Messages Scroll Area ───────────────────────────────────────── */}
-      <div className="flex-1 h-full w-full overflow-y-auto">
+      <div className="flex-1 h-full w-full overflow-y-auto overflow-x-hidden">
         <div
           className={
             isFullPage
-              ? "max-w-3xl mx-auto w-full px-4 sm:px-6 pt-16 pb-36 space-y-4"
-              : "w-full px-3.5 sm:px-4 pt-14 pb-28 space-y-3"
+              ? "max-w-3xl mx-auto w-full min-w-0 px-4 sm:px-6 pt-16 pb-36 space-y-4"
+              : "w-full max-w-full min-w-0 px-3.5 sm:px-4 pt-14 pb-28 space-y-3"
           }
         >
           {messages.length === 0 ? (

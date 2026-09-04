@@ -19,7 +19,7 @@ export function FormattedMarkdown({ content, className, isStreaming }: Formatted
   }
 
   return (
-    <div className={cn('text-sm leading-relaxed break-words space-y-2', className)}>
+    <div className={cn('text-sm leading-relaxed break-words [overflow-wrap:anywhere] space-y-2 max-w-full overflow-hidden', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

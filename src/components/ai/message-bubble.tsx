@@ -25,7 +25,7 @@ export function MessageBubble({ message, userName = 'You', isStreaming, status, 
   return (
     <div
       className={cn(
-        'flex items-start transition-all',
+        'flex items-start transition-all min-w-0 w-full max-w-full',
         isFullPage ? 'gap-3.5 my-4' : 'gap-2.5 my-2.5',
         isUser
           ? 'flex-row-reverse self-end ml-auto max-w-[85%] sm:max-w-[75%]'
@@ -50,10 +50,10 @@ export function MessageBubble({ message, userName = 'You', isStreaming, status, 
       ) : (
         <div
           className={cn(
-            'text-sm transition-all',
+            'text-sm transition-all min-w-0',
             isUser
-              ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-xs px-4 py-2.5 leading-relaxed whitespace-pre-wrap break-words font-normal shadow-2xs'
-              : 'text-foreground leading-relaxed w-full pt-0.5'
+              ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-xs px-4 py-2.5 leading-relaxed whitespace-pre-wrap break-words font-normal shadow-2xs max-w-[calc(100%-2.5rem)]'
+              : 'text-foreground leading-relaxed flex-1 min-w-0 pt-0.5 break-words [overflow-wrap:anywhere]'
           )}
         >
           {isUser ? (
