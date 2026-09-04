@@ -14,17 +14,22 @@ interface MessageBubbleProps {
   userName?: string;
   isStreaming?: boolean;
   status?: AIStreamStatus;
+  variant?: 'widget' | 'full';
 }
 
-export function MessageBubble({ message, userName = 'You', isStreaming, status }: MessageBubbleProps) {
+export function MessageBubble({ message, userName = 'You', isStreaming, status, variant = 'widget' }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const showThinkingState = !isUser && !message.content && (isStreaming || Boolean(status));
+  const isFullPage = variant === 'full';
 
   return (
     <div
       className={cn(
-        'flex gap-2.5 my-2.5 items-start',
-        isUser ? 'flex-row-reverse self-end ml-auto max-w-[88%] sm:max-w-[80%]' : 'flex-row self-start mr-auto max-w-[95%] sm:max-w-[88%]'
+        'flex items-start transition-all',
+        isFullPage ? 'gap-3.5 my-4' : 'gap-2.5 my-2.5',
+        isUser
+          ? 'flex-row-reverse self-end ml-auto max-w-[85%] sm:max-w-[75%]'
+          : 'flex-row self-start mr-auto w-full max-w-full'
       )}
     >
       <Avatar
@@ -45,10 +50,12 @@ export function MessageBubble({ message, userName = 'You', isStreaming, status }
       ) : (
         <div
           className={cn(
-            'rounded-2xl px-4 py-2.5 text-sm transition-all shadow-2xs',
+            'text-sm transition-all',
             isUser
-              ? 'bg-primary text-primary-foreground rounded-tr-xs leading-relaxed whitespace-pre-wrap break-words font-normal'
-              : 'bg-muted/25 text-foreground border border-border/30 rounded-tl-xs w-full'
+              ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-xs px-4 py-2.5 leading-relaxed whitespace-pre-wrap break-words font-normal shadow-2xs'
+              : isFullPage
+              ? 'text-foreground leading-relaxed w-full pt-0.5'
+              : 'bg-muted/25 text-foreground border border-border/30 rounded-2xl rounded-tl-xs px-4 py-2.5 shadow-2xs w-full'
           )}
         >
           {isUser ? (

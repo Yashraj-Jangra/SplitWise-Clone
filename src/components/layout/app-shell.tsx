@@ -407,6 +407,8 @@ export function AppShell({ children }: AppShellProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(isMobile);
   const { toast } = useToast();
   const { userProfile } = useAuth();
+  const pathname = usePathname();
+  const isAssistant = pathname === '/assistant';
 
   React.useEffect(() => {
     setIsCollapsed(isMobile);
@@ -436,11 +438,16 @@ export function AppShell({ children }: AppShellProps) {
         isCollapsed ? "md:grid-cols-[80px_1fr]" : "md:grid-cols-[280px_1fr]"
     )}>
       <Sidebar isCollapsed={!!isCollapsed} onToggle={handleToggle} />
-       <div className="flex flex-col">
+       <div className="flex flex-col min-h-screen">
           <UpdateBanner />
           <Header />
           <EmailVerificationBanner />
-          <main className="flex flex-1 flex-col gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 animate-in fade-in-0 duration-300 pb-24 md:pb-4 lg:pb-6">
+          <main className={cn(
+            "flex flex-1 flex-col animate-in fade-in-0 duration-300",
+            isAssistant
+              ? "p-0 pb-0 md:pb-0 gap-0 overflow-hidden h-[calc(100dvh-60px)]"
+              : "gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 pb-24 md:pb-4 lg:pb-6"
+          )}>
             {children}
           </main>
           <BottomNavBar />

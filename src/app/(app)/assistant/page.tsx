@@ -8,10 +8,8 @@ export const metadata: Metadata = {
 
 export default function AssistantPage() {
   return (
-    <div className="w-full h-[calc(100dvh-4.5rem)] sm:h-[calc(100dvh-5.5rem)] max-w-4xl mx-auto p-2 sm:p-4 md:p-6 flex flex-col">
-      <div className="flex-1 w-full rounded-2xl border border-border/30 overflow-hidden shadow-xl bg-background flex flex-col">
-        <ChatPanel className="flex-1" />
-      </div>
+    <div className="flex flex-col flex-1 w-full h-full min-h-0 overflow-hidden">
+      <ChatPanel variant="full" className="flex-1 h-full" />
     </div>
   );
 }

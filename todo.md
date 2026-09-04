@@ -1,5 +1,17 @@
 # Session Progress & Context Preservation
 
+  - **Full-Page Assistant UI Redesign (Centered Canvas & Zero Div Box)** ✅:
+    - Overhauled [`src/app/(app)/assistant/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/assistant/page.tsx) to completely remove the framed card box container (`border`, `shadow-xl`, `max-w-4xl`, outer margin paddings) so the page occupies 100% of the available viewport canvas.
+    - Updated [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx) to remove outer page padding and gaps when `pathname === '/assistant'`.
+    - Updated [`src/components/layout/bottom-nav-bar.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/bottom-nav-bar.tsx) to hide the mobile bottom navigation bar on `/assistant` so the full screen is dedicated to the conversation and chat input without overlapping bars.
+    - Upgraded [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with a new `variant="full"` mode:
+      - Centered reading column: conversation messages scroll within a clean `max-w-3xl mx-auto` container with generous vertical whitespace.
+      - Centered input bar: anchored at the bottom with backdrop blur, centering the textarea and stop/send buttons at `max-w-3xl mx-auto`.
+      - Minimal sub-header with subtle title, group badge, and clean action shortcuts (`(i)` info tooltip and `Trash2` clear history).
+      - Centered empty welcome screen with clean icon, greeting, and 2-column quick starter cards.
+    - Upgraded [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to render assistant responses directly on the page canvas without grey card boxes in full-page mode.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **Realistic & Functional Live AI Status Feedback** ✅:
     - Updated [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts) with functional query intent analysis:
       - Automatically detects pure drafting, composing, and conversational queries vs. balance calculations vs. semantic expense searches.

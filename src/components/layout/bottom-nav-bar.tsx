@@ -69,6 +69,9 @@ export function BottomNavBar() {
     }
   }, [userProfile]);
 
+  // Hide bottom nav bar on full-page /assistant chat to dedicate full screen to conversation & input
+  if (pathname === '/assistant') return null;
+
   const currentGroup = useMemo(() => {
     const match = pathname.match(/^\/groups\/([^/]+)/);
     if (match) {
