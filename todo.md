@@ -40,7 +40,6 @@
       - Automatically suppressed the floating widget on `/settings`, `/admin`, `/notifications`, `/support`, and `/assistant`.
       - Added automatic `groupId` extraction from URL path to scope financial RAG context when browsing group detail pages.
     - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
-
   - **Version Bump** 📌: Bumped application version to `0.3.2` across `package.json`, `package-lock.json`, and `src/lib/version.ts`.
 
   - **AI Assistant Mobile Gestures & Top Header Activity Filter Slider** ✨ ✅:
