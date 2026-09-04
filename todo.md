@@ -1,5 +1,14 @@
 # Session Progress & Context Preservation
 
+  - **Move Activity Filter Slider to Activity Card Header & Shorten Description** 🎨 ✅:
+    - **Issue**: The activity filter slider (`All`, `Expenses`, `Settlements`) was incorrectly placed as a sub-bar in the top header banner instead of inside the Activity card header, and the description text was overly verbose.
+    - **Fix Applied**:
+      - Removed the sub-bar and unused activity props from [`src/components/groups/group-detail-header.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-detail-header.tsx).
+      - Embedded the segmented filter slider with animated pill (`layoutId="activity-filter-pill"`) directly inside the `CardHeader` of the Activity card in [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx).
+      - Guaranteed full mobile and desktop visibility with responsive sizing (`shrink-0 px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs`).
+      - Shortened description text from `"A chronological log of all expenses and settlements in this group."` down to concise `"All expenses and settlements."`.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Mobile Drawer Drag-to-Close Transparency & Header Alignment** 🎨 ✅:
     - **Issue**: When sliding the AI assistant mobile drawer down, the stationary `SheetContent` background container remained visible at the top of the screen. In addition, the grab handle had an opaque background instead of being transparent, pushing the header below an empty section.
     - **Fix Applied**:

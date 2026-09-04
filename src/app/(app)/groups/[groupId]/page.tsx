@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 import { GroupDetailHeader } from '@/components/groups/group-detail-header';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
@@ -342,14 +343,6 @@ export default function GroupDetailPage() {
             }
           }}
           initialSettlement={initialSettlementVal}
-          activityFilter={activityFilter}
-          onActivityFilterChange={(filter) => {
-            setActivityFilter(filter);
-            setVisibleActivityCount(BATCH_SIZE);
-          }}
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          activityCounts={activityCounts}
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -372,12 +365,50 @@ export default function GroupDetailPage() {
 
           <TabsContent value="expenses" className="mt-4">
             <Card>
-              <CardHeader className="py-3 px-4 sm:p-6 pb-3">
-                <div>
+              <CardHeader className="py-3 px-3.5 sm:px-6 sm:py-4 pb-3 flex flex-row items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <CardTitle className="text-base sm:text-lg font-semibold tracking-tight">Activity</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                    A chronological log of all expenses and settlements in this group.
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5 truncate sm:whitespace-normal">
+                    All expenses and settlements.
                   </CardDescription>
+                </div>
+
+                {/* ── Segmented Activity Filter Slider (All, Expenses, Settlements) ── */}
+                <div className="flex items-center bg-muted/70 dark:bg-muted/40 p-0.5 rounded-lg border border-border/40 text-xs shrink-0">
+                  {(
+                    [
+                      { value: 'all', label: 'All' },
+                      { value: 'expenses', label: 'Expenses' },
+                      { value: 'settlements', label: 'Settlements' },
+                    ] as const
+                  ).map((opt) => {
+                    const isSelected = activityFilter === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setActivityFilter(opt.value);
+                          setVisibleActivityCount(BATCH_SIZE);
+                        }}
+                        className={cn(
+                          'relative px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-medium rounded-md transition-colors select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                          isSelected
+                            ? 'text-foreground font-semibold'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {isSelected && (
+                          <motion.div
+                            layoutId="activity-filter-pill"
+                            className="absolute inset-0 bg-background dark:bg-zinc-800 rounded-md shadow-xs border border-border/60"
+                            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                          />
+                        )}
+                        <span className="relative z-10">{opt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </CardHeader>
               <CardContent className="p-0">
