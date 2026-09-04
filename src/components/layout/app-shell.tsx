@@ -450,8 +450,8 @@ export function AppShell({ children }: AppShellProps) {
           )}>
             {children}
           </main>
-          <BottomNavBar />
-          <AIChatWidget />
+          {!isAssistant && <BottomNavBar />}
+          {!isAssistant && <AIChatWidget />}
       </div>
     </div>
   );

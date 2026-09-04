@@ -64,13 +64,16 @@ export function BottomNavBar() {
   const pathname = usePathname();
 
   useEffect(() => {
+    let isMounted = true;
     if (userProfile?.uid) {
-      getGroupsByUserId(userProfile.uid).then(setGroups);
+      getGroupsByUserId(userProfile.uid).then((data) => {
+        if (isMounted) setGroups(data);
+      });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [userProfile]);
-
-  // Hide bottom nav bar on full-page /assistant chat to dedicate full screen to conversation & input
-  if (pathname === '/assistant') return null;
 
   const currentGroup = useMemo(() => {
     const match = pathname.match(/^\/groups\/([^/]+)/);
@@ -80,6 +83,9 @@ export function BottomNavBar() {
     }
     return undefined;
   }, [pathname, groups]);
+
+  // Hide bottom nav bar on full-page /assistant chat to dedicate full screen to conversation & input
+  if (pathname === '/assistant') return null;
 
   return (
     <footer

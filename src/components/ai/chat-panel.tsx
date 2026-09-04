@@ -125,7 +125,16 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+          const valid = parsed.filter(
+            (m): m is ChatMessage =>
+              Boolean(m) &&
+              typeof m === 'object' &&
+              (m.role === 'user' || m.role === 'assistant') &&
+              typeof m.content === 'string'
+          );
+          if (valid.length > 0) {
+            setMessages(valid);
+          }
         }
       }
     } catch {
