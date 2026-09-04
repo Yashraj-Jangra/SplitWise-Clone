@@ -1,5 +1,10 @@
 # Session Progress & Context Preservation
 
+  - **Milestone Release v0.3.0 Bump** ✅:
+    - Bumped application version to `0.3.0` across [`package.json`](file:///d:/Projects/SplitWise-Clone/package.json), [`package-lock.json`](file:///d:/Projects/SplitWise-Clone/package-lock.json), and [`src/lib/version.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/version.ts) following the completion of the 6-phase AI & RAG hardening milestone.
+    - Updated build metadata (`BUILD_NUMBER` to `2026.09.04`, `BUILD_DATE` to `2026-09-04`).
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **AI & RAG Hardening Phase 6 — UI Live Status & Animated Feedback** ✅:
     - Created [`src/components/ai/status-pill.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/status-pill.tsx): modern, sleek status pill matching the minimalist dialog theme, featuring animated cycling loading dots, dynamic icon transitions, and live status states (`Searching records...` vs. `Thinking...`).
     - Integrated lifecycle SSE streaming in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): streams `status: 'retrieving'` immediately upon request, followed by `status: 'thinking'` during generation, and real-time tokens.
