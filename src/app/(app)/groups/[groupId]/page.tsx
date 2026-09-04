@@ -34,7 +34,6 @@ import { GroupBudgetTab } from '@/components/groups/budget/group-budget-tab';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PullToRefresh } from '@/components/shared/pull-to-refresh';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const TABS: { value: string; label: string; icon: IconName }[] = [
@@ -152,6 +151,12 @@ export default function GroupDetailPage() {
       ];
       return combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [expenses, settlements]);
+
+  const activityCounts = useMemo(() => ({
+    all: activityItems.length,
+    expenses: expenses.length,
+    settlements: settlements.length,
+  }), [activityItems.length, expenses.length, settlements.length]);
 
   const filteredActivityItems = useMemo(() => {
     if (activityFilter === 'expenses') {
@@ -337,6 +342,14 @@ export default function GroupDetailPage() {
             }
           }}
           initialSettlement={initialSettlementVal}
+          activityFilter={activityFilter}
+          onActivityFilterChange={(filter) => {
+            setActivityFilter(filter);
+            setVisibleActivityCount(BATCH_SIZE);
+          }}
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          activityCounts={activityCounts}
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -360,51 +373,11 @@ export default function GroupDetailPage() {
           <TabsContent value="expenses" className="mt-4">
             <Card>
               <CardHeader className="py-3 px-4 sm:p-6 pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <CardTitle className="text-base sm:text-lg font-semibold tracking-tight">Activity</CardTitle>
-                    <CardDescription className="hidden sm:block text-xs text-muted-foreground mt-0.5">
-                      A chronological log of all expenses and settlements in this group.
-                    </CardDescription>
-                  </div>
-
-                  {/* Inline Minimal Segmented Slider Pill */}
-                  <div className="flex items-center bg-muted/60 dark:bg-muted/40 p-0.5 rounded-lg border border-border/40 text-xs shrink-0">
-                    {(
-                      [
-                        { value: 'all', label: 'All' },
-                        { value: 'expenses', label: 'Expenses' },
-                        { value: 'settlements', label: 'Settlements' },
-                      ] as const
-                    ).map((opt) => {
-                      const isSelected = activityFilter === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => {
-                            setActivityFilter(opt.value);
-                            setVisibleActivityCount(BATCH_SIZE);
-                          }}
-                          className={cn(
-                            'relative px-2.5 py-1 text-[11px] sm:text-xs font-medium rounded-md transition-colors select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-                            isSelected
-                              ? 'text-foreground font-semibold'
-                              : 'text-muted-foreground hover:text-foreground'
-                          )}
-                        >
-                          {isSelected && (
-                            <motion.div
-                              layoutId="activity-filter-pill"
-                              className="absolute inset-0 bg-background dark:bg-zinc-800 rounded-md shadow-xs border border-border/60"
-                              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                            />
-                          )}
-                          <span className="relative z-10">{opt.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div>
+                  <CardTitle className="text-base sm:text-lg font-semibold tracking-tight">Activity</CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                    A chronological log of all expenses and settlements in this group.
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="p-0">

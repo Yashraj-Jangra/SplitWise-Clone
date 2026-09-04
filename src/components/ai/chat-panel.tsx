@@ -16,6 +16,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import type { ChatMessage } from '@/types/ai';
 
 const STARTER_PROMPTS = [
@@ -359,24 +364,25 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
 
           <TooltipProvider delayDuration={150}>
             <div className="flex items-center gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <Popover>
+                <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors flex items-center justify-center"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Assistant information"
                   >
                     <Info className="w-4 h-4" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent
+                </PopoverTrigger>
+                <PopoverContent
                   side="bottom"
                   align="end"
-                  className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed"
+                  sideOffset={8}
+                  className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed w-auto"
                 >
                   <AssistantInfoTooltipContent variant="full" />
-                </TooltipContent>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
 
               {messages.length > 0 && (
                 <Tooltip>
@@ -443,24 +449,25 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 </TooltipContent>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <Popover>
+                <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors flex items-center justify-center"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Assistant information"
                   >
                     <Info className="w-4 h-4" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent
+                </PopoverTrigger>
+                <PopoverContent
                   side="bottom"
                   align="end"
-                  className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed"
+                  sideOffset={8}
+                  className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed w-auto"
                 >
                   <AssistantInfoTooltipContent variant="widget" />
-                </TooltipContent>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
 
               {messages.length > 0 && (
                 <Tooltip>

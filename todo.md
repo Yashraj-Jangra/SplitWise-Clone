@@ -1,5 +1,18 @@
 # Session Progress & Context Preservation
 
+  - **AI Assistant Mobile Gestures & Top Header Activity Filter Slider** ✨ ✅:
+    - **Issues Resolved**:
+      - Opening the floating AI widget on mobile caused the rich assistant information tooltip to immediately auto-open and stick on screen because of auto-focus on the `TooltipTrigger`.
+      - The grab handle pill at the top of the mobile drawer was static with no gesture support for holding and swiping down to close.
+      - The Activity filter slider (`All` · `Expenses` · `Settlements`) was previously embedded inside the card body, rather than accessible from the top header.
+    - **Fixes Applied**:
+      - Replaced `<Tooltip>` with a controlled `<Popover>` for the `(i)` Info button in [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) and added `onOpenAutoFocus={(e) => e.preventDefault()}` on `<SheetContent>` in [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx).
+      - Added gesture-based swipe-down-to-close on the mobile drawer using Framer Motion `drag="y"` and `useDragControls`, isolated to the top grab handle with visual expansion feedback and snap-back physics.
+      - Integrated a sleek minimalist sub-bar below the stats grid in [`src/components/groups/group-detail-header.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-detail-header.tsx) displaying the active record count and the animated segmented slider pill (`layoutId="header-activity-filter-pill"`).
+      - Clicking any filter option automatically navigates to the Activity tab (`activeTab = 'expenses'`) from any other tab.
+      - Cleaned up the Activity card header in [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx).
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Remove Redundant Settlement Button in Group Activity & Consolidate with Header** 🎨 ✅:
     - **Issue**: After consolidating Activity and removing the Settlements tab, a standalone `<AddSettlementDialog />` was mounted at the top of the tab content to handle deep-linked `?action=settle` events. Because `trigger` was not provided, the component rendered its fallback trigger button ("Record Settlement") directly above the activity tabs, resulting in a duplicate button alongside the existing "Settle" button in the group header.
     - **Fix Applied**:
