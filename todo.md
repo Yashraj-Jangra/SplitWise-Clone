@@ -7,7 +7,8 @@
   - **Docker Container Name & PR #7** 🔧:
     - Opened GitHub issue [#6](https://github.com/Yashraj-Jangra/SplitWise-Clone/issues/6): "Explicitly set Docker container name in deployment workflow".
     - Updated [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) to explicitly assign `container_name: splitit-web` in the dynamically generated `docker-compose.yml` so the container doesn't default to generic `app-web-1` / `web app 1`.
-    - Pushed `dev` branch to `origin/dev` and opened PR [#7](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/7) to merge into `master`.
+    - Pushed `dev` branch to `origin/dev` and opened PR [#7](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/7) to merge into `master` (merged).
+
 
   - **Version Bump** 📌: Bumped application version to `0.3.1` in `package.json` and `src/lib/version.ts`.
 
