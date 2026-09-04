@@ -260,10 +260,10 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   const isFullPage = variant === 'full';
 
   return (
-    <div className={`flex flex-col h-full bg-background ${className || ''}`}>
-      {/* ── Top Bar (Minimal Full-Page Bar vs. Widget Header) ─────────── */}
+    <div className={`relative flex flex-col h-full w-full bg-background overflow-hidden ${className || ''}`}>
+      {/* ── Top Floating Header (Glassmorphic Passthrough) ───────────── */}
       {isFullPage ? (
-        <div className="flex items-center justify-between px-4 sm:px-8 py-2.5 border-b border-border/20 bg-background/80 backdrop-blur-sm flex-shrink-0">
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-8 py-3 border-b border-border/20 bg-background/80 backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted/40 text-foreground border border-border/30 flex-shrink-0">
               <Icons.Bot className="w-3.5 h-3.5" />
@@ -319,7 +319,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/30 bg-background flex-shrink-0">
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 py-3.5 border-b border-border/30 bg-background/80 backdrop-blur-md">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted/30 border border-border/40 text-foreground flex-shrink-0">
               <Icons.Bot className="w-4 h-4" />
@@ -392,12 +392,18 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
         </div>
       )}
 
-      {/* ── Messages Scroll Area ───────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className={isFullPage ? "max-w-3xl mx-auto w-full px-4 sm:px-6 py-6 space-y-4" : "p-4 sm:p-5 space-y-2"}>
+      {/* ── Messages Scroll Area (Full Height Canvas) ───────────────────── */}
+      <div className="flex-1 h-full w-full overflow-y-auto">
+        <div
+          className={
+            isFullPage
+              ? "max-w-3xl mx-auto w-full px-4 sm:px-6 pt-16 pb-36 space-y-4"
+              : "p-4 sm:p-5 pt-20 pb-28 space-y-2"
+          }
+        >
           {messages.length === 0 ? (
             isFullPage ? (
-              <div className="h-full min-h-[55vh] flex flex-col items-center justify-center text-center max-w-xl mx-auto py-8">
+              <div className="h-full min-h-[calc(100dvh-17rem)] flex flex-col items-center justify-center text-center max-w-xl mx-auto py-8">
                 <div className="h-12 w-12 rounded-2xl bg-muted/30 border border-border/30 flex items-center justify-center text-foreground mb-4 shadow-2xs">
                   <Icons.Bot className="w-6 h-6" />
                 </div>
@@ -423,7 +429,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-4 max-w-sm mx-auto">
+              <div className="h-full min-h-[280px] flex flex-col items-center justify-center text-center p-4 max-w-sm mx-auto">
                 <div className="h-12 w-12 rounded-2xl bg-muted/30 border border-border/30 flex items-center justify-center text-foreground mb-3 shadow-2xs">
                   <Icons.Bot className="w-6 h-6" />
                 </div>
@@ -467,10 +473,16 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
         </div>
       </div>
 
-      {/* ── Input Box (Centered for Full Page, Flush for Widget) ─────── */}
-      <div className={isFullPage ? "w-full bg-background/80 backdrop-blur-md pt-2 pb-5 sm:pb-7 flex-shrink-0" : "p-3.5 sm:p-4 border-t border-border/30 bg-background flex-shrink-0"}>
-        <div className={isFullPage ? "max-w-3xl mx-auto w-full px-4 sm:px-6" : ""}>
-          <div className="relative flex items-end rounded-2xl bg-muted/20 border border-border/30 focus-within:border-border/60 focus-within:bg-background focus-within:shadow-sm transition-all">
+      {/* ── Input Box (Floating Glass Overlay) ─────────────────────────── */}
+      <div
+        className={
+          isFullPage
+            ? "absolute bottom-0 left-0 right-0 z-20 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent pt-6 pb-4 sm:pb-6"
+            : "absolute bottom-0 left-0 right-0 z-20 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent pt-4 pb-3 sm:pb-4 border-t border-border/20 backdrop-blur-[2px]"
+        }
+      >
+        <div className={isFullPage ? "max-w-3xl mx-auto w-full px-4 sm:px-6 pointer-events-auto" : "px-3.5 sm:px-4 pointer-events-auto"}>
+          <div className="relative flex items-end rounded-2xl bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg focus-within:border-border/60 focus-within:bg-background focus-within:shadow-xl transition-all">
             <Textarea
               ref={textareaRef}
               value={input}
