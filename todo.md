@@ -1,5 +1,7 @@
 # Session Progress & Context Preservation
 
+  - **Version Bump** 📌: Bumped application version to `0.3.1` in `package.json` and `src/lib/version.ts`.
+
   - **Configure GitHub Deployments** ✅:
     - Added `environment: production` and `deployments: write` permission to the CI/CD workflow in [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) so GitHub tracks deployments and populates the Deployments widget on the repository homepage.
 
