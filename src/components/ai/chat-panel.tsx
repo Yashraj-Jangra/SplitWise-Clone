@@ -43,7 +43,7 @@ function AssistantInfoTooltipContent({ variant = 'full' }: { variant?: 'widget' 
         </div>
         <div>
           <p className="font-semibold text-foreground text-[12px] leading-tight">Financial Assistant</p>
-          <p className="text-[10px] text-muted-foreground leading-tight">Powered by Gemini · RAG-grounded</p>
+          <p className="text-[10px] text-muted-foreground leading-tight">Private & RAG-grounded</p>
         </div>
       </div>
 
@@ -76,7 +76,7 @@ function AssistantInfoTooltipContent({ variant = 'full' }: { variant?: 'widget' 
           <Cpu className="w-3.5 h-3.5 text-orange-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-[11px] font-semibold text-foreground leading-tight">How it works</p>
-            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Question → server computes exact ledger facts → semantic vector search → Gemini synthesises the answer → streamed back live.</p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Question → server computes exact ledger facts → semantic vector search → AI synthesises the answer → streamed back live.</p>
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ function AssistantInfoTooltipContent({ variant = 'full' }: { variant?: 'widget' 
       <div className="mt-3 pt-2.5 border-t border-border/30 flex items-center justify-between">
         <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider font-medium">Tech</span>
         <div className="flex items-center gap-1.5">
-          {['Gemini', 'Oracle 23ai', 'RAG'].map((tag) => (
+          {['AI', 'Oracle 23ai', 'RAG'].map((tag) => (
             <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted/50 border border-border/30 text-muted-foreground">{tag}</span>
           ))}
         </div>
