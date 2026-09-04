@@ -1,5 +1,19 @@
 # Session Progress & Context Preservation
 
+  - **Firebase Purge & Code Quality Cleanup** 🧹 ✅:
+    - **Deleted 20 files**: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `apphosting.yaml`, `service-account.json`, `src/app/faviconFirebase.ico`, and 11 one-time migration scripts (`export-firebase.ts`, `sync-firebase-expenses-settlements.ts`, `check-groups.ts`, `restore-groups.ts`, `import-oracle-ajd.ts`, `import-oracle-nosql.ts`, `import-oracle-wallet.ts`, `import-to-postgres.ts`, `export-postgres.ts`, `patch-migrated-users.ts`, `verify-migration.ts`) + dead shims (`mock-data.ts`, `auth.ts`).
+    - **Renamed** `src/lib/firestore.service.ts` → [`src/lib/api.client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/api.client.ts) — the file was never Firestore; it's the Oracle REST API client.
+    - **Updated ~60 import sites** from `@/lib/mock-data` and `@/lib/firestore.service` → `@/lib/api.client`.
+    - **Cleaned `auth-context.tsx`**: renamed `firebaseUser` → `currentUser`, `firebaseError` → `authError`, removed dead `getIdToken()` stub.
+    - **Fixed 2 broken admin pages**: `data-tools/page.tsx` and `mail/page.tsx` — removed the `getIdToken()` + `Authorization: Bearer ""` pattern (stub always returned empty string, making auth headers broken).
+    - **Cleaned `.github/workflows/deploy.yml`**: removed 8 `NEXT_PUBLIC_FIREBASE_*` env vars, `FIREBASE_SERVICE_ACCOUNT`, and the `SA_B64` base64-encoding block from the CI/CD pipeline.
+    - **Cleaned `icons.tsx`**: removed `FirebaseStudioIcon` component and `FirebaseLogo` icon entry.
+    - **Updated about page**: replaced Firebase tech stack entries with current stack.
+    - **Cleaned `errors.ts`**: removed `FirestorePermissionError` alias.
+    - **Cleaned `types/index.ts`**: replaced Firestore-specific doc comments.
+    - `npx tsc --noEmit --skipLibCheck` exits **0 — clean**.
+    - Committed: `c831924` — `purge firebase files scripts icons env vars rename firestore.service to api.client`
+
   - **CI/CD AI & Worker Secrets & Image Cache Fix** 🔧:
     - Resolved [#8](https://github.com/Yashraj-Jangra/SplitWise-Clone/issues/8): Forwarded `AI_API_KEY` and `INTERNAL_API_SECRET` in [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) across step `env:`, `appleboy/ssh-action` `with.envs:`, and `docker-compose.yml` generation via `printf`.
     - Fixed Next.js image optimization cache `EACCES` permission error in [`Dockerfile`](file:///d:/Projects/SplitWise-Clone/Dockerfile) by adding `--chown=nextjs:nodejs` to all runner COPY instructions and ensuring `/app/.next/cache` is owned by `nextjs:nodejs`.
