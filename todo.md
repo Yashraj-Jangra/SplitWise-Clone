@@ -1,5 +1,25 @@
 # Session Progress & Context Preservation
 
+  - **Fix Oracle DB Pool Exhaustion & Timeout Errors in Development** ⚡ ✅:
+    - **Root Cause Diagnosed**: Next.js Fast Refresh / HMR re-evaluates server modules on file changes. Without `globalThis`, `poolPromise` was re-initialized on every reload, abandoning open Oracle connection pools in memory without closing them. Additionally, the default connection string used `splititdb_high` (which limits concurrency to 3 sessions on Free Tier ATP), and dev attempted to allocate up to 20 connections (`poolMax: 20`), directly competing with the production server for Oracle's 20-session limit.
+    - **Fix Applied**:
+      - Attached `oraclePoolPromise` to `globalThis` in [`src/lib/nosql.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql.ts) so dev HMR reuses a single connection pool across reloads.
+      - Switched default connect string from `splititdb_high` to `splititdb_low` (which supports high concurrency and eliminates the 3-session bottleneck).
+      - Right-sized pool limits: `poolMin: 0, poolMax: 3` in development (with 30s idle timeout and 15s queue timeout), leaving remaining sessions for production.
+      - Added graceful pool drainage (`pool.close(5)`) inside `resetOraclePool` before instantiating new pools.
+      - Added listener refusal error codes (`NJS-511`, `ORA-12523`, `ORA-12516`, `ORA-12519`) to `isRecoverableOracleError`.
+      - Updated `ORA_CONNECT_STRING="splititdb_low"` recommendation in [`.env.example`](file:///d:/Projects/SplitWise-Clone/.env.example).
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
+  - **Consolidated Group Activity & Removed Settlements Tab** ✨ ✅:
+    - **Tab Bar Streamlining**: Removed redundant Settlements tab from group details `TABS` array. Reduced tab grid from 7 to 6 columns (`grid-cols-6`), giving remaining tabs more breathing room on mobile viewports.
+    - **Inline Minimal Segmented Slider**: Added an animated, compact segmented slider pill directly inline on the right side of the "Activity" title within the card header row (`All` [default], `Expenses`, `Settlements`). Powered by Framer Motion's `layoutId="activity-filter-pill"` with smooth spring physics.
+    - **Space Preservation on Mobile**: Consolidated layout into a single header row and hid the long description text on mobile viewports (`hidden sm:block`), leaving zero extra vertical space consumed.
+    - **Dynamic Filtering & Pagination**: Filtered `activityItems` dynamically with full infinite-scroll sentinel and load-more pagination support, resetting visible counts upon filter toggles.
+    - **Contextual Empty States**: Tailored empty state icon and descriptive copy depending on the active filter (`Icons.Expense`, `Icons.Settle`, `Icons.History`).
+    - **Backwards Compatibility & Resilience**: Direct links with `?tab=settlements` automatically route to Activity with the `Settlements` filter active. Deep links for expenses/settlements auto-adjust filters, and the controlled `<AddSettlementDialog />` remains mounted to handle `?action=settle` triggers seamlessly.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Fix Forgot Password Error in Production (`TypeError: r.consumeOne is not a function`)** 🐛 ✅:
     - **Root Cause Diagnosed**: Better Auth's `resetPassword` endpoint verifies the password reset token by calling `internalAdapter.consumeVerificationValue(id)`. This helper delegates atomic single-token consumption directly to the database adapter via `adapter.consumeOne({ model, where })` (and subsequently updates credentials via `adapter.updateMany({ model, where, update })`). Our custom Oracle Single-Table adapter [`src/lib/nosql-auth-adapter.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql-auth-adapter.ts) was missing `consumeOne`, `updateMany`, `count`, and `incrementOne`, causing Better Auth to crash with `TypeError: r.consumeOne is not a function`.
     - **Fix Applied**:
