@@ -1,5 +1,14 @@
 # Session Progress & Context Preservation
 
+  - **Harmonize Monthly Digest Widget Theming with Dashboard Cards** 🎨 ✅:
+    - **Issue**: The Monthly Digest (`AIInsightsCard`) widget on the dashboard had contrasting theming and background colors that didn't match the other dashboard widgets (`DynamicSpendingChart`, `NetBalanceCard`, `ObligationsCard`). It used `bg-background` instead of `bg-card`, custom border/shadow overrides, and a custom header without a separator.
+    - **Fix Applied**:
+      - Updated [`src/components/ai/insights-card.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/insights-card.tsx) to use the standard dashboard `Card` token system (`bg-card text-card-foreground border-border`).
+      - Harmonized the header with standard `CardHeader`, `CardTitle` ("Monthly Digest"), and `CardDescription` paired with a brand-accent bot badge (`bg-primary/10 text-primary border border-primary/20`).
+      - Added `<Separator />` below `CardHeader` for identical pixel-alignment with the adjacent `DynamicSpendingChart`.
+      - Standardized `CardContent` with `pt-6`, removed the inner gray box container, and adopted native `FormattedMarkdown` spacing with standard shadcn `Skeleton` loading states.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Scope AI Assistant Widget to Financial Surfaces** 🛡️ ✅:
     - **Issue**: The floating AI assistant widget was rendering indiscriminately on non-financial routes such as User Settings, Admin Panels, Support, and Notifications.
     - **Fix Applied**:
