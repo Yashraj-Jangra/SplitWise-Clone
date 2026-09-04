@@ -6,8 +6,52 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ChatPanel } from './chat-panel';
 import { Icons } from '@/components/icons';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useDragControls } from 'framer-motion';
 import { cn } from '@/lib/utils';
+
+function MobileDrawerContent({ onClose }: { onClose: () => void }) {
+  const dragControls = useDragControls();
+  const [isDragging, setIsDragging] = useState(false);
+
+  return (
+    <motion.div
+      drag="y"
+      dragControls={dragControls}
+      dragListener={false}
+      dragConstraints={{ top: 0 }}
+      dragElastic={{ top: 0, bottom: 0.6 }}
+      onDragStart={() => setIsDragging(true)}
+      onDragEnd={(_, info) => {
+        setIsDragging(false);
+        if (info.offset.y > 80 || info.velocity.y > 200) {
+          onClose();
+        }
+      }}
+      className="flex flex-col h-full w-full"
+    >
+      {/* ── Active Grab Handle Zone with Touch & Drag Gesture ── */}
+      <div
+        className="w-full pt-3 pb-2 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none flex-shrink-0"
+        onPointerDown={(e) => dragControls.start(e)}
+        role="button"
+        tabIndex={-1}
+        aria-label="Drag down to close assistant"
+      >
+        <motion.div
+          animate={{
+            width: isDragging ? 48 : 36,
+            height: isDragging ? 5 : 4,
+            backgroundColor: isDragging ? 'rgba(161, 161, 170, 0.7)' : 'rgba(161, 161, 170, 0.35)',
+          }}
+          transition={{ duration: 0.15 }}
+          className="rounded-full"
+        />
+      </div>
+
+      <ChatPanel onClose={onClose} className="flex-1" />
+    </motion.div>
+  );
+}
 
 export function AIChatWidget() {
   const pathname = usePathname();
@@ -54,10 +98,10 @@ export function AIChatWidget() {
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetContent
             side="bottom"
+            onOpenAutoFocus={(e) => e.preventDefault()}
             className="h-[88vh] max-h-[88dvh] flex flex-col rounded-t-2xl border-t border-border/30 p-0 bg-background/95 backdrop-blur-xl overflow-hidden overflow-x-hidden [&>button]:hidden shadow-2xl"
           >
-            <div className="w-9 h-1 rounded-full bg-muted-foreground/30 mx-auto mt-2.5 mb-1 flex-shrink-0" />
-            <ChatPanel onClose={() => setIsOpen(false)} className="flex-1" />
+            <MobileDrawerContent onClose={() => setIsOpen(false)} />
           </SheetContent>
         </Sheet>
       ) : (

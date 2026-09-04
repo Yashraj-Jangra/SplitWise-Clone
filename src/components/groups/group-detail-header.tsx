@@ -20,7 +20,7 @@ import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddExpenseDialog } from "../expenses/add-expense-dialog";
 import { AddSettlementDialog } from "../settlements/add-settlement-dialog";
-
+import { motion } from "framer-motion";
 
 interface GroupDetailHeaderProps {
   group: Group;
@@ -31,6 +31,11 @@ interface GroupDetailHeaderProps {
   settlementOpen?: boolean;
   onSettlementOpenChange?: (open: boolean) => void;
   initialSettlement?: any;
+  activityFilter?: 'all' | 'expenses' | 'settlements';
+  onActivityFilterChange?: (filter: 'all' | 'expenses' | 'settlements') => void;
+  activeTab?: string;
+  onSelectTab?: (tab: string) => void;
+  activityCounts?: { all: number; expenses: number; settlements: number };
 }
 
 export function GroupDetailHeader({
@@ -42,6 +47,11 @@ export function GroupDetailHeader({
   settlementOpen,
   onSettlementOpenChange,
   initialSettlement,
+  activityFilter,
+  onActivityFilterChange,
+  activeTab,
+  onSelectTab,
+  activityCounts,
 }: GroupDetailHeaderProps) {
   const { toast } = useToast();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -214,6 +224,62 @@ export function GroupDetailHeader({
             )}
         </div>
       </div>
+
+      {/* Sleek Activity Filter Sub-Bar */}
+      {activityFilter && onActivityFilterChange && (
+        <div className="border-t border-border/30 bg-muted/20 dark:bg-muted/10 px-3 sm:px-4 py-2 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+              <Icons.History className="w-3.5 h-3.5 text-muted-foreground/80 flex-shrink-0" />
+              <span className="font-semibold text-foreground tracking-tight">Activity</span>
+              {activityCounts !== undefined && (
+                <span className="text-[10px] text-muted-foreground/70 font-mono hidden xs:inline">
+                  ({activityFilter === 'expenses' ? activityCounts.expenses : activityFilter === 'settlements' ? activityCounts.settlements : activityCounts.all} records)
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center bg-muted/70 dark:bg-muted/40 p-0.5 rounded-lg border border-border/40 text-xs shrink-0 ml-auto">
+            {(
+              [
+                { value: 'all', label: 'All' },
+                { value: 'expenses', label: 'Expenses' },
+                { value: 'settlements', label: 'Settlements' },
+              ] as const
+            ).map((opt) => {
+              const isSelected = activityFilter === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onActivityFilterChange(opt.value);
+                    if (onSelectTab && activeTab !== 'expenses') {
+                      onSelectTab('expenses');
+                    }
+                  }}
+                  className={cn(
+                    'relative px-2.5 py-1 text-[11px] sm:text-xs font-medium rounded-md transition-colors select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                    isSelected
+                      ? 'text-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {isSelected && (
+                    <motion.div
+                      layoutId="header-activity-filter-pill"
+                      className="absolute inset-0 bg-background dark:bg-zinc-800 rounded-md shadow-xs border border-border/60"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
