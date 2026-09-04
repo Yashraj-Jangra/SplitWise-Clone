@@ -1,5 +1,21 @@
 # Session Progress & Context Preservation
 
+  - **Final Firebase Purge, Genkit Removal & Build Stabilization** 🧹 ✅:
+    - **Cleaned `tsconfig.json`**: Removed 5 dead `firebase/*` path aliases and duplicate `skipLibCheck`.
+    - **Deleted dead routes**: Removed [`src/app/api/auth/session/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/auth/session/route.ts) (legacy Firebase ID token session endpoint) and [`src/app/api/set-admin-claim/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/set-admin-claim/route.ts) (legacy custom claims endpoint superseded by `/api/admin/users`).
+    - **Deleted patch files**: Removed `patches/firebase+11.10.0.patch` and deleted the obsolete `patches/` folder.
+    - **Cleaned doc comments**: Replaced references to Firestore in [`src/components/groups/group-history.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-history.tsx) and [`src/__tests__/balance.service.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/balance.service.test.ts).
+    - **Cleaned `.gitignore`**: Removed stale `firebase-debug.log`, `firestore-debug.log`, and `.genkit/*`.
+    - **Removed dead Genkit prototype**: Deleted `src/ai/dev.ts`, `src/ai/genkit.ts`, and the `src/ai` folder. App AI is powered by OpenRouter / OpenAI-compatible client in `src/lib/ai/`.
+    - **Pruned dependencies in `package.json` & `package-lock.json`**: Uninstalled `@genkit-ai/googleai`, `@genkit-ai/next`, `genkit`, `genkit-cli`, `patch-package`, and legacy `next-pwa`. Removed dead scripts `genkit:dev` and `genkit:watch`.
+    - **Stabilized Next.js 15 App Router build**: Removed `next-pwa` wrapper from [`next.config.ts`](file:///d:/Projects/SplitWise-Clone/next.config.ts) which was failing with `PageNotFoundError: /_document`. PWA manifest and web push (`/sw-push.js`) operate natively.
+    - **Cleaned UI & Icons**: Replaced Genkit with AI Assistant on the About page ([`src/app/(info)/about/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(info)/about/page.tsx)), removed `GenkitLogo` from [`src/components/icons.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/icons.tsx) and categories icon filter ([`src/app/(admin)/admin/settings/categories/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(admin)/admin/settings/categories/page.tsx)).
+    - **Triple-Verified**:
+      - `npx tsc --noEmit` exits **0 — clean**.
+      - `npm test` passes **14/14 unit tests** across all 3 test suites.
+      - `npm run build` compiles, generates, and optimizes **all 46 routes with exit code 0**.
+    - Committed: `2f955f4` — `🧹 purge remaining firebase remnants, dead genkit stubs, and legacy next-pwa wrapper`.
+
   - **Firebase Purge & Code Quality Cleanup** 🧹 ✅:
     - **Deleted 20 files**: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `apphosting.yaml`, `service-account.json`, `src/app/faviconFirebase.ico`, and 11 one-time migration scripts (`export-firebase.ts`, `sync-firebase-expenses-settlements.ts`, `check-groups.ts`, `restore-groups.ts`, `import-oracle-ajd.ts`, `import-oracle-nosql.ts`, `import-oracle-wallet.ts`, `import-to-postgres.ts`, `export-postgres.ts`, `patch-migrated-users.ts`, `verify-migration.ts`) + dead shims (`mock-data.ts`, `auth.ts`).
     - **Renamed** `src/lib/firestore.service.ts` → [`src/lib/api.client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/api.client.ts) — the file was never Firestore; it's the Oracle REST API client.
