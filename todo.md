@@ -1,7 +1,8 @@
 # Session Progress & Context Preservation
 
-  - **CI/CD AI & Worker Secrets Tracking** 📋:
-    - Opened GitHub issue [#8](https://github.com/Yashraj-Jangra/SplitWise-Clone/issues/8): "Pass AI and internal worker secrets in CI/CD deployment workflow" to track injecting `AI_API_KEY` and `INTERNAL_API_SECRET` into `deploy.yml`.
+  - **CI/CD AI & Worker Secrets & Image Cache Fix** 🔧:
+    - Resolved [#8](https://github.com/Yashraj-Jangra/SplitWise-Clone/issues/8): Forwarded `AI_API_KEY` and `INTERNAL_API_SECRET` in [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) across step `env:`, `appleboy/ssh-action` `with.envs:`, and `docker-compose.yml` generation via `printf`.
+    - Fixed Next.js image optimization cache `EACCES` permission error in [`Dockerfile`](file:///d:/Projects/SplitWise-Clone/Dockerfile) by adding `--chown=nextjs:nodejs` to all runner COPY instructions and ensuring `/app/.next/cache` is owned by `nextjs:nodejs`.
 
   - **Docker Container Name & PR #7** 🔧:
     - Opened GitHub issue [#6](https://github.com/Yashraj-Jangra/SplitWise-Clone/issues/6): "Explicitly set Docker container name in deployment workflow".
