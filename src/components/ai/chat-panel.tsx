@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, Trash2, ArrowRight, Info } from 'lucide-react';
+import { Send, Trash2, ArrowRight, Info, Square } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -42,6 +42,14 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
   const [streamStatus, setStreamStatus] = useState<AIStreamStatus>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   // Load history from localStorage
   useEffect(() => {
@@ -82,6 +90,35 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
     localStorage.removeItem(storageKey);
   };
 
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+    setStreamStatus(null);
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.role === 'assistant' && !last.content.trim()) {
+        return prev.slice(0, -1);
+      }
+      return prev;
+    });
+  }, []);
+
+  // Global listener for Escape key to stop response
+  useEffect(() => {
+    if (!isStreaming) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleStop();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isStreaming, handleStop]);
+
   const handleSend = async (userText?: string) => {
     const textToSend = (userText || input).trim();
     if (!textToSend || isStreaming) return;
@@ -89,10 +126,15 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
     setInput('');
     const userMsg: ChatMessage = { role: 'user', content: textToSend };
     const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
+
+    // Mount user message AND empty assistant bubble immediately for instant 0ms thinking feedback
+    setMessages([...updatedMessages, { role: 'assistant', content: '' }]);
 
     setIsStreaming(true);
     setStreamStatus('retrieving');
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const response = await fetch('/api/ai/chat', {
@@ -103,6 +145,7 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
           history: updatedMessages.slice(-6),
           groupId,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -117,8 +160,6 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let assistantContent = '';
-
-      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
       let buffer = '';
       while (true) {
@@ -160,23 +201,38 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
         }
       }
     } catch (err: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `⚠️ ${err.message || 'Sorry, I encountered an issue processing your query. Please try again.'}`,
-        },
-      ]);
+      if (err.name === 'AbortError') {
+        // User aborted generation intentionally
+        return;
+      }
+      setMessages((prev) => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        const errorMessage = `⚠️ ${err.message || 'Sorry, I encountered an issue processing your query. Please try again.'}`;
+        if (last && last.role === 'assistant' && !last.content) {
+          last.content = errorMessage;
+          return updated;
+        }
+        return [...updated, { role: 'assistant', content: errorMessage }];
+      });
     } finally {
+      abortControllerRef.current = null;
       setStreamStatus(null);
       setIsStreaming(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape' && isStreaming) {
+      e.preventDefault();
+      handleStop();
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (!isStreaming) {
+        handleSend();
+      }
     }
   };
 
@@ -314,22 +370,32 @@ export function ChatPanel({ groupId, groupName, className, onClose }: ChatPanelP
             className="min-h-[44px] max-h-[120px] resize-none border-0 !bg-transparent !hover:bg-transparent !focus:bg-transparent !active:bg-transparent shadow-none px-3.5 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 leading-relaxed placeholder:text-muted-foreground/60"
           />
           <div className="p-1.5 flex-shrink-0 self-end">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              disabled={!input.trim() || isStreaming}
-              onClick={() => handleSend()}
-              className="h-8 w-8 min-h-[32px] max-h-[32px] rounded-lg bg-transparent text-muted-foreground hover:bg-muted/70 hover:text-primary transition-colors disabled:opacity-25 disabled:pointer-events-none disabled:hover:bg-transparent disabled:hover:text-muted-foreground group"
-              title="Send message"
-              aria-label="Send message"
-            >
-              {isStreaming ? (
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              ) : (
+            {isStreaming ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={handleStop}
+                className="h-8 w-8 min-h-[32px] max-h-[32px] rounded-lg bg-muted/40 text-foreground hover:bg-muted/70 hover:text-red-500 transition-all flex items-center justify-center group"
+                title="Stop generating (Esc)"
+                aria-label="Stop generating"
+              >
+                <Square className="w-3 h-3 fill-current text-foreground group-hover:text-red-500 transition-colors" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                disabled={!input.trim()}
+                onClick={() => handleSend()}
+                className="h-8 w-8 min-h-[32px] max-h-[32px] rounded-lg bg-transparent text-muted-foreground hover:bg-muted/70 hover:text-primary transition-colors disabled:opacity-25 disabled:pointer-events-none disabled:hover:bg-transparent disabled:hover:text-muted-foreground group"
+                title="Send message"
+                aria-label="Send message"
+              >
                 <Send className="w-4 h-4 transition-colors group-hover:text-primary" />
-              )}
-            </Button>
+              </Button>
+            )}
           </div>
         </div>
 

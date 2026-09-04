@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { FormattedMarkdown } from './formatted-markdown';
-import { StatusPill, type AIStreamStatus } from './status-pill';
+import { ThinkingBubble } from './thinking-bubble';
+import type { AIStreamStatus } from './status-pill';
 import type { ChatMessage } from '@/types/ai';
 
 interface MessageBubbleProps {
@@ -17,7 +18,7 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, userName = 'You', isStreaming, status }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const showStatusPill = !isUser && !message.content && (isStreaming || Boolean(status));
+  const showThinkingState = !isUser && !message.content && (isStreaming || Boolean(status));
 
   return (
     <div
@@ -39,10 +40,8 @@ export function MessageBubble({ message, userName = 'You', isStreaming, status }
         </AvatarFallback>
       </Avatar>
 
-      {showStatusPill ? (
-        <div className="pt-0.5">
-          <StatusPill status={status || 'thinking'} />
-        </div>
+      {showThinkingState ? (
+        <ThinkingBubble status={status || 'thinking'} />
       ) : (
         <div
           className={cn(

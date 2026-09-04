@@ -4,7 +4,7 @@ const AI_BASE_URL = process.env.AI_BASE_URL || 'https://openrouter.ai/api/v1';
 const AI_API_KEY = process.env.AI_API_KEY || '';
 const AI_CHAT_MODEL = process.env.AI_CHAT_MODEL || 'minimax/minimax-m3:free';
 const AI_VISION_MODEL = process.env.AI_VISION_MODEL || 'minimax/minimax-m3:free';
-const AI_EMBEDDING_MODEL = process.env.AI_EMBEDDING_MODEL || 'nvidia/llama-nemotron-embed-vl-1b-v2:free';
+const AI_EMBEDDING_MODEL = process.env.AI_EMBEDDING_MODEL || 'liquid/lfm-2.5-embedding-350m:free';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
 
 export class AIClientError extends Error {
@@ -16,6 +16,18 @@ export class AIClientError extends Error {
 
 function getBaseUrl(): string {
   return process.env.AI_BASE_URL || AI_BASE_URL;
+}
+
+export function getChatModel(): string {
+  return process.env.AI_CHAT_MODEL || AI_CHAT_MODEL;
+}
+
+export function getVisionModel(): string {
+  return process.env.AI_VISION_MODEL || AI_VISION_MODEL;
+}
+
+export function getEmbeddingModel(): string {
+  return process.env.AI_EMBEDDING_MODEL || AI_EMBEDDING_MODEL;
 }
 
 function getHeaders(): HeadersInit {
@@ -110,64 +122,88 @@ export async function* streamCompletion(
     max_tokens?: number;
   }
 ): AsyncGenerator<string, void, unknown> {
-  const model = options?.model || AI_CHAT_MODEL;
-  const payload = {
-    model,
-    messages,
-    temperature: options?.temperature ?? 0.4,
-    max_tokens: options?.max_tokens ?? 1500,
-    stream: true,
-  };
+  const primaryModel = options?.model || getChatModel();
+  const candidateModels = Array.from(
+    new Set([primaryModel, 'minimax/minimax-m3:free', 'meta-llama/llama-3.3-70b-instruct:free'])
+  );
 
-  const res = await fetch(`${getBaseUrl()}/chat/completions`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify(payload),
-  });
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    const errorBody = await res.text().catch(() => '');
-    throw new AIClientError(`Stream request failed (${res.status}): ${errorBody}`, res.status);
-  }
+  for (let i = 0; i < candidateModels.length; i++) {
+    const model = candidateModels[i];
+    const isLastCandidate = i === candidateModels.length - 1;
 
-  if (!res.body) {
-    throw new AIClientError('No response body received for stream', 500);
-  }
+    try {
+      const payload = {
+        model,
+        messages,
+        temperature: options?.temperature ?? 0.4,
+        max_tokens: options?.max_tokens ?? 1500,
+        stream: true,
+      };
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buffer = '';
+      const res = await fetch(`${getBaseUrl()}/chat/completions`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => '');
+        // If the model does not exist or is deprecated (400/404), fall back to next candidate
+        if ((res.status === 400 || res.status === 404) && !isLastCandidate) {
+          console.warn(`[AI Client] Model "${model}" returned ${res.status}, falling back to candidate "${candidateModels[i + 1]}"...`);
+          continue;
+        }
+        throw new AIClientError(`Stream request failed (${res.status}): ${errorBody.slice(0, 200)}`, res.status);
+      }
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+      if (!res.body) {
+        throw new AIClientError('No response body received for stream', 500);
+      }
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith(':')) continue;
-        if (trimmed === 'data: [DONE]') return;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
 
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const parsed = JSON.parse(trimmed.slice(6));
-            const token = parsed?.choices?.[0]?.delta?.content;
-            if (token) {
-              yield token;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith(':')) continue;
+            if (trimmed === 'data: [DONE]') return;
+
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const parsed = JSON.parse(trimmed.slice(6));
+                const token = parsed?.choices?.[0]?.delta?.content;
+                if (token) {
+                  yield token;
+                }
+              } catch {
+                // Partial JSON chunk, ignore and continue
+              }
             }
-          } catch {
-            // Partial JSON chunk, ignore and continue
           }
         }
+      } finally {
+        reader.releaseLock();
       }
+      return;
+    } catch (err: any) {
+      lastError = err;
+      if (isLastCandidate) throw err;
     }
-  } finally {
-    reader.releaseLock();
   }
+
+  if (lastError) throw lastError;
 }
 
 /**
@@ -221,7 +257,7 @@ export async function generateEmbedding(
   text: string,
   options?: { model?: string }
 ): Promise<number[]> {
-  const model = options?.model || AI_EMBEDDING_MODEL;
+  const model = options?.model || getEmbeddingModel();
 
   const res = await fetchWithRetry(`${getBaseUrl()}/embeddings`, {
     method: 'POST',

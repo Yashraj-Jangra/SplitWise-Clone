@@ -1,5 +1,15 @@
 # Session Progress & Context Preservation
 
+  - **AI Replying UX Overhaul (Stop Button & In-Bubble Thinking)** ✅:
+    - Created [`src/components/ai/thinking-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/thinking-bubble.tsx): sleek in-bubble loading state featuring dynamic status icons (`Database` for record retrieval, `Sparkles` for thinking), cycling bouncing dots, dynamic status labels ("Searching your records" vs. "Thinking & calculating"), and shimmering skeleton preview lines.
+    - Updated [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to mount `ThinkingBubble` when assistant content is empty and stream/status is active, transitioning smoothly into `FormattedMarkdown` once the first token streams in.
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx):
+      - Instant mount at 0ms: user message and empty assistant placeholder mount simultaneously to eliminate perceived network lag.
+      - Replaced spinner in send button with an interactive square stop button (`Square` icon with `fill-current`) that lights up red on hover (`hover:text-red-500`).
+      - Integrated `AbortController` with `handleStop()`, unmount cleanup, and global `Escape` shortcut to cancel streaming instantly and clean up empty placeholders.
+    - Updated [`src/lib/ai/client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/client.ts) with multi-candidate model fallbacks to guard against unavailable or deprecated model slugs in `.env`.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
   - **Milestone Release v0.3.0 Bump** ✅:
     - Bumped application version to `0.3.0` across [`package.json`](file:///d:/Projects/SplitWise-Clone/package.json), [`package-lock.json`](file:///d:/Projects/SplitWise-Clone/package-lock.json), and [`src/lib/version.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/version.ts) following the completion of the 6-phase AI & RAG hardening milestone.
     - Updated build metadata (`BUILD_NUMBER` to `2026.09.04`, `BUILD_DATE` to `2026-09-04`).
