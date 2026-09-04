@@ -1,8 +1,14 @@
 # Session Progress & Context Preservation
 
-  - **Docker Container Name & Issue Creation** 🔧:
+  - **CI/CD AI & Worker Secrets & Image Cache Fix** 🔧:
+    - Resolved [#8](https://github.com/Yashraj-Jangra/SplitWise-Clone/issues/8): Forwarded `AI_API_KEY` and `INTERNAL_API_SECRET` in [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) across step `env:`, `appleboy/ssh-action` `with.envs:`, and `docker-compose.yml` generation via `printf`.
+    - Fixed Next.js image optimization cache `EACCES` permission error in [`Dockerfile`](file:///d:/Projects/SplitWise-Clone/Dockerfile) by adding `--chown=nextjs:nodejs` to all runner COPY instructions and ensuring `/app/.next/cache` is owned by `nextjs:nodejs`.
+
+  - **Docker Container Name & PR #7** 🔧:
     - Opened GitHub issue [#6](https://github.com/Yashraj-Jangra/SplitWise-Clone/issues/6): "Explicitly set Docker container name in deployment workflow".
     - Updated [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) to explicitly assign `container_name: splitit-web` in the dynamically generated `docker-compose.yml` so the container doesn't default to generic `app-web-1` / `web app 1`.
+    - Pushed `dev` branch to `origin/dev` and opened PR [#7](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/7) to merge into `master` (merged).
+
 
   - **Version Bump** 📌: Bumped application version to `0.3.1` in `package.json` and `src/lib/version.ts`.
 
