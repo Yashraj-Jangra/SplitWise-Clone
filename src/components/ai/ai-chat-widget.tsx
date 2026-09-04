@@ -29,10 +29,10 @@ export function AIChatWidget() {
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.96 }}
           className={cn(
-            "flex items-center gap-2.5 h-10 px-3.5 rounded-xl backdrop-blur-md transition-all font-medium text-xs focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 shadow-lg hover:shadow-xl",
+            "flex items-center gap-2.5 h-10 px-3.5 rounded-xl transition-all font-medium text-xs focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 shadow-lg hover:shadow-xl",
             isOpen
-              ? "bg-muted/80 border border-border/70 text-foreground"
-              : "bg-background/90 dark:bg-background/80 border border-border/40 text-foreground hover:bg-muted/40 hover:border-border/60"
+              ? "bg-muted border border-border/70 text-foreground"
+              : "bg-background dark:bg-card border border-border/40 text-foreground hover:bg-muted hover:border-border/60"
           )}
           title={isOpen ? "Close Assistant" : "Open AI Financial Assistant"}
           aria-label="Toggle AI Assistant"
