@@ -1,5 +1,17 @@
 # Session Progress & Context Preservation
 
+  - **Fix Transient Error When Navigating to /assistant** 🐛 ✅:
+    - **Root Cause Diagnosed**: In [`src/components/layout/bottom-nav-bar.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/bottom-nav-bar.tsx), the early return `if (pathname === '/assistant') return null;` was placed directly before `const currentGroup = useMemo(...)`. When navigating from `/dashboard` (or any other page) to `/assistant`, `BottomNavBar` was already mounted with 5 hooks. On the navigation render, hook count dropped from 5 to 4 because the early return skipped `useMemo`. React detected this hook count mismatch and flashed `Rendered fewer hooks than expected`, which then cleared once Fast Refresh / reconciliation settled.
+    - **Fix Applied**:
+      - Reordered hooks in [`src/components/layout/bottom-nav-bar.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/bottom-nav-bar.tsx): moved `currentGroup = useMemo(...)` before the early return so all 5 hooks unconditionally execute on every render.
+      - Added unmount safety guard (`isMounted`) in `BottomNavBar`'s `useEffect`.
+      - Omitted `<BottomNavBar />` and `<AIChatWidget />` from the tree in [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx) when `isAssistant === true`.
+      - Added defensive validation in [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) for restored `localStorage` messages to guarantee safe string content and valid roles.
+    - **Verification**:
+      - `npx tsc --noEmit` exits **0 — clean**.
+      - `npm test` passes **14/14 unit tests**.
+
+
   - **Final Firebase Purge, Genkit Removal & Build Stabilization** 🧹 ✅:
     - **Cleaned `tsconfig.json`**: Removed 5 dead `firebase/*` path aliases and duplicate `skipLibCheck`.
     - **Deleted dead routes**: Removed [`src/app/api/auth/session/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/auth/session/route.ts) (legacy Firebase ID token session endpoint) and [`src/app/api/set-admin-claim/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/set-admin-claim/route.ts) (legacy custom claims endpoint superseded by `/api/admin/users`).
