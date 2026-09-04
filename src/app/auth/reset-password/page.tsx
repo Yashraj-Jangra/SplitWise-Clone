@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { ResetPasswordForm } from '@/components/auth/reset-password-form';
 import type { Metadata } from 'next';
-import { getSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/api.client';
 import { Loader2 } from 'lucide-react';
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from '@/components/icons';
-import { getExpensesByUserId, getGroupsByUserId } from '@/lib/firestore.service';
+import { getExpensesByUserId, getGroupsByUserId } from '@/lib/api.client';
 import type { Expense, Group } from '@/types';
 import { ExpenseListItem } from '@/components/expenses/expense-list-item';
 import { ScrollArea } from '@/components/ui/scroll-area';

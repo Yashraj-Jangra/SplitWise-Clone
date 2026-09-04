@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from '@/components/icons';
-import { getSettlementsByUserId, getGroupsByUserId } from '@/lib/firestore.service';
+import { getSettlementsByUserId, getGroupsByUserId } from '@/lib/api.client';
 import { SettlementListItem } from '@/components/settlements/settlement-list-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';

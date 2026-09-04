@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
-import { updateUser } from '@/lib/firestore.service';
+import { updateUser } from '@/lib/api.client';
 import { Icons } from '@/components/icons';
 import { cn, getInitials } from '@/lib/utils';
 import { KeyRound, Lock, Shield, User, CreditCard, Eye, EyeOff, Save, CheckCircle2 } from 'lucide-react';

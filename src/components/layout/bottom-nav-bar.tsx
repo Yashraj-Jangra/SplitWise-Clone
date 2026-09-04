@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import type { Group } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
-import { getGroupsByUserId } from '@/lib/mock-data';
+import { getGroupsByUserId } from '@/lib/api.client';
 import { BottomNavAddButton } from './bottom-nav-add-button';
 import { useHaptics } from '@/hooks/use-haptics';
 

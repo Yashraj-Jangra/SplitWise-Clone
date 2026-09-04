@@ -8,7 +8,7 @@ import { Icons, IconName } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getSiteSettings, updateSiteSettings } from '@/lib/firestore.service';
+import { getSiteSettings, updateSiteSettings } from '@/lib/api.client';
 
 import type { SiteSettings, MasterCategory, SubCategory } from '@/types';
 import { X, GripVertical } from 'lucide-react';
@@ -52,7 +52,7 @@ export default function AdminCategorySettingsPage() {
   const [editingSubName, setEditingSubName] = useState('');
 
   const iconNames = Object.keys(Icons).filter(
-    (key) => !['AppLogo', 'Logo', 'Google', 'Github', 'Linkedin', 'NextJs', 'ReactLogo', 'FirebaseLogo', 'TailwindLogo', 'ShadcnLogo', 'FirebaseStudio', 'GenkitLogo'].includes(key)
+    (key) => !['AppLogo', 'Logo', 'Google', 'Github', 'Linkedin', 'NextJs', 'ReactLogo', 'TailwindLogo', 'ShadcnLogo', 'GenkitLogo'].includes(key)
   ) as IconName[];
 
   useEffect(() => {

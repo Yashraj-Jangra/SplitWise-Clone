@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UserProfile, Group, Expense, SupportTicket } from '@/types';
-import { getAllUsers, getAllGroups, getAllExpenses, getAllTickets, updateSiteSettings } from '@/lib/mock-data';
+import { getAllUsers, getAllGroups, getAllExpenses, getAllTickets, updateSiteSettings } from '@/lib/api.client';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';

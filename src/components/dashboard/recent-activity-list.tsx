@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Icons } from '@/components/icons';
-import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId } from '@/lib/mock-data';
+import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId } from '@/lib/api.client';
 import type { Expense, Settlement, UserProfile } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { formatDistanceToNow } from 'date-fns';

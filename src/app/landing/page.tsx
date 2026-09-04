@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Icons, type IconName } from '@/components/icons';
 import { DynamicYear } from '@/components/layout/dynamic-year';
-import { getSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/api.client';
 import { CheckCircle2 } from 'lucide-react';
 
 export default async function LandingPage() {

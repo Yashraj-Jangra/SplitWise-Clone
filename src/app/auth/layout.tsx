@@ -1,4 +1,4 @@
-import { getSiteSettings } from '@/lib/firestore.service';
+import { getSiteSettings } from '@/lib/api.client';
 import Image from 'next/image';
 import { Icons } from '@/components/icons';
 

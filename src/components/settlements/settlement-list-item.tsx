@@ -9,7 +9,7 @@ import { getGroupCurrencySymbol } from "@/lib/constants";
 import { format, formatDistanceToNow } from "date-fns";
 import { getFullName, getInitials, cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { deleteSettlement } from '@/lib/mock-data';
+import { deleteSettlement } from '@/lib/api.client';
 import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/popover";
 
 import { useToast } from "@/hooks/use-toast";
-import { updateGroup, getSiteSettings } from "@/lib/firestore.service";
+import { updateGroup, getSiteSettings } from "@/lib/api.client";
 import { calculateGroupBudgetStats } from "@/lib/budget-utils";
 
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Icons, IconName } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
-import { updateSiteSettings } from '@/lib/mock-data';
+import { updateSiteSettings } from '@/lib/api.client';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { useTheme } from '@/contexts/theme-context';
 import { BASE_THEMES } from '@/themes';

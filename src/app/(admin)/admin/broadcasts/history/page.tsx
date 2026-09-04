@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { deleteNotification, getAllNotifications } from "@/lib/mock-data";
+import { deleteNotification, getAllNotifications } from "@/lib/api.client";
 import { format, formatDistanceToNow } from 'date-fns';
 import type { NotificationV2 } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';

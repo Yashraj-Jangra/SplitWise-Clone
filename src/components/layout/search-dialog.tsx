@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, UserProfile, Settlement } from '@/types';
-import { getGroupsByUserId, getExpensesByUserId, getSettlementsByUserId, hydrateUsers } from '@/lib/mock-data';
+import { getGroupsByUserId, getExpensesByUserId, getSettlementsByUserId, hydrateUsers } from '@/lib/api.client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getFullName, getInitials, cn } from '@/lib/utils';

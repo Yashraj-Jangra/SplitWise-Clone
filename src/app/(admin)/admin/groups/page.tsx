@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getAllGroups, archiveGroup, restoreGroup, deleteGroupPermanently } from '@/lib/firestore.service';
+import { getAllGroups, archiveGroup, restoreGroup, deleteGroupPermanently } from '@/lib/api.client';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { getFullName, getInitials, cn } from '@/lib/utils';

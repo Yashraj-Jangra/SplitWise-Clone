@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Expense } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
-import { getExpensesByUserId } from '@/lib/mock-data';
+import { getExpensesByUserId } from '@/lib/api.client';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { TimelineFilter, type DateRangePreset } from '@/components/analysis/timeline-filter';
 import { SpendingBreakdown } from '@/components/analysis/spending-breakdown';

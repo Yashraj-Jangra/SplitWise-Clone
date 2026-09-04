@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import type { Group, Expense, UserProfile } from '@/types';
-import { getGroupById } from '@/lib/mock-data';
+import { getGroupById } from '@/lib/api.client';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '../ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';

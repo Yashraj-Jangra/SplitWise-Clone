@@ -10,7 +10,7 @@ import { Icons } from '@/components/icons';
 import { Save } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings, updateSiteSettings } from '@/lib/api.client';
 import type { SiteSettings } from '@/types';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';

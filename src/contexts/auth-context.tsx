@@ -6,10 +6,10 @@ import { authClient } from '@/lib/auth.client';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
-  firebaseUser: any | null; // Mapped to Better Auth user for backward compatibility
+  currentUser: { uid: string; email: string; displayName: string; photoURL?: string; emailVerified: boolean } | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  firebaseError: string | null;
+  authError: string | null;
   isAdmin: boolean;
   hasPassword?: boolean;
   isGoogleLinked?: boolean;
@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(sessionLoading);
   }, [sessionLoading]);
 
-  const firebaseUser = useMemo(() => {
+  const currentUser = useMemo(() => {
     if (!sessionData?.user) return null;
     const user = sessionData.user as any;
     return {
@@ -46,8 +46,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       displayName: user.name,
       photoURL: user.image || user.avatarUrl,
       emailVerified: user.emailVerified,
-      providerData: sessionData.session ? [{ providerId: 'better-auth' }] : [],
-      getIdToken: async () => "", // Backward compatibility stub for Admin Panel
     };
   }, [sessionData]);
 
@@ -229,10 +227,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [toast]);
 
   const value = useMemo(() => ({
-    firebaseUser,
+    currentUser,
     userProfile,
     loading,
-    firebaseError: authError,
+    authError,
     isAdmin,
     hasPassword,
     isGoogleLinked,
@@ -246,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     unlinkFromGoogle,
     updateUserPassword,
     deleteAccount,
-  }), [firebaseUser, userProfile, loading, authError, isAdmin, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle, updateUserPassword, deleteAccount]);
+  }), [currentUser, userProfile, loading, authError, isAdmin, hasPassword, isGoogleLinked, login, signup, logout, loginWithGoogle, sendPasswordResetEmail, resendVerificationEmail, linkWithGoogle, unlinkFromGoogle, updateUserPassword, deleteAccount]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

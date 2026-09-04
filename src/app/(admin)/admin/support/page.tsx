@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { getAllTickets, deleteTicket, updateTicket } from "@/lib/mock-data";
+import { getAllTickets, deleteTicket, updateTicket } from "@/lib/api.client";
 import { format, formatDistanceToNow } from 'date-fns';
 import type { SupportTicket } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';

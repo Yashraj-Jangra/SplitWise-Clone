@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Balance } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { updateGroup, getGroupBalances, archiveGroup, deleteGroupPermanently } from '@/lib/mock-data';
+import { updateGroup, getGroupBalances, archiveGroup, deleteGroupPermanently } from '@/lib/api.client';
 import { GroupMembers } from './group-members';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';

@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import type { SiteSettings } from '@/types';
-import { getSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/api.client';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -60,8 +60,6 @@ function AboutPageSkeleton() {
 const technologies = [
   { name: 'Next.js', icon: Icons.NextJs, color: 'text-foreground' },
   { name: 'React', icon: Icons.ReactLogo, color: 'text-sky-400' },
-  { name: 'Firebase Studio', icon: Icons.FirebaseStudio, color: 'text-primary' },
-  { name: 'Firebase', icon: Icons.FirebaseLogo },
   { name: 'Tailwind CSS', icon: Icons.TailwindLogo, color: 'text-cyan-400' },
   { name: 'ShadCN UI', icon: Icons.ShadcnLogo, color: 'text-foreground' },
   { name: 'Genkit', icon: Icons.GenkitLogo, color: 'text-emerald-400' },

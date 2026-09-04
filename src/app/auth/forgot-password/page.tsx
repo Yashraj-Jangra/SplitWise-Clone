@@ -1,7 +1,7 @@
 
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 import type { Metadata } from 'next';
-import { getSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/api.client';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
