@@ -137,7 +137,7 @@ export function AddSettlementDialog({ group, initialSettlement, trigger, open: c
     }
   }
 
-  const dialogTrigger = trigger || (
+  const dialogTrigger = trigger !== undefined ? trigger : (
     <Button variant="outline" disabled={!userProfile} className="gap-2 font-medium rounded-xl">
       <HandCoins className="h-4 w-4" /> Record Settlement
     </Button>
@@ -394,7 +394,7 @@ export function AddSettlementDialog({ group, initialSettlement, trigger, open: c
     return (
       <>
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>{dialogTrigger}</SheetTrigger>
+          {dialogTrigger && <SheetTrigger asChild>{dialogTrigger}</SheetTrigger>}
           <SheetContent side="bottom" className="h-[90vh] flex flex-col rounded-t-2xl border-border/20 p-0 bg-background">
             <SheetHeader className="p-4 border-b border-border/20">
               <SheetTitle className="text-center text-lg font-semibold">Record a settlement</SheetTitle>
@@ -431,7 +431,7 @@ export function AddSettlementDialog({ group, initialSettlement, trigger, open: c
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
+        {dialogTrigger && <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>}
         <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-border/20 rounded-2xl shadow-2xl bg-background">
           <div className="flex flex-col h-full">
             <div className="p-6">
