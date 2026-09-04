@@ -1,5 +1,12 @@
 # Session Progress & Context Preservation
 
+  - **Remove Vercel Analytics and Speed Insights** 🧹 ✅:
+    - **Issue**: `@vercel/analytics` and `@vercel/speed-insights` were mounted in `RootLayout` and installed in dependencies despite the application being self-hosted with Docker/Oracle.
+    - **Fix Applied**:
+      - Removed `<Analytics />` and `<SpeedInsights />` components and their imports from [`src/app/layout.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/layout.tsx).
+      - Uninstalled `@vercel/analytics` and `@vercel/speed-insights` from [`package.json`](file:///d:/Projects/SplitWise-Clone/package.json) and [`package-lock.json`](file:///d:/Projects/SplitWise-Clone/package-lock.json).
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Move Activity Filter Slider to Activity Card Header & Shorten Description** 🎨 ✅:
     - **Issue**: The activity filter slider (`All`, `Expenses`, `Settlements`) was incorrectly placed as a sub-bar in the top header banner instead of inside the Activity card header, and the description text was overly verbose.
     - **Fix Applied**:

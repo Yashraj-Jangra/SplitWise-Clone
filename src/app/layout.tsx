@@ -8,8 +8,6 @@ import { getSiteSettings } from '@/lib/services/settings.service';
 import { NotificationProvider } from '@/contexts/notification-context';
 import { SiteSettingsProvider } from '@/contexts/site-settings-context';
 import { ThemeProvider } from '@/contexts/theme-context';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import QueryProvider from '@/components/providers/QueryProvider';
 
 // Self-hosted via Next.js — no external DNS round-trip, no render blocking
@@ -76,8 +74,6 @@ export default function RootLayout({
           </AuthProvider>
           <Toaster />
         </QueryProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );
