@@ -10,11 +10,30 @@ dotenv.config();
  * auto-reconnect, and seamless query retries for transient cloud network disconnects.
  */
 
-let poolPromise: Promise<any> | null = null;
+const globalForOracle = globalThis as unknown as {
+  oraclePoolPromise?: Promise<any> | null;
+};
+
+const isDev = process.env.NODE_ENV !== 'production';
+
+async function resetOraclePool(): Promise<void> {
+  if (globalForOracle.oraclePoolPromise) {
+    const oldPromise = globalForOracle.oraclePoolPromise;
+    globalForOracle.oraclePoolPromise = null;
+    try {
+      const oldPool = await oldPromise;
+      if (oldPool && typeof oldPool.close === 'function') {
+        await oldPool.close(5); // 5s drain timeout to gracefully release Oracle sessions
+      }
+    } catch {
+      // Safe ignore error while closing severed pool
+    }
+  }
+}
 
 async function getOraclePool() {
-  if (!poolPromise) {
-    poolPromise = (async () => {
+  if (!globalForOracle.oraclePoolPromise) {
+    globalForOracle.oraclePoolPromise = (async () => {
       const oracledb = await import('oracledb');
       oracledb.default.outFormat = oracledb.default.OUT_FORMAT_OBJECT;
       oracledb.default.autoCommit = true;
@@ -25,7 +44,9 @@ async function getOraclePool() {
 
       const dbUser = process.env.ORA_DB_USER || 'ADMIN';
       const dbPassword = process.env.ORA_DB_PASSWORD;
-      const connectString = process.env.ORA_CONNECT_STRING || 'splititdb_high';
+      // Default to splititdb_low: has up to 300 concurrent connection capacity on Free Tier,
+      // avoiding the strict 3-concurrent-session bottleneck of splititdb_high.
+      const connectString = process.env.ORA_CONNECT_STRING || 'splititdb_low';
 
       if (!dbPassword) {
         throw new Error('ORA_DB_PASSWORD is not set in .env.local');
@@ -38,20 +59,22 @@ async function getOraclePool() {
         configDir: walletDir,
         walletLocation: walletDir,
         walletPassword: dbPassword,
-        poolMin: 1, // Keep 1 warm connection ready for immediate query response
-        poolMax: 20, // Accommodate high concurrent requests without queueing
-        poolIncrement: 2, // Scale pool quickly during simultaneous page loads
-        poolTimeout: 120, // Keep idle connections alive longer
-        poolPingInterval: 60, // Validate connection health before handing out of pool
-        queueTimeout: 60000, // 60s queue allowance for mTLS handshakes
+        // In dev, keep pool tiny (0-3 connections) so dev HMR never exhausts the 20-session limit
+        // shared with the production server.
+        poolMin: isDev ? 0 : 1,
+        poolMax: isDev ? 3 : 10,
+        poolIncrement: 1,
+        poolTimeout: isDev ? 30 : 120, // Terminate idle dev connections faster
+        poolPingInterval: 30, // Validate connection health before handing out of pool
+        queueTimeout: isDev ? 15000 : 60000, // 15s queue in dev so failures fail fast rather than hang
         enableStatistics: false,
       });
     })().catch((err) => {
-      poolPromise = null; // Ensure future attempts can try reconnecting
+      globalForOracle.oraclePoolPromise = null; // Ensure future attempts can try reconnecting
       throw err;
     });
   }
-  return poolPromise;
+  return globalForOracle.oraclePoolPromise;
 }
 
 function isRecoverableOracleError(err: any): boolean {
@@ -63,15 +86,20 @@ function isRecoverableOracleError(err: any): boolean {
     code === 'NJS-500' ||
     code === 'NJS-521' ||
     code === 'NJS-040' ||
+    code === 'NJS-511' ||
     msg.includes('NJS-500') ||
     msg.includes('NJS-521') ||
     msg.includes('NJS-040') ||
+    msg.includes('NJS-511') ||
     msg.includes('CLOSED OR BROKEN') ||
     msg.includes('END-OF-FILE ON COMMUNICATION CHANNEL') ||
     msg.includes('QUEUE TIMEOUT') ||
     msg.includes('ORA-03113') ||
     msg.includes('ORA-03114') ||
-    msg.includes('ORA-03135')
+    msg.includes('ORA-03135') ||
+    msg.includes('ORA-12523') ||
+    msg.includes('ORA-12516') ||
+    msg.includes('ORA-12519')
   );
 }
 
@@ -92,7 +120,7 @@ export async function executeOracleQuery<T = any>(sql: string, params: any = {},
   } catch (err: any) {
     if (retries > 0 && isRecoverableOracleError(err)) {
       console.warn(`Oracle connection severed (${err.code || 'recoverable'}), refreshing pool and retrying query...`);
-      poolPromise = null;
+      await resetOraclePool();
       return executeOracleQuery<T>(sql, params, retries - 1);
     }
     console.error('Oracle Query Error:', err.message || err);
