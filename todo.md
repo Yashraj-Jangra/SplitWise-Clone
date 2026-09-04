@@ -1,5 +1,18 @@
 # Session Progress & Context Preservation
 
+  - **Fix Forgot Password Error in Production (`TypeError: r.consumeOne is not a function`)** 🐛 ✅:
+    - **Root Cause Diagnosed**: Better Auth's `resetPassword` endpoint verifies the password reset token by calling `internalAdapter.consumeVerificationValue(id)`. This helper delegates atomic single-token consumption directly to the database adapter via `adapter.consumeOne({ model, where })` (and subsequently updates credentials via `adapter.updateMany({ model, where, update })`). Our custom Oracle Single-Table adapter [`src/lib/nosql-auth-adapter.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql-auth-adapter.ts) was missing `consumeOne`, `updateMany`, `count`, and `incrementOne`, causing Better Auth to crash with `TypeError: r.consumeOne is not a function`.
+    - **Fix Applied**:
+      - Implemented `consumeOne({ model, where })` in [`src/lib/nosql-auth-adapter.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql-auth-adapter.ts): retrieves the document, deletes it immediately via `deleteItem`, and returns the formatted record.
+      - Implemented `updateMany({ model, where, update })`: updates all matching records and returns count (used by Better Auth's `updatePassword`).
+      - Implemented `count({ model, where })` and `incrementOne({ model, where, increment, set })`: completes the full Better Auth adapter contract.
+      - Enhanced `findMany({ model, where, limit, offset, sortBy })`: added direct partition queries for `verification` records (`pk = VERIFICATION#<identifier>`) and implemented in-memory `sortBy`, `limit`, and `offset` support.
+      - Enhanced `findOne({ model, where })` for `verification`: prioritizes `id` lookup via GSI1 (`VERIFICATION#<id>`) and filters by remaining `where` attributes for partition lookups.
+    - **Verification**:
+      - `npx tsc --noEmit` exits **0 — clean**.
+      - `npm test` passes **14/14 unit tests**.
+      - Verified end-to-end token creation, `findMany` with `sortBy/limit`, and `consumeOne` deletion on the live database.
+
   - **Fix Transient Error When Navigating to /assistant** 🐛 ✅:
     - **Root Cause Diagnosed**: In [`src/components/layout/bottom-nav-bar.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/bottom-nav-bar.tsx), the early return `if (pathname === '/assistant') return null;` was placed directly before `const currentGroup = useMemo(...)`. When navigating from `/dashboard` (or any other page) to `/assistant`, `BottomNavBar` was already mounted with 5 hooks. On the navigation render, hook count dropped from 5 to 4 because the early return skipped `useMemo`. React detected this hook count mismatch and flashed `Rendered fewer hooks than expected`, which then cleared once Fast Refresh / reconciliation settled.
     - **Fix Applied**:

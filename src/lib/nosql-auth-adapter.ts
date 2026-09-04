@@ -181,13 +181,20 @@ export function nosqlAuthAdapter() {
           if (accountItems.length > 0) return formatAuthItem(accountItems[0]);
         }
       } else if (model === 'verification') {
-        if (fieldMap.has('identifier')) {
-          const res = await queryByPk<any>(`VERIFICATION#${fieldMap.get('identifier')}`);
-          if (res.length > 0) return formatAuthItem(res[0]);
-        }
         if (fieldMap.has('id')) {
           const res = await queryByGsi<any>(`VERIFICATION#${fieldMap.get('id')}`);
           if (res.length > 0) return formatAuthItem(res[0]);
+        }
+        if (fieldMap.has('identifier')) {
+          const res = await queryByPk<any>(`VERIFICATION#${fieldMap.get('identifier')}`);
+          const match = res.find(item =>
+            where.every(w => {
+              const val = item[w.field];
+              if (val === undefined || val === null) return w.value === null || w.value === undefined;
+              return String(val) === String(w.value);
+            })
+          );
+          if (match) return formatAuthItem(match);
         }
       }
 
@@ -209,7 +216,21 @@ export function nosqlAuthAdapter() {
       return formatAuthItem(found) || null;
     },
 
-    async findMany({ model, where }: { model: string; where?: Array<{ field: string; value: any }> }) {
+    async findMany({
+      model,
+      where,
+      limit,
+      offset,
+      sortBy,
+    }: {
+      model: string;
+      where?: Array<{ field: string; value: any }>;
+      limit?: number;
+      offset?: number;
+      sortBy?: { field: string; direction: 'asc' | 'desc' };
+    }) {
+      let results: any[] = [];
+
       if (model === 'account') {
         const userIdWhere = where?.find(w => w.field === 'userId');
         if (userIdWhere) {
@@ -233,7 +254,7 @@ export function nosqlAuthAdapter() {
             accountsList = allAccountDocs.filter((a: any) => a.userId === userId);
           }
 
-          const filtered = accountsList.filter((item: any) =>
+          results = accountsList.filter((item: any) =>
             !where || where.every(w => {
               if (w.field === 'userId') return item.userId === userId;
               // credential and email are equivalent for migrated users
@@ -243,21 +264,85 @@ export function nosqlAuthAdapter() {
               return item[w.field] === w.value;
             })
           );
-          return filtered.map(formatAuthItem);
+        } else {
+          const all = await queryByEntityType<any>('ACCOUNT');
+          results = !where || where.length === 0
+            ? all
+            : all.filter(item => where.every(w => {
+                if (w.field === 'providerId' && (w.value === 'credential' || w.value === 'email')) {
+                  return item.providerId === 'credential' || item.providerId === 'email';
+                }
+                return item[w.field] === w.value;
+              }));
         }
+      } else if (model === 'verification') {
+        const identifierWhere = where?.find(w => w.field === 'identifier');
+        const idWhere = where?.find(w => w.field === 'id');
+        let records: any[] = [];
+        if (identifierWhere) {
+          records = await queryByPk<any>(`VERIFICATION#${identifierWhere.value}`);
+        } else if (idWhere) {
+          records = await queryByGsi<any>(`VERIFICATION#${idWhere.value}`);
+        } else {
+          records = await queryByEntityType<any>('VERIFICATION');
+        }
+
+        results = !where || where.length === 0
+          ? records
+          : records.filter(item => where.every(w => {
+              const val = item[w.field];
+              if (val === undefined || val === null) return w.value === null || w.value === undefined;
+              return String(val) === String(w.value);
+            }));
+      } else if (model === 'session') {
+        const userIdWhere = where?.find(w => w.field === 'userId');
+        let records: any[] = [];
+        if (userIdWhere) {
+          const userItems = await queryByPk<any>(`USER#${userIdWhere.value}`);
+          records = userItems.filter(i => i.token && i.userId);
+        }
+        if (records.length === 0) {
+          records = await queryByEntityType<any>('SESSION');
+        }
+        results = !where || where.length === 0
+          ? records
+          : records.filter(item => where.every(w => {
+              const val = item[w.field];
+              if (val === undefined || val === null) return w.value === null || w.value === undefined;
+              return String(val) === String(w.value);
+            }));
+      } else {
+        const all = await queryByEntityType<any>(model.toUpperCase());
+        results = !where || where.length === 0
+          ? all
+          : all.filter(item => where.every(w => {
+              const val = item[w.field];
+              if (val === undefined || val === null) return w.value === null || w.value === undefined;
+              return item[w.field] === w.value;
+            }));
       }
 
-      const all = await queryByEntityType<any>(model.toUpperCase());
-      const filtered = !where || where.length === 0
-        ? all
-        : all.filter(item => where.every(w => {
-            if (w.field === 'providerId' && (w.value === 'credential' || w.value === 'email')) {
-              return item.providerId === 'credential' || item.providerId === 'email';
-            }
-            return item[w.field] === w.value;
-          }));
+      if (sortBy) {
+        results.sort((a: any, b: any) => {
+          const valA = a[sortBy.field];
+          const valB = b[sortBy.field];
+          const timeA = valA instanceof Date ? valA.getTime() : new Date(valA).getTime() || valA;
+          const timeB = valB instanceof Date ? valB.getTime() : new Date(valB).getTime() || valB;
+          if (timeA < timeB) return sortBy.direction === 'desc' ? 1 : -1;
+          if (timeA > timeB) return sortBy.direction === 'desc' ? -1 : 1;
+          return 0;
+        });
+      }
 
-      return filtered.map(formatAuthItem);
+      if (typeof offset === 'number' && offset > 0) {
+        results = results.slice(offset);
+      }
+
+      if (typeof limit === 'number' && limit >= 0) {
+        results = results.slice(0, limit);
+      }
+
+      return results.map(formatAuthItem);
     },
 
     async update({ model, where, update }: { model: string; where: Array<{ field: string; value: any }>; update: any }) {
@@ -270,6 +355,14 @@ export function nosqlAuthAdapter() {
       return formatAuthItem(updated);
     },
 
+    async updateMany({ model, where, update }: { model: string; where?: Array<{ field: string; value: any }>; update: any }) {
+      const items = await this.findMany({ model, where });
+      for (const item of items) {
+        await this.update({ model, where: [{ field: 'id', value: item.id }], update });
+      }
+      return items.length;
+    },
+
     async delete({ model, where }: { model: string; where: Array<{ field: string; value: any }> }) {
       const existing = await this.findOne({ model, where });
       if (!existing) return;
@@ -279,7 +372,8 @@ export function nosqlAuthAdapter() {
       } else if (model === 'session') {
         await deleteItem(`USER#${existing.userId}`, `SESSION#${existing.id}`);
       } else if (model === 'account') {
-        await deleteItem(`USER#${existing.userId}`, `ACCOUNT#${existing.providerId}#${existing.accountId}`);
+        const accId = existing.accountId || existing.userId;
+        await deleteItem(`USER#${existing.userId}`, `ACCOUNT#${existing.providerId}#${accId}`);
       } else if (model === 'verification') {
         await deleteItem(`VERIFICATION#${existing.identifier}`, `VERIFICATION#${existing.id}`);
       }
@@ -288,8 +382,73 @@ export function nosqlAuthAdapter() {
     async deleteMany({ model, where }: { model: string; where?: Array<{ field: string; value: any }> }) {
       const items = await this.findMany({ model, where });
       for (const item of items) {
+        if (model === 'verification') {
+          await deleteItem(`VERIFICATION#${item.identifier}`, `VERIFICATION#${item.id}`);
+        } else if (model === 'user') {
+          await deleteItem(`USER#${item.id}`, 'PROFILE');
+        } else if (model === 'session') {
+          await deleteItem(`USER#${item.userId}`, `SESSION#${item.id}`);
+        } else if (model === 'account') {
+          const accId = item.accountId || item.userId;
+          await deleteItem(`USER#${item.userId}`, `ACCOUNT#${item.providerId}#${accId}`);
+        } else {
+          await this.delete({ model, where: [{ field: 'id', value: item.id }] });
+        }
+      }
+      return items.length;
+    },
+
+    async consumeOne({ model, where }: { model: string; where: Array<{ field: string; value: any }> }) {
+      const item = await this.findOne({ model, where });
+      if (!item) return null;
+
+      if (model === 'verification') {
+        await deleteItem(`VERIFICATION#${item.identifier}`, `VERIFICATION#${item.id}`);
+      } else if (model === 'user') {
+        await deleteItem(`USER#${item.id}`, 'PROFILE');
+      } else if (model === 'session') {
+        await deleteItem(`USER#${item.userId}`, `SESSION#${item.id}`);
+      } else if (model === 'account') {
+        const accId = item.accountId || item.userId;
+        await deleteItem(`USER#${item.userId}`, `ACCOUNT#${item.providerId}#${accId}`);
+      } else {
         await this.delete({ model, where: [{ field: 'id', value: item.id }] });
       }
+
+      return item;
+    },
+
+    async count({ model, where }: { model: string; where?: Array<{ field: string; value: any }> }) {
+      const items = await this.findMany({ model, where });
+      return items.length;
+    },
+
+    async incrementOne({
+      model,
+      where,
+      increment,
+      set,
+    }: {
+      model: string;
+      where: Array<{ field: string; value: any }>;
+      increment: Record<string, number>;
+      set?: Record<string, any>;
+    }) {
+      const item = await this.findOne({ model, where });
+      if (!item) return null;
+
+      const updated = { ...item };
+      for (const [field, delta] of Object.entries(increment)) {
+        updated[field] = (typeof updated[field] === 'number' ? updated[field] : 0) + delta;
+      }
+      if (set) {
+        Object.assign(updated, set);
+      }
+      return await this.update({
+        model,
+        where: [{ field: 'id', value: item.id }],
+        update: updated,
+      });
     },
   });
 }
