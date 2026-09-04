@@ -38,9 +38,9 @@ function MobileDrawerContent({ onClose, groupId }: { onClose: () => void; groupI
       }}
       className="flex flex-col h-full w-full"
     >
-      {/* ── Active Grab Handle Zone with Touch & Drag Gesture ── */}
+      {/* ── Active Grab Handle Zone with Touch & Drag Gesture (Transparent Background) ── */}
       <div
-        className="w-full pt-3 pb-2 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none flex-shrink-0"
+        className="w-full py-2.5 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none flex-shrink-0"
         onPointerDown={(e) => dragControls.start(e)}
         role="button"
         tabIndex={-1}
@@ -50,14 +50,17 @@ function MobileDrawerContent({ onClose, groupId }: { onClose: () => void; groupI
           animate={{
             width: isDragging ? 48 : 36,
             height: isDragging ? 5 : 4,
-            backgroundColor: isDragging ? 'rgba(161, 161, 170, 0.7)' : 'rgba(161, 161, 170, 0.35)',
+            backgroundColor: isDragging ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.5)',
           }}
           transition={{ duration: 0.15 }}
-          className="rounded-full"
+          className="rounded-full shadow-xs"
         />
       </div>
 
-      <ChatPanel groupId={groupId} onClose={onClose} className="flex-1" />
+      {/* ── Drawer Card with Rounded Top Corners & Themed Surface (Header at the top) ── */}
+      <div className="flex-1 min-h-0 flex flex-col rounded-t-2xl border-t border-border/30 bg-background shadow-2xl overflow-hidden">
+        <ChatPanel groupId={groupId} onClose={onClose} className="flex-1 h-full" />
+      </div>
     </motion.div>
   );
 }
@@ -117,7 +120,7 @@ export function AIChatWidget() {
           <SheetContent
             side="bottom"
             onOpenAutoFocus={(e) => e.preventDefault()}
-            className="h-[88vh] max-h-[88dvh] flex flex-col rounded-t-2xl border-t border-border/30 p-0 bg-background/95 backdrop-blur-xl overflow-hidden overflow-x-hidden [&>button]:hidden shadow-2xl"
+            className="h-[88vh] max-h-[88dvh] flex flex-col p-0 !bg-transparent !border-none !shadow-none overflow-hidden [&>button]:hidden"
           >
             <MobileDrawerContent onClose={() => setIsOpen(false)} groupId={currentGroupId} />
           </SheetContent>

@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **Mobile Drawer Drag-to-Close Transparency & Header Alignment** 🎨 ✅:
+    - **Issue**: When sliding the AI assistant mobile drawer down, the stationary `SheetContent` background container remained visible at the top of the screen. In addition, the grab handle had an opaque background instead of being transparent, pushing the header below an empty section.
+    - **Fix Applied**:
+      - Made the parent `SheetContent` completely transparent (`!bg-transparent !border-none !shadow-none p-0 overflow-hidden`) in [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx), eliminating the stationary background layer when sliding down.
+      - Styled the grab handle zone with a completely transparent background and a high-contrast pill (`rgba(255, 255, 255, 0.5)` to `0.9` on drag) floating cleanly above the card.
+      - Wrapped `ChatPanel` in a `rounded-t-2xl border-t border-border/30 bg-background shadow-2xl overflow-hidden` container so the header ("Financial Assistant") sits right at the top of the card.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Harmonize Monthly Digest Widget Theming with Dashboard Cards** 🎨 ✅:
     - **Issue**: The Monthly Digest (`AIInsightsCard`) widget on the dashboard had contrasting theming and background colors that didn't match the other dashboard widgets (`DynamicSpendingChart`, `NetBalanceCard`, `ObligationsCard`). It used `bg-background` instead of `bg-card`, custom border/shadow overrides, and a custom header without a separator.
     - **Fix Applied**:
