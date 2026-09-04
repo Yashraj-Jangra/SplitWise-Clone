@@ -36,14 +36,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-.genkit/*
 .env*
 !.env.example
 PROJECT_KNOWLEDGE.md
-
-# firebase
-firebase-debug.log
-firestore-debug.log
 
 # secrets and data exports
 service-account.json

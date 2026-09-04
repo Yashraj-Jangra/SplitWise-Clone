@@ -62,7 +62,7 @@ const technologies = [
   { name: 'React', icon: Icons.ReactLogo, color: 'text-sky-400' },
   { name: 'Tailwind CSS', icon: Icons.TailwindLogo, color: 'text-cyan-400' },
   { name: 'ShadCN UI', icon: Icons.ShadcnLogo, color: 'text-foreground' },
-  { name: 'Genkit', icon: Icons.GenkitLogo, color: 'text-emerald-400' },
+  { name: 'AI Assistant', icon: Icons.Sparkles, color: 'text-amber-400' },
 ];
 
 
