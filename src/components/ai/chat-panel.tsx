@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Send, Trash2, ArrowRight, Info, Square, Maximize2 } from 'lucide-react';
+import { Send, Trash2, ArrowRight, Info, Square, Maximize2, ShieldCheck, Calculator, Database, Sparkles, Cpu } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -32,6 +32,68 @@ interface ChatPanelProps {
   onClose?: () => void;
   variant?: 'widget' | 'full';
 }
+
+function AssistantInfoTooltipContent({ variant = 'full' }: { variant?: 'widget' | 'full' }) {
+  const isWidget = variant === 'widget';
+  return (
+    <div className={isWidget ? 'w-72' : 'w-80'}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+        </div>
+        <div>
+          <p className="font-semibold text-foreground text-[12px] leading-tight">Financial Assistant</p>
+          <p className="text-[10px] text-muted-foreground leading-tight">Powered by Gemini · RAG-grounded</p>
+        </div>
+      </div>
+
+      <div className="space-y-2.5">
+        <div className="flex gap-2.5 items-start">
+          <Calculator className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] font-semibold text-foreground leading-tight">Zero math hallucinations</p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Balances, debts, and totals are computed server-side from your actual records — the AI never guesses or recalculates numbers.</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2.5 items-start">
+          <Database className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] font-semibold text-foreground leading-tight">Semantic expense search</p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Your expenses are indexed as vectors. Relevant records are retrieved by meaning, not just keywords, before answering.</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2.5 items-start">
+          <ShieldCheck className="w-3.5 h-3.5 text-violet-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] font-semibold text-foreground leading-tight">Private by design</p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Data never leaves your account scope. Group queries are access-controlled and your history is never used for model training.</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2.5 items-start">
+          <Cpu className="w-3.5 h-3.5 text-orange-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] font-semibold text-foreground leading-tight">How it works</p>
+            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">Question → server computes exact ledger facts → semantic vector search → Gemini synthesises the answer → streamed back live.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 pt-2.5 border-t border-border/30 flex items-center justify-between">
+        <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider font-medium">Tech</span>
+        <div className="flex items-center gap-1.5">
+          {['Gemini', 'Oracle 23ai', 'RAG'].map((tag) => (
+            <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted/50 border border-border/30 text-muted-foreground">{tag}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
 export function ChatPanel({ groupId, groupName, className, onClose, variant = 'widget' }: ChatPanelProps) {
   const { userProfile } = useAuth();
@@ -298,12 +360,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 <TooltipContent
                   side="bottom"
                   align="end"
-                  className="max-w-xs text-xs p-3 rounded-xl border border-border/40 bg-popover text-popover-foreground shadow-xl leading-relaxed"
+                  className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed"
                 >
-                  <p className="font-semibold text-foreground mb-1">Financial Assistant</p>
-                  <p className="text-muted-foreground text-[11px]">
-                    Answers questions using your recorded transactions, balances, and group expenses. Calculations and insights are performed securely and kept private to your account.
-                  </p>
+                  <AssistantInfoTooltipContent variant="full" />
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -377,12 +436,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 <TooltipContent
                   side="bottom"
                   align="end"
-                  className="max-w-xs text-xs p-3 rounded-xl border border-border/40 bg-popover text-popover-foreground shadow-xl leading-relaxed"
+                  className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed"
                 >
-                  <p className="font-semibold text-foreground mb-1">Financial Assistant</p>
-                  <p className="text-muted-foreground text-[11px]">
-                    Answers questions using your recorded transactions, balances, and group expenses. Calculations and insights are performed securely and kept private to your account.
-                  </p>
+                  <AssistantInfoTooltipContent variant="widget" />
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -558,12 +614,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   <TooltipContent
                     side="top"
                     align="center"
-                    className="max-w-xs text-xs p-2.5 rounded-xl border border-border/40 bg-popover text-popover-foreground shadow-xl leading-relaxed"
+                    className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed"
                   >
-                    <p className="font-semibold text-foreground mb-0.5">Private Context Retrieval</p>
-                    <p className="text-muted-foreground text-[11px]">
-                      Answers are generated strictly from your personal expense history and shared group balances using private search. No personal financial data is shared or used for model training.
-                    </p>
+                    <AssistantInfoTooltipContent variant="full" />
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -632,12 +685,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   <TooltipContent
                     side="top"
                     align="center"
-                    className="max-w-xs text-xs p-2.5 rounded-xl border border-border/40 bg-popover text-popover-foreground shadow-xl leading-relaxed"
+                    className="text-xs p-3.5 rounded-2xl border border-border/40 bg-popover text-popover-foreground shadow-2xl leading-relaxed"
                   >
-                    <p className="font-semibold text-foreground mb-0.5">Private Context Retrieval</p>
-                    <p className="text-muted-foreground text-[11px]">
-                      Answers are generated strictly from your personal expense history and shared group balances using private search. No personal financial data is shared or used for model training.
-                    </p>
+                    <AssistantInfoTooltipContent variant="widget" />
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
