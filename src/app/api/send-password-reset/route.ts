@@ -13,7 +13,7 @@ export async function POST(request: Request) {
         await auth.api.requestPasswordReset({
             body: {
                 email,
-                redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235'}/auth/reset-password`,
+                redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231'}/auth/reset-password`,
             },
             headers: request.headers,
         });

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     await addTicketReply(ticketId, session.user.id, replyMessage);
 
     // Trigger notification
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
     fetch(`${appUrl}/api/admin/notify-ticket-reply`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -4,6 +4,12 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   html {
     @apply text-[90%];
   }

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
                 </ul>
                 <p><strong>Message:</strong></p>
                 <p style="white-space: pre-wrap; background-color: #f5f5f5; padding: 10px; border-radius: 5px;">${firstMessage}</p>
-                <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3235'}/admin/support/${ticket.id}">Click here to view and reply to the ticket.</a></p>
+                <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231'}/admin/support/${ticket.id}">Click here to view and reply to the ticket.</a></p>
             `,
         };
 

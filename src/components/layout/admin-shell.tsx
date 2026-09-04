@@ -209,7 +209,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const footerItem = adminNavItems.find((item) => item.href === '/dashboard');
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[260px_1fr] bg-background">
+    <div className="grid h-dvh w-full overflow-hidden md:grid-cols-[260px_1fr] bg-background">
       <div className="hidden border-r border-border bg-card md:block">
         <div className="flex h-full max-h-screen flex-col sticky top-0">
           <div className="flex h-12 items-center border-b border-border px-4">
@@ -234,9 +234,9 @@ export function AdminShell({ children }: AdminShellProps) {
           </div>
         </div>
       </div>
-      <div className="flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0 h-dvh overflow-hidden">
         <AdminHeader />
-        <main className="flex-1 px-2.5 py-3 sm:p-4 lg:p-5 space-y-4">{children}</main>
+        <main className="flex-1 min-h-0 overflow-y-auto px-2.5 py-3 sm:p-4 lg:p-5 space-y-4">{children}</main>
       </div>
     </div>
   );

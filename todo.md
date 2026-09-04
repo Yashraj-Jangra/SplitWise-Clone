@@ -1,6 +1,139 @@
 # Session Progress & Context Preservation
 
-## Work Completed
+  - **Version Bump** 📌: Bumped application version to `0.3.1` in `package.json` and `src/lib/version.ts`.
+
+  - **Configure GitHub Deployments** ✅:
+    - Added `environment: production` and `deployments: write` permission to the CI/CD workflow in [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml) so GitHub tracks deployments and populates the Deployments widget on the repository homepage.
+
+  - **AI Chat Widget Horizontal Overflow Fix & Minimal Tooltip Polish** ✅:
+    - Fixed AI assistant trigger button hover state in [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx): replaced semi-transparent `hover:bg-muted/40` with fully opaque `hover:bg-muted` over `bg-background dark:bg-card` so the button background does not become transparent on hover.
+    - Fixed horizontal scrolling in [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx): converted assistant message container to `flex-1 min-w-0 [overflow-wrap:anywhere]` to eliminate flexbox expansion past 100% width.
+    - Added `overflow-x-hidden` and `min-w-0 max-w-full` across [`chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx), [`ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx), and [`formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx).
+    - Fixed tooltip visibility in [`src/components/ui/tooltip.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ui/tooltip.tsx) by wrapping `TooltipContent` in `<TooltipPrimitive.Portal>` so tooltips mount directly to `document.body` without being clipped by parent `overflow-hidden` containers.
+    - Polished [`AssistantInfoTooltipContent`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with a divider line after the header and a divider line before the footer, preserving the clean, minimal, sleek content layout.
+    - Verified with `npx tsc --noEmit --skipLibCheck` exiting 0 without errors.
+
+  - **Floating AI Assistant Widget Redesign (Matching Assistant Page)** ✅:
+    - Overhauled [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx):
+      - **Trigger FAB Button**: Enhanced with glassmorphic backdrop-blur (`bg-background/90 dark:bg-background/80 backdrop-blur-md border border-border/40`), animated live status presence ring (`animate-ping` ping ring + emerald dot), active open state, and subtle micro-interactions.
+      - **Desktop Popover Container**: Elevated to match the modal design system with glassmorphic surface (`bg-background/95 backdrop-blur-xl border border-border/30 dark:border-border/20 shadow-2xl ring-1 ring-border/20 w-[430px] h-[600px] rounded-2xl`).
+      - **Mobile Bottom Sheet Parity**: Added sleek drag handle pill, `backdrop-blur-xl bg-background/95`, and suppressed the default Radix close button (`[&>button]:hidden`) to let the chat panel header handle navigation cleanly.
+    - Upgraded [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) for `variant="widget"`:
+      - **Floating Glass Header**: Transformed the widget header to a sticky glass overlay (`absolute top-0 left-0 right-0 z-20 bg-background/85 backdrop-blur-md border-b border-border/20`) allowing messages to glide smoothly underneath.
+      - **One-Click Maximize**: Added a header shortcut (`Maximize2` icon) linking directly to `/assistant` with tooltip so users can transition from popup to full page instantly.
+      - **Refined Empty Welcome**: Replaced the bulky welcome block with a clean centered greeting ("How can I help you today?"), bot avatar, and interactive quick-start cards matching the assistant page.
+      - **Floating Glass Input**: Replaced the rigid bottom bar with a gradient glass overlay (`bg-gradient-to-t from-background via-background/95 to-transparent`) with rounded glass textarea container and minimal privacy retrieval indicator.
+    - Updated [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx):
+      - Unboxed assistant messages in widget mode (`text-foreground leading-relaxed w-full pt-0.5`), removing heavy gray card borders so markdown, tables, lists, and bold text flow naturally just like the `/assistant` page.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx):
+      - **Dedicated to `/assistant` (`variant="full"`)**:
+        - **Sticky Floating Header**: `absolute top-0 left-0 right-0 z-20` with `backdrop-blur-md bg-background/80 border-b border-border/20`. Assistant title, bot icon, group badge, info tooltip `(i)`, and clear history `Trash2` button remain pinned and fully interactive while messages smoothly scroll underneath.
+        - **Continuous Full-Height Canvas**: Chat scroll container spans the complete 100% height (`flex-1 h-full w-full overflow-y-auto`) with `pt-16 pb-36` padding buffers so the top and bottom messages are never obscured.
+        - **Floating Input Overlay**: `absolute bottom-0 left-0 right-0 z-20` with gradient and blur (`bg-gradient-to-t from-background via-background/90 to-transparent`). Container is `pointer-events-none` so background clicks and scrolling pass through, while the centered input card is `pointer-events-auto` with a floating glass card aesthetic (`bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg`).
+        - Verified clean empty state vertical centering with `min-h-[calc(100dvh-17rem)]`.
+      - **Restored Standard Widget (`variant="widget"`)**: Preserved clean, standard flex in-flow header, scroll area, and footer layout for the floating popup / mobile sheet widget without absolute positioning overlays.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **Full-Page Assistant UI Redesign (Centered Canvas & Zero Div Box)** ✅:
+    - Overhauled [`src/app/(app)/assistant/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/assistant/page.tsx) to completely remove the framed card box container (`border`, `shadow-xl`, `max-w-4xl`, outer margin paddings) so the page occupies 100% of the available viewport canvas.
+    - Updated [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx) to remove outer page padding and gaps when `pathname === '/assistant'`.
+    - Updated [`src/components/layout/bottom-nav-bar.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/bottom-nav-bar.tsx) to hide the mobile bottom navigation bar on `/assistant` so the full screen is dedicated to the conversation and chat input without overlapping bars.
+    - Upgraded [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with a new `variant="full"` mode:
+      - Centered reading column: conversation messages scroll within a clean `max-w-3xl mx-auto` container with generous vertical whitespace.
+      - Centered input bar: anchored at the bottom with backdrop blur, centering the textarea and stop/send buttons at `max-w-3xl mx-auto`.
+      - Minimal sub-header with subtle title, group badge, and clean action shortcuts (`(i)` info tooltip and `Trash2` clear history).
+      - Centered empty welcome screen with clean icon, greeting, and 2-column quick starter cards.
+    - Upgraded [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to render assistant responses directly on the page canvas without grey card boxes in full-page mode.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **Realistic & Functional Live AI Status Feedback** ✅:
+    - Updated [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts) with functional query intent analysis:
+      - Automatically detects pure drafting, composing, and conversational queries vs. balance calculations vs. semantic expense searches.
+      - Never runs unneeded vector searches or displays fake "Searching your records" when the user asks to draft or compose answers.
+      - Emits accurate, functional live stages via SSE: `drafting` ("Drafting response..."), `calculating` ("Checking ledger & balances..."), `searching` ("Searching expense records..."), or `analyzing` ("Understanding request...").
+    - Updated [`src/components/ai/status-pill.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/status-pill.tsx) and [`src/components/ai/thinking-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/thinking-bubble.tsx):
+      - Replaced hardcoded status checks with dynamic `resolveStatus` supporting `analyzing`, `searching`, `calculating`, and `drafting`.
+      - Added dedicated live status icons: `Sparkles` for analyzing, `Database` for expense searching, `Calculator` for ledger balancing, and `PenLine` for drafting answers.
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with optimistic client-side intent recognition at $t=0\text{ms}$ and dynamic server SSE stage consumption.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **AI Replying UX Overhaul (Stop Button & In-Bubble Thinking)** ✅:
+    - Created [`src/components/ai/thinking-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/thinking-bubble.tsx): sleek in-bubble loading state featuring dynamic status icons, cycling bouncing dots, dynamic status labels, and shimmering skeleton preview lines.
+    - Updated [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to mount `ThinkingBubble` when assistant content is empty and stream/status is active, transitioning smoothly into `FormattedMarkdown` once the first token streams in.
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx):
+      - Instant mount at 0ms: user message and empty assistant placeholder mount simultaneously to eliminate perceived network lag.
+      - Replaced spinner in send button with an interactive square stop button (`Square` icon with `fill-current`) that lights up red on hover (`hover:text-red-500`).
+      - Integrated `AbortController` with `handleStop()`, unmount cleanup, and global `Escape` shortcut to cancel streaming instantly and clean up empty placeholders.
+    - Updated [`src/lib/ai/client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/client.ts) with multi-candidate model fallbacks to guard against unavailable or deprecated model slugs in `.env`.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **Milestone Release v0.3.0 Bump** ✅:
+    - Bumped application version to `0.3.0` across [`package.json`](file:///d:/Projects/SplitWise-Clone/package.json), [`package-lock.json`](file:///d:/Projects/SplitWise-Clone/package-lock.json), and [`src/lib/version.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/version.ts) following the completion of the 6-phase AI & RAG hardening milestone.
+    - Updated build metadata (`BUILD_NUMBER` to `2026.09.04`, `BUILD_DATE` to `2026-09-04`).
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **AI & RAG Hardening Phase 6 — UI Live Status & Animated Feedback** ✅:
+    - Created [`src/components/ai/status-pill.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/status-pill.tsx): modern, sleek status pill matching the minimalist dialog theme, featuring animated cycling loading dots, dynamic icon transitions, and live status states (`Searching records...` vs. `Thinking...`).
+    - Integrated lifecycle SSE streaming in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): streams `status: 'retrieving'` immediately upon request, followed by `status: 'thinking'` during generation, and real-time tokens.
+    - Updated [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) and [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to seamlessly display live status feedback and transition into formatted markdown without visual jumps.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **AI & RAG Hardening Phase 5 — Retriever & Embedder Improvements** ✅:
+    - Updated [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts) with `DEFAULT_TOP_K = 10` and tuned `DEFAULT_MIN_SIMILARITY = 0.40` for broader semantic recall on conversational expense queries.
+    - Enhanced [`src/lib/ai/embedder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/embedder.ts): raised normalization limit from 512 to 768 characters and added regex filtering for control characters.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **AI & RAG Hardening Phase 4 — Vector Coverage Expansion** ✅:
+    - Added `buildGroupMetaChunk()` and `buildBalanceSnapshotChunk()` in [`src/lib/ai/context-builder.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/context-builder.ts) to structure group metadata and balance summaries into semantically searchable vector chunks.
+    - Updated [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) with `entityType === 'group'` indexing to vectorize group names, descriptions, member rosters, and budget limits across all member partitions.
+    - Added background vector embedding triggers in [`src/lib/services/group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts) for group creation, member additions/removals, metadata updates, and permanent deletions.
+    - Updated [`src/lib/ai/queue-helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/queue-helper.ts) to support the `group` entity type.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **AI & RAG Hardening Phase 3 — Zero-Hallucination Math via Server Context** ✅:
+    - Created [`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts): `buildFinancialSnapshot()` computes authoritative ledger facts on the server (exact net balances, debts via `simplifyDebts`, current month spending, recent 5 transactions, and group budget).
+    - Integrated authoritative financial facts into [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts) with strict LLM directives forbidding guessing or recalculating balances from raw transaction lists.
+    - Updated [`src/app/api/ai/insights/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/insights/route.ts) to ground personal spending insights in verified ledger figures and net balance status.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **AI & RAG Hardening Phase 2 — Prompt Injection & Security Hardening** ✅:
+    - Added group membership validation in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): returns 403 Forbidden if user requests group scope for a group they are not a member of.
+    - Added user message length cap (1,000 chars) and sanitization to prevent prompt bloat.
+    - Added anti-prompt injection and jailbreak defense system instructions to enforce assistant role boundaries and prevent leaking secrets/keys.
+    - Hardened [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) with production `INTERNAL_API_SECRET` verification and strict payload type and action validation.
+    - Capped support ticket thread history to last 10 messages with anti-jailbreak safeguards in [`src/app/api/ai/draft-reply/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/draft-reply/route.ts).
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **AI & RAG Hardening Phase 1 — Native Vector Store & Backfill** ✅:
+    - Fixed Oracle 23ai native vector dimension to 2048 (`VECTOR(2048, FLOAT32)`) in [`scripts/setup-vector-table.ts`](file:///d:/Projects/SplitWise-Clone/scripts/setup-vector-table.ts) to match the configured embedding model (`nvidia/llama-nemotron-embed-vl-1b-v2:free`).
+    - Fixed vector binding in [`src/lib/ai/vector-store.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/vector-store.ts) and [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts) to bind `Float32Array` directly to Oracle 23ai vector columns and `VECTOR_DISTANCE(embedding, :vec, COSINE)` (bypassing ORA-01461 string length limits).
+    - Upgraded [`scripts/backfill-embeddings.ts`](file:///d:/Projects/SplitWise-Clone/scripts/backfill-embeddings.ts) with CLI flags `--dry-run`, `--group <id>`, `--concurrency <num>`, and `--limit <count>`.
+    - Added in-memory caching to hydrate payer names, participant names, and group names into vector text chunks so records are searchable by human names.
+    - Verified live embedding generation and native cosine similarity search in `SPLITITVECTORS` table.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors.
+
+  - **Chat Send Button & Interface Copy Refinement** ✅:
+    - Redesigned chat input send button to be fixed height (`h-8 w-8 min-h-[32px] max-h-[32px]`) and minimal: transparent default background (`bg-transparent`), neutral hover background (`hover:bg-muted/70`), and primary accent color icon transition on hover (`group-hover:text-primary`).
+    - Anchored send button cleanly at bottom-right of textarea container so it stays fixed in height when text wraps.
+    - Rewrote top and bottom chat texts to eliminate robotic, AI-generated phrasing: replaced `"Private vector-grounded expense analysis"` with natural human copy (`"Ask about your spending, balances, and shared debts"`), and removed model/technology name hardcoding (`"Oracle 23ai"`, `"Gemini"`).
+    - Integrated interactive info `(i)` button (`Info` icon) with hover tooltip in both the footer ("Insights based on your expense history") and header explaining private context retrieval without model branding.
+    - Updated clear chat button: hover turns icon red (`text-red-500`) with zero background change (`hover:bg-transparent`).
+    - Cleaned metadata in [`assistant/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/assistant/page.tsx). Verified `npx tsc --noEmit` exits 0.
+
+  - **UI/UX Refinement & Output Formatting (Minimalist Dialog Theme)** ✅:
+    - Installed `react-markdown` and `remark-gfm`.
+    - Created [`FormattedMarkdown`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx) rendering structured markdown, headers, bullet/numbered lists, inline code, code blocks, tables, bold text, blockquotes, and streaming pulse indicator.
+    - Upgraded [`MessageBubble`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx) to render assistant answers via `FormattedMarkdown` with dialog-styled neutral bubbles (`bg-muted/25 border border-border/30 rounded-2xl rounded-tl-xs`).
+    - Redesigned [`AIChatWidget`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx): removed cheesy `animate-ping` halo, added sleek floating pill trigger on desktop, mobile bottom sheet (`h-[90vh]` per Rule 6), and desktop popover (`w-[420px] h-[580px]` per Rule 1).
+    - Redesigned [`ChatPanel`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx) with dialog-themed header (`h-9 w-9` icon badge, status tag), starter prompt cards, and dialog-styled input container.
+    - Redesigned [`AIInsightsCard`](file:///d:/Projects/SplitWise-Clone/src/components/ai/insights-card.tsx) using `FormattedMarkdown` and high-density dialog card styling.
+    - Refined [`ReceiptScannerButton`](file:///d:/Projects/SplitWise-Clone/src/components/expenses/receipt-scanner-button.tsx) to tight `rounded-lg` form control style.
+    - Refined AI category suggestion chip in [`expense-form.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/expenses/expense-form.tsx) to tight `rounded-md` badge.
+    - Refined AI reply draft button in [`admin/support/[ticketId]`](file:///d:/Projects/SplitWise-Clone/src/app/(admin)/admin/support/[ticketId]/page.tsx) to tight `rounded-md` admin style.
+    - Verified with `npx tsc --noEmit` exiting 0 without errors. Committed atomically with `🎨 [ai/rag]`.
+
 - **Repository Branching Rules Enforced (`dev` → `master` only)** ✅:
   - `main` branch was identified as introduced on **Aug 25, 2026** (branched from `dev` at `a0e427f`). It should NOT be used for development.
   - Strict branching rules added to [`.agents/AGENTS.md`](file:///d:/Projects/SplitWise-Clone/.agents/AGENTS.md): all commits go to `dev`, deploys via PR to `master`.
@@ -128,11 +261,18 @@
     - **Desktop Sidebar Toggle Refinement**: Updated collapsed desktop navbar to display the brand logo by default, smoothly transitioning into a dedicated `PanelLeftOpen` expand button on hover, and added a dedicated `PanelLeftClose` button for collapsing the expanded navbar.
     - **Oracle Database Connection Resilience**: Fixed transient `NJS-500` / `NJS-521` end-of-file idle disconnects by configuring `SQLNET.EXPIRE_TIME=1` TCP keep-alive, enabling `poolPingInterval: 60` / `poolMin: 0` in `node-oracledb`, and adding automatic retry handling for recoverable severed sockets.
     - **Documentation & Environment Templates**: Created [`.env.example`](file:///d:/Projects/SplitWise-Clone/.env.example) with detailed inline guides and updated [`README.md`](file:///d:/Projects/SplitWise-Clone/README.md) with modern architecture diagrams, category budgeting engines, and multi-channel notifications.
+- **Password Reset Flow Fix (complete)**:
+  - **Root cause**: `POST /api/send-password-reset` was not in the `publicPaths` whitelist in [`middleware.ts`](file:///d:/Projects/SplitWise-Clone/src/middleware.ts), causing Next.js to redirect unauthenticated API calls to the login page (HTML), which the client then tried to parse as JSON → `Unexpected token '<', "<!DOCTYPE"` SyntaxError.
+  - **Fix 1 — Middleware**: Added `/auth/reset-password`, `/api/send-password-reset`, and `/sw-push.js` to `publicPaths`; added `sw-push.js` to matcher exclusions.
+  - **Fix 2 — Hardcoded ports**: Corrected fallback `localhost:3235` → `localhost:3231` in 5 files: `send-password-reset/route.ts`, `support/ticket/route.ts`, `support/reply/route.ts`, `admin/notify-new-ticket/route.ts`, `admin/notify-ticket-reply/route.ts`.
+  - **Fix 3 — JSON safety**: Hardened `forgot-password-form.tsx` `onSubmit` to check `Content-Type: application/json` before calling `.json()` — no more raw SyntaxError toasts from HTML responses.
+  - **New page**: Created [`src/app/auth/reset-password/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/auth/reset-password/page.tsx) + [`reset-password-form.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/auth/reset-password-form.tsx) with token validation, 4-level strength meter, confirm password, Better Auth `resetPassword` integration, success view, and invalid-token error view.
+  - **TypeScript**: `npx tsc --noEmit` exits 0 — no type errors.
 
 ## Next Steps
-- Verify end-to-end group budget configuration and spend updates across user sessions.
+- Run `npx tsx scripts/backfill-embeddings.ts` to vectorize historical expenses and settlements in Oracle DB.
+- Test end-to-end password reset flow with a real email: `/auth/forgot-password` → email → `/auth/reset-password?token=...` → submit → redirect to login.
 - Verify expense/settlement/budget notifications fire correctly end-to-end (in-app + push + email).
 - Set up monthly cron job on VPS to call `/api/reminders/trigger` for monthly summaries and inactivity checks.
 - Production deployment to Oracle Cloud Infrastructure (OCI).
-
 

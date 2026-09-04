@@ -25,6 +25,7 @@ import { listenForForegroundMessages } from "@/lib/push-service";
 import { UpdateBanner } from "@/components/shared/update-banner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAppVersionDisplay, BUILD_NUMBER } from "@/lib/version";
+import { AIChatWidget } from "@/components/ai/ai-chat-widget";
 
 
 const mainNavItems: NavItem[] = [
@@ -33,6 +34,7 @@ const mainNavItems: NavItem[] = [
   { title: "Expenses", href: "/expenses", icon: "Expense" },
   { title: "Settlements", href: "/settlements", icon: "Settle" },
   { title: "Analysis", href: "/analysis", icon: "Analysis" },
+  { title: "Assistant", href: "/assistant", icon: "Sparkles" },
 ];
 
 const settingsNavItem: NavItem = {
@@ -405,6 +407,8 @@ export function AppShell({ children }: AppShellProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(isMobile);
   const { toast } = useToast();
   const { userProfile } = useAuth();
+  const pathname = usePathname();
+  const isAssistant = pathname === '/assistant';
 
   React.useEffect(() => {
     setIsCollapsed(isMobile);
@@ -430,18 +434,24 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className={cn(
-        "grid min-h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
+        "grid h-dvh w-full overflow-hidden transition-[grid-template-columns] duration-300 ease-in-out",
         isCollapsed ? "md:grid-cols-[80px_1fr]" : "md:grid-cols-[280px_1fr]"
     )}>
       <Sidebar isCollapsed={!!isCollapsed} onToggle={handleToggle} />
-       <div className="flex flex-col">
+       <div className="flex flex-col h-dvh overflow-hidden">
           <UpdateBanner />
           <Header />
           <EmailVerificationBanner />
-          <main className="flex flex-1 flex-col gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 animate-in fade-in-0 duration-300 pb-24 md:pb-4 lg:pb-6">
+          <main className={cn(
+            "flex flex-1 flex-col min-h-0 animate-in fade-in-0 duration-300",
+            isAssistant
+              ? "p-0 pb-0 md:pb-0 gap-0 overflow-hidden"
+              : "gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 pb-24 md:pb-4 lg:pb-6 overflow-y-auto"
+          )}>
             {children}
           </main>
           <BottomNavBar />
+          <AIChatWidget />
       </div>
     </div>
   );
