@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Group, Expense, Settlement, UserProfile, Balance } from '@/types';
 
-// Pure representation of the Firestore net balance aggregation math
+// Pure representation of the net balance aggregation math
 export function calculateBalances(
   group: Group,
   expenses: Expense[],

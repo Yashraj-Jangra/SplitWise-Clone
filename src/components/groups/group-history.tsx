@@ -158,7 +158,7 @@ function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryE
         // Only show expense date for expense-related events
         if (event.data?.date && event.eventType.startsWith('expense_')) {
             const dateValue = event.data.date;
-            // The date from a deleted expense's data is a Firestore Timestamp
+            // The date from event data may have a .toDate() method or ISO string
             if (dateValue.toDate && typeof dateValue.toDate === 'function') {
                 return dateValue.toDate();
             }

@@ -52,7 +52,7 @@ export default function AdminCategorySettingsPage() {
   const [editingSubName, setEditingSubName] = useState('');
 
   const iconNames = Object.keys(Icons).filter(
-    (key) => !['AppLogo', 'Logo', 'Google', 'Github', 'Linkedin', 'NextJs', 'ReactLogo', 'TailwindLogo', 'ShadcnLogo', 'GenkitLogo'].includes(key)
+    (key) => !['AppLogo', 'Logo', 'Google', 'Github', 'Linkedin', 'NextJs', 'ReactLogo', 'TailwindLogo', 'ShadcnLogo'].includes(key)
   ) as IconName[];
 
   useEffect(() => {

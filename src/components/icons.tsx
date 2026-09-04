@@ -348,27 +348,6 @@ export const Icons = {
   ),
 
 
-
-  GenkitLogo: ({ className }: { className?: string }) => (
-    <svg
-    role="img"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={cn("h-5 w-5", className)}
-  >
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M12 2L4 6.5V15.5L12 20L20 15.5V6.5L12 2ZM18 14.36L12 17.74L6 14.36V7.64L12 4.26L18 7.64V14.36Z"
-      fill="currentColor"
-    />
-    <path
-      d="M12 8L13.1 10.9L16 12L13.1 13.1L12 16L10.9 13.1L8 12L10.9 10.9L12 8Z"
-      fill="currentColor"
-    />
-    </svg>
-  ),
 };
 
 export type IconName = keyof typeof Icons;
