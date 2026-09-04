@@ -1,6 +1,7 @@
 # Session Progress & Context Preservation
 
   - **AI Chat Widget Horizontal Overflow Fix & Minimal Tooltip Polish** ✅:
+    - Fixed AI assistant trigger button hover state in [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx): replaced semi-transparent `hover:bg-muted/40` with fully opaque `hover:bg-muted` over `bg-background dark:bg-card` so the button background does not become transparent on hover.
     - Fixed horizontal scrolling in [`src/components/ai/message-bubble.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/message-bubble.tsx): converted assistant message container to `flex-1 min-w-0 [overflow-wrap:anywhere]` to eliminate flexbox expansion past 100% width.
     - Added `overflow-x-hidden` and `min-w-0 max-w-full` across [`chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx), [`ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx), and [`formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx).
     - Fixed tooltip visibility in [`src/components/ui/tooltip.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ui/tooltip.tsx) by wrapping `TooltipContent` in `<TooltipPrimitive.Portal>` so tooltips mount directly to `document.body` without being clipped by parent `overflow-hidden` containers.
