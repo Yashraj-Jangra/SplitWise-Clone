@@ -35,11 +35,12 @@ import { GroupBudgetTab } from '@/components/groups/budget/group-budget-tab';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PullToRefresh } from '@/components/shared/pull-to-refresh';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const TABS: { value: string; label: string; icon: IconName }[] = [
     { value: 'expenses', label: 'Activity', icon: 'History' },
     { value: 'budget', label: 'Budget', icon: 'Currency' },
-    { value: 'settlements', label: 'Settlements', icon: 'Settle' },
     { value: 'balances', label: 'Balances', icon: 'Wallet' },
     { value: 'analysis', label: 'Analysis', icon: 'Analysis' },
     { value: 'history', label: 'Audit', icon: 'ShieldCheck' },
@@ -47,6 +48,7 @@ const TABS: { value: string; label: string; icon: IconName }[] = [
 ];
 
 type ActivityItem = { id: string; type: 'expense' | 'settlement'; date: string; data: Expense | Settlement };
+type ActivityFilter = 'all' | 'expenses' | 'settlements';
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -62,6 +64,7 @@ export default function GroupDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState('expenses');
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
@@ -151,12 +154,22 @@ export default function GroupDetailPage() {
       return combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [expenses, settlements]);
 
+  const filteredActivityItems = useMemo(() => {
+    if (activityFilter === 'expenses') {
+      return activityItems.filter(item => item.type === 'expense');
+    }
+    if (activityFilter === 'settlements') {
+      return activityItems.filter(item => item.type === 'settlement');
+    }
+    return activityItems;
+  }, [activityItems, activityFilter]);
+
   const BATCH_SIZE = 15;
   const [visibleActivityCount, setVisibleActivityCount] = useState(BATCH_SIZE);
 
   const visibleActivityItems = useMemo(() => {
-    return activityItems.slice(0, visibleActivityCount);
-  }, [activityItems, visibleActivityCount]);
+    return filteredActivityItems.slice(0, visibleActivityCount);
+  }, [filteredActivityItems, visibleActivityCount]);
 
   // Expand visible bounds if deep-linked item or target expense is beyond initial batch
   useEffect(() => {
@@ -164,20 +177,20 @@ export default function GroupDetailPage() {
     const setDocId = searchParams?.get('settlementId');
     const currentTargetId = targetItemId || (expId ? `exp-${expId}` : setDocId ? `set-${setDocId}` : null);
     if (currentTargetId) {
-      const idx = activityItems.findIndex(i => i.id === currentTargetId);
+      const idx = filteredActivityItems.findIndex(i => i.id === currentTargetId);
       if (idx !== -1 && idx >= visibleActivityCount) {
         setVisibleActivityCount(idx + 10);
       }
     }
-  }, [searchParams, targetItemId, activityItems, visibleActivityCount]);
+  }, [searchParams, targetItemId, filteredActivityItems, visibleActivityCount]);
 
   // Infinite Scroll IntersectionObserver
   useEffect(() => {
-    if (visibleActivityCount >= activityItems.length) return;
+    if (visibleActivityCount >= filteredActivityItems.length) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setVisibleActivityCount(prev => Math.min(prev + BATCH_SIZE, activityItems.length));
+          setVisibleActivityCount(prev => Math.min(prev + BATCH_SIZE, filteredActivityItems.length));
         }
       },
       { threshold: 0.1 }
@@ -185,7 +198,7 @@ export default function GroupDetailPage() {
     const node = document.getElementById('activity-scroll-sentinel');
     if (node) observer.observe(node);
     return () => observer.disconnect();
-  }, [activityItems.length, visibleActivityCount]);
+  }, [filteredActivityItems.length, visibleActivityCount]);
 
   // Unified choreographed transition sequence (scroll -> open -> highlight)
   useEffect(() => {
@@ -267,6 +280,7 @@ export default function GroupDetailPage() {
     } else if (expId) {
       setTargetItemId(`exp-${expId}`);
       setActiveTab('expenses');
+      setActivityFilter(prev => prev === 'settlements' ? 'all' : prev);
       
       // Clean up URL query parameters
       const cleanUrl = window.location.pathname;
@@ -274,13 +288,17 @@ export default function GroupDetailPage() {
     } else if (setDocId) {
       setTargetItemId(`set-${setDocId}`);
       setActiveTab('expenses');
+      setActivityFilter(prev => prev === 'expenses' ? 'all' : prev);
       
       // Clean up URL query parameters
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);
     } else {
       const tabParam = searchParams.get('tab');
-      if (tabParam && TABS.some(t => t.value === tabParam)) {
+      if (tabParam === 'settlements') {
+        setActiveTab('expenses');
+        setActivityFilter('settlements');
+      } else if (tabParam && TABS.some(t => t.value === tabParam)) {
         setActiveTab(tabParam);
       }
     }
@@ -314,8 +332,17 @@ export default function GroupDetailPage() {
           onNavigateToBudget={() => setActiveTab('budget')}
         />
 
+        {!group.archivedAt && (
+          <AddSettlementDialog
+            group={group}
+            open={settlementDialogOpen}
+            onOpenChange={setSettlementDialogOpen}
+            initialSettlement={initialSettlementVal}
+          />
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 md:w-auto md:inline-flex md:justify-start">
+          <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex md:justify-start">
             {TABS.map((tab) => {
               const Icon = Icons[tab.icon];
               return (
@@ -334,14 +361,56 @@ export default function GroupDetailPage() {
 
           <TabsContent value="expenses" className="mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Activity Log</CardTitle>
-                <CardDescription>
-                  A chronological log of all expenses and settlements in this group.
-                </CardDescription>
+              <CardHeader className="py-3 px-4 sm:p-6 pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <CardTitle className="text-base sm:text-lg font-semibold tracking-tight">Activity</CardTitle>
+                    <CardDescription className="hidden sm:block text-xs text-muted-foreground mt-0.5">
+                      A chronological log of all expenses and settlements in this group.
+                    </CardDescription>
+                  </div>
+
+                  {/* Inline Minimal Segmented Slider Pill */}
+                  <div className="flex items-center bg-muted/60 dark:bg-muted/40 p-0.5 rounded-lg border border-border/40 text-xs shrink-0">
+                    {(
+                      [
+                        { value: 'all', label: 'All' },
+                        { value: 'expenses', label: 'Expenses' },
+                        { value: 'settlements', label: 'Settlements' },
+                      ] as const
+                    ).map((opt) => {
+                      const isSelected = activityFilter === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setActivityFilter(opt.value);
+                            setVisibleActivityCount(BATCH_SIZE);
+                          }}
+                          className={cn(
+                            'relative px-2.5 py-1 text-[11px] sm:text-xs font-medium rounded-md transition-colors select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                            isSelected
+                              ? 'text-foreground font-semibold'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          {isSelected && (
+                            <motion.div
+                              layoutId="activity-filter-pill"
+                              className="absolute inset-0 bg-background dark:bg-zinc-800 rounded-md shadow-xs border border-border/60"
+                              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                            />
+                          )}
+                          <span className="relative z-10">{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
-                {activityItems.length > 0 ? (
+                {filteredActivityItems.length > 0 ? (
                   <>
                     <Accordion type="single" collapsible className="w-full" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
                         {visibleActivityItems.map((item) => {
@@ -357,7 +426,7 @@ export default function GroupDetailPage() {
                                       isHighlighted={highlightedItemId === `exp-${expense.id}`}
                                       showGroupName={false}
                                     />
-                                )
+                                );
                             } else {
                                 const settlement = item.data as Settlement;
                                 return (
@@ -370,27 +439,41 @@ export default function GroupDetailPage() {
                                         isHighlighted={highlightedItemId === `set-${settlement.id}`}
                                         showGroupName={false}
                                      />
-                                )
+                                );
                             }
                         })}
                      </Accordion>
-                     {visibleActivityCount < activityItems.length && (
+                     {visibleActivityCount < filteredActivityItems.length && (
                        <div id="activity-scroll-sentinel" className="p-3 text-center border-t border-border/30">
                          <Button
                            variant="ghost"
                            size="sm"
                            className="text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                           onClick={() => setVisibleActivityCount(prev => Math.min(prev + BATCH_SIZE, activityItems.length))}
+                           onClick={() => setVisibleActivityCount(prev => Math.min(prev + BATCH_SIZE, filteredActivityItems.length))}
                          >
-                           Showing {visibleActivityItems.length} of {activityItems.length} records — Scroll or tap to load more...
+                           Showing {visibleActivityItems.length} of {filteredActivityItems.length} records — Scroll or tap to load more...
                          </Button>
                        </div>
                      )}
                   </>
                 ) : (
                   <div className="text-center p-8 text-muted-foreground">
-                    <Icons.History className="h-12 w-12 mx-auto mb-2" />
-                    No activity recorded yet.
+                    {activityFilter === 'expenses' ? (
+                      <>
+                        <Icons.Expense className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        No expenses recorded yet.
+                      </>
+                    ) : activityFilter === 'settlements' ? (
+                      <>
+                        <Icons.Settle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        No settlements recorded yet.
+                      </>
+                    ) : (
+                      <>
+                        <Icons.History className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        No activity recorded yet.
+                      </>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -402,46 +485,6 @@ export default function GroupDetailPage() {
               group={group}
               expenses={expenses}
             />
-          </TabsContent>
-
-          <TabsContent value="settlements" className="mt-4">
-            <Card>
-              <CardHeader className="flex flex-row justify-between items-center">
-                <div>
-                  <CardTitle>Settlements Log</CardTitle>
-                  <CardDescription>
-                    All settlements made in this group.
-                  </CardDescription>
-                </div>
-                 {!group.archivedAt && <AddSettlementDialog
-                   group={group}
-                   open={settlementDialogOpen}
-                   onOpenChange={setSettlementDialogOpen}
-                   initialSettlement={initialSettlementVal}
-                 />}
-              </CardHeader>
-              <CardContent className="p-0">
-                {settlements.length > 0 ? (
-                  <Accordion type="single" collapsible className="w-full">
-                    {settlements.map((settlement) => (
-                      <SettlementListItem
-                        key={settlement.id}
-                        settlement={settlement}
-                        currentUserId={userProfile.uid}
-                        group={group}
-                        groupHistory={groupHistory}
-                        showGroupName={false}
-                      />
-                    ))}
-                  </Accordion>
-                ) : (
-                  <div className="text-center p-8 text-muted-foreground">
-                    <Icons.Settle className="h-12 w-12 mx-auto mb-2" />
-                    No settlements recorded yet.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="balances" className="mt-4">

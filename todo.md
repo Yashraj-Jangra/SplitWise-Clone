@@ -1,5 +1,14 @@
 # Session Progress & Context Preservation
 
+  - **Consolidated Group Activity & Removed Settlements Tab** ✨ ✅:
+    - **Tab Bar Streamlining**: Removed redundant Settlements tab from group details `TABS` array. Reduced tab grid from 7 to 6 columns (`grid-cols-6`), giving remaining tabs more breathing room on mobile viewports.
+    - **Inline Minimal Segmented Slider**: Added an animated, compact segmented slider pill directly inline on the right side of the "Activity" title within the card header row (`All` [default], `Expenses`, `Settlements`). Powered by Framer Motion's `layoutId="activity-filter-pill"` with smooth spring physics.
+    - **Space Preservation on Mobile**: Consolidated layout into a single header row and hid the long description text on mobile viewports (`hidden sm:block`), leaving zero extra vertical space consumed.
+    - **Dynamic Filtering & Pagination**: Filtered `activityItems` dynamically with full infinite-scroll sentinel and load-more pagination support, resetting visible counts upon filter toggles.
+    - **Contextual Empty States**: Tailored empty state icon and descriptive copy depending on the active filter (`Icons.Expense`, `Icons.Settle`, `Icons.History`).
+    - **Backwards Compatibility & Resilience**: Direct links with `?tab=settlements` automatically route to Activity with the `Settlements` filter active. Deep links for expenses/settlements auto-adjust filters, and the controlled `<AddSettlementDialog />` remains mounted to handle `?action=settle` triggers seamlessly.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes 14/14 tests.
+
   - **Fix Forgot Password Error in Production (`TypeError: r.consumeOne is not a function`)** 🐛 ✅:
     - **Root Cause Diagnosed**: Better Auth's `resetPassword` endpoint verifies the password reset token by calling `internalAdapter.consumeVerificationValue(id)`. This helper delegates atomic single-token consumption directly to the database adapter via `adapter.consumeOne({ model, where })` (and subsequently updates credentials via `adapter.updateMany({ model, where, update })`). Our custom Oracle Single-Table adapter [`src/lib/nosql-auth-adapter.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql-auth-adapter.ts) was missing `consumeOne`, `updateMany`, `count`, and `incrementOne`, causing Better Auth to crash with `TypeError: r.consumeOne is not a function`.
     - **Fix Applied**:
