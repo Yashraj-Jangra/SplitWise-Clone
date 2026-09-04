@@ -1,5 +1,7 @@
 # Session Progress & Context Preservation
 
+  - **Version Bump** 📌: Bumped application version to `0.3.2` across `package.json`, `package-lock.json`, and `src/lib/version.ts`.
+
   - **AI Assistant Mobile Gestures & Top Header Activity Filter Slider** ✨ ✅:
     - **Issues Resolved**:
       - Opening the floating AI widget on mobile caused the rich assistant information tooltip to immediately auto-open and stick on screen because of auto-focus on the `TooltipTrigger`.
