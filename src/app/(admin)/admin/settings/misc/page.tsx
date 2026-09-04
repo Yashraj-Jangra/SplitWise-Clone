@@ -8,7 +8,7 @@ import { Icons } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings, updateSiteSettings } from '@/lib/api.client';
 import type { SiteSettings, CountryCode } from '@/types';
 import { X } from 'lucide-react';
 

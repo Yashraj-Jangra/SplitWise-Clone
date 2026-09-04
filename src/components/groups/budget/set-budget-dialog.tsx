@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Icons } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
-import { updateGroup } from '@/lib/firestore.service';
+import { updateGroup } from '@/lib/api.client';
 import { useAuth } from '@/contexts/auth-context';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { CURRENCY_SYMBOL } from '@/lib/constants';

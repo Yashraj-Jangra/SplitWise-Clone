@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getAllUsers, deleteUser, deleteUsersMass, updateUserRoleMass } from '@/lib/firestore.service';
+import { getAllUsers, deleteUser, deleteUsersMass, updateUserRoleMass } from '@/lib/api.client';
 import type { UserProfile } from '@/types';
 import { getFullName, getInitials, cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';

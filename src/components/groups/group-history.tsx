@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import type { HistoryEvent } from '@/types';
-import { getHistoryByGroupId, restoreExpense, restoreSettlement, deleteHistoryEvent } from '@/lib/mock-data';
+import { getHistoryByGroupId, restoreExpense, restoreSettlement, deleteHistoryEvent } from '@/lib/api.client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/components/icons';

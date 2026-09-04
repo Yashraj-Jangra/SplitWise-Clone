@@ -1,7 +1,7 @@
 // A simple, shared event emitter for cross-component communication.
 // This helps decouple components, particularly for triggering data refetches.
 
-import { clearClientFetchCache } from './firestore.service';
+import { clearClientFetchCache } from './api.client';
 
 type Listener = () => void;
 

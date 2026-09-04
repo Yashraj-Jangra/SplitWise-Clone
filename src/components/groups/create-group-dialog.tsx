@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { createGroup, getAllUsers, getSiteSettings } from "@/lib/firestore.service";
+import { createGroup, getAllUsers, getSiteSettings } from "@/lib/api.client";
 
 
 import type { UserProfile, GroupDocument } from "@/types";

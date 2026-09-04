@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { SiteSettings } from '@/types';
-import { getSiteSettings } from '@/lib/firestore.service';
+import { getSiteSettings } from '@/lib/api.client';
 import { useAuth } from '@/contexts/auth-context';
 
 const DEFAULT_APP_NAME = 'SplitIt';

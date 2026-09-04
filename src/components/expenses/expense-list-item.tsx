@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { deleteExpense } from '@/lib/mock-data';
+import { deleteExpense } from '@/lib/api.client';
 import { useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 import { EditExpenseDialog } from './edit-expense-dialog';

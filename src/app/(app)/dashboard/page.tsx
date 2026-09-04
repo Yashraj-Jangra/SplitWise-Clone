@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NetBalanceCard } from '@/components/dashboard/net-balance-card';
 import { ObligationsCard } from '@/components/dashboard/obligations-card';
-import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/mock-data';
+import { getExpensesByUserId, getSettlementsByUserId, getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/api.client';
 import type { Expense, Settlement, Group, Balance, SimplifiedSettlement, UserProfile } from '@/types';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { ErrorBoundary } from '@/components/shared/error-boundary';

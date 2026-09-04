@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Group } from '@/types';
-import { getGroupsByUserId } from '@/lib/firestore.service';
+import { getGroupsByUserId } from '@/lib/api.client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';

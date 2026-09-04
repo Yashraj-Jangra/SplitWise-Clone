@@ -1,6 +1,6 @@
 import { AuthCard } from "@/components/auth/auth-card";
 import type { Metadata } from 'next';
-import { getSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/api.client';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();

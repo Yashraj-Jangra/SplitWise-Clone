@@ -21,7 +21,7 @@ export type NotificationEventType =
 
 export type NotificationChannel = 'in_app' | 'push' | 'email';
 
-// Base user profile stored in Firestore
+// Base user profile
 export interface UserProfile {
   uid: string;
   firstName: string;
@@ -37,7 +37,7 @@ export interface UserProfile {
   createdAt?: string; // ISO string for client
 }
 
-// --- Firestore Document Types ---
+// --- Core Document Types ---
 
 export interface GroupBudget {
   monthlyLimit: number;
@@ -135,7 +135,7 @@ export interface SupportTicketDocument {
     assignedToId?: string; // Admin UID
 }
 
-// Firestore: notifications_v2/{id}
+// Notification record
 export interface NotificationV2Document {
   type: NotificationEventType;
   title: string;

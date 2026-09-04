@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Icons } from '@/components/icons';
-import { getGroupsByUserId, getSiteSettings } from '@/lib/mock-data';
+import { getGroupsByUserId, getSiteSettings } from '@/lib/api.client';
 import type { Group } from '@/types';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { CreateGroupDialog } from '@/components/groups/create-group-dialog';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getFullName, getInitials, cn } from '@/lib/utils';
-import { getGroupBalances, simplifyDebts } from '@/lib/mock-data';
+import { getGroupBalances, simplifyDebts } from '@/lib/api.client';
 import {
   DropdownMenu,
   DropdownMenuTrigger,

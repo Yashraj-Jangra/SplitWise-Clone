@@ -355,11 +355,11 @@ function Header() {
 }
 
 function EmailVerificationBanner() {
-  const { firebaseUser, resendVerificationEmail } = useAuth();
+  const { currentUser, resendVerificationEmail } = useAuth();
   const { toast } = useToast();
   const [isSending, setIsSending] = React.useState(false);
 
-  if (!firebaseUser || firebaseUser.emailVerified) {
+  if (!currentUser || currentUser.emailVerified) {
     return null;
   }
 
@@ -388,7 +388,7 @@ function EmailVerificationBanner() {
         <Icons.Mail className="h-6 w-6 flex-shrink-0 mt-1 sm:mt-0" />
         <div>
           <p className="font-bold">Please verify your email address.</p>
-          <p className="text-sm text-yellow-300">A verification link was sent to {firebaseUser.email}.</p>
+          <p className="text-sm text-yellow-300">A verification link was sent to {currentUser.email}.</p>
         </div>
       </div>
       <Button variant="outline" size="sm" onClick={handleResend} disabled={isSending} className="bg-yellow-300/10 text-yellow-200 border-yellow-300/50 hover:bg-yellow-300/20 w-full sm:w-auto flex-shrink-0">

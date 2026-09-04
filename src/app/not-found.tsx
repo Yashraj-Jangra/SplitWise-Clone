@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { getSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings } from '@/lib/api.client';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { Lightbulb, Mail } from 'lucide-react';

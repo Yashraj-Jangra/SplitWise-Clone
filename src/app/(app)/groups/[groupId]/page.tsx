@@ -24,7 +24,7 @@ import {
   getSettlementsByGroupId,
   getGroupBalances,
   getHistoryByGroupId,
-} from '@/lib/mock-data';
+} from '@/lib/api.client';
 import { useAuth } from '@/contexts/auth-context';
 import type { Group, Expense, Settlement, Balance, HistoryEvent } from '@/types';
 import GroupDetailLoading from '@/app/(app)/groups/[groupId]/loading';

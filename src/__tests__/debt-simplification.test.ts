@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Balance, UserProfile } from '@/types';
 
 
-import { simplifyDebts } from '@/lib/firestore.service';
+import { simplifyDebts } from '@/lib/api.client';
 
 // Helper to create a dummy user profile
 function makeUser(uid: string, name: string): UserProfile {

@@ -22,5 +22,4 @@ export class DatabasePermissionError extends Error {
   }
 }
 
-// Alias for backwards compatibility
-export { DatabasePermissionError as FirestorePermissionError };
+

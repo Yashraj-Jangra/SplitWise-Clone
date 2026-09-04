@@ -8,7 +8,7 @@ import { Icons } from '@/components/icons';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getSiteSettings, updateSiteSettings } from '@/lib/mock-data';
+import { getSiteSettings, updateSiteSettings } from '@/lib/api.client';
 import type { SiteSettings, EmailTemplate } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -51,7 +51,6 @@ import {
   BarChart3
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuth } from '@/contexts/auth-context';
 
 type EmailTemplateName = keyof NonNullable<SiteSettings['emailTemplates']>;
 type FromAddressKey = keyof NonNullable<SiteSettings['emailSettings']>['fromAddresses'];
@@ -108,7 +107,6 @@ export default function AdminMailSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState<FromAddressKey | null>(null);
   const { toast } = useToast();
-  const { firebaseUser } = useAuth();
 
   useEffect(() => {
     async function fetchSettings() {
@@ -217,10 +215,6 @@ export default function AdminMailSettingsPage() {
   };
   
   const handleSendTestMail = async (testTarget: FromAddressKey) => {
-    if (!firebaseUser) {
-        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to send a test email.' });
-        return;
-    }
 
     if (!settings?.emailSettings || !settings.emailSettings.fromAddresses[testTarget] || !settings.emailSettings.smtpSettings) {
         toast({ variant: 'destructive', title: 'Missing Settings', description: 'Please fill out all SMTP fields and the target "From" address first.' });
@@ -228,12 +222,10 @@ export default function AdminMailSettingsPage() {
     }
     setIsSendingTest(testTarget);
     try {
-        const idToken = await firebaseUser.getIdToken();
         const response = await fetch('/api/send-test-email', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
             },
             body: JSON.stringify({ emailSettings: settings.emailSettings, testTarget }),
         });

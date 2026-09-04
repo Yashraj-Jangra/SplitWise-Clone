@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AddSettlementDialog } from '@/components/settlements/add-settlement-dialog';
 import { useAuth } from '@/contexts/auth-context';
-import { getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/mock-data';
+import { getGroupsByUserId, getGroupBalances, simplifyDebts } from '@/lib/api.client';
 import { Icons } from '@/components/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';

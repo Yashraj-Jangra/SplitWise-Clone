@@ -14,7 +14,7 @@ import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from "@/hooks/use-toast";
 import { appEventEmitter } from '@/lib/event-emitter';
-import { addExpense, updateExpense } from '@/lib/mock-data';
+import { addExpense, updateExpense } from '@/lib/api.client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useDebounce } from '@/hooks/use-debounce';

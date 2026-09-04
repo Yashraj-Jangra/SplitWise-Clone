@@ -24,8 +24,8 @@ import { EmailManagementSection } from "@/components/settings/email-management-s
 
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { updateUser } from "@/lib/firestore.service";
-import { getUserNotificationPrefs, updateUserNotificationPrefs } from "@/lib/mock-data";
+import { updateUser } from "@/lib/api.client";
+import { getUserNotificationPrefs, updateUserNotificationPrefs } from "@/lib/api.client";
 
 import { useSiteSettings } from "@/contexts/site-settings-context";
 import { useTheme } from "@/contexts/theme-context";
@@ -88,7 +88,7 @@ const SECTIONS = [
 type SectionId = typeof SECTIONS[number]["id"];
 
 export default function SettingsPage() {
-  const { userProfile, firebaseUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword } = useAuth();
+  const { userProfile, currentUser, hasPassword, isGoogleLinked, linkWithGoogle, unlinkFromGoogle, updateUserPassword } = useAuth();
   const { settings: siteSettings } = useSiteSettings();
   const { theme: currentTheme, setTheme, allThemes } = useTheme();
   const { toast } = useToast();

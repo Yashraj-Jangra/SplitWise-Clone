@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -26,8 +25,8 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const uidReplaceSchema = z.object({
-  oldUid: z.string().min(28, { message: "Please enter a valid Firebase UID." }),
-  newUid: z.string().min(28, { message: "Please enter a valid Firebase UID." }),
+  oldUid: z.string().min(20, { message: "Please enter a valid User ID." }),
+  newUid: z.string().min(20, { message: "Please enter a valid User ID." }),
 }).refine(data => data.oldUid !== data.newUid, {
   message: "Old and New UIDs cannot be the same.",
   path: ["newUid"],
@@ -43,7 +42,6 @@ interface ApiResponse {
 }
 
 export default function AdminDataToolsPage() {
-    const { firebaseUser } = useAuth();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -58,16 +56,10 @@ export default function AdminDataToolsPage() {
         setIsSubmitting(true);
         setLastResponse(null);
         try {
-            if (!firebaseUser) {
-                throw new Error("Authentication token not available.");
-            }
-            const idToken = await firebaseUser.getIdToken();
-
             const response = await fetch('/api/admin/data-updater', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`,
                 },
                 body: JSON.stringify(values),
             });

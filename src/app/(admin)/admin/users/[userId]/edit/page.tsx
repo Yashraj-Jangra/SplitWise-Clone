@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { EditUserForm } from '@/components/admin/edit-user-form';
-import { getUserProfile } from '@/lib/firestore.service';
+import { getUserProfile } from '@/lib/api.client';
 import type { UserProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';

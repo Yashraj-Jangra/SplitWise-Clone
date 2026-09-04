@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 import type { Group, SettlementDocument, UserProfile } from "@/types";
-import { addSettlement } from "@/lib/firestore.service";
+import { addSettlement } from "@/lib/api.client";
 import { cn, getFullName, getInitials } from "@/lib/utils";
 import { format } from "date-fns";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
