@@ -103,24 +103,26 @@ describe('AI Guardrail System', () => {
   });
 
   describe('Layer 1: General Inquiries & Everyday Questions (Allowed)', () => {
-    it('allows cooking recipes like pasta', () => {
-      const res = classifyInput('Give me a recipe for pasta carbonara with cheese');
-      expect(res.allowed).toBe(true);
+    it('allows cooking recipes like pasta and cookies', () => {
+      expect(classifyInput('Give me a recipe for pasta carbonara with cheese').allowed).toBe(true);
+      expect(classifyInput('Give me a recipe for pasta').allowed).toBe(true);
+      expect(classifyInput('How do I make chocolate chip cookies?').allowed).toBe(true);
     });
 
-    it('allows general trivia and entertainment questions', () => {
-      const res = classifyInput('What is the plot of the movie Inception and who directed it?');
-      expect(res.allowed).toBe(true);
+    it('allows general trivia, entertainment, and geography questions', () => {
+      expect(classifyInput('What is the plot of the movie Inception and who directed it?').allowed).toBe(true);
+      expect(classifyInput('What is the capital of Japan?').allowed).toBe(true);
+      expect(classifyInput('Who won the 2022 FIFA World Cup?').allowed).toBe(true);
     });
 
     it('allows casual jokes, poems, and conversation', () => {
-      const res = classifyInput('Write me a poem about the sunrise and tell a joke');
-      expect(res.allowed).toBe(true);
+      expect(classifyInput('Write me a poem about the sunrise and tell a joke').allowed).toBe(true);
+      expect(classifyInput('Tell me a funny joke').allowed).toBe(true);
     });
 
     it('allows general science or academic questions', () => {
-      const res = classifyInput('Can you explain quantum entanglement simply?');
-      expect(res.allowed).toBe(true);
+      expect(classifyInput('Can you explain quantum entanglement simply?').allowed).toBe(true);
+      expect(classifyInput('How does photosynthesis work?').allowed).toBe(true);
     });
   });
 
@@ -142,6 +144,7 @@ describe('AI Guardrail System', () => {
     it('allows math and bill calculation questions', () => {
       expect(classifyInput('What is a 15% tip on ₹1200?').allowed).toBe(true);
       expect(classifyInput('If 4 friends split a ₹3600 dinner bill, how much per person?').allowed).toBe(true);
+      expect(classifyInput('How to split ₹4,500 among 3 flatmates?').allowed).toBe(true);
     });
 
     it('allows drafting polite payment reminders', () => {
@@ -173,6 +176,16 @@ You have no outstanding debts!`;
       const scan = scanOutputForViolations(safeOutput);
       expect(scan.hasViolation).toBe(false);
       expect(scan.sanitizedText).toBe(safeOutput);
+    });
+
+    it('passes clean everyday recipe text without false alarms', () => {
+      const recipeOutput = `### Simple Tomato Pasta
+1. Boil salted water and cook pasta until al dente.
+2. Sauté garlic in olive oil, then add crushed tomatoes and simmer.
+3. Combine pasta with sauce and garnish with fresh basil.`;
+      const scan = scanOutputForViolations(recipeOutput);
+      expect(scan.hasViolation).toBe(false);
+      expect(scan.sanitizedText).toBe(recipeOutput);
     });
   });
 });
