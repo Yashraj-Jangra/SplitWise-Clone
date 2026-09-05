@@ -23,9 +23,13 @@ export interface VectorRecord {
 
 export type ChatRole = 'user' | 'assistant' | 'system';
 
+export type GuardrailBlockedReason = 'code_generation' | 'injection' | 'unsafe';
+
 export interface ChatMessage {
   role: ChatRole;
   content: string;
+  isBlocked?: boolean;
+  blockedReason?: GuardrailBlockedReason;
 }
 
 export interface AIInsight {

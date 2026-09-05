@@ -281,6 +281,21 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   stage: data.status,
                   label: data.message,
                 });
+              } else if (data.blocked) {
+                setStreamStatus(null);
+                if (data.token) {
+                  assistantContent += data.token;
+                }
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
+                  if (last && last.role === 'assistant') {
+                    last.content = assistantContent;
+                    last.isBlocked = true;
+                    last.blockedReason = data.reason;
+                  }
+                  return updated;
+                });
               } else if (data.token) {
                 setStreamStatus(null);
                 assistantContent += data.token;

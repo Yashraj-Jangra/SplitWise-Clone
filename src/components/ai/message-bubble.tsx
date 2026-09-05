@@ -6,6 +6,7 @@ import { Icons } from '@/components/icons';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { FormattedMarkdown } from './formatted-markdown';
 import { ThinkingBubble } from './thinking-bubble';
+import { ShieldAlert } from 'lucide-react';
 import type { AIStreamStatus } from './status-pill';
 import type { ChatMessage } from '@/types/ai';
 
@@ -59,7 +60,23 @@ export function MessageBubble({ message, userName = 'You', isStreaming, status, 
           {isUser ? (
             message.content
           ) : (
-            <FormattedMarkdown content={message.content} isStreaming={isStreaming} />
+            <>
+              {message.isBlocked && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 mb-1.5 select-none shadow-2xs">
+                  <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+                  <span>
+                    {message.blockedReason === 'code_generation'
+                      ? 'Code generation restricted'
+                      : message.blockedReason === 'injection'
+                      ? 'Instruction override restricted'
+                      : message.blockedReason === 'unsafe'
+                      ? 'Safety policy restriction'
+                      : 'Out of domain scope'}
+                  </span>
+                </div>
+              )}
+              <FormattedMarkdown content={message.content} isStreaming={isStreaming} />
+            </>
           )}
         </div>
       )}
