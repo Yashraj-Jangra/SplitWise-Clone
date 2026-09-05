@@ -8,7 +8,7 @@
       - **Layer 3 (`src/lib/ai/guardrail.ts` & `src/app/api/ai/chat/route.ts`)**: Post-stream output scanner detecting code blocks (```python, ```js, etc.) and injecting safety notices.
       - **UI Badge (`src/components/ai/message-bubble.tsx` & `src/components/ai/chat-panel.tsx`)**: Extended `ChatMessage` with `isBlocked` and `blockedReason`. Displays a clean amber `ShieldAlert` pill above the refusal message in chat bubbles.
       - **Unit Tests (`src/__tests__/guardrail.test.ts`)**: 21 unit tests covering code generation, injections, unsafe requests, and verifying general everyday queries (like recipes) are allowed.
-    - **Verification**: `npx tsc --noEmit` clean; `npm test` passes all 35/35 tests across 4 test suites.
+  - **Version Bump** 📌: Bumped application version to `0.3.3` across `package.json`, `package-lock.json`, and `src/lib/version.ts`.
 
   - **Group Header Stats Bar Mobile Optimization (Hide Members, 3-Col Layout)** 🎨 ✅:
     - **Issue**: On mobile viewports, the group header stats bar rendered 4 items in a 2x2 grid (`grid-cols-2 divide-y`), consuming excessive vertical height and prominently showing the members count under the cover image.
