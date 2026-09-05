@@ -1,5 +1,15 @@
 # Session Progress & Context Preservation
 
+  - **AI Assistant Multi-Layer Guardrail System (Code Restriction & Jailbreak Prevention)** 🛡️ ✅:
+    - **Feature & Objective**: Guardrail the AI assistant so that it cannot be prompted to write/generate programming code, execute prompt injection/jailbreak/DAN attacks, or perform unsafe activities, while allowing general everyday questions (e.g. recipes, general explanations, trivia), bill calculations, and financial inquiries.
+    - **Implementation**:
+      - **Layer 1 (`src/lib/ai/guardrail.ts`)**: Server-side input intent classifier running targeted taxonomies (`INJECTION`, `UNSAFE`, `CODE_GENERATION`) before invoking the LLM. Rejects code writing and jailbreaks while gracefully permitting general questions and financial queries.
+      - **Layer 2 (`src/app/api/ai/chat/route.ts`)**: Hardened system prompts with immutable persona locks, explicit coding prohibitions, and polite redirection templates.
+      - **Layer 3 (`src/lib/ai/guardrail.ts` & `src/app/api/ai/chat/route.ts`)**: Post-stream output scanner detecting code blocks (```python, ```js, etc.) and injecting safety notices.
+      - **UI Badge (`src/components/ai/message-bubble.tsx` & `src/components/ai/chat-panel.tsx`)**: Extended `ChatMessage` with `isBlocked` and `blockedReason`. Displays a clean amber `ShieldAlert` pill above the refusal message in chat bubbles.
+      - **Unit Tests (`src/__tests__/guardrail.test.ts`)**: 21 unit tests covering code generation, injections, unsafe requests, and verifying general everyday queries (like recipes) are allowed.
+    - **Verification**: `npx tsc --noEmit` clean; `npm test` passes all 35/35 tests across 4 test suites.
+
   - **Group Header Stats Bar Mobile Optimization (Hide Members, 3-Col Layout)** 🎨 ✅:
     - **Issue**: On mobile viewports, the group header stats bar rendered 4 items in a 2x2 grid (`grid-cols-2 divide-y`), consuming excessive vertical height and prominently showing the members count under the cover image.
     - **Fix Applied**:
