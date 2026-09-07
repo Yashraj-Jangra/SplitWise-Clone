@@ -1,5 +1,15 @@
 # Session Progress & Context Preservation
 
+  - **Mobile Bottom Navigation Bar View Overlap & Scroll Clipping Fix** 🎨 🐛 ✅:
+    - **Issue**: The bottom navigation bar in mobile view was set to `fixed bottom-0 left-0 z-50 w-full`. This took it out of the flex layout hierarchy in `AppShell`, causing `<main>` to extend all the way down behind it and resulting in the bottom navigation bar and center FAB button overlapping/blocking page content across all app routes. In addition, `AIChatWidget`'s floating trigger button (`bottom-20`) collided with the navigation bar on devices with safe area insets.
+    - **Fix Applied**:
+      - Replaced `fixed bottom-0 left-0 z-50` with `relative shrink-0 z-30` on `<footer className="md:hidden ...">` in [`src/components/layout/bottom-nav-bar.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/bottom-nav-bar.tsx) so the bottom navigation bar docks naturally inside the `h-dvh flex-col` flexbox container.
+      - Reduced excessive `pb-24` to clean `pb-10 md:pb-4 lg:pb-6` in `<main>` in [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx), eliminating dead space while giving comfortable clearance for the raised center FAB button when scrolled to the very bottom.
+      - Updated the floating AI trigger button in [`src/components/ai/ai-chat-widget.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/ai-chat-widget.tsx) to `bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]`, preventing it from ever overlapping the bottom navigation bar or its tabs.
+      - Replaced `min-h-screen` with `min-h-full` on `PullToRefresh` containers in [`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx) and [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx) to match the bounded layout height.
+      - Enhanced [`src/hooks/use-pull-to-refresh.ts`](file:///d:/Projects/SplitWise-Clone/src/hooks/use-pull-to-refresh.ts) to check `scrollParent.scrollTop > 0` before triggering pull gesture.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); all unit tests pass.
+
   - **AI Assistant Multi-Layer Guardrail System (Code Restriction & Jailbreak Prevention)** 🛡️ ✅:
     - **Feature & Objective**: Guardrail the AI assistant so that it cannot be prompted to write/generate programming code, execute prompt injection/jailbreak/DAN attacks, or perform unsafe activities, while allowing general everyday questions (e.g. recipes, general explanations, trivia), bill calculations, and financial inquiries.
     - **Implementation**:

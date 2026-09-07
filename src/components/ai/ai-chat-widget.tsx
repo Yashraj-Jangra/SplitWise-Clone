@@ -87,7 +87,7 @@ export function AIChatWidget() {
   return (
     <>
       {/* ── Floating Modern Minimal Trigger Button ─────────────────────── */}
-      <div className="fixed bottom-20 right-3.5 sm:bottom-6 sm:right-6 z-40">
+      <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3.5 sm:bottom-6 sm:right-6 z-40">
         <motion.button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}

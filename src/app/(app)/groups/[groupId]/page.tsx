@@ -327,7 +327,7 @@ export default function GroupDetailPage() {
   }
 
   return (
-    <PullToRefresh onRefresh={() => loadGroupData(true)} className="min-h-screen">
+    <PullToRefresh onRefresh={() => loadGroupData(true)} className="min-h-full">
       <div className="space-y-6 p-1">
         <GroupDetailHeader
           group={group}

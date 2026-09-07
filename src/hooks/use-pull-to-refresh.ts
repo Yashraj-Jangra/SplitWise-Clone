@@ -24,7 +24,8 @@ export function usePullToRefresh({ threshold = 80, onRefresh }: UsePullToRefresh
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     // Only start tracking if scrolled to the very top
     const el = (e.currentTarget as HTMLElement);
-    if (window.scrollY > 0 || el.scrollTop > 0) return;
+    const scrollParent = el.closest('main') || el;
+    if (window.scrollY > 0 || el.scrollTop > 0 || scrollParent.scrollTop > 0) return;
     startYRef.current = e.touches[0].clientY;
   }, []);
 

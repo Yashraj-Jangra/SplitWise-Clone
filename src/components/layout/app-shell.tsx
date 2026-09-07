@@ -446,7 +446,7 @@ export function AppShell({ children }: AppShellProps) {
             "flex flex-1 flex-col min-h-0 animate-in fade-in-0 duration-300",
             isAssistant
               ? "p-0 pb-0 md:pb-0 gap-0 overflow-hidden"
-              : "gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 pb-24 md:pb-4 lg:pb-6 overflow-y-auto"
+              : "gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 pb-10 md:pb-4 lg:pb-6 overflow-y-auto"
           )}>
             {children}
           </main>
