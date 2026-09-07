@@ -89,7 +89,7 @@ export function BottomNavBar() {
 
   return (
     <footer
-      className="md:hidden fixed bottom-0 left-0 z-50 w-full border-t bg-background/95 backdrop-blur-md"
+      className="md:hidden relative shrink-0 z-30 w-full border-t bg-background/95 backdrop-blur-md"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="grid h-16 grid-cols-5 items-center">

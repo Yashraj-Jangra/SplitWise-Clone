@@ -127,7 +127,7 @@ export default function DashboardPage() {
   const { expenses, settlements, balances } = dashboardData;
 
   return (
-    <PullToRefresh onRefresh={loadDashboardData} className="min-h-screen">
+    <PullToRefresh onRefresh={loadDashboardData} className="min-h-full">
       <div className="space-y-6 p-1">
           <div>
               <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
