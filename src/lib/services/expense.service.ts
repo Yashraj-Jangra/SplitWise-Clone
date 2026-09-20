@@ -8,6 +8,19 @@ import { getMasterCategory } from '../expense-categories';
 import { getFullName } from '../utils';
 import { format } from 'date-fns';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
+import { getGroupsByUserId } from './group.service';
+
+function getFallbackUser(userId: string): UserProfile {
+  return {
+    uid: userId || 'unknown',
+    firstName: 'Former',
+    lastName: 'Member',
+    username: 'former_member',
+    email: '',
+    role: 'user',
+    createdAt: new Date().toISOString(),
+  };
+}
 
 async function checkAndNotifyBudgetThreshold(
   groupId: string,
@@ -266,19 +279,21 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   const expense = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
   if (!expense) return;
 
+  const actualAmount = typeof expense.amount === 'number' ? expense.amount : (amount || 0);
+
   await deleteItem(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
 
   // Adjust group total
   const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (groupDoc) {
-    groupDoc.totalExpenses = Math.max(0, (groupDoc.totalExpenses || 0) - amount);
+    groupDoc.totalExpenses = Math.max(0, (groupDoc.totalExpenses || 0) - actualAmount);
     groupDoc.updatedAt = new Date().toISOString();
     await putItem(`GROUP#${groupId}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupDoc.createdById}`, `GROUP#${groupId}`);
   }
 
   const actor = await getUserProfile(actorId);
   const actorName = getFullName(actor?.firstName, actor?.lastName);
-  const description = `${actorName} deleted expense "${expense.description}" (was ₹${amount.toFixed(2)}).`;
+  const description = `${actorName} deleted expense "${expense.description}" (was ₹${actualAmount.toFixed(2)}).`;
 
   await logHistoryEvent(groupId, 'expense_deleted', actorId, description, {
     ...expense,
@@ -301,9 +316,15 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
 
   const userIds = new Set<string>();
   expenseDocs.forEach(r => {
-    userIds.add(r.expenseCreatorId);
-    (r.payers || []).forEach((p: any) => userIds.add(typeof p === 'string' ? p : p.userId));
-    (r.participants || []).forEach((p: any) => userIds.add(typeof p === 'string' ? p : p.userId));
+    if (r.expenseCreatorId) userIds.add(r.expenseCreatorId);
+    (r.payers || []).forEach((p: any) => {
+      const uid = typeof p === 'string' ? p : p.userId;
+      if (uid) userIds.add(uid);
+    });
+    (r.participants || []).forEach((p: any) => {
+      const uid = typeof p === 'string' ? p : p.userId;
+      if (uid) userIds.add(uid);
+    });
   });
 
   const users = await hydrateUsers(Array.from(userIds));
@@ -311,34 +332,41 @@ export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> 
 
   return expenseDocs
     .map(r => {
-      const creator = userMap.get(r.expenseCreatorId);
-      if (!creator) return null;
+      const creator = userMap.get(r.expenseCreatorId) || getFallbackUser(r.expenseCreatorId);
 
       const payers = (r.payers || []).map((p: any) => {
         const uid = typeof p === 'string' ? p : p.userId;
-        const u = userMap.get(uid);
-        return u ? ({ amount: p.amount || 0, user: u } as ExpensePayer) : null;
-      }).filter((p: any): p is ExpensePayer => p !== null);
+        const u = userMap.get(uid) || getFallbackUser(uid);
+        return { amount: p.amount || 0, user: u } as ExpensePayer;
+      });
 
       const participants = (r.participants || []).map((p: any) => {
         const uid = typeof p === 'string' ? p : p.userId;
-        const u = userMap.get(uid);
-        return u ? ({ amountOwed: p.amountOwed || 0, share: p.share || undefined, user: u } as ExpenseParticipant) : null;
-      }).filter((p: any): p is ExpenseParticipant => p !== null);
+        const u = userMap.get(uid) || getFallbackUser(uid);
+        return { amountOwed: p.amountOwed || 0, share: p.share || undefined, user: u } as ExpenseParticipant;
+      });
 
       return mapExpenseRow(r, payers, participants, creator);
     })
-    .filter((e: any): e is Expense => e !== null)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
-  const allExpenses = await getAllExpenses();
-  return allExpenses.filter(e => {
-    const isPayer = e.payers.some(p => p.user.uid === userId);
-    const isParticipant = e.participants.some(p => p.user.uid === userId);
-    return isPayer || isParticipant;
-  });
+  const userGroups = await getGroupsByUserId(userId);
+  if (userGroups.length === 0) return [];
+
+  const groupExpenseLists = await Promise.all(
+    userGroups.map(g => getExpensesByGroupId(g.id))
+  );
+
+  const allUserGroupExpenses = groupExpenseLists.flat();
+  return allUserGroupExpenses
+    .filter(e => {
+      const isPayer = e.payers.some(p => p.user.uid === userId);
+      const isParticipant = e.participants.some(p => p.user.uid === userId);
+      return isPayer || isParticipant;
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export async function getAllExpenses(): Promise<Expense[]> {
@@ -346,9 +374,15 @@ export async function getAllExpenses(): Promise<Expense[]> {
 
   const userIds = new Set<string>();
   allItems.forEach(r => {
-    userIds.add(r.expenseCreatorId);
-    (r.payers || []).forEach((p: any) => userIds.add(typeof p === 'string' ? p : p.userId));
-    (r.participants || []).forEach((p: any) => userIds.add(typeof p === 'string' ? p : p.userId));
+    if (r.expenseCreatorId) userIds.add(r.expenseCreatorId);
+    (r.payers || []).forEach((p: any) => {
+      const uid = typeof p === 'string' ? p : p.userId;
+      if (uid) userIds.add(uid);
+    });
+    (r.participants || []).forEach((p: any) => {
+      const uid = typeof p === 'string' ? p : p.userId;
+      if (uid) userIds.add(uid);
+    });
   });
 
   const users = await hydrateUsers(Array.from(userIds));
@@ -356,23 +390,21 @@ export async function getAllExpenses(): Promise<Expense[]> {
 
   return allItems
     .map(r => {
-      const creator = userMap.get(r.expenseCreatorId);
-      if (!creator) return null;
+      const creator = userMap.get(r.expenseCreatorId) || getFallbackUser(r.expenseCreatorId);
 
       const payers = (r.payers || []).map((p: any) => {
         const uid = typeof p === 'string' ? p : p.userId;
-        const u = userMap.get(uid);
-        return u ? ({ amount: p.amount || 0, user: u } as ExpensePayer) : null;
-      }).filter((p: any): p is ExpensePayer => p !== null);
+        const u = userMap.get(uid) || getFallbackUser(uid);
+        return { amount: p.amount || 0, user: u } as ExpensePayer;
+      });
 
       const participants = (r.participants || []).map((p: any) => {
         const uid = typeof p === 'string' ? p : p.userId;
-        const u = userMap.get(uid);
-        return u ? ({ amountOwed: p.amountOwed || 0, share: p.share || undefined, user: u } as ExpenseParticipant) : null;
-      }).filter((p: any): p is ExpenseParticipant => p !== null);
+        const u = userMap.get(uid) || getFallbackUser(uid);
+        return { amountOwed: p.amountOwed || 0, share: p.share || undefined, user: u } as ExpenseParticipant;
+      });
 
       return mapExpenseRow(r, payers, participants, creator);
     })
-    .filter((e): e is Expense => e !== null)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

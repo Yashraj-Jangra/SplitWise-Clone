@@ -1,10 +1,23 @@
-import { getItem, putItem, queryByEntityType, deleteItem } from '@/lib/nosql';
+import { getItem, putItem, queryByEntityType, deleteItem, deletePartition } from '@/lib/nosql';
 import type { Group, GroupDocument, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifyMemberAdded, notifyMemberRemoved } from '@/lib/notification-service';
 import { getFullName } from '../utils';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
+import { deleteVectorsByGroup } from '@/lib/ai/vector-store';
+
+function getFallbackUser(userId: string): UserProfile {
+  return {
+    uid: userId || 'unknown',
+    firstName: 'Former',
+    lastName: 'Member',
+    username: 'former_member',
+    email: '',
+    role: 'user',
+    createdAt: new Date().toISOString(),
+  };
+}
 
 function mapGroupRow(g: any, members: UserProfile[], createdBy: UserProfile): Group {
   return {
@@ -63,9 +76,7 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
     getUserProfile(g.createdById)
   ]);
 
-  if (!createdBy) throw new Error("Created by user not found for group");
-
-  return mapGroupRow(g, members, createdBy);
+  return mapGroupRow(g, members, createdBy || getFallbackUser(g.createdById));
 }
 
 export async function getGroupsByUserId(userId: string): Promise<Group[]> {
@@ -75,35 +86,50 @@ export async function getGroupsByUserId(userId: string): Promise<Group[]> {
     return g.members.some((m: any) => (typeof m === 'string' ? m : m.userId) === userId);
   });
 
-  const hydrated = await Promise.all(
-    userGroups.map(async (g: any) => {
-      const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
-      const [members, createdBy] = await Promise.all([
-        hydrateUsers(memberIds),
-        getUserProfile(g.createdById)
-      ]);
-      if (!createdBy) return null;
-      return mapGroupRow(g, members, createdBy);
-    })
-  );
+  if (userGroups.length === 0) return [];
 
-  return hydrated.filter(Boolean) as Group[];
+  const userIds = new Set<string>();
+  userGroups.forEach((g: any) => {
+    if (g.createdById) userIds.add(g.createdById);
+    (g.members || []).forEach((m: any) => {
+      const id = typeof m === 'string' ? m : m?.userId;
+      if (id) userIds.add(id);
+    });
+  });
+
+  const hydratedList = await hydrateUsers(Array.from(userIds));
+  const userMap = new Map<string, UserProfile>(hydratedList.map(u => [u.uid, u]));
+
+  return userGroups.map((g: any) => {
+    const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+    const members = memberIds.map(id => userMap.get(id) || getFallbackUser(id));
+    const createdBy = userMap.get(g.createdById) || getFallbackUser(g.createdById);
+    return mapGroupRow(g, members, createdBy);
+  });
 }
 
 export async function getAllGroups(): Promise<Group[]> {
   const allGroups = await queryByEntityType<any>('GROUP');
-  const hydrated = await Promise.all(
-    allGroups.map(async (g: any) => {
-      const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
-      const [members, createdBy] = await Promise.all([
-        hydrateUsers(memberIds),
-        getUserProfile(g.createdById)
-      ]);
-      if (!createdBy) return null;
-      return mapGroupRow(g, members, createdBy);
-    })
-  );
-  return hydrated.filter(Boolean) as Group[];
+  if (allGroups.length === 0) return [];
+
+  const userIds = new Set<string>();
+  allGroups.forEach((g: any) => {
+    if (g.createdById) userIds.add(g.createdById);
+    (g.members || []).forEach((m: any) => {
+      const id = typeof m === 'string' ? m : m?.userId;
+      if (id) userIds.add(id);
+    });
+  });
+
+  const hydratedList = await hydrateUsers(Array.from(userIds));
+  const userMap = new Map<string, UserProfile>(hydratedList.map(u => [u.uid, u]));
+
+  return allGroups.map((g: any) => {
+    const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+    const members = memberIds.map(id => userMap.get(id) || getFallbackUser(id));
+    const createdBy = userMap.get(g.createdById) || getFallbackUser(g.createdById);
+    return mapGroupRow(g, members, createdBy);
+  });
 }
 
 export async function addMembersToGroup(groupId: string, memberIds: string[], actorId: string): Promise<void> {
@@ -251,7 +277,8 @@ export async function restoreGroup(groupId: string, actorId: string): Promise<vo
 }
 
 export async function deleteGroupPermanently(groupId: string): Promise<void> {
-  await deleteItem(`GROUP#${groupId}`, 'METADATA');
+  await deletePartition(`GROUP#${groupId}`);
+  await deleteVectorsByGroup(groupId);
   queueVectorEmbedding(groupId, groupId, 'group', 'delete');
 }
 

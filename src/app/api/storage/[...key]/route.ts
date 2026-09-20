@@ -54,7 +54,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
       headers,
     });
   } catch (error) {
-    console.error('Error proxying file from MinIO:', error);
+    console.error('Error proxying file from storage:', error);
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 }
