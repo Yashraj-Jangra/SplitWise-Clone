@@ -1,24 +1,46 @@
 import { NextResponse } from 'next/server';
-import { getAllTickets } from '@/lib/services/ticket.service';
+import { getTicketById } from '@/lib/services/ticket.service';
 import { getSiteSettings } from '@/lib/services/settings.service';
 import { getUserProfile } from '@/lib/services/user.service';
+import { auth } from '@/lib/auth.server';
 import nodemailer from 'nodemailer';
 import { getFullName } from '@/lib/utils';
 
+function escapeHtml(str: string): string {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 export async function POST(request: Request) {
     try {
+        const internalSecret = request.headers.get('x-internal-secret');
+        const isInternal = !!(
+            internalSecret &&
+            process.env.INTERNAL_API_SECRET &&
+            internalSecret === process.env.INTERNAL_API_SECRET
+        );
+
+        if (!isInternal) {
+            const session = await auth.api.getSession({ headers: request.headers });
+            if (!session?.user || session.user.role !== 'admin') {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+        }
+
         const { ticketId, replyMessage, replierId } = await request.json();
         if (!ticketId || !replyMessage || !replierId) {
             return NextResponse.json({ error: 'Missing required parameters.' }, { status: 400 });
         }
 
-        const [siteSettings, allTickets, replier] = await Promise.all([
+        const [siteSettings, ticket, replier] = await Promise.all([
             getSiteSettings(),
-            getAllTickets(),
+            getTicketById(ticketId),
             getUserProfile(replierId)
         ]);
-
-        const ticket = allTickets.find(t => t.id === ticketId);
 
         if (!ticket || !replier) {
             return NextResponse.json({ error: 'Ticket or replier not found.' }, { status: 404 });
@@ -47,17 +69,18 @@ export async function POST(request: Request) {
             },
         });
 
-        await transporter.verify();
-
         const subject = template.subject.replace(/{appName}/g, appName).replace(/{ticketId}/g, ticket.id.slice(0, 8));
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
         const ticketLink = isAdminReply ? `${appUrl}/support` : `${appUrl}/admin/support/${ticket.id}`;
 
+        const safeRecipientName = escapeHtml(recipientName);
+        const safeReplyMessage = escapeHtml(replyMessage);
+
         const body = template.body
-            .replace(/{appName}/g, appName)
-            .replace(/{userName}/g, recipientName)
-            .replace(/{replyMessage}/g, replyMessage)
+            .replace(/{appName}/g, escapeHtml(appName || 'SplitIt'))
+            .replace(/{userName}/g, safeRecipientName)
+            .replace(/{replyMessage}/g, safeReplyMessage)
             .replace(/{ticketLink}/g, ticketLink);
 
         const mailOptions = {
