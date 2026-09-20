@@ -1,5 +1,15 @@
 # Session Progress & Context Preservation
 
+  - **GitHub Actions CI/CD Deployment AI Variables & Environment Scope Hardening** 🔧 ✅:
+    - **Issue**:
+      - In [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml), only the `deploy` job had `environment: name: production`, while the `build-and-push` job lacked an environment scope. If secrets were saved under GitHub's `production` Environment Secrets, `NEXT_PUBLIC_*` build-args were passed as empty strings during the Docker build.
+      - Optional AI configuration variables (`AI_BASE_URL`, `AI_CHAT_MODEL`, `AI_VISION_MODEL`, `AI_EMBEDDING_MODEL`) were not forwarded in `deploy.yml`, meaning custom AI endpoints or models set in GitHub Secrets were ignored and reverted to code defaults.
+    - **Fix Applied**:
+      - Added `environment: name: production` to the `build-and-push` job in [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml).
+      - Forwarded `AI_BASE_URL`, `AI_CHAT_MODEL`, `AI_VISION_MODEL`, and `AI_EMBEDDING_MODEL` across SSH step `env`, `envs` list, and `docker-compose.yml` generation with safe parameter expansion fallbacks (`${VAR:-default}`).
+      - Explicitly declared `ORA_WALLET_DIR: "/app/wallet"` in the generated `docker-compose.yml`.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean).
+
   - **Mobile Bottom Navigation Bar View Overlap & Scroll Clipping Fix** 🎨 🐛 ✅:
     - **Issue**: The bottom navigation bar in mobile view was set to `fixed bottom-0 left-0 z-50 w-full`. This took it out of the flex layout hierarchy in `AppShell`, causing `<main>` to extend all the way down behind it and resulting in the bottom navigation bar and center FAB button overlapping/blocking page content across all app routes. In addition, `AIChatWidget`'s floating trigger button (`bottom-20`) collided with the navigation bar on devices with safe area insets.
     - **Fix Applied**:
