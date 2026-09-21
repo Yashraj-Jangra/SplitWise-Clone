@@ -7,6 +7,7 @@ const DEFAULT_MIN_SIMILARITY = parseFloat(process.env.AI_VECTOR_MIN_SIMILARITY |
 interface RetrieveOptions {
   groupId?: string;
   entityType?: string;
+  textFilter?: string;
   topK?: number;
   minSimilarity?: number;
 }
@@ -44,6 +45,11 @@ export async function retrieveSimilar(
   if (opts?.entityType) {
     sql += ` AND entityType = :entityType`;
     params.entityType = opts.entityType;
+  }
+
+  if (opts?.textFilter) {
+    sql += ` AND LOWER(textChunk) LIKE :textFilter`;
+    params.textFilter = `%${opts.textFilter.toLowerCase()}%`;
   }
 
   sql += `

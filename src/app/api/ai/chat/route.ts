@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth.server';
 import { embed } from '@/lib/ai/embedder';
 import { retrieveSimilar } from '@/lib/ai/retriever';
 import { buildContextBlock } from '@/lib/ai/context-builder';
-import { buildFinancialSnapshot } from '@/lib/ai/financial-context';
+import { buildFinancialSnapshot, detectQueryIntent } from '@/lib/ai/financial-context';
 import { streamCompletion } from '@/lib/ai/client';
 import { classifyInput, scanOutputForViolations } from '@/lib/ai/guardrail';
 import type { ChatMessage } from '@/types/ai';
@@ -85,31 +85,24 @@ export async function POST(request: Request) {
     }
 
     // 1. Analyze query intent functionally to determine actual needed actions
+    const queryIntent = detectQueryIntent(message);
     const lower = message.toLowerCase();
 
-    const isExplicitDraft =
-      /^(draft|write|compose|suggest (a )?reply|say to|craft|pen|prepare a message|prepare an email)\b/i.test(message.trim()) ||
-      /\b(draft (an?|the|a response|an answer)|write (an?|the|a message|an email|a note))\b/i.test(message);
-
-    const isCasualGreetingOrGeneralHelp =
-      /^(hi|hello|hey|greetings|hola|thanks|thank you|ok|okay|cool|bye|good (morning|afternoon|evening)|who are you|what can you do|how do you work|help me)\b/i.test(lower.trim());
+    const isExplicitDraft = queryIntent.isExplicitDraft;
+    const isCasualGreetingOrGeneralHelp = queryIntent.isCasualGreeting;
 
     const hasFinancialKeywords =
-      /(spend|spent|expense|cost|paid|bill|receipt|purchase|balance|owe|owed|debt|settle|settlement|rupee|inr|₹|rs\.?|breakdown|transactions|ledger|dues|how much|who owes)/i.test(lower);
+      /(spend|spent|expense|cost|paid|bill|receipt|purchase|balance|owe|owed|debt|settle|settlement|rupee|inr|₹|rs\.?|breakdown|transactions|ledger|dues|how much|who owes|trend|cut|share|budget)/i.test(lower);
 
     // True when query is pure drafting or general conversational/help without needing private ledger lookup
     const isPureDraftOrConversational =
       (isExplicitDraft || isCasualGreetingOrGeneralHelp) && !hasFinancialKeywords && !groupId;
 
-    // Checks if query is specifically asking about balances, debts, or who owes whom
-    const isBalanceOrLedgerQuery =
-      /(balance|owe|owed|debt|dues|who owes|settle|net balance|how much do i owe|how much am i owed)/i.test(lower);
-
     // Checks if query requires semantic vector search across expenses/settlements
     const needsVectorSearch =
       !isPureDraftOrConversational &&
-      (/(spend|spent|expense|cost|paid for|bought|receipt|bill|purchase|category|flight|hotel|food|dinner|lunch|groceries|shopping|movie|taxi|cab|trip|yesterday|last (week|month|year))/i.test(lower) ||
-        Boolean(groupId));
+      (/(paid for|bought|receipt|bill|purchase|flight|hotel|food|dinner|lunch|groceries|shopping|movie|taxi|cab|trip|yesterday)/i.test(lower) ||
+        queryIntent.intent === 'SEMANTIC_SEARCH');
 
     const needsLedgerSnapshot = !isPureDraftOrConversational;
 
@@ -128,25 +121,38 @@ export async function POST(request: Request) {
               encoder.encode(`data: ${JSON.stringify({ status: 'drafting', message: draftLabel })}\n\n`)
             );
           } else {
-            // Live status: searching records vs calculating balances
-            if (needsVectorSearch) {
+            // Live status: granularly reflect user intent
+            if (queryIntent.intent === 'MEMBER_CUT') {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Calculating member cuts & contributions...' })}\n\n`)
+              );
+            } else if (queryIntent.intent === 'TREND') {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Computing monthly spending trends...' })}\n\n`)
+              );
+            } else if (queryIntent.intent === 'CATEGORY_TIMELINE') {
+              const catLabel = queryIntent.categoryQuery ? ` for "${queryIntent.categoryQuery}"` : '';
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: `Analyzing category timeline${catLabel}...` })}\n\n`)
+              );
+            } else if (queryIntent.intent === 'BUDGET_RUNRATE') {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Forecasting budget burn rate...' })}\n\n`)
+              );
+            } else if (needsVectorSearch) {
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ status: 'searching', message: 'Searching expense records...' })}\n\n`)
               );
-            } else if (isBalanceOrLedgerQuery) {
+            } else {
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Checking ledger & balances...' })}\n\n`)
               );
-            } else {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ status: 'analyzing', message: 'Understanding request...' })}\n\n`)
-              );
             }
 
-            // Perform only the operations that are actually required
+            // Perform analytical snapshot and vector search in parallel
             const [resolvedSnapshot, queryVector] = await Promise.all([
               needsLedgerSnapshot
-                ? buildFinancialSnapshot(session.user.id, groupId).catch((err) => {
+                ? buildFinancialSnapshot(session.user.id, groupId, message).catch((err) => {
                     console.warn('[Financial Context] Snapshot note:', err.message || err);
                     return null;
                   })
@@ -166,6 +172,7 @@ export async function POST(request: Request) {
               try {
                 const chunks = await retrieveSimilar(queryVector, session.user.id, {
                   groupId,
+                  textFilter: queryIntent.categoryQuery,
                   topK: 8,
                 });
                 if (chunks.length > 0) {
@@ -206,7 +213,7 @@ GUIDELINES:
 3. Keep your response concise, well-structured with markdown bullets, and easy to read on mobile.`
             : `IDENTITY & ROLE (IMMUTABLE):
 You are SplitIt AI, the intelligent financial assistant for the SplitIt group expense-sharing app.
-You help users understand their spending, debts, group finances, and balances using their actual verified records.
+You help users understand their spending trends, category breakdowns, member cuts, group finances, and balances using their actual verified records.
 
 ABSOLUTE BOUNDARIES & SECURITY RESTRICTIONS:
 1. NEVER write, generate, debug, explain, or provide code in any programming language (such as Python, JavaScript, TypeScript, SQL, Bash, C++, HTML/CSS, etc.).
@@ -219,10 +226,12 @@ AUTHORITATIVE FINANCIAL FACTS (STRICT SERVER-CALCULATED FIGURES):
 ${snapshot?.formattedText || 'No current balance snapshot available.'}
 
 CRITICAL FINANCIAL ACCURACY DIRECTIVE:
-- The figures in "AUTHORITATIVE FINANCIAL FACTS" above are pre-calculated directly by the core ledger engine.
-- You MUST use these exact figures for current balances, debts, and who owes whom.
-- NEVER attempt to recalculate or guess balances by summing transaction history alone.
-- If asked "who owes me?" or "how much do I owe?", answer strictly using the AUTHORITATIVE FINANCIAL FACTS above.
+- The figures in "AUTHORITATIVE FINANCIAL FACTS" above are pre-calculated directly by the core ledger & analytics engine.
+- You MUST use these exact figures for all balances, debts, spending trends, category timelines, and member cuts.
+- NEVER attempt to recalculate or guess totals or percentages by summing transaction history alone.
+- If asked about "trend": Present the Month-over-Month (MoM) % change (with 📈 / 📉), daily burn rate, and projected month-end spend.
+- If asked about "member cuts" or "who paid what": Present the member breakdown showing Paid Out of Pocket vs Consumed Cut vs Net position in a clean markdown table or list.
+- If asked about a "category timeline": Present the monthly trajectory and highlight top transactions.
 
 RELEVANT FINANCIAL RECORDS:
 ${contextBlock}
@@ -231,12 +240,12 @@ ACTIVE USER:
 - Name: ${session.user.name || 'Member'}
 ${groupId ? `- Scoped to Group: ${groupId}` : '- Global account view'}
 
-GUIDELINES:
+RESPONSE GUIDELINES:
 1. Ground your answers directly in the authoritative facts and retrieved records above.
-2. Format all financial figures in Indian Rupees (e.g. ₹500, ₹1,200.50).
-3. If asked who owes whom, summarize clearly with member names and net directions.
+2. Format all currency figures in Indian Rupees (e.g. ₹500, ₹1,200.50).
+3. Use markdown tables, bold key metrics, and concise bullet points for scannability.
 4. If the records do not have enough detail to answer a specific question, answer honestly based on what is available and offer helpful guidance.
-5. Keep your response concise, well-structured with markdown bullets, and easy to read on mobile.`;
+5. Keep your response structured, friendly, and easy to read on mobile.`;
 
           const fullMessages: ChatMessage[] = [
             { role: 'system', content: systemPrompt },
