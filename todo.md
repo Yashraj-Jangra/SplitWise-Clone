@@ -1,5 +1,46 @@
 # Session Progress & Context Preservation
 
+  - **Global Quick-Actions, In-Place Action Dialogs & Header Shortcuts** ✨ 🎨 ✅:
+    - **Objective**: Implement a global desktop quick-action trigger (`+`) and eliminate jarring redirects from `/expenses` and `/settlements` to `/groups`.
+    - **Implementation**:
+      - **Global Quick-Actions Component ([`src/components/layout/global-quick-actions.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/global-quick-actions.tsx))**:
+        - Universal trigger offering quick actions: "Record Expense", "Record Settlement", "Create Group".
+        - Smart group selection modal: if the user has 1 group, opens the transaction dialog immediately; if multiple groups, opens a sleek glass-pane group picker with avatar previews and member counts.
+        - Mounts directly in `Header` in [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx) next to `SearchDialog` and `NotificationBell`.
+      - **In-Place Dialog Triggers on `/expenses` and `/settlements`**:
+        - Replaced `<Link href="/groups">` on [`src/app/(app)/expenses/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/expenses/page.tsx) and [`src/app/(app)/settlements/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/settlements/page.tsx) with `<GlobalQuickActions directAction="..." />`, allowing users to record transactions without losing page context.
+        - Added `appEventEmitter.on('data-changed', loadData)` to [`src/app/(app)/settlements/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/settlements/page.tsx) to resolve realtime desync issues.
+      - **Dashboard Quick Action Bar ([`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx))**:
+        - Added quick "Record Expense" and "Settle Up" action triggers in the dashboard header beside the personalized greeting.
+        - Polished empty states on `DynamicSpendingChart` and added `aspect-auto` to prevent Recharts aspect ratio overflow.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 50/50 tests in 5 test suites.
+
+  - **Mobile Analytics Horizontal Overflow & Responsive Overhaul** 🎨 📱 ✅:
+    - **Issue**: The Analytics page (`/analysis`) suffered from horizontal scrolling and clipped UI on mobile viewports due to fixed Recharts aspect ratios, negative margins, and inflexible filter containers.
+    - **Fix Applied**:
+      - Replaced `ChartContainer` aspect ratio defaults with `aspect-auto w-full min-w-0 max-w-full overflow-hidden` across [`spending-over-time.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/analysis/spending-over-time.tsx) and [`spending-breakdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/analysis/spending-breakdown.tsx).
+      - Removed `-mr-4 pr-4` negative padding hack on `SpendingBreakdown` that pushed elements 16px off-screen.
+      - Replaced inflexible Radix toggle group in [`timeline-filter.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/analysis/timeline-filter.tsx) with horizontal scroll pill container (`overflow-x-auto no-scrollbar`).
+      - Added responsive `YAxis` width (42px with compact number formatting) and tight margins (`left: -12`) on `SpendingOverTime`.
+      - Added `min-w-0 max-w-full overflow-x-hidden` on `AppShell` `<main>` and `AnalysisPage` root container.
+      - Added real-time reactivity with `appEventEmitter.on('data-changed', loadData)`.
+    - **Verification**: `npx tsc --noEmit` exits 0; all unit tests pass.
+
+  - **Tab Switch State Reset & Form Progress Loss Fix** 🐛 🛡️ ✅:
+    - **Issue**: Switching browser tabs or returning to SplitIt caused the entire web application to re-render, unmounting `<AppShell>` and resetting active dialog forms (such as "Add Expense"), causing users to lose unsaved input progress.
+    - **Fix Applied**:
+      - Configured Better Auth client with `sessionOptions: { refetchOnWindowFocus: false }` in [`src/lib/auth.client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/auth.client.ts).
+      - Guarded `loading` in [`src/contexts/auth-context.tsx`](file:///d:/Projects/SplitWise-Clone/src/contexts/auth-context.tsx) so background revalidations never reset `loading: true` once a user session is active.
+      - Updated [`src/app/(app)/layout.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/layout.tsx) so `<AppLoading />` is only shown if `!userProfile`, keeping `<AppShell>` permanently mounted across background syncs.
+      - Guarded service worker `controllerchange` in [`src/hooks/use-service-worker-update.ts`](file:///d:/Projects/SplitWise-Clone/src/hooks/use-service-worker-update.ts) to only reload when explicitly triggered by the user.
+    - **Verification**: `npx tsc --noEmit` exits 0; verified session retention during revalidations.
+
+  - **Group Detail Mobile Tabs & Modal Design System Alignment** 🎨 ✅:
+    - **Fix Applied**:
+      - Replaced cramped `grid grid-cols-6` icon-only tabs in [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx) with a horizontal scrollable pill bar (`overflow-x-auto no-scrollbar flex`) displaying both icons and clear labels ("Activity", "Budget", "Balances", "Analysis", "Audit", "Settings").
+      - Redesigned [`CreateGroupDialog`](file:///d:/Projects/SplitWise-Clone/src/components/groups/create-group-dialog.tsx) to strictly follow the Dark-Mode Glass-Pane Minimalist Modal System (`rounded-2xl border-border/20 shadow-2xl`, `p-6` body padding, `h-11 rounded-xl` inputs, and `h-[90vh]` mobile bottom sheet).
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean).
+
   - **Extended AI Financial Analytics & Hybrid RAG Intelligence System** ✨ 🧠 ⚡ ✅:
     - **Objective & Architectural Solution**: Extended SplitIt's AI RAG from basic current-month snapshot and generic top-K vector search to a deterministic financial intelligence engine that guarantees zero math hallucinations by pre-calculating verified metrics before LLM synthesis.
     - **Implementation**:
