@@ -129,10 +129,10 @@ export function QuickInsights({ currentExpenses, previousExpenses }: QuickInsigh
     const Icon = Icons[activeInsight.icon];
 
     return (
-        <Card className="h-full flex flex-col min-h-[280px] max-h-[420px] md:max-h-none">
-            <CardHeader>
-                <CardTitle>Quick Insights</CardTitle>
-                <CardDescription>Actionable summaries of your spending.</CardDescription>
+        <Card className="h-full flex flex-col min-h-[260px] max-h-[420px] md:max-h-none w-full min-w-0 max-w-full overflow-hidden">
+            <CardHeader className="p-3.5 sm:p-6 pb-2 sm:pb-3">
+                <CardTitle className="text-base sm:text-lg font-bold">Quick Insights</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Actionable summaries of your spending.</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
                  <AnimatePresence mode="wait">

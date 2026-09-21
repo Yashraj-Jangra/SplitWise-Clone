@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Icons } from '@/components/icons';
 import { format, subDays, startOfMonth, startOfYear, isValid } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { cn } from '@/lib/utils';
 import type { Expense } from '@/types';
 
 export interface DateRangePreset {
@@ -76,36 +76,50 @@ export function TimelineFilter({ selectedRange, onRangeChange, allExpenses, isMo
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-3 border rounded-lg bg-card/80">
-        <ToggleGroup
-            type="single"
-            value={selectedRange.id}
-            onValueChange={handlePresetChange}
-            className="flex-wrap justify-start"
-        >
-            {presets.map(p => (
-                <ToggleGroupItem key={p.id} value={p.id} size="sm" variant="outline" className="text-xs sm:text-sm">
-                    {p.label}
-                </ToggleGroupItem>
-            ))}
-        </ToggleGroup>
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2.5 sm:p-3 border rounded-xl bg-card/60 backdrop-blur-md w-full min-w-0 max-w-full overflow-hidden">
+        {/* Preset filter pills: smoothly scrollable on mobile, flex-wrap on desktop */}
+        <div className="w-full sm:w-auto overflow-x-auto no-scrollbar min-w-0 py-0.5">
+          <div className="flex items-center gap-1.5 w-max sm:w-auto sm:flex-wrap">
+            {presets.map(p => {
+              const isSelected = selectedRange.id === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handlePresetChange(p.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all border",
+                    isSelected
+                      ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
+                      : "bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground border-border/40"
+                  )}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         
+        {/* Custom Range Popover */}
         <Popover open={isCustomPickerOpen} onOpenChange={setIsCustomPickerOpen}>
             <PopoverTrigger asChild>
-                 <Button variant="outline" className="w-full sm:w-[280px] justify-start text-left font-normal h-10">
-                    <Icons.Calendar className="mr-2 h-4 w-4" />
-                    {selectedRange.range?.from && isValid(selectedRange.range.from) ? (
-                        selectedRange.range.to && isValid(selectedRange.range.to) ? (
-                        <>
-                            {format(selectedRange.range.from, 'LLL dd, y')} - {format(selectedRange.range.to, 'LLL dd, y')}
-                        </>
-                        ) : (
-                        format(selectedRange.range.from, 'LLL dd, y')
-                        )
-                    ) : (
-                        <span>Pick a date range</span>
-                    )}
-                    </Button>
+                 <Button variant="outline" className="w-full sm:w-auto sm:min-w-[240px] justify-start text-left font-normal h-9 sm:h-10 text-xs sm:text-sm shrink-0 border-border/40 bg-muted/20">
+                    <Icons.Calendar className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">
+                      {selectedRange.range?.from && isValid(selectedRange.range.from) ? (
+                          selectedRange.range.to && isValid(selectedRange.range.to) ? (
+                          <>
+                              {format(selectedRange.range.from, 'LLL dd, y')} - {format(selectedRange.range.to, 'LLL dd, y')}
+                          </>
+                          ) : (
+                          format(selectedRange.range.from, 'LLL dd, y')
+                          )
+                      ) : (
+                          <span>Custom Date Range</span>
+                      )}
+                    </span>
+                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
                 <Calendar

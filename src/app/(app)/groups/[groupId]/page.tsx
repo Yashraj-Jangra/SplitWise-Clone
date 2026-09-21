@@ -346,22 +346,24 @@ export default function GroupDetailPage() {
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 md:w-auto md:inline-flex md:justify-start">
-            {TABS.map((tab) => {
-              const Icon = Icons[tab.icon];
-              return (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="gap-2 px-2 md:px-4"
-                  title={tab.label}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="hidden md:inline">{tab.label}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+          <div className="w-full overflow-x-auto no-scrollbar pb-0.5">
+            <TabsList className="flex w-max min-w-full sm:min-w-0 md:w-auto md:inline-flex justify-start gap-1 p-1 bg-muted/50 rounded-xl h-auto border border-border/30">
+              {TABS.map((tab) => {
+                const Icon = Icons[tab.icon];
+                return (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium shrink-0 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-xs transition-all"
+                    title={tab.label}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
 
           <TabsContent value="expenses" className="mt-4">
             <Card>
