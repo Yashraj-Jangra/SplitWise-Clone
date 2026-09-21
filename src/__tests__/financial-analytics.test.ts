@@ -365,4 +365,86 @@ describe('Financial Analytics & AI Intent Routing', () => {
       expect(spikes[0].amount).toBe(15000);
     });
   });
+
+  describe('7. Edge Cases & Resilience', () => {
+    it('handles empty group with 0 expenses gracefully without NaN', async () => {
+      const emptyGroup: Group = {
+        id: 'g_empty',
+        name: 'Empty Group',
+        createdBy: u1,
+        members: [u1],
+        totalExpenses: 0,
+        createdAt: new Date().toISOString(),
+      };
+
+      vi.mocked(getGroupById).mockResolvedValue(emptyGroup);
+      vi.mocked(getExpensesByGroupId).mockResolvedValue([]);
+
+      const cuts = await calculateMemberCuts('g_empty', 'u1');
+      expect(cuts.totalGroupSpend).toBe(0);
+      expect(cuts.members[0].percentageOfTotal).toBe(0);
+      expect(cuts.members[0].netBalance).toBe(0);
+      expect(cuts.formattedSummary).not.toContain('NaN');
+
+      const trends = await calculateSpendingTrends('u1', 'g_empty', 3);
+      expect(trends.currentMonthSpent).toBe(0);
+      expect(trends.monthOverMonthChangePct).toBeNull();
+      expect(trends.dailyBurnRate).toBe(0);
+      expect(trends.projectedMonthEndSpent).toBe(0);
+      expect(trends.formattedSummary).not.toContain('NaN');
+
+      const category = await calculateCategoryTimeline('u1', 'food', 'g_empty', 3);
+      expect(category.totalSpent).toBe(0);
+      expect(category.personalShare).toBe(0);
+      expect(category.trendDirection).toBe('stable');
+      expect(category.formattedSummary).not.toContain('NaN');
+    });
+
+    it('handles unequal multi-payer and complex decimal splits without rounding drift', async () => {
+      const group: Group = {
+        id: 'g_split',
+        name: 'Trip',
+        createdBy: u1,
+        members: [u1, u2],
+        totalExpenses: 100,
+        createdAt: new Date().toISOString(),
+      };
+
+      const exp: Expense = {
+        id: 'e1',
+        groupId: 'g_split',
+        description: 'Dinner',
+        amount: 100,
+        splitType: 'unequally',
+        date: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        payers: [
+          { amount: 60, user: u1 },
+          { amount: 40, user: u2 },
+        ],
+        participants: [
+          { amountOwed: 33.33, user: u1 },
+          { amountOwed: 66.67, user: u2 },
+        ],
+        expenseCreator: u1,
+      };
+
+      vi.mocked(getGroupById).mockResolvedValue(group);
+      vi.mocked(getExpensesByGroupId).mockResolvedValue([exp]);
+
+      const cuts = await calculateMemberCuts('g_split', 'u1');
+      const alice = cuts.members.find(m => m.userId === 'u1')!;
+      const bob = cuts.members.find(m => m.userId === 'u2')!;
+
+      expect(alice.totalPaid).toBe(60);
+      expect(alice.totalConsumed).toBe(33.33);
+      expect(alice.netBalance).toBe(26.67);
+
+      expect(bob.totalPaid).toBe(40);
+      expect(bob.totalConsumed).toBe(66.67);
+      expect(bob.netBalance).toBe(-26.67);
+
+      expect(alice.netBalance + bob.netBalance).toBeCloseTo(0, 2);
+    });
+  });
 });
