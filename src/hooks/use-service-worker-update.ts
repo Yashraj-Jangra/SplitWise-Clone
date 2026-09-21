@@ -15,6 +15,8 @@ export function useServiceWorkerUpdate() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
 
+  const userInitiatedUpdate = useState<{ current: boolean }>({ current: false })[0];
+
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
@@ -42,18 +44,24 @@ export function useServiceWorkerUpdate() {
       });
     });
 
-    // After the new SW takes control, reload to get the new assets
+    // Only reload after new SW takes control IF the user explicitly initiated the update
     let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
+    const handleControllerChange = () => {
+      if (!refreshing && userInitiatedUpdate.current) {
         refreshing = true;
         window.location.reload();
       }
-    });
-  }, []);
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+    };
+  }, [userInitiatedUpdate]);
 
   const applyUpdate = () => {
     if (waitingWorker) {
+      userInitiatedUpdate.current = true;
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
     }
   };
