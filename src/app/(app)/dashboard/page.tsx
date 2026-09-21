@@ -11,6 +11,9 @@ import type { Expense, Settlement, Group, Balance, SimplifiedSettlement, UserPro
 import { appEventEmitter } from '@/lib/event-emitter';
 import { ErrorBoundary } from '@/components/shared/error-boundary';
 import { PullToRefresh } from '@/components/shared/pull-to-refresh';
+import { Button } from '@/components/ui/button';
+import { Icons } from '@/components/icons';
+import { GlobalQuickActions } from '@/components/layout/global-quick-actions';
 
 // Defer heavy Recharts bundles — only loaded after user data is ready
 const DynamicSpendingChart = dynamic(
@@ -129,11 +132,31 @@ export default function DashboardPage() {
   return (
     <PullToRefresh onRefresh={loadDashboardData} className="min-h-full">
       <div className="space-y-6 p-1">
-          <div>
-              <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
-              {greeting}, {userProfile.firstName}!
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your finances today.</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  {greeting}, {userProfile.firstName}!
+                  </h1>
+                  <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your finances today.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                  <GlobalQuickActions
+                      directAction="expense"
+                      trigger={
+                          <Button size="sm" className="shadow-xs rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium">
+                              <Icons.Add className="mr-1.5 h-3.5 w-3.5" /> Record Expense
+                          </Button>
+                      }
+                  />
+                  <GlobalQuickActions
+                      directAction="settlement"
+                      trigger={
+                          <Button variant="outline" size="sm" className="shadow-xs rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium border-border/40 bg-card/50 hover:bg-muted">
+                              <Icons.Settle className="mr-1.5 h-3.5 w-3.5" /> Settle Up
+                          </Button>
+                      }
+                  />
+              </div>
           </div>
 
           {/* ── Top Row: 3 Equal-Width Financial Position Cards ──────────────── */}
