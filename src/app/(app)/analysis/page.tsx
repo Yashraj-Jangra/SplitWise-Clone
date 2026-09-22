@@ -1,9 +1,10 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Expense } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
+import { appEventEmitter } from '@/lib/event-emitter';
 import { getExpensesByUserId } from '@/lib/api.client';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { TimelineFilter, type DateRangePreset } from '@/components/analysis/timeline-filter';
@@ -45,14 +46,25 @@ export default function AnalysisPage() {
     },
   });
 
-  useEffect(() => {
-    if (userProfile?.uid) {
-      setLoading(true);
-      getExpensesByUserId(userProfile.uid)
-        .then(setAllExpenses)
-        .finally(() => setLoading(false));
+  const loadData = useCallback(async () => {
+    if (!userProfile?.uid) return;
+    try {
+      const expenses = await getExpensesByUserId(userProfile.uid);
+      setAllExpenses(expenses);
+    } catch (err) {
+      console.error("Failed to load analysis expenses:", err);
+    } finally {
+      setLoading(false);
     }
   }, [userProfile?.uid]);
+
+  useEffect(() => {
+    loadData();
+    appEventEmitter.on('data-changed', loadData);
+    return () => {
+      appEventEmitter.off('data-changed', loadData);
+    };
+  }, [loadData]);
 
   const filteredExpenses = useMemo(() => {
     if (!dateRange.range.from) return [];
@@ -81,7 +93,7 @@ export default function AnalysisPage() {
   }
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0 max-w-full overflow-x-hidden">
         <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground">Financial Health Dashboard</h1>
             <p className="text-muted-foreground text-sm sm:text-base">An overview of your personal spending and budgets.</p>
@@ -104,32 +116,40 @@ export default function AnalysisPage() {
           </div>
         )}
 
-        <TimelineFilter
-            selectedRange={dateRange}
-            onRangeChange={setDateRange}
-            allExpenses={allExpenses}
-            isMobile={!!isMobile}
-        />
+        <div className="w-full min-w-0">
+          <TimelineFilter
+              selectedRange={dateRange}
+              onRangeChange={setDateRange}
+              allExpenses={allExpenses}
+              isMobile={!!isMobile}
+          />
+        </div>
 
-        <SpendingOverTime expenses={filteredExpenses} />
+        <div className="w-full min-w-0">
+          <SpendingOverTime expenses={filteredExpenses} />
+        </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full min-w-0">
+            <div className="lg:col-span-2 w-full min-w-0">
                 <SpendingBreakdown
                     currentExpenses={filteredExpenses}
                     previousExpenses={previousPeriodExpenses}
                 />
             </div>
-            <QuickInsights 
-                currentExpenses={filteredExpenses}
-                previousExpenses={previousPeriodExpenses}
-            />
+            <div className="lg:col-span-1 w-full min-w-0">
+                <QuickInsights 
+                    currentExpenses={filteredExpenses}
+                    previousExpenses={previousPeriodExpenses}
+                />
+            </div>
         </div>
 
-        <BudgetPerformance
-          currentExpenses={filteredExpenses}
-          dateRange={dateRange.range}
-        />
+        <div className="w-full min-w-0">
+          <BudgetPerformance
+            currentExpenses={filteredExpenses}
+            dateRange={dateRange.range}
+          />
+        </div>
     </div>
   );
 }

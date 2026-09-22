@@ -99,7 +99,9 @@ export async function hydrateUsers(uids: string[]): Promise<UserProfile[]> {
 
 export async function deleteUser(userId: string): Promise<void> {
   const user = await getItem<any>(`USER#${userId}`, 'PROFILE');
-  if (user && (user.email === 'jangrayash1505@gmail.com' || user.role === 'superadmin')) {
+  const configuredAdmin = (process.env.ADMIN_EMAIL || '').toLowerCase();
+  const isProtectedAdmin = configuredAdmin && user?.email && user.email.toLowerCase() === configuredAdmin;
+  if (user && (isProtectedAdmin || user.role === 'superadmin')) {
     throw new Error('The main admin user cannot be deleted.');
   }
   await deleteItem(`USER#${userId}`, 'PROFILE');

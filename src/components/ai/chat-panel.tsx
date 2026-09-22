@@ -23,11 +23,18 @@ import {
 } from '@/components/ui/popover';
 import type { ChatMessage } from '@/types/ai';
 
-const STARTER_PROMPTS = [
-  'How much did I spend this month?',
-  'Who owes me money right now?',
-  'What are my highest expense categories?',
-  'Summarize recent group expenses',
+const GLOBAL_STARTER_PROMPTS = [
+  "What's my spending trend this month vs last month?",
+  "Show my category timeline for the last 3 months",
+  "Who owes me money right now?",
+  "What were my biggest expense spikes recently?",
+];
+
+const GROUP_STARTER_PROMPTS = [
+  "Break down each member's cut and share",
+  "What's our group spending trend this month?",
+  "Who paid the most in this group?",
+  "How much did we spend on Food & Dining?",
 ];
 
 interface ChatPanelProps {
@@ -218,11 +225,23 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
     const isExplicitDraft =
       /^(draft|write|compose|suggest (a )?reply|say to|craft|pen|prepare a message|prepare an email)\b/i.test(textToSend.trim()) ||
       /\b(draft (an?|the|a response|an answer)|write (an?|the|a message|an email|a note))\b/i.test(textToSend);
+    const isCut = /\b(cut|cuts|share|shares|contribution|who paid what|everyone('?s)? cut|breakdown of)\b/i.test(lower);
+    const isTrend = /\b(trend|trends|velocity|burn rate|this month vs last|month over month|mom)\b/i.test(lower);
+    const isCategoryTimeline = /\b(timeline|spent on|spend on|groceries|dining|food|travel|rent|utilities)\b/i.test(lower);
+    const isBudget = /\b(budget|limit|exceed|run out|safe to spend)\b/i.test(lower);
     const isBalance = /(balance|owe|owed|debt|dues|who owes|settle|net balance)/i.test(lower);
     const isExpense = /(spend|spent|expense|cost|receipt|bill|category|hotel|flight|food|dinner|lunch|groceries|trip)/i.test(lower);
 
     if (isExplicitDraft) {
       setStreamStatus({ stage: 'drafting', label: 'Drafting response...' });
+    } else if (isCut) {
+      setStreamStatus({ stage: 'calculating', label: 'Calculating member cuts...' });
+    } else if (isTrend) {
+      setStreamStatus({ stage: 'calculating', label: 'Computing monthly spending trends...' });
+    } else if (isCategoryTimeline) {
+      setStreamStatus({ stage: 'calculating', label: 'Analyzing category timeline...' });
+    } else if (isBudget) {
+      setStreamStatus({ stage: 'calculating', label: 'Forecasting budget burn rate...' });
     } else if (isBalance) {
       setStreamStatus({ stage: 'calculating', label: 'Checking ledger & balances...' });
     } else if (isExpense || groupId) {
@@ -551,11 +570,11 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   How can I help you today{userProfile?.firstName ? `, ${userProfile.firstName}` : ''}?
                 </h4>
                 <p className="text-xs text-muted-foreground mt-1.5 mb-8 max-w-md mx-auto leading-relaxed">
-                  Ask about your monthly spending, balances, or who owes you money. All answers are based securely on your personal and group records.
+                  Ask about monthly spending trends, member cuts, category timelines, or balances. All answers are based securely on your personal and group records.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
-                  {STARTER_PROMPTS.map((prompt, idx) => (
+                  {(groupId ? GROUP_STARTER_PROMPTS : GLOBAL_STARTER_PROMPTS).map((prompt, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -577,11 +596,11 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   How can I help you today{userProfile?.firstName ? `, ${userProfile.firstName}` : ''}?
                 </h4>
                 <p className="text-xs text-muted-foreground mt-1 mb-5 leading-relaxed">
-                  Ask about your monthly spending, balances, or who owes you money.
+                  Ask about spending trends, member cuts, or category timelines.
                 </p>
 
                 <div className="flex flex-col gap-2 w-full">
-                  {STARTER_PROMPTS.map((prompt, idx) => (
+                  {(groupId ? GROUP_STARTER_PROMPTS : GLOBAL_STARTER_PROMPTS).map((prompt, idx) => (
                     <button
                       key={idx}
                       type="button"

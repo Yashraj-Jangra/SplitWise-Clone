@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getItem } from '@/lib/nosql';
 import { embed } from '@/lib/ai/embedder';
-import { upsertVector, deleteVector } from '@/lib/ai/vector-store';
+import { upsertVector, deleteVector, deleteVectorsByPrefix, deleteVectorsByGroup } from '@/lib/ai/vector-store';
 import { buildExpenseChunk, buildSettlementChunk, buildGroupMetaChunk } from '@/lib/ai/context-builder';
 import { getUserProfile } from '@/lib/services/user.service';
 import { getFullName } from '@/lib/utils';
@@ -15,15 +15,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ skipped: true, reason: 'Embedding queue is disabled' });
     }
 
-    // Security check: internal secret validation
-    const authHeader = request.headers.get('Authorization') || request.headers.get('x-internal-secret');
-    const token = authHeader?.replace(/^Bearer\s+/i, '');
-    const isProd = process.env.NODE_ENV === 'production';
-    if (isProd && (!INTERNAL_API_SECRET || token !== INTERNAL_API_SECRET)) {
-      return NextResponse.json({ error: 'Unauthorized queue caller' }, { status: 401 });
-    }
-    if (INTERNAL_API_SECRET && token !== INTERNAL_API_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized queue caller' }, { status: 401 });
+    // Protect queue from unauthorized public triggers if a secret is configured
+    if (INTERNAL_API_SECRET) {
+      const authHeader = request.headers.get('Authorization') || request.headers.get('x-internal-secret');
+      const token = authHeader?.replace(/^Bearer\s+/i, '');
+      if (token !== INTERNAL_API_SECRET) {
+        return NextResponse.json({ error: 'Unauthorized internal trigger' }, { status: 401 });
+      }
     }
 
     const body = await request.json().catch(() => ({}));
@@ -40,9 +38,16 @@ export async function POST(request: Request) {
     }
 
     if (action === 'delete') {
-      await deleteVector(`EXPENSE#${id}`);
-      await deleteVector(`SETTLEMENT#${id}`);
-      await deleteVector(`GROUP#${id}`);
+      if (entityType === 'group') {
+        await deleteVectorsByGroup(id);
+        await deleteVectorsByPrefix(`GROUP#${id}#`);
+        await deleteVector(`GROUP#${id}`);
+      } else {
+        await deleteVectorsByPrefix(`EXPENSE#${id}#`);
+        await deleteVectorsByPrefix(`SETTLEMENT#${id}#`);
+        await deleteVector(`EXPENSE#${id}`);
+        await deleteVector(`SETTLEMENT#${id}`);
+      }
       return NextResponse.json({ success: true, action: 'deleted' });
     }
 

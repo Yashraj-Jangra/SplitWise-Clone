@@ -97,23 +97,23 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
   }, [expenses, selectedCategory]);
   
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+    <Card className="w-full min-w-0 max-w-full overflow-hidden">
+      <CardHeader className="p-3.5 sm:p-6 pb-2 sm:pb-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full min-w-0">
             <div>
-                <CardTitle>Spending Over Time</CardTitle>
-                <CardDescription>Daily spending across different categories.</CardDescription>
+                <CardTitle className="text-base sm:text-lg font-bold">Spending Over Time</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Daily spending across different categories.</CardDescription>
             </div>
-             <div className="flex items-center gap-2 flex-wrap">
-                <ToggleGroup type="single" value={chartView} onValueChange={(v) => { if (v) setChartView(v as any)}} size="sm">
-                    <ToggleGroupItem value="line" aria-label="Line chart"><Icons.LineChart className="h-4 w-4" /></ToggleGroupItem>
-                    <ToggleGroupItem value="bar" aria-label="Bar chart"><Icons.Analysis className="h-4 w-4" /></ToggleGroupItem>
+             <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto min-w-0">
+                <ToggleGroup type="single" value={chartView} onValueChange={(v) => { if (v) setChartView(v as any)}} size="sm" className="shrink-0 bg-muted/40 p-0.5 rounded-lg border border-border/40">
+                    <ToggleGroupItem value="line" aria-label="Line chart" className="h-7 w-7 p-0 data-[state=on]:bg-background rounded-md"><Icons.LineChart className="h-3.5 w-3.5" /></ToggleGroupItem>
+                    <ToggleGroupItem value="bar" aria-label="Bar chart" className="h-7 w-7 p-0 data-[state=on]:bg-background rounded-md"><Icons.Analysis className="h-3.5 w-3.5" /></ToggleGroupItem>
                 </ToggleGroup>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-[160px] flex-shrink-0 h-9 text-xs">
-                        <SelectValue placeholder="Select category" />
+                    <SelectTrigger className="w-full sm:w-[150px] flex-1 sm:flex-initial h-8 text-xs shrink-0 bg-muted/20 border-border/40 rounded-lg">
+                        <SelectValue placeholder="Category" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="end">
                         {uniqueCategories.map(cat => (
                             <SelectItem key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</SelectItem>
                         ))}
@@ -122,82 +122,104 @@ export function SpendingOverTime({ expenses }: { expenses: Expense[] }) {
             </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-            {chartView === 'line' ? (
-                <LineChart
-                    accessibilityLayer
-                    data={chartData}
-                    margin={{
-                    left: 12,
-                    right: 12,
-                    }}
-                >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                        dataKey="date"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => value}
-                    />
-                    <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`}
-                    />
-                    <Tooltip content={<ChartTooltipContent indicator="dot" />} />
-                    <Legend />
-                    {Object.keys(chartConfig).map((key) => (
-                        <Line
-                            key={key}
-                            dataKey={key}
-                            name={chartConfig[key].label as string}
-                            type="monotone"
-                            stroke={`var(--color-${key})`}
-                            strokeWidth={2}
-                            dot={false}
-                        />
-                    ))}
-                </LineChart>
-            ) : (
-                 <BarChart
-                    accessibilityLayer
-                    data={chartData}
-                    margin={{
-                    left: 12,
-                    right: 12,
-                    }}
-                 >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                        dataKey="date"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => value}
-                    />
-                    <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => `${CURRENCY_SYMBOL}${value}`}
-                    />
-                    <Tooltip content={<ChartTooltipContent indicator="dot" />} />
-                    <Legend />
-                     {Object.keys(chartConfig).map((key) => (
-                        <Bar
-                            key={key}
-                            dataKey={key}
-                            stackId="a"
-                            fill={`var(--color-${key})`}
-                            name={chartConfig[key].label as string}
-                        />
-                    ))}
-                 </BarChart>
-            )}
-        </ChartContainer>
+      <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0 min-w-0 max-w-full overflow-hidden">
+        {chartData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[220px] text-center text-muted-foreground p-4">
+            <Icons.LineChart className="h-10 w-10 mb-2 opacity-30" />
+            <p className="text-sm font-medium">No spending data in this period</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">Try selecting a different date range preset above.</p>
+          </div>
+        ) : (
+          <ChartContainer config={chartConfig} className="aspect-auto h-[240px] sm:h-[300px] w-full min-w-0 max-w-full overflow-hidden">
+              {chartView === 'line' ? (
+                  <LineChart
+                      accessibilityLayer
+                      data={chartData}
+                      margin={{
+                        left: -12,
+                        right: 8,
+                        top: 10,
+                        bottom: 0,
+                      }}
+                  >
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis
+                          dataKey="date"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={6}
+                          minTickGap={20}
+                          interval="preserveStartEnd"
+                          tickFormatter={(value) => value}
+                          fontSize={11}
+                      />
+                      <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={4}
+                          width={42}
+                          fontSize={11}
+                          tickFormatter={(value) => `${CURRENCY_SYMBOL}${value >= 1000 ? `${(value/1000).toFixed(1)}k` : value}`}
+                      />
+                      <Tooltip content={<ChartTooltipContent indicator="dot" />} />
+                      <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '6px' }} />
+                      {Object.keys(chartConfig).map((key) => (
+                          <Line
+                              key={key}
+                              dataKey={key}
+                              name={chartConfig[key].label as string}
+                              type="monotone"
+                              stroke={`var(--color-${key})`}
+                              strokeWidth={2}
+                              dot={false}
+                          />
+                      ))}
+                  </LineChart>
+              ) : (
+                   <BarChart
+                      accessibilityLayer
+                      data={chartData}
+                      margin={{
+                        left: -12,
+                        right: 8,
+                        top: 10,
+                        bottom: 0,
+                      }}
+                   >
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis
+                          dataKey="date"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={6}
+                          minTickGap={20}
+                          interval="preserveStartEnd"
+                          tickFormatter={(value) => value}
+                          fontSize={11}
+                      />
+                      <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={4}
+                          width={42}
+                          fontSize={11}
+                          tickFormatter={(value) => `${CURRENCY_SYMBOL}${value >= 1000 ? `${(value/1000).toFixed(1)}k` : value}`}
+                      />
+                      <Tooltip content={<ChartTooltipContent indicator="dot" />} />
+                      <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '6px' }} />
+                       {Object.keys(chartConfig).map((key) => (
+                          <Bar
+                              key={key}
+                              dataKey={key}
+                              stackId="a"
+                              fill={`var(--color-${key})`}
+                              name={chartConfig[key].label as string}
+                          />
+                      ))}
+                   </BarChart>
+              )}
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

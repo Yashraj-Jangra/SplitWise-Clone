@@ -117,21 +117,23 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <CardTitle>Spending Breakdown</CardTitle>
-        <CardDescription>How your spending is distributed across categories.</CardDescription>
+    <Card className="h-full flex flex-col w-full min-w-0 max-w-full overflow-hidden">
+      <CardHeader className="p-3.5 sm:p-6 pb-2 sm:pb-3">
+        <CardTitle className="text-base sm:text-lg font-bold">Spending Breakdown</CardTitle>
+        <CardDescription className="text-xs sm:text-sm">How your spending is distributed across categories.</CardDescription>
       </CardHeader>
       <Separator />
-      <CardContent className="flex-1 flex flex-col md:flex-row items-center justify-center gap-4 pt-6">
+      <CardContent className="flex-1 flex flex-col md:flex-row items-center justify-center gap-4 p-3.5 sm:p-6 min-w-0 max-w-full overflow-hidden">
         {expensesByMasterCategory.length === 0 ? (
-          <div className="text-center text-muted-foreground w-full">
-            <p>No spending data for the selected period.</p>
+          <div className="flex flex-col items-center justify-center h-[200px] text-center text-muted-foreground p-4 w-full">
+            <Icons.PieChart className="h-10 w-10 mb-2 opacity-30" />
+            <p className="text-sm font-medium">No spending data for this period</p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">Recorded expenses will display their category breakdown here.</p>
           </div>
         ) : (
           <>
-            <div className="w-full h-[220px] md:h-[250px] md:w-1/2 flex-shrink-0 relative">
-              <ChartContainer config={chartConfig} className="h-full w-full">
+            <div className="w-full h-[200px] sm:h-[220px] md:h-[250px] md:w-1/2 flex-shrink-0 relative min-w-0">
+              <ChartContainer config={chartConfig} className="aspect-auto h-full w-full min-w-0 max-w-full overflow-hidden">
                 <ResponsiveContainer>
                   <PieChart>
                     <Pie
@@ -140,8 +142,8 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        innerRadius="60%"
-                        outerRadius="80%"
+                        innerRadius="55%"
+                        outerRadius="78%"
                         paddingAngle={2}
                         activeIndex={activeIndex}
                         activeShape={ActiveShape}
@@ -157,9 +159,9 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
               </ChartContainer>
             </div>
             
-            <div className="w-full md:w-1/2 h-full flex flex-col">
-                <ScrollArea className="flex-1 min-h-[150px] pr-4 -mr-4">
-                    <div className="space-y-2">
+            <div className="w-full md:w-1/2 h-full flex flex-col min-w-0">
+                <ScrollArea className="flex-1 max-h-[220px] pr-2">
+                    <div className="space-y-1.5">
                         {expensesByMasterCategory.map((category, index) => {
                             const percentage = totalAmount > 0 ? (category.total / totalAmount) * 100 : 0;
                             const trend = getTrend(category.name, category.total);
@@ -169,19 +171,19 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
                                     onMouseEnter={() => onPieEnter(null, index)}
                                     onMouseLeave={onPieLeave}
                                     className={cn(
-                                        "flex items-center justify-between p-2 rounded-md transition-all duration-300",
-                                        activeIndex === index && "bg-muted"
+                                        "flex items-center justify-between p-2 rounded-lg transition-all duration-200 border border-transparent",
+                                        activeIndex === index ? "bg-muted border-border/40" : "hover:bg-muted/40"
                                     )}
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: chartConfig[category.name]?.color }}/>
-                                        <span className="text-sm text-muted-foreground">{category.name}</span>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: chartConfig[category.name]?.color }}/>
+                                        <span className="text-xs sm:text-sm text-foreground truncate">{category.name}</span>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-semibold">{CURRENCY_SYMBOL}{category.total.toFixed(2)}</p>
+                                    <div className="text-right shrink-0">
+                                        <p className="text-xs sm:text-sm font-semibold">{CURRENCY_SYMBOL}{category.total.toFixed(2)}</p>
                                         <div className="flex items-center justify-end gap-1">
                                              {trend && <trend.icon className={cn("h-3 w-3", trend.color)} />}
-                                             <p className={cn("text-xs", trend?.color || 'text-muted-foreground')}>{percentage.toFixed(1)}%</p>
+                                             <p className={cn("text-[10px] sm:text-xs", trend?.color || 'text-muted-foreground')}>{percentage.toFixed(1)}%</p>
                                         </div>
                                     </div>
                                 </div>
@@ -190,9 +192,9 @@ export function SpendingBreakdown({ currentExpenses, previousExpenses }: Spendin
                     </div>
                 </ScrollArea>
                 <Separator className="my-2" />
-                <div className="flex flex-col items-center pt-2">
-                    <p className="text-sm text-muted-foreground">Total Spent</p>
-                    <p className="text-2xl font-bold">{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
+                <div className="flex items-center justify-between px-2 pt-1">
+                    <p className="text-xs text-muted-foreground font-medium">Total Spent</p>
+                    <p className="text-lg sm:text-xl font-bold font-headline">{CURRENCY_SYMBOL}{totalAmount.toFixed(2)}</p>
                 </div>
             </div>
           </>

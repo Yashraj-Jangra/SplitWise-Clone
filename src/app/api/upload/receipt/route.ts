@@ -26,8 +26,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Invalid file type. Only JPEG, PNG, WEBP, GIF, and PDF are allowed for receipts.' }, { status: 400 });
+    }
+
+    // Limit receipt size to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File size too large. Max limit is 10MB.' }, { status: 400 });
+    }
+
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const fileExtension = file.name.split('.').pop() || 'png';
+    const rawExtension = file.name.split('.').pop() || 'png';
+    const fileExtension = rawExtension.toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
     const uniqueId = crypto.randomUUID();
     
     // Store in a group-specific folder or generic receipts folder

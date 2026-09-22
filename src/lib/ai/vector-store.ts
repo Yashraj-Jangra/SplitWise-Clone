@@ -46,6 +46,13 @@ export async function deleteVector(id: string): Promise<void> {
 }
 
 /**
+ * Delete vector records matching an ID prefix (e.g. EXPENSE#123#)
+ */
+export async function deleteVectorsByPrefix(prefix: string): Promise<void> {
+  await executeOracleQuery(`DELETE FROM SPLITITVECTORS WHERE id LIKE :prefix`, { prefix: `${prefix}%` });
+}
+
+/**
  * Delete all vector records belonging to a specific group
  */
 export async function deleteVectorsByGroup(groupId: string): Promise<void> {

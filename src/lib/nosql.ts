@@ -128,9 +128,20 @@ export async function executeOracleQuery<T = any>(sql: string, params: any = {},
   }
 }
 
-// High-performance in-memory TTL cache for read operations
+// High-performance bounded in-memory TTL cache for read operations
 const readCache = new Map<string, { expiresAt: number; data: any }>();
 const CACHE_TTL_MS = 15000; // 15-second read cache
+const MAX_CACHE_SIZE = 500;
+
+function setReadCache(key: string, data: any): void {
+  if (readCache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = readCache.keys().next().value;
+    if (oldestKey) {
+      readCache.delete(oldestKey);
+    }
+  }
+  readCache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, data });
+}
 
 export function clearNoSqlCache(): void {
   readCache.clear();
@@ -154,7 +165,7 @@ export async function getItem<T = any>(pk: string, sk: string): Promise<T | null
   if (!rows || rows.length === 0) return null;
   const raw = rows[0].DATA;
   const result = (typeof raw === 'string' ? JSON.parse(raw) : raw) as T;
-  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  setReadCache(cacheKey, result);
   return result;
 }
 
@@ -208,7 +219,7 @@ export async function queryByPk<T = any>(pk: string): Promise<T[]> {
   );
 
   const result = rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
-  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  setReadCache(cacheKey, result);
   return result;
 }
 
@@ -228,7 +239,7 @@ export async function queryByEntityType<T = any>(entityType: string): Promise<T[
   );
 
   const result = rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
-  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  setReadCache(cacheKey, result);
   return result;
 }
 
@@ -248,7 +259,7 @@ export async function queryByGsi<T = any>(gsi1pk: string): Promise<T[]> {
   );
 
   const result = rows.map((r) => (typeof r.DATA === 'string' ? JSON.parse(r.DATA) : r.DATA));
-  readCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, data: result });
+  setReadCache(cacheKey, result);
   return result;
 }
 
@@ -258,4 +269,12 @@ export async function queryByGsi<T = any>(gsi1pk: string): Promise<T[]> {
 export async function deleteItem(pk: string, sk: string): Promise<void> {
   clearNoSqlCache();
   await executeOracleQuery(`DELETE FROM SplitItDB WHERE pk = :pk AND sk = :sk`, { pk, sk });
+}
+
+/**
+ * Delete all documents in a partition (e.g. GROUP#123)
+ */
+export async function deletePartition(pk: string): Promise<void> {
+  clearNoSqlCache();
+  await executeOracleQuery(`DELETE FROM SplitItDB WHERE pk = :pk`, { pk });
 }

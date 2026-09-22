@@ -34,8 +34,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    setLoading(sessionLoading);
-  }, [sessionLoading]);
+    // Only set loading to true if we do not already have an active session
+    if (!sessionLoading) {
+      setLoading(false);
+    } else if (!sessionData?.user) {
+      setLoading(true);
+    }
+  }, [sessionLoading, sessionData?.user]);
 
   const currentUser = useMemo(() => {
     if (!sessionData?.user) return null;

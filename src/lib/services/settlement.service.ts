@@ -5,6 +5,19 @@ import { logHistoryEvent } from './history.service';
 import { notifySettlementAdded } from '@/lib/notification-service';
 import { getFullName } from '../utils';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
+import { getGroupsByUserId } from './group.service';
+
+function getFallbackUser(userId: string): UserProfile {
+  return {
+    uid: userId || 'unknown',
+    firstName: 'Former',
+    lastName: 'Member',
+    username: 'former_member',
+    email: '',
+    role: 'user',
+    createdAt: new Date().toISOString(),
+  };
+}
 
 function mapSettlementRow(row: any, paidBy: UserProfile, paidTo: UserProfile): Settlement {
   return {
@@ -87,19 +100,25 @@ export async function getSettlementsByGroupId(groupId: string): Promise<Settleme
 
   return settlementDocs
     .map(r => {
-      const paidBy = userMap.get(r.paidById);
-      const paidTo = userMap.get(r.paidToId);
-      if (!paidBy || !paidTo) return null;
-
+      const paidBy = userMap.get(r.paidById) || getFallbackUser(r.paidById);
+      const paidTo = userMap.get(r.paidToId) || getFallbackUser(r.paidToId);
       return mapSettlementRow(r, paidBy, paidTo);
     })
-    .filter((s): s is Settlement => s !== null)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export async function getSettlementsByUserId(userId: string): Promise<Settlement[]> {
-  const all = await getAllSettlements();
-  return all.filter(s => s.paidBy.uid === userId || s.paidTo.uid === userId);
+  const userGroups = await getGroupsByUserId(userId);
+  if (userGroups.length === 0) return [];
+
+  const groupSettlementLists = await Promise.all(
+    userGroups.map(g => getSettlementsByGroupId(g.id))
+  );
+
+  const allUserGroupSettlements = groupSettlementLists.flat();
+  return allUserGroupSettlements
+    .filter(s => s.paidBy.uid === userId || s.paidTo.uid === userId)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export async function getAllSettlements(): Promise<Settlement[]> {
@@ -107,8 +126,8 @@ export async function getAllSettlements(): Promise<Settlement[]> {
 
   const userIds = new Set<string>();
   settlementDocs.forEach(r => {
-    userIds.add(r.paidById);
-    userIds.add(r.paidToId);
+    if (r.paidById) userIds.add(r.paidById);
+    if (r.paidToId) userIds.add(r.paidToId);
   });
 
   const users = await hydrateUsers(Array.from(userIds));
@@ -116,13 +135,10 @@ export async function getAllSettlements(): Promise<Settlement[]> {
 
   return settlementDocs
     .map(r => {
-      const paidBy = userMap.get(r.paidById);
-      const paidTo = userMap.get(r.paidToId);
-      if (!paidBy || !paidTo) return null;
-
+      const paidBy = userMap.get(r.paidById) || getFallbackUser(r.paidById);
+      const paidTo = userMap.get(r.paidToId) || getFallbackUser(r.paidToId);
       return mapSettlementRow(r, paidBy, paidTo);
     })
-    .filter((s): s is Settlement => s !== null)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
@@ -131,9 +147,15 @@ export async function updateSettlement(
   data: Partial<SettlementDocument>,
   actorId: string
 ): Promise<void> {
-  // Find existing settlement
-  const allSettlements = await queryByEntityType<any>('SETTLEMENT');
-  const oldData = allSettlements.find(s => s.id === settlementId);
+  // Find existing settlement: direct partition lookup if groupId provided, otherwise fallback
+  let oldData: any = null;
+  if (data.groupId) {
+    oldData = await getItem<any>(`GROUP#${data.groupId}`, `SETTLEMENT#${settlementId}`);
+  }
+  if (!oldData) {
+    const allSettlements = await queryByEntityType<any>('SETTLEMENT');
+    oldData = allSettlements.find(s => s.id === settlementId);
+  }
   if (!oldData) throw new Error("Settlement not found.");
 
   const updatedDoc = {

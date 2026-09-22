@@ -53,3 +53,112 @@ export interface ReceiptScanResult {
   notes: string | null;
   confidence?: 'high' | 'medium' | 'low';
 }
+
+export type QueryIntent =
+  | 'TREND'
+  | 'CATEGORY_TIMELINE'
+  | 'MEMBER_CUT'
+  | 'BALANCE_LEDGER'
+  | 'BUDGET_RUNRATE'
+  | 'SPENDING_SPIKE'
+  | 'SEMANTIC_SEARCH'
+  | 'DRAFT'
+  | 'GENERAL';
+
+export interface SpendingTrendMonth {
+  monthKey: string; // YYYY-MM
+  label: string;    // e.g. "Sep 2026"
+  personalSpent: number;
+  groupTotalSpent?: number;
+  expenseCount: number;
+}
+
+export interface SpendingTrendResult {
+  scope: 'user' | 'group';
+  groupName?: string;
+  months: SpendingTrendMonth[];
+  currentMonthSpent: number;
+  previousMonthSpent: number;
+  monthOverMonthChangePct: number | null; // e.g. +14.2 or -8.5
+  dailyBurnRate: number;                 // current month average per day so far
+  projectedMonthEndSpent: number;        // estimated total for full month
+  memberTrends?: Array<{
+    userId: string;
+    name: string;
+    currentMonthSpent: number;
+    previousMonthSpent: number;
+    changePct: number | null;
+  }>;
+  formattedSummary: string;
+}
+
+export interface CategoryTimelineMonth {
+  monthKey: string;
+  label: string;
+  amount: number;
+  expenseCount: number;
+}
+
+export interface CategoryTimelineResult {
+  category: string;
+  masterCategory?: string;
+  totalSpent: number;
+  personalShare: number;
+  months: CategoryTimelineMonth[];
+  topExpenses: Array<{
+    description: string;
+    amount: number;
+    date: string;
+    paidBy: string;
+  }>;
+  trendDirection: 'increasing' | 'decreasing' | 'stable';
+  formattedSummary: string;
+}
+
+export interface MemberCutDetail {
+  userId: string;
+  name: string;
+  username?: string;
+  totalPaid: number;      // Amount member paid out of pocket
+  totalConsumed: number;  // Amount member owed across splits ("cut")
+  netBalance: number;     // totalPaid - totalConsumed (+ creditor, - debtor)
+  percentageOfTotal: number; // Share of total group spending
+  expenseCount: number;
+}
+
+export interface MemberCutResult {
+  groupId: string;
+  groupName: string;
+  totalGroupSpend: number;
+  memberCount: number;
+  members: MemberCutDetail[];
+  highestPayer: { name: string; amount: number };
+  highestConsumer: { name: string; amount: number };
+  formattedSummary: string;
+}
+
+export interface BudgetForecastResult {
+  groupId: string;
+  groupName: string;
+  monthlyLimit: number;
+  currentSpent: number;
+  percentageUsed: number;
+  daysInMonth: number;
+  daysElapsed: number;
+  daysRemaining: number;
+  currentDailySpend: number;
+  projectedMonthEndSpend: number;
+  willExceedBudget: boolean;
+  recommendedDailyBudgetRemaining: number;
+  formattedSummary: string;
+}
+
+export interface SpendingSpike {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category?: string;
+  paidBy: string;
+  groupName?: string;
+}

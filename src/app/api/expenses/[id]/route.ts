@@ -22,9 +22,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
     }
 
+    const parsedDate = body.date ? new Date(body.date) : new Date();
+    const date = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
     const expenseData = {
       ...body,
-      date: new Date(body.date),
+      date,
     };
     await updateExpense(id, body.oldAmount || body.amount, expenseData, session.user.id);
     return NextResponse.json({ success: true });

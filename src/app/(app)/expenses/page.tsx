@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { GlobalQuickActions } from '@/components/layout/global-quick-actions';
 import { Accordion } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -180,11 +181,14 @@ export default function AllExpensesPage() {
           <h1 className="text-2xl sm:text-3xl font-bold font-headline text-foreground tracking-tight">My Expenses</h1>
           <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 hidden sm:block">A consolidated breakdown of all transactions across your groups.</p>
         </div>
-        <Button asChild size="sm" className="shadow-md shrink-0 sm:h-10 sm:px-4">
-          <Link href="/groups">
-            <Icons.Add className="mr-1.5 sm:mr-2 h-4 w-4" /> <span className="text-xs sm:text-sm">Record Expense</span>
-          </Link>
-        </Button>
+        <GlobalQuickActions
+          directAction="expense"
+          trigger={
+            <Button size="sm" className="shadow-md shrink-0 sm:h-10 sm:px-4">
+              <Icons.Add className="mr-1.5 sm:mr-2 h-4 w-4" /> <span className="text-xs sm:text-sm">Record Expense</span>
+            </Button>
+          }
+        />
       </div>
 
       {/* Stats Cards Section */}

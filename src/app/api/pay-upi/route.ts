@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const pa = searchParams.get('pa');
@@ -13,7 +22,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/dashboard', baseUrl));
   }
 
-  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(pa)}&pn=${encodeURIComponent(pn)}&am=${encodeURIComponent(am)}&cu=INR&tn=${encodeURIComponent(tn)}`;
+  const safeAm = isNaN(Number(am)) ? '0.00' : Number(am).toFixed(2);
+  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(pa)}&pn=${encodeURIComponent(pn)}&am=${encodeURIComponent(safeAm)}&cu=INR&tn=${encodeURIComponent(tn)}`;
+
+  const safePn = escapeHtml(pn);
+  const safePa = escapeHtml(pa);
+  const safeUpiLink = escapeHtml(upiDeepLink);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -85,16 +99,16 @@ export async function GET(request: Request) {
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     </div>
     <h2>Opening UPI App</h2>
-    <p>Transferring ₹${Number(am).toFixed(2)} to <strong>${pn}</strong> (${pa})</p>
-    <div class="amount">₹${Number(am).toFixed(2)}</div>
-    <a href="${upiDeepLink}" class="btn">Open UPI App (GPay / PhonePe / Paytm)</a>
+    <p>Transferring ₹${safeAm} to <strong>${safePn}</strong> (${safePa})</p>
+    <div class="amount">₹${safeAm}</div>
+    <a href="${safeUpiLink}" class="btn">Open UPI App (GPay / PhonePe / Paytm)</a>
     <div class="fallback">
-      Already paid? <a href="${baseUrl}/dashboard">Return to Splitwise</a>
+      Already paid? <a href="${escapeHtml(baseUrl)}/dashboard">Return to Splitwise</a>
     </div>
   </div>
   <script>
     setTimeout(function() {
-      window.location.href = "${upiDeepLink}";
+      window.location.href = ${JSON.stringify(upiDeepLink)};
     }, 300);
   </script>
 </body>

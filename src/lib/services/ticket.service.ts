@@ -18,6 +18,39 @@ function mapTicketRow(row: any, user: UserProfile, messages: SupportTicketMessag
   };
 }
 
+export async function getTicketById(ticketId: string): Promise<SupportTicket | null> {
+  const r = await getItem<any>(`TICKET#${ticketId}`, 'METADATA');
+  if (!r) return null;
+
+  const userIds = new Set<string>();
+  userIds.add(r.userId);
+  if (r.assignedToId) userIds.add(r.assignedToId);
+  (r.messages || []).forEach((m: any) => {
+    const sentById = typeof m === 'string' ? m : m.sentById;
+    if (sentById) userIds.add(sentById);
+  });
+
+  const users = await hydrateUsers(Array.from(userIds));
+  const userMap = new Map(users.map(u => [u.uid, u]));
+
+  const user = userMap.get(r.userId);
+  if (!user) return null;
+
+  const messages: SupportTicketMessage[] = (r.messages || []).map((m: any) => {
+    const sentById = typeof m === 'string' ? m : m.sentById;
+    const sentBy = userMap.get(sentById);
+    if (!sentBy) return null;
+    return {
+      message: m.message,
+      sentAt: m.sentAt ? new Date(m.sentAt).toISOString() : new Date().toISOString(),
+      sentBy,
+    };
+  }).filter((m: any): m is SupportTicketMessage => m !== null);
+
+  const assignedTo = r.assignedToId ? userMap.get(r.assignedToId) : undefined;
+  return mapTicketRow(r, user, messages, assignedTo);
+}
+
 export async function getTicketsByUserId(userId: string): Promise<SupportTicket[]> {
   const allTickets = await getAllTickets();
   return allTickets.filter(t => t.user.uid === userId);

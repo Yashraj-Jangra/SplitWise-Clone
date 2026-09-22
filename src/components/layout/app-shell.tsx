@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SearchDialog } from "./search-dialog";
 import { NotificationBell } from "./notification-bell";
+import { GlobalQuickActions } from "./global-quick-actions";
 import { BottomNavBar } from "./bottom-nav-bar";
 import { listenForForegroundMessages } from "@/lib/push-service";
 import { UpdateBanner } from "@/components/shared/update-banner";
@@ -348,6 +349,7 @@ function Header() {
         <div className="relative flex-1">
             <SearchDialog />
         </div>
+        <GlobalQuickActions />
         <NotificationBell />
         <UserNav />
       </header>
@@ -446,7 +448,7 @@ export function AppShell({ children }: AppShellProps) {
             "flex flex-1 flex-col min-h-0 animate-in fade-in-0 duration-300",
             isAssistant
               ? "p-0 pb-0 md:pb-0 gap-0 overflow-hidden"
-              : "gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 pb-10 md:pb-4 lg:pb-6 overflow-y-auto"
+              : "gap-3.5 sm:gap-4 lg:gap-6 px-2 py-3 sm:px-4 sm:py-4 lg:p-6 pb-10 md:pb-4 lg:pb-6 overflow-y-auto overflow-x-hidden min-w-0 max-w-full"
           )}>
             {children}
           </main>

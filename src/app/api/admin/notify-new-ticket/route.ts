@@ -1,10 +1,34 @@
 import { NextResponse } from 'next/server';
-import { getAllTickets } from '@/lib/services/ticket.service';
+import { getTicketById } from '@/lib/services/ticket.service';
 import { getSiteSettings } from '@/lib/services/settings.service';
+import { auth } from '@/lib/auth.server';
 import nodemailer from 'nodemailer';
+
+function escapeHtml(str: string): string {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 export async function POST(request: Request) {
     try {
+        const internalSecret = request.headers.get('x-internal-secret');
+        const isInternal = !!(
+            internalSecret &&
+            process.env.INTERNAL_API_SECRET &&
+            internalSecret === process.env.INTERNAL_API_SECRET
+        );
+
+        if (!isInternal) {
+            const session = await auth.api.getSession({ headers: request.headers });
+            if (!session?.user || session.user.role !== 'admin') {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            }
+        }
+
         const { ticketId } = await request.json();
         if (!ticketId) {
             return NextResponse.json({ error: 'Ticket ID is required.' }, { status: 400 });
@@ -19,8 +43,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: 'Admin notification skipped; mail not configured.' });
         }
 
-        const allTickets = await getAllTickets();
-        const ticket = allTickets.find(t => t.id === ticketId);
+        const ticket = await getTicketById(ticketId);
 
         if (!ticket) {
             return NextResponse.json({ error: 'Ticket not found.' }, { status: 404 });
@@ -37,24 +60,28 @@ export async function POST(request: Request) {
             },
         });
 
-        await transporter.verify();
-
         const firstMessage = ticket.messages[0]?.message || 'No message content';
+        const safeAppName = escapeHtml(appName || 'SplitIt');
+        const safeUserName = escapeHtml(ticket.userName || 'User');
+        const safeUserEmail = escapeHtml(ticket.userEmail || '');
+        const safeSubject = escapeHtml(ticket.subject || '');
+        const safeCategory = escapeHtml(ticket.category || '');
+        const safeFirstMessage = escapeHtml(firstMessage);
 
         const mailOptions = {
             from: supportEmail,
             to: supportEmail,
-            subject: `[${appName}] New Ticket #${ticket.id.slice(0,6)}: ${ticket.subject}`,
+            subject: `[${safeAppName}] New Ticket #${ticket.id.slice(0, 6)}: ${safeSubject}`,
             html: `
                 <h1>New Support Ticket</h1>
-                <p>A new support ticket has been submitted on ${appName}.</p>
+                <p>A new support ticket has been submitted on ${safeAppName}.</p>
                 <ul>
-                    <li><strong>User:</strong> ${ticket.userName} (${ticket.userEmail})</li>
-                    <li><strong>Subject:</strong> ${ticket.subject}</li>
-                    <li><strong>Category:</strong> ${ticket.category}</li>
+                    <li><strong>User:</strong> ${safeUserName} (${safeUserEmail})</li>
+                    <li><strong>Subject:</strong> ${safeSubject}</li>
+                    <li><strong>Category:</strong> ${safeCategory}</li>
                 </ul>
                 <p><strong>Message:</strong></p>
-                <p style="white-space: pre-wrap; background-color: #f5f5f5; padding: 10px; border-radius: 5px;">${firstMessage}</p>
+                <p style="white-space: pre-wrap; background-color: #f5f5f5; padding: 10px; border-radius: 5px;">${safeFirstMessage}</p>
                 <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231'}/admin/support/${ticket.id}">Click here to view and reply to the ticket.</a></p>
             `,
         };

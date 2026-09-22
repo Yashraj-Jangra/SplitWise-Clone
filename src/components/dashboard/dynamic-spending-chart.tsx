@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Icons } from '@/components/icons';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
@@ -141,14 +142,20 @@ export function DynamicSpendingChart({ expenses }: DynamicSpendingChartProps) {
         onMouseLeave={() => { setIsHovered(false); }}
       >
         {expensesByCategory.length === 0 ? (
-          <div className="text-center text-muted-foreground w-full">
-            <p>No spending data in the last 30 days.</p>
+          <div className="flex flex-col items-center justify-center h-[250px] text-center text-muted-foreground p-4 w-full">
+            <div className="h-12 w-12 rounded-2xl bg-muted/50 border border-border/40 flex items-center justify-center mb-3 shadow-xs">
+              <Icons.PieChart className="h-6 w-6 opacity-40 text-primary" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">No spending data in the last 30 days</p>
+            <p className="text-xs text-muted-foreground/70 mt-1 max-w-xs">
+              Expenses recorded in your groups will automatically break down by category here.
+            </p>
           </div>
         ) : (
           <>
             {/* Left Column: Donut Pie Chart */}
             <div className="w-full sm:w-1/2 flex-shrink-0 relative">
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full min-w-0 max-w-full overflow-hidden">
                 <ResponsiveContainer>
                     <PieChart>
                     <Tooltip

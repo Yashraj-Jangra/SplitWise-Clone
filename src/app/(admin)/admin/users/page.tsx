@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import { getAllUsers, deleteUser, deleteUsersMass, updateUserRoleMass } from '@/lib/api.client';
 import type { UserProfile } from '@/types';
 import { getFullName, getInitials, cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ import { Search, UserCheck, Shield, Trash2, Edit3, X, Users as UsersIcon, Shield
 
 export default function ManageUsersPage() {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -283,7 +285,7 @@ export default function ManageUsersPage() {
               </TableRow>
             ) : (
               filteredUsers.map((user) => {
-                const isMainAdmin = user.email === 'jangrayash1505@gmail.com';
+                const isMainAdmin = (user as any).role === 'superadmin' || user.uid === currentUser?.uid;
                 const isSelected = selectedUserIds.includes(user.uid);
 
                 return (

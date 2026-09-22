@@ -48,6 +48,8 @@ const passwordResetSchema = z.object({
 
 type PasswordResetValues = z.infer<typeof passwordResetSchema>;
 
+import { useAuth } from '@/contexts/auth-context';
+
 interface EditUserFormProps {
   user: UserProfile;
 }
@@ -55,7 +57,8 @@ interface EditUserFormProps {
 export function EditUserForm({ user }: EditUserFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const isMainAdmin = user.email === 'jangrayash1505@gmail.com';
+  const { currentUser } = useAuth();
+  const isMainAdmin = (user as any).role === 'superadmin' || user.uid === currentUser?.uid;
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   const [showPassword, setShowPassword] = useState(false);

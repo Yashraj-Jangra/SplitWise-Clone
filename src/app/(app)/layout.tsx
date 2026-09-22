@@ -22,9 +22,9 @@ export default function AuthenticatedAppLayout({
     }
   }, [userProfile, loading, router]);
 
-  // While checking auth state or if user is not yet available, show a loading screen.
-  // This prevents a flash of content before the redirect can happen.
-  if (loading || !userProfile) {
+  // While checking initial auth state or if user is not yet available, show a loading screen.
+  // Once userProfile is present, never unmount AppShell or children during background checks.
+  if (!userProfile) {
     return <AppLoading />;
   }
   

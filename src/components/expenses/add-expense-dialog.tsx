@@ -21,6 +21,8 @@ interface AddExpenseDialogProps {
   onExpenseAdded?: () => void;
   buttonVariant?: ButtonProps['variant'];
   buttonSize?: ButtonProps['size'];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function AddExpenseDialog({
@@ -29,8 +31,12 @@ export function AddExpenseDialog({
   onExpenseAdded,
   buttonVariant,
   buttonSize,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: AddExpenseDialogProps) {
-  const [open, setOpen] = React.useState(false);
+  const [localOpen, setLocalOpen] = React.useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : localOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setLocalOpen;
   const isMobile = useIsMobile();
   const { userProfile } = useAuth();
   

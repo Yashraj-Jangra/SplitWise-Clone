@@ -21,10 +21,11 @@ export async function POST(request: Request) {
     );
 
     let authUid: string;
+    let session: any = null;
     if (isInternal) {
       authUid = body.actorId || 'system';
     } else {
-      const session = await auth.api.getSession({ headers: request.headers });
+      session = await auth.api.getSession({ headers: request.headers });
       if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
       }
@@ -71,6 +72,13 @@ export async function POST(request: Request) {
 
     if (!type || !title || !notifBody || !recipientIds) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!isInternal) {
+      const isBroadcast = target === 'all_users' || type === 'broadcast_announcement' || type === 'broadcast_critical';
+      if (isBroadcast && session.user.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden: Admin privilege required for broadcast notifications' }, { status: 403 });
+      }
     }
 
     const result = await serverDispatchNotification({

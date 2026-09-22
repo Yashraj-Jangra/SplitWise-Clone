@@ -1,5 +1,91 @@
 # Session Progress & Context Preservation
 
+  - **Production Release Pull Request Opened (dev -> master)** 🚀 ✅:
+    - Opened Pull Request [#18](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/18) merging `dev` into `master` with 0 conflicts and 100% test suite pass rate.
+    - Captures all AI financial analytics extensions, security hardenings, mobile overflow fixes, tab-switching session persistence, and global quick-action workflows.
+
+  - **Global Quick-Actions, In-Place Action Dialogs & Header Shortcuts** ✨ 🎨 ✅:
+    - **Objective**: Implement a global desktop quick-action trigger (`+`) and eliminate jarring redirects from `/expenses` and `/settlements` to `/groups`.
+    - **Implementation**:
+      - **Global Quick-Actions Component ([`src/components/layout/global-quick-actions.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/global-quick-actions.tsx))**:
+        - Universal trigger offering quick actions: "Record Expense", "Record Settlement", "Create Group".
+        - Smart group selection modal: if the user has 1 group, opens the transaction dialog immediately; if multiple groups, opens a sleek glass-pane group picker with avatar previews and member counts.
+        - Mounts directly in `Header` in [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx) next to `SearchDialog` and `NotificationBell`.
+      - **In-Place Dialog Triggers on `/expenses` and `/settlements`**:
+        - Replaced `<Link href="/groups">` on [`src/app/(app)/expenses/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/expenses/page.tsx) and [`src/app/(app)/settlements/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/settlements/page.tsx) with `<GlobalQuickActions directAction="..." />`, allowing users to record transactions without losing page context.
+        - Added `appEventEmitter.on('data-changed', loadData)` to [`src/app/(app)/settlements/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/settlements/page.tsx) to resolve realtime desync issues.
+      - **Dashboard Quick Action Bar ([`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx))**:
+        - Added quick "Record Expense" and "Settle Up" action triggers in the dashboard header beside the personalized greeting.
+        - Polished empty states on `DynamicSpendingChart` and added `aspect-auto` to prevent Recharts aspect ratio overflow.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 50/50 tests in 5 test suites.
+
+  - **Mobile Analytics Horizontal Overflow & Responsive Overhaul** 🎨 📱 ✅:
+    - **Issue**: The Analytics page (`/analysis`) suffered from horizontal scrolling and clipped UI on mobile viewports due to fixed Recharts aspect ratios, negative margins, and inflexible filter containers.
+    - **Fix Applied**:
+      - Replaced `ChartContainer` aspect ratio defaults with `aspect-auto w-full min-w-0 max-w-full overflow-hidden` across [`spending-over-time.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/analysis/spending-over-time.tsx) and [`spending-breakdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/analysis/spending-breakdown.tsx).
+      - Removed `-mr-4 pr-4` negative padding hack on `SpendingBreakdown` that pushed elements 16px off-screen.
+      - Replaced inflexible Radix toggle group in [`timeline-filter.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/analysis/timeline-filter.tsx) with horizontal scroll pill container (`overflow-x-auto no-scrollbar`).
+      - Added responsive `YAxis` width (42px with compact number formatting) and tight margins (`left: -12`) on `SpendingOverTime`.
+      - Added `min-w-0 max-w-full overflow-x-hidden` on `AppShell` `<main>` and `AnalysisPage` root container.
+      - Added real-time reactivity with `appEventEmitter.on('data-changed', loadData)`.
+    - **Verification**: `npx tsc --noEmit` exits 0; all unit tests pass.
+
+  - **Tab Switch State Reset & Form Progress Loss Fix** 🐛 🛡️ ✅:
+    - **Issue**: Switching browser tabs or returning to SplitIt caused the entire web application to re-render, unmounting `<AppShell>` and resetting active dialog forms (such as "Add Expense"), causing users to lose unsaved input progress.
+    - **Fix Applied**:
+      - Configured Better Auth client with `sessionOptions: { refetchOnWindowFocus: false }` in [`src/lib/auth.client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/auth.client.ts).
+      - Guarded `loading` in [`src/contexts/auth-context.tsx`](file:///d:/Projects/SplitWise-Clone/src/contexts/auth-context.tsx) so background revalidations never reset `loading: true` once a user session is active.
+      - Updated [`src/app/(app)/layout.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/layout.tsx) so `<AppLoading />` is only shown if `!userProfile`, keeping `<AppShell>` permanently mounted across background syncs.
+      - Guarded service worker `controllerchange` in [`src/hooks/use-service-worker-update.ts`](file:///d:/Projects/SplitWise-Clone/src/hooks/use-service-worker-update.ts) to only reload when explicitly triggered by the user.
+    - **Verification**: `npx tsc --noEmit` exits 0; verified session retention during revalidations.
+
+  - **Group Detail Mobile Tabs & Modal Design System Alignment** 🎨 ✅:
+    - **Fix Applied**:
+      - Replaced cramped `grid grid-cols-6` icon-only tabs in [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx) with a horizontal scrollable pill bar (`overflow-x-auto no-scrollbar flex`) displaying both icons and clear labels ("Activity", "Budget", "Balances", "Analysis", "Audit", "Settings").
+      - Redesigned [`CreateGroupDialog`](file:///d:/Projects/SplitWise-Clone/src/components/groups/create-group-dialog.tsx) to strictly follow the Dark-Mode Glass-Pane Minimalist Modal System (`rounded-2xl border-border/20 shadow-2xl`, `p-6` body padding, `h-11 rounded-xl` inputs, and `h-[90vh]` mobile bottom sheet).
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean).
+
+  - **Extended AI Financial Analytics & Hybrid RAG Intelligence System** ✨ 🧠 ⚡ ✅:
+    - **Objective & Architectural Solution**: Extended SplitIt's AI RAG from basic current-month snapshot and generic top-K vector search to a deterministic financial intelligence engine that guarantees zero math hallucinations by pre-calculating verified metrics before LLM synthesis.
+    - **Implementation**:
+      - **Financial Analytics Engine ([`src/lib/ai/financial-analytics.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-analytics.ts))**:
+        - `calculateSpendingTrends`: Multi-month personal and group spending trends, Month-over-Month (MoM) % changes, daily velocity/burn rate, projected month-end totals, and per-member trends.
+        - `calculateCategoryTimeline`: Multi-month category spending trajectories, personal share vs group totals, and top expenses driving each category with keyword matching powered by `defaultExpenseCategories`.
+        - `calculateMemberCuts`: Authoritative member breakdown computing total out-of-pocket payments (`paid`), actual split obligations consumed (`cut`), net creditor/debtor balance, and % share of total group spending.
+        - `calculateBudgetForecast`: Pacing and forecast against monthly group budgets with safe daily spend recommendations.
+        - `calculateSpendingSpikes`: Extraction of recent high-value transaction outliers.
+      - **Dynamic Intent Classifier & Context Orchestrator ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Added `detectQueryIntent` to categorize requests (`TREND`, `CATEGORY_TIMELINE`, `MEMBER_CUT`, `BUDGET_RUNRATE`, `SPENDING_SPIKE`, `BALANCE_LEDGER`, `DRAFT`, `GENERAL`).
+        - Dynamically executes relevant analytical queries in parallel and injects structured authoritative facts into the system prompt.
+      - **Chat API Route ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Integrated query intent routing, passed message to `buildFinancialSnapshot`, and added granular SSE stream status messages (`"Computing monthly spending trends..."`, `"Calculating member cuts & contributions..."`, etc.).
+        - Expanded System Prompt with explicit format directives for trends (`📈` / `📉`), member cuts (markdown comparison table), and category timelines.
+      - **UI Chat Panel ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Added context-aware starter prompts tailored for Group view vs Global Dashboard.
+        - Updated empty state copy and client-side instant status feedback.
+      - **Unit Tests ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts))**:
+        - 12 comprehensive vitest tests covering intent classification, category keyword resolution, member cut mathematics, trend/burn-rate calculations, and budget forecasting.
+    - **Verification**: `npm test` passes all 48/48 tests across 5 test suites; `npx tsc --noEmit` exits 0 (clean).
+    - **Security Hardening (Phase 1)**:
+      - **Reflected XSS Patch**: Sanitized and HTML-escaped URL search parameters (`pn`, `pa`, `tn`, `am`) and safely injected `JSON.stringify(upiDeepLink)` into script execution blocks in [`src/app/api/pay-upi/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/pay-upi/route.ts).
+      - **Support Notification Protection**: Secured [`src/app/api/admin/notify-new-ticket/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/admin/notify-new-ticket/route.ts) and [`src/app/api/admin/notify-ticket-reply/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/admin/notify-ticket-reply/route.ts) with `x-internal-secret` and admin session checks, added HTML escaping to email templates, and switched to dedicated `getTicketById(ticketId)` in [`src/lib/services/ticket.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/ticket.service.ts).
+      - **Broadcast Authorization**: Enforced admin role checks before allowing broadcast notification dispatches (`all_users` / `broadcast_*`) in [`src/app/api/notifications/send/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/notifications/send/route.ts).
+      - **File Upload Safeguards**: Enforced MIME type whitelist (JPEG, PNG, WEBP, PDF), 10MB file size limit, and alphanumeric filename sanitization in [`src/app/api/upload/receipt/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/upload/receipt/route.ts).
+      - **Superadmin Role Decoupling**: Replaced hardcoded personal email addresses with `process.env.ADMIN_EMAIL` and `user.role === 'superadmin'` across [`src/lib/services/user.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/user.service.ts), [`src/components/admin/edit-user-form.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/admin/edit-user-form.tsx), and [`src/app/(admin)/admin/users/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(admin)/admin/users/page.tsx).
+    - **Data Integrity & Logic Fixes (Phase 2)**:
+      - **Vector Store Composite Deletions**: Added `deleteVectorsByPrefix` and `deleteVectorsByGroup` in [`src/lib/ai/vector-store.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/vector-store.ts) and updated [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) so composite vector keys (`EXPENSE#${id}#${uid}`, `SETTLEMENT#${id}#${uid}`, `GROUP#${id}#${uid}`) are cleanly deleted.
+      - **Cascade Group Deletions**: Implemented `deletePartition(pk)` in [`src/lib/nosql.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql.ts) and updated `deleteGroupPermanently` in [`src/lib/services/group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts) to purge the entire `GROUP#${groupId}` partition and group vectors.
+      - **Expense Amount Desync**: In `deleteExpense` ([`src/lib/services/expense.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/expense.service.ts)), read `expense.amount` directly from the database record rather than trusting client-provided amounts.
+      - **Deleted User Fallback Handling**: Added `getFallbackUser` across [`group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts), [`expense.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/expense.service.ts), and [`settlement.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/settlement.service.ts) so deleted user accounts no longer crash groups or hide expenses/settlements from remaining members.
+      - **Safe Date Parsing**: Sanitized `new Date(body.date)` across [`src/app/api/expenses/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/expenses/route.ts), [`src/app/api/expenses/[id]/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/expenses/[id]/route.ts), [`src/app/api/settlements/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/settlements/route.ts), and [`src/app/api/settlements/[id]/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/settlements/[id]/route.ts) with fallback to `new Date()`, avoiding `RangeError: Invalid time value`.
+    - **Performance & Architectural Optimizations (Phase 3)**:
+      - **Partition-Targeted User Queries**: Replaced full-table scans (`queryByEntityType('EXPENSE')` and `queryByEntityType('SETTLEMENT')`) in `getExpensesByUserId` and `getSettlementsByUserId` with partition queries scoped to the user's groups (`queryByPk`), avoiding loading the entire database into memory.
+      - **Batched Group Member Hydration**: Eliminated $N+1$ hydration in `getGroupsByUserId` and `getAllGroups` by pre-aggregating unique member and creator IDs into a single batched `hydrateUsers` call.
+      - **Optimized Settlement Updates**: In `updateSettlement` ([`settlement.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/settlement.service.ts)), perform direct partition lookup (`getItem`) when `data.groupId` is provided instead of scanning all settlements in the database.
+      - **Bounded In-Memory Cache**: Capped `readCache` in [`src/lib/nosql.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/nosql.ts) to a maximum of 500 entries with automatic oldest-key eviction.
+      - **Storage Proxy Log Cleanup**: Replaced stale MinIO log message with general storage error message in [`src/app/api/storage/[...key]/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/storage/%5B...key%5D/route.ts).
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 36/36 tests in 4 test suites.
+
   - **GitHub Actions CI/CD Deployment AI Variables & Environment Scope Hardening** 🔧 ✅:
     - **Issue**:
       - In [`.github/workflows/deploy.yml`](file:///d:/Projects/SplitWise-Clone/.github/workflows/deploy.yml), only the `deploy` job had `environment: name: production`, while the `build-and-push` job lacked an environment scope. If secrets were saved under GitHub's `production` Environment Secrets, `NEXT_PUBLIC_*` build-args were passed as empty strings during the Docker build.
