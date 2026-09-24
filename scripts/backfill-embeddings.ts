@@ -78,6 +78,11 @@ async function backfill() {
   if (targetGroup) console.log(`Filter: Scoped to group "${targetGroup}"`);
   console.log(`Concurrency: ${concurrency}`);
 
+  // Preload existing vector IDs for idempotency
+  const existingRows = await executeOracleQuery<{ ID: string }>(`SELECT id FROM SPLITITVECTORS`).catch(() => []);
+  const existingIds = new Set(existingRows.map((r) => r.ID));
+  console.log(`Found ${existingIds.size} already indexed partition vectors in SPLITITVECTORS.`);
+
   // 1. Fetch all expenses
   console.log('\n[1/2] Querying expenses from SplitItDB...');
   let expenseQuery = `SELECT pk, sk, data FROM SplitItDB WHERE entityType = 'EXPENSE'`;
@@ -94,11 +99,23 @@ async function backfill() {
     DATA: string | object;
   }>(expenseQuery, queryParams);
 
+  // Sort descending by date so most recent expenses are processed first
+  expenseRows.sort((a, b) => {
+    try {
+      const dataA = typeof a.DATA === 'string' ? JSON.parse(a.DATA) : a.DATA;
+      const dataB = typeof b.DATA === 'string' ? JSON.parse(b.DATA) : b.DATA;
+      return new Date(dataB.date || 0).getTime() - new Date(dataA.date || 0).getTime();
+    } catch {
+      return 0;
+    }
+  });
+
   const itemsToProcess = limitCount ? expenseRows.slice(0, limitCount) : expenseRows;
   console.log(`Found ${expenseRows.length} expense records${limitCount ? ` (processing top ${itemsToProcess.length})` : ''}.`);
 
   let indexedExpenses = 0;
   let skippedExpenses = 0;
+  let alreadyIndexedExpenses = 0;
 
   await runWithConcurrency(itemsToProcess, concurrency, async (row, idx) => {
     try {
@@ -144,6 +161,12 @@ async function backfill() {
         }))
       );
 
+      const allExist = Array.from(allUserIds).every((uid) => existingIds.has(`EXPENSE#${expenseId}#${uid}`));
+      if (allExist) {
+        alreadyIndexedExpenses++;
+        return;
+      }
+
       const textChunk = buildExpenseChunk({
         id: expenseId,
         description: data.description,
@@ -162,7 +185,25 @@ async function backfill() {
         return;
       }
 
-      const embedding = await embed(textChunk);
+      let embedding: number[] | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          embedding = await embed(textChunk);
+          break;
+        } catch (embedErr: any) {
+          if (embedErr.message?.includes('429') && attempt < 2) {
+            console.log(`[Rate Limit] Backing off 4s before retrying ${expenseId}...`);
+            await new Promise((r) => setTimeout(r, 4000));
+          } else {
+            throw embedErr;
+          }
+        }
+      }
+
+      if (!embedding) {
+        skippedExpenses++;
+        return;
+      }
 
       for (const uid of allUserIds) {
         await upsertVector({
@@ -173,6 +214,7 @@ async function backfill() {
           textChunk,
           embedding,
         });
+        existingIds.add(`EXPENSE#${expenseId}#${uid}`);
       }
 
       indexedExpenses++;
@@ -181,7 +223,7 @@ async function backfill() {
       }
 
       // Small throttling delay to protect rate limits
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 500));
     } catch (err: any) {
       console.warn(`⚠️ Error processing expense ${row.SK}:`, err.message || err);
       skippedExpenses++;
@@ -206,6 +248,7 @@ async function backfill() {
 
   let indexedSettlements = 0;
   let skippedSettlements = 0;
+  let alreadyIndexedSettlements = 0;
 
   await runWithConcurrency(settlementsToProcess, concurrency, async (row, idx) => {
     try {
@@ -233,13 +276,37 @@ async function backfill() {
 
       const uids = [data.paidById, data.paidToId].filter(Boolean);
 
+      const allExist = uids.every((uid) => existingIds.has(`SETTLEMENT#${settlementId}#${uid}`));
+      if (allExist) {
+        alreadyIndexedSettlements++;
+        return;
+      }
+
       if (isDryRun) {
         console.log(`[${idx + 1}/${settlementRows.length}] [DRY RUN] SETTLEMENT#${settlementId}: ${paidByName} paid ${paidToName} ₹${data.amount} → ${uids.length} partitions`);
         indexedSettlements++;
         return;
       }
 
-      const embedding = await embed(textChunk);
+      let embedding: number[] | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          embedding = await embed(textChunk);
+          break;
+        } catch (embedErr: any) {
+          if (embedErr.message?.includes('429') && attempt < 2) {
+            console.log(`[Rate Limit] Backing off 4s before retrying settlement ${settlementId}...`);
+            await new Promise((r) => setTimeout(r, 4000));
+          } else {
+            throw embedErr;
+          }
+        }
+      }
+
+      if (!embedding) {
+        skippedSettlements++;
+        return;
+      }
 
       for (const uid of uids) {
         await upsertVector({
@@ -250,6 +317,7 @@ async function backfill() {
           textChunk,
           embedding,
         });
+        existingIds.add(`SETTLEMENT#${settlementId}#${uid}`);
       }
 
       indexedSettlements++;
@@ -257,7 +325,7 @@ async function backfill() {
         console.log(`[${idx + 1}/${settlementRows.length}] ✓ Embedded SETTLEMENT#${settlementId} (₹${data.amount}) for ${uids.length} users`);
       }
 
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 500));
     } catch (err: any) {
       console.warn(`⚠️ Error processing settlement ${row.SK}:`, err.message || err);
       skippedSettlements++;
@@ -265,8 +333,8 @@ async function backfill() {
   });
 
   console.log('\n=== Backfill Summary ===');
-  console.log(`Expenses: ${indexedExpenses} indexed, ${skippedExpenses} skipped`);
-  console.log(`Settlements: ${indexedSettlements} indexed, ${skippedSettlements} skipped`);
+  console.log(`Expenses: ${indexedExpenses} indexed, ${alreadyIndexedExpenses} already present, ${skippedExpenses} skipped`);
+  console.log(`Settlements: ${indexedSettlements} indexed, ${alreadyIndexedSettlements} already present, ${skippedSettlements} skipped`);
   console.log(`Mode was: ${isDryRun ? 'DRY RUN (no DB vector rows modified)' : 'LIVE'}`);
   process.exit(0);
 }

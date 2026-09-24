@@ -1,6 +1,6 @@
 import { getGroupById, getGroupsByUserId } from '@/lib/services/group.service';
 import { getGroupBalances, getAllUserBalances, simplifyDebts } from '@/lib/services/balance.service';
-import { getExpensesByGroupId } from '@/lib/services/expense.service';
+import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
 import { getFullName } from '@/lib/utils';
 import {
   calculateSpendingTrends,
@@ -17,7 +17,7 @@ import type {
   SpendingSpike,
   QueryIntent,
 } from '@/types/ai';
-import type { Balance } from '@/types';
+import type { Balance, Expense } from '@/types';
 
 export interface FinancialSnapshot {
   scope: 'group' | 'global';
@@ -218,7 +218,7 @@ export async function buildFinancialSnapshot(
       }
     });
 
-    const recentExpenses = expenses.slice(0, 5).map((e) => ({
+    const recentExpenses = expenses.slice(0, 10).map((e) => ({
       description: e.description,
       amount: e.amount,
       date: e.date ? new Date(e.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Recent',
@@ -290,8 +290,9 @@ export async function buildFinancialSnapshot(
       });
     }
 
-    if (recentExpenses.length > 0 && !memberCutData && !trendData) {
-      lines.push('', 'RECENT GROUP EXPENSES:');
+    // Always provide recent verified group expenses
+    if (recentExpenses.length > 0) {
+      lines.push('', '---', 'RECENT GROUP EXPENSES:');
       recentExpenses.forEach((e) => lines.push(`- "${e.description}": ₹${e.amount.toFixed(2)} on ${e.date} (Paid by ${e.paidBy})`));
     }
 
@@ -315,9 +316,10 @@ export async function buildFinancialSnapshot(
   }
 
   // Global user scope (across all user's groups)
-  const [userBalances, userGroups, trendData, categoryData, spikes] = await Promise.all([
+  const [userBalances, userGroups, userExpenses, trendData, categoryData, spikes] = await Promise.all([
     getAllUserBalances(userId).catch(() => [] as Balance[]),
     getGroupsByUserId(userId).catch(() => []),
+    getExpensesByUserId(userId).catch(() => [] as Expense[]),
     (detectedIntent === 'TREND' || detectedIntent === 'GENERAL')
       ? calculateSpendingTrends(userId, undefined, 3).catch(() => undefined)
       : Promise.resolve(undefined),
@@ -344,6 +346,13 @@ export async function buildFinancialSnapshot(
       name: getFullName(b.user.firstName, b.user.lastName) || b.user.username || 'Member',
       amount: parseFloat(Math.abs(b.netBalance).toFixed(2)),
     }));
+
+  const recentExpenses = userExpenses.slice(0, 10).map((e) => ({
+    description: e.description,
+    amount: e.amount,
+    date: e.date ? new Date(e.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Recent',
+    paidBy: e.payers.map((p) => getFullName(p.user.firstName, p.user.lastName) || p.user.username).join(', ') || 'Unknown',
+  }));
 
   const lines: string[] = [
     'SCOPE: Global (All Groups & Friends)',
@@ -383,13 +392,21 @@ export async function buildFinancialSnapshot(
     });
   }
 
+  // Always provide recent verified personal expenses across groups
+  if (recentExpenses.length > 0) {
+    lines.push('', '---', 'RECENT PERSONAL TRANSACTIONS ACROSS GROUPS:');
+    recentExpenses.forEach((e) => {
+      lines.push(`- "${e.description}": ₹${e.amount.toFixed(2)} on ${e.date} (Paid by ${e.paidBy})`);
+    });
+  }
+
   return {
     scope: 'global',
     netBalance: parseFloat(totalNetBalance.toFixed(2)),
     youAreOwed,
     youOwe,
     monthlySpent: trendData?.currentMonthSpent || 0,
-    recentExpenses: [],
+    recentExpenses,
     intent: detectedIntent,
     trendData,
     categoryData,

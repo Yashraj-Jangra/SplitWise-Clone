@@ -2,7 +2,7 @@ import { executeOracleQuery } from '@/lib/nosql';
 import type { RetrievedChunk } from '@/types/ai';
 
 const DEFAULT_TOP_K = parseInt(process.env.AI_VECTOR_TOP_K || '10', 10);
-const DEFAULT_MIN_SIMILARITY = parseFloat(process.env.AI_VECTOR_MIN_SIMILARITY || '0.40');
+const DEFAULT_MIN_SIMILARITY = parseFloat(process.env.AI_VECTOR_MIN_SIMILARITY || '0.25');
 
 interface RetrieveOptions {
   groupId?: string;
@@ -47,14 +47,10 @@ export async function retrieveSimilar(
     params.entityType = opts.entityType;
   }
 
-  if (opts?.textFilter) {
-    sql += ` AND LOWER(textChunk) LIKE :textFilter`;
-    params.textFilter = `%${opts.textFilter.toLowerCase()}%`;
-  }
-
+  // Fetch candidate nearest neighbors based on semantic vector distance
   sql += `
     ORDER BY distance ASC
-    FETCH FIRST ${Math.max(1, topK * 2)} ROWS ONLY
+    FETCH FIRST ${Math.max(1, topK * 3)} ROWS ONLY
   `;
 
   const rows = await executeOracleQuery<{
@@ -65,11 +61,17 @@ export async function retrieveSimilar(
   }>(sql, params);
 
   const results: RetrievedChunk[] = [];
+  const normalizedFilter = opts?.textFilter ? opts.textFilter.toLowerCase().trim() : '';
 
   for (const row of rows) {
     const distance = typeof row.DISTANCE === 'number' ? row.DISTANCE : parseFloat(String(row.DISTANCE));
     // Cosine similarity = 1 - cosine distance
-    const similarity = 1 - distance;
+    let similarity = 1 - distance;
+
+    // Soft keyword boost if text matches keyword without hard-filtering out semantic matches
+    if (normalizedFilter && row.TEXTCHUNK.toLowerCase().includes(normalizedFilter)) {
+      similarity = Math.min(1.0, similarity + 0.05);
+    }
 
     if (similarity >= minSimilarity) {
       results.push({
@@ -83,5 +85,7 @@ export async function retrieveSimilar(
     if (results.length >= topK) break;
   }
 
-  return results;
+  // Ensure top results are ordered by final similarity score
+  results.sort((a, b) => b.similarity - a.similarity);
+  return results.slice(0, topK);
 }

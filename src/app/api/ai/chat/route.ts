@@ -1,11 +1,14 @@
 import { auth } from '@/lib/auth.server';
 import { embed } from '@/lib/ai/embedder';
 import { retrieveSimilar } from '@/lib/ai/retriever';
-import { buildContextBlock } from '@/lib/ai/context-builder';
+import { buildContextBlock, buildExpenseChunk } from '@/lib/ai/context-builder';
 import { buildFinancialSnapshot, detectQueryIntent } from '@/lib/ai/financial-context';
+import { resolveCategoryKeywords } from '@/lib/ai/financial-analytics';
+import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
+import { getFullName } from '@/lib/utils';
 import { streamCompletion } from '@/lib/ai/client';
 import { classifyInput, scanOutputForViolations } from '@/lib/ai/guardrail';
-import type { ChatMessage } from '@/types/ai';
+import type { ChatMessage, RetrievedChunk } from '@/types/ai';
 
 export async function POST(request: Request) {
   try {
@@ -98,11 +101,8 @@ export async function POST(request: Request) {
     const isPureDraftOrConversational =
       (isExplicitDraft || isCasualGreetingOrGeneralHelp) && !hasFinancialKeywords && !groupId;
 
-    // Checks if query requires semantic vector search across expenses/settlements
-    const needsVectorSearch =
-      !isPureDraftOrConversational &&
-      (/(paid for|bought|receipt|bill|purchase|flight|hotel|food|dinner|lunch|groceries|shopping|movie|taxi|cab|trip|yesterday)/i.test(lower) ||
-        queryIntent.intent === 'SEMANTIC_SEARCH');
+    // Trigger semantic vector retrieval for any financial/transactional inquiry
+    const needsVectorSearch = !isPureDraftOrConversational;
 
     const needsLedgerSnapshot = !isPureDraftOrConversational;
 
@@ -168,21 +168,77 @@ export async function POST(request: Request) {
             snapshot = resolvedSnapshot;
 
             // Retrieve similar chunks from Oracle 23ai if query vector was computed
+            let chunks: RetrievedChunk[] = [];
             if (queryVector) {
               try {
-                const chunks = await retrieveSimilar(queryVector, session.user.id, {
+                chunks = await retrieveSimilar(queryVector, session.user.id, {
                   groupId,
                   textFilter: queryIntent.categoryQuery,
-                  topK: 8,
+                  topK: 10,
                 });
-                if (chunks.length > 0) {
-                  contextBlock = buildContextBlock(chunks);
-                } else {
-                  contextBlock = 'No matching expense records found for this query.';
-                }
               } catch (retrievalErr: any) {
                 console.warn('[RAG Chat] Vector retrieval note:', retrievalErr.message || retrievalErr);
               }
+            }
+
+            // DETERMINISTIC DATABASE FALLBACK:
+            // If vector retrieval returned 0 chunks (or queryVector was null/failed),
+            // fetch verified expense records directly from SplitItDB to guarantee context grounding!
+            if (chunks.length === 0 && !isPureDraftOrConversational) {
+              try {
+                const dbExpenses = groupId
+                  ? await getExpensesByGroupId(groupId).catch(() => [])
+                  : await getExpensesByUserId(session.user.id).catch(() => []);
+
+                if (dbExpenses.length > 0) {
+                  const filterKeywords = queryIntent.categoryQuery
+                    ? resolveCategoryKeywords(queryIntent.categoryQuery)
+                    : [];
+
+                  let matched = dbExpenses;
+                  if (filterKeywords.length > 0) {
+                    const filtered = dbExpenses.filter((e) => {
+                      const cat = (e.category || '').toLowerCase();
+                      const master = (e.masterCategory || '').toLowerCase();
+                      const desc = (e.description || '').toLowerCase();
+                      return filterKeywords.some((kw) => cat.includes(kw) || master.includes(kw) || desc.includes(kw));
+                    });
+                    if (filtered.length > 0) matched = filtered;
+                  }
+
+                  // Take top 15 relevant / recent expenses
+                  const fallbackList = matched.slice(0, 15);
+                  chunks = fallbackList.map((e) => ({
+                    id: e.id,
+                    entityType: 'expense',
+                    textChunk: buildExpenseChunk({
+                      id: e.id,
+                      description: e.description,
+                      amount: e.amount,
+                      date: e.date,
+                      category: e.category,
+                      notes: e.notes,
+                      payers: e.payers.map((p) => ({
+                        name: getFullName(p.user.firstName, p.user.lastName) || p.user.username,
+                        amount: p.amount,
+                      })),
+                      participants: e.participants.map((p) => ({
+                        name: getFullName(p.user.firstName, p.user.lastName) || p.user.username,
+                        amountOwed: p.amountOwed,
+                      })),
+                    }),
+                    similarity: 0.9,
+                  }));
+                }
+              } catch (fallbackErr: any) {
+                console.warn('[RAG Chat] Direct DB fallback note:', fallbackErr.message || fallbackErr);
+              }
+            }
+
+            if (chunks.length > 0) {
+              contextBlock = buildContextBlock(chunks);
+            } else {
+              contextBlock = 'No matching expense records found for this query.';
             }
 
             // Transition status to drafting when invoking the model

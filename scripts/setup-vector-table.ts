@@ -32,8 +32,21 @@ async function setupVectorTable() {
     `SELECT table_name FROM user_tables WHERE table_name = 'SPLITITVECTORS'`
   );
 
+  const recreate = process.argv.includes('--recreate');
+
+  if (recreate && check.rows && check.rows.length > 0) {
+    console.log('Dropping existing SPLITITVECTORS table for dimension realignment...');
+    try {
+      await conn.execute(`DROP TABLE SPLITITVECTORS CASCADE CONSTRAINTS`);
+      console.log('SPLITITVECTORS dropped successfully.');
+    } catch (dropErr: any) {
+      console.warn('Drop warning:', dropErr.message);
+    }
+    check.rows = [];
+  }
+
   if (!check.rows || check.rows.length === 0) {
-    console.log('Creating SPLITITVECTORS table with Oracle 23ai native VECTOR(2048, FLOAT32)...');
+    console.log('Creating SPLITITVECTORS table with Oracle 23ai native VECTOR(1024, FLOAT32)...');
     await conn.execute(`
       CREATE TABLE SPLITITVECTORS (
         id           VARCHAR2(100)         NOT NULL PRIMARY KEY,
@@ -41,7 +54,7 @@ async function setupVectorTable() {
         groupId      VARCHAR2(100),
         entityType   VARCHAR2(50)          NOT NULL,
         textChunk    VARCHAR2(4000)        NOT NULL,
-        embedding    VECTOR(2048, FLOAT32) NOT NULL,
+        embedding    VECTOR(1024, FLOAT32) NOT NULL,
         createdAt    TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
         updatedAt    TIMESTAMP             DEFAULT CURRENT_TIMESTAMP
       )

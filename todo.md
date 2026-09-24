@@ -1,5 +1,26 @@
 # Session Progress & Context Preservation
 
+  - **AI RAG Pipeline Fix, 1024-dim Vector Alignment & Deterministic DB Fallback** 🐛 🧠 ⚡ ✅:
+    - **Issue**: The AI assistant reported lacking access to specific expense/transaction details and could only state who owes how much.
+    - **Root Causes Fixed**:
+      1. *Vector Dimension Mismatch*: The embedding model (`liquid/lfm-2.5-embedding-350m:free`) produces 1024-dimension embeddings, but `SPLITITVECTORS` in Oracle 23ai was configured with `VECTOR(2048, FLOAT32)`, throwing `ORA-51803: vector dimension does not match` on all upserts and similarity queries (caught and omitted).
+      2. *Overly Restrictive SQL Filter*: `retriever.ts` had a strict `AND LOWER(textChunk) LIKE :textFilter` clause that eliminated semantic matches whenever the query keyword wasn't an exact substring of the chunk.
+      3. *Missing Transaction Fallback*: If vector retrieval returned 0 chunks (or failed due to embedding service/rate-limiting), `contextBlock` was left empty (`"No matching expense records found"`), leaving the LLM with zero transaction context despite 1,000+ expenses existing in `SplitItDB`.
+      4. *Financial Context Omission*: In [`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts), `recentExpenses` was suppressed when trends or member breakdowns were active, and set to `[]` in global scope.
+      5. *Loopback HTTP Embedding Failure*: [`src/lib/ai/queue-helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/queue-helper.ts) depended on loopback `fetch("${appUrl}/api/ai/embed-queue")`, which failed silently in local/containerized environments.
+    - **Changes Implemented**:
+      - Recreated `SPLITITVECTORS` table and `svec_idx` HNSW index with `VECTOR(1024, FLOAT32)` in [`scripts/setup-vector-table.ts`](file:///d:/Projects/SplitWise-Clone/scripts/setup-vector-table.ts).
+      - Extracted in-process indexing service [`src/lib/ai/indexing.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/indexing.service.ts) and updated [`src/lib/ai/queue-helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/queue-helper.ts) and [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) to execute embedding jobs directly in-process without relying on external HTTP loopbacks.
+      - Softened retriever logic in [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts): removed destructive SQL `LIKE` filter, lowered min similarity threshold to 0.25, and added soft keyword similarity boost (+0.05).
+      - Added deterministic DB fallback in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): if vector retrieval returns fewer than 3 chunks or encounters an issue, automatically fetches real transaction records from `getExpensesByGroupId`/`getExpensesByUserId`, applies category/keyword scoring, and builds top-15 formatted chunks.
+      - Enriched [`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts) with unsuppressed recent expenses across both group and global user scopes.
+      - Updated [`scripts/backfill-embeddings.ts`](file:///d:/Projects/SplitWise-Clone/scripts/backfill-embeddings.ts) with idempotency prechecks (skipping already-indexed vectors) and exponential backoff on HTTP 429 rate limits.
+    - **Verification**:
+      - Oracle 23ai table validated with 1024-dim vector upserts and cosine distance queries.
+      - Intent detection, financial snapshot, and context block verified via end-to-end simulation.
+      - `npx tsc --noEmit` exits 0 (clean).
+      - `npm test` passes all 50/50 test cases across 5 test suites.
+
   - **Production Release Pull Request Opened (dev -> master)** 🚀 ✅:
     - Opened Pull Request [#18](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/18) merging `dev` into `master` with 0 conflicts and 100% test suite pass rate.
     - Captures all AI financial analytics extensions, security hardenings, mobile overflow fixes, tab-switching session persistence, and global quick-action workflows.
