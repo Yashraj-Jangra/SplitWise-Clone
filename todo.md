@@ -1,5 +1,9 @@
 # Session Progress & Context Preservation
 
+  - **Version Bump (0.4.0)** 📌:
+    - Bumped application milestone version to `0.4.0` across [`package.json`](file:///d:/Projects/SplitWise-Clone/package.json), [`package-lock.json`](file:///d:/Projects/SplitWise-Clone/package-lock.json), and [`src/lib/version.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/version.ts).
+    - Milestone release marks the complete delivery of AI Budget Management, Smart Shortfall Auto-Balancing, 10-Minute Expiry Engine, and Live UI Refresh.
+
   - **Live Page Refresh & Direct Budget Display After Budget Changes** ✨ 🔄 📊 ✅:
     - **Requirement**: "after changing budget show the new budget too i.e refresh page, not something in ai chat".
     - **Root Cause**:
