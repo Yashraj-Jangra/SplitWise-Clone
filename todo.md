@@ -1,5 +1,35 @@
 # Session Progress & Context Preservation
 
+  - **Granular Activity Logging for Manual & AI Budget Changes** ✨ 📋 🔍 ✅:
+    - **User Requirement**:
+      - "good now make the activity logging for budgets better and detailed. enabled, disabled, edited full details of whats changed from what log them only changes. for AI made changes too use same detailed view. eg if only categorised budget is changed and whole budget is same in green write something like it wasent changed at top always. cover all possible edge cases. make a plan"
+    - **Implementation**:
+      - **Deterministic Budget Diffing Engine ([`src/lib/services/budget-history.helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/budget-history.helper.ts))**:
+        - Implemented `diffBudgetChanges(oldBudget, newBudget, actorName, aiInitiated, aiSummary)`.
+        - Strict "log only changes" algorithm: compares previous state against new state and omits all unchanged categories.
+        - Computes:
+          - Status transition (Enabled ↔ Disabled).
+          - Total monthly budget modifications (`₹old → ₹new`).
+          - Granular category additions (`added`), removals (`removed`), and value modifications (`changed`).
+          - Flexible pool adjustments (`₹old → ₹new`).
+          - Alert threshold updates (`75%, 90% → 75%, 90%, 100%`).
+          - Sets `monthlyBudgetUnchanged: true` whenever the total monthly limit remains identical but categories, thresholds, or status changed.
+      - **Manual Budget Updates Logging ([`src/lib/services/group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts))**:
+        - Replaced generic single-line update with full `budget_updated` event logging through `diffBudgetChanges`.
+        - Records exact structured changes, flags, and human description without polluting `group_updated`.
+      - **AI-Initiated Budget Updates Logging ([`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts))**:
+        - Integrated `diffBudgetChanges` on AI proposal approvals, guaranteeing 100% data contract and UI parity between manual and AI-assisted changes.
+      - **Enhanced Group History UI ([`src/components/groups/group-history.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-history.tsx))**:
+        - Enabled details accordion for `budget_updated` events.
+        - **Green Unchanged Callout**: When `event.data?.monthlyBudgetUnchanged` is true, displays a prominent callout at the top:
+          `✓ Total monthly budget was not changed (₹25,000)`.
+        - **Disabled Status Callout**: When budget is turned off, displays an amber warning banner.
+        - **AI Badge & Dynamic Icons**: Displays `🤖 SplitIt AI` pill for AI-assisted budget modifications with `<Icons.Bot />`, and `<Icons.Wallet />` for manual configurations.
+        - **Color-Coded Granular Diffs**: Clean strikethrough red values to emerald green values (`₹5,000 → ₹6,000`), green added rows with `<Icons.Add />`, and red removed rows with `<Icons.Delete />`.
+      - **Unit Tests ([`src/__tests__/budget-history.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/budget-history.test.ts))**:
+        - Implemented automated tests covering all 11 edge cases (brand new budget, disabling, re-enabling, category-only changes with green callout, monthly-only changes, compound AI auto-balancing, additions, removals, 100% flexible pool clearing, threshold adjustments, and zero-op submissions). All 11 passed.
+
+
   - **Global Context View-Only Group Budgets & Zero-Click Navigation** ✨ 🌐 🎯 ✅:
     - **User Requirement**:
       - "give the AI access to view the budgets too of all groups just view (categorised too) and not edit budgets and to edit u hv to open that group (currently thats how it works) and add a button to take user to that group if user asks to edit then continue editing it"

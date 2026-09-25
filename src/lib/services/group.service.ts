@@ -6,6 +6,7 @@ import { notifyMemberAdded, notifyMemberRemoved } from '@/lib/notification-servi
 import { getFullName } from '../utils';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { deleteVectorsByGroup } from '@/lib/ai/vector-store';
+import { diffBudgetChanges } from './budget-history.helper';
 
 function getFallbackUser(userId: string): UserProfile {
   return {
@@ -235,9 +236,19 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
     changes.push({ field: 'Description', from: `"${oldData.description || ''}"`, to: `"${data.description || ''}"` });
   }
   if (data.budget !== undefined) {
-    const oldLimit = oldData.budget?.monthlyLimit ? `₹${oldData.budget.monthlyLimit}` : 'None';
-    const newLimit = data.budget?.monthlyLimit ? `₹${data.budget.monthlyLimit}` : 'Disabled';
-    changes.push({ field: 'Monthly Budget', from: oldLimit, to: newLimit });
+    const budgetDiff = diffBudgetChanges(oldData.budget, data.budget, actorName, false);
+    if (budgetDiff.hasChanges) {
+      await logHistoryEvent(groupId, 'budget_updated', actorId, budgetDiff.description, {
+        changes: budgetDiff.changes,
+        monthlyBudgetUnchanged: budgetDiff.monthlyBudgetUnchanged,
+        currentMonthlyLimit: budgetDiff.currentMonthlyLimit,
+        statusChanged: budgetDiff.statusChanged,
+        newStatus: budgetDiff.newStatus,
+        aiInitiated: false,
+        newBudget: data.budget,
+        oldBudget: oldData.budget || null,
+      });
+    }
   }
 
   if (changes.length > 0) {
