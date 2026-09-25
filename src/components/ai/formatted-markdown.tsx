@@ -4,6 +4,11 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+
+import { useRouter } from 'next/navigation';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 interface FormattedMarkdownProps {
   content: string;
@@ -12,6 +17,8 @@ interface FormattedMarkdownProps {
 }
 
 export function FormattedMarkdown({ content, className, isStreaming }: FormattedMarkdownProps) {
+  const router = useRouter();
+
   if (!content) {
     return isStreaming ? (
       <span className="inline-block w-1.5 h-4 bg-foreground/70 animate-pulse rounded-xs" />
@@ -133,16 +140,86 @@ export function FormattedMarkdown({ content, className, isStreaming }: Formatted
           ),
 
           // Links
-          a: ({ href, children }) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children }) => {
+            let normalizedHref = href || '';
+            // If href contains domain or localhost prefix pointing to app routes, strip to relative path
+            if (/^https?:\/\/[^/]+(\/.*)$/.test(normalizedHref)) {
+              const pathPart = normalizedHref.replace(/^https?:\/\/[^/]+/, '');
+              if (
+                pathPart.startsWith('/groups') ||
+                pathPart.startsWith('/expenses') ||
+                pathPart.startsWith('/dashboard') ||
+                pathPart.startsWith('/settlements') ||
+                pathPart.startsWith('/analysis')
+              ) {
+                normalizedHref = pathPart;
+              }
+            }
+
+            const isInternal = Boolean(normalizedHref && normalizedHref.startsWith('/'));
+            const isGroupAction = Boolean(normalizedHref && normalizedHref.startsWith('/groups/'));
+
+            if (isGroupAction) {
+              let promptText: string | null = null;
+              let targetGroupId: string | null = null;
+              try {
+                const urlObj = new URL(normalizedHref, 'http://localhost');
+                promptText = urlObj.searchParams.get('prompt');
+                const match = urlObj.pathname.match(/\/groups\/([^/]+)/);
+                if (match) targetGroupId = match[1];
+              } catch {
+                // Ignore URL parse error
+              }
+
+              const handleClick = (e: React.MouseEvent) => {
+                if (targetGroupId) {
+                  e.preventDefault();
+                  // Clean URL for background navigation
+                  const cleanUrl = `/groups/${targetGroupId}?tab=budget`;
+                  router.push(cleanUrl);
+                  if (promptText) {
+                    appEventEmitter.emit('ai-send-prompt', {
+                      prompt: promptText,
+                      groupId: targetGroupId,
+                    });
+                  }
+                }
+              };
+
+              return (
+                <Link
+                  href={normalizedHref}
+                  onClick={handleClick}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 rounded-xl bg-primary text-primary-foreground font-medium text-xs shadow-xs hover:bg-primary/90 transition-all active:scale-[0.98] cursor-pointer no-underline group"
+                >
+                  <span className="font-semibold">{children}</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              );
+            }
+
+            if (isInternal) {
+              return (
+                <Link
+                  href={normalizedHref}
+                  className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
+                >
+                  {children}
+                </Link>
+              );
+            }
+
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
+              >
+                {children}
+              </a>
+            );
+          },
 
           // Horizontal rule
           hr: () => <hr className="my-2.5 border-border/30" />,

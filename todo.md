@@ -1,5 +1,108 @@
 # Session Progress & Context Preservation
 
+  - **Version Bump to 0.4.1** 📌 🚀 ✅:
+    - Bumped application version to `0.4.1` across `package.json`, `package-lock.json`, and `src/lib/version.ts`.
+
+
+  - **Budget Proposal Timer Removal & Continuity Across Chat Minimize** ✨ ⏳ 💬 ✅:
+    - **User Requirement**:
+      - "remove the timer from budget proposal its just for backend and do not expire it immediatly as user close minimize the AI chat expire when cleared chat or make a new proposal"
+    - **Implementation**:
+      - **Client Countdown Timer Removal ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Stripped out `remainingMs`, countdown badge, `1000ms` ticking interval, and `isExpired` branches from `BudgetActionCard`.
+        - Kept backend 10-minute expiry verification intact in [`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts) for secure server-side boundary checks.
+      - **Proposal Data Serialization & Continuity ([`src/types/ai.ts`](file:///d:/Projects/SplitWise-Clone/src/types/ai.ts), [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Extended `ChatMessage` with optional `budgetProposal?: BudgetActionProposal`.
+        - Persisted the proposal directly onto the assistant card message in `handleSend`.
+        - When user closes or minimizes the AI widget (`isOpen: false`), messages are preserved in `localStorage`.
+        - On re-opening/mounting, `ChatPanel` rehydrates `pendingBudgetProposal` from the latest active proposal message so the proposal never prematurely shows "expired" upon minimize.
+      - **Explicit Proposal Lifecycle & Expiration Rules**:
+        - **Cleared Chat (`Trash2` / `handleClearHistory`)**: Clears messages, removes storage, and resets `pendingBudgetProposal` to `null`.
+        - **Superseded by New Proposal**: When a new budget proposal arrives in `handleSend`, any previous proposal cards in history are marked superseded (`"Budget change request superseded by a newer proposal."`) and their proposal references are cleaned up.
+        - **Approved or Dismissed**: Upon approval or denial, the card message is updated to the confirmation/denial summary and the proposal reference is cleared.
+      - **Automated Tests & Quality Checks Verified**:
+        - Ran `npm run typecheck` (`tsc --noEmit`): 0 errors.
+        - Ran `npm test` (`vitest run`): all 69 unit tests across 6 test suites passed cleanly.
+
+  - **1-Click Global Budget Transition & Automatic In-Group AI Proposal Trigger** ✨ 🖱️ 💬 ✅:
+    - **User Requirement**:
+      - "now it just takes u there and where is that apply dialog box. write clearly in global reply that after taking to that page I'll be able to modify and clicking that button sends a new prompt to AI to set the new budget after opening the group"
+    - **Implementation**:
+      - **Global Scope Guidance & Prompt Action Button ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Explicitly communicates to user in global reply:
+          *"Budget management is configured directly within each group. After opening **[groupName]** in the background, you'll be able to review and modify the budget."*
+        - Formulates targeted follow-up prompt (e.g. `Set monthly budget to ₹21,000` or `Increase monthly budget by ₹5,000`) and encodes it directly into the action link:
+          `👉 [Open "[groupName]" & Set Budget to ₹[amount]](/groups/[id]?tab=budget&action=ai-budget&prompt=[encodedPrompt])`.
+      - **Automatic In-Group Prompt Dispatch on Button Click ([`src/components/ai/formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx), [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - `FormattedMarkdown` intercepts group action clicks:
+          - Navigates background page to `/groups/[id]?tab=budget` via client router without closing popup window.
+          - Emits `appEventEmitter.emit('ai-send-prompt', { prompt, groupId })`.
+        - `ChatPanel` listens to `ai-send-prompt`:
+          - Cancels any running stream and triggers `handleSend(prompt, targetGroupId)` with the explicit target group ID.
+          - Dispatches directly to `/api/ai/chat` with group scope.
+          - Chat immediately renders the interactive `BudgetActionCard` with the **"Approve & Apply"** dialog box / card right inside the active assistant window.
+      - **Instant Budget Dialog Sync on Group Page ([`src/components/groups/budget/group-budget-tab.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/group-budget-tab.tsx))**:
+        - Subscribed `GroupBudgetTab` to `open-budget-dialog` event and `action=edit-budget` URL search parameter to open `SetBudgetDialog` reliably.
+      - **Automated Tests Verified**:
+        - All 69 tests across all 6 test suites passed.
+
+  - **Granular Activity Logging for Manual & AI Budget Changes** ✨ 📋 🔍 ✅:
+    - **User Requirement**:
+      - "good now make the activity logging for budgets better and detailed. enabled, disabled, edited full details of whats changed from what log them only changes. for AI made changes too use same detailed view. eg if only categorised budget is changed and whole budget is same in green write something like it wasent changed at top always. cover all possible edge cases. make a plan"
+    - **Implementation**:
+      - **Deterministic Budget Diffing Engine ([`src/lib/services/budget-history.helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/budget-history.helper.ts))**:
+        - Implemented `diffBudgetChanges(oldBudget, newBudget, actorName, aiInitiated, aiSummary)`.
+        - Strict "log only changes" algorithm: compares previous state against new state and omits all unchanged categories.
+        - Computes:
+          - Status transition (Enabled ↔ Disabled).
+          - Total monthly budget modifications (`₹old → ₹new`).
+          - Granular category additions (`added`), removals (`removed`), and value modifications (`changed`).
+          - Flexible pool adjustments (`₹old → ₹new`).
+          - Alert threshold updates (`75%, 90% → 75%, 90%, 100%`).
+          - Sets `monthlyBudgetUnchanged: true` whenever the total monthly limit remains identical but categories, thresholds, or status changed.
+      - **Manual Budget Updates Logging ([`src/lib/services/group.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/services/group.service.ts))**:
+        - Replaced generic single-line update with full `budget_updated` event logging through `diffBudgetChanges`.
+        - Records exact structured changes, flags, and human description without polluting `group_updated`.
+      - **AI-Initiated Budget Updates Logging ([`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts))**:
+        - Integrated `diffBudgetChanges` on AI proposal approvals, guaranteeing 100% data contract and UI parity between manual and AI-assisted changes.
+      - **Enhanced Group History UI ([`src/components/groups/group-history.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-history.tsx))**:
+        - Enabled details accordion for `budget_updated` events.
+        - **Green Unchanged Callout**: When `event.data?.monthlyBudgetUnchanged` is true, displays a prominent callout at the top:
+          `✓ Total monthly budget was not changed (₹25,000)`.
+        - **Disabled Status Callout**: When budget is turned off, displays an amber warning banner.
+        - **AI Badge & Dynamic Icons**: Displays `🤖 SplitIt AI` pill for AI-assisted budget modifications with `<Icons.Bot />`, and `<Icons.Wallet />` for manual configurations.
+        - **Color-Coded Granular Diffs**: Clean strikethrough red values to emerald green values (`₹5,000 → ₹6,000`), green added rows with `<Icons.Add />`, and red removed rows with `<Icons.Delete />`.
+      - **Unit Tests ([`src/__tests__/budget-history.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/budget-history.test.ts))**:
+        - Implemented automated tests covering all 11 edge cases (brand new budget, disabling, re-enabling, category-only changes with green callout, monthly-only changes, compound AI auto-balancing, additions, removals, 100% flexible pool clearing, threshold adjustments, and zero-op submissions). All 11 passed.
+
+
+  - **Global Context View-Only Group Budgets & Zero-Click Navigation** ✨ 🌐 🎯 ✅:
+    - **User Requirement**:
+      - "give the AI access to view the budgets too of all groups just view (categorised too) and not edit budgets and to edit u hv to open that group (currently thats how it works) and add a button to take user to that group if user asks to edit then continue editing it"
+    - **Implementation**:
+      - **Global Financial Context View-Only Grounding ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Added `groupBudgets` array to `FinancialSnapshot`.
+        - Iterated over all groups the user belongs to (`userGroups`), running `computeBudgetBreakdown` on each.
+        - Appended `ALL GROUPS BUDGET OVERVIEW (VIEW-ONLY ACCESS)` section into `formattedText` with explicit status (Active / Disabled / Not configured), monthly limits, category allocations sum, category caps breakdown, flexible pool balance, and direct manage URL (`/groups/<id>?tab=budget&action=edit-budget`).
+        - Injected clear system instructions that the AI has view-only permissions in global scope and cannot perform edits.
+      - **Global Scope Budget Edit Interception ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - When `!groupId` (global context) and user triggers `BUDGET_ACTION`:
+          - Refuses in-chat mutation proposal execution.
+          - Smart group matching matches mentioned group names against `userGroups`.
+          - Streams clear guidance and direct action link button: `[Open "<GroupName>" to Edit Budget](/groups/<id>?tab=budget&action=edit-budget)`.
+          - If multiple groups match or none match, lists all user groups as clickable action buttons.
+      - **Interactive Action Button Rendering in AI Chat ([`src/components/ai/formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx))**:
+        - Enhanced markdown link renderer: internal `/groups/` links with action params are automatically styled as primary interactive button pills with `<ArrowRight>` using `next/link`.
+      - **Zero-Click Transition to Group Budget Editing ([`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx))**:
+        - Handled `action === 'edit-budget'`:
+          - Immediately switches active tab to `budget`.
+          - Waits until `!loading && group` finishes loading and DOM renders.
+          - Emits `open-budget-dialog` with `{ groupId, expandCategories: true }`, automatically opening `SetBudgetDialog` with categorized caps expanded and ready for editing.
+          - Cleans up query parameter from browser address bar via `window.history.replaceState`.
+      - **Unit Tests ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts))**:
+        - Added test suite `7. Global Context Multi-Group Budget View & Navigation` verifying `groupBudgets` snapshot structure, category breakdown, flexible pool, view-only banner, and direct management link generation.
+
+
   - **Pull Request #19 Opened (dev → master)** 🚀:
     - Opened [PR #19](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/19): `✨ AI Budget Management, Smart Shortfall Auto-Balancing & Live Refresh (v0.4.0)`.
     - Fully synchronized branch `dev` with remote `origin/dev`.

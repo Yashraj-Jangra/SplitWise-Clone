@@ -6,6 +6,7 @@ import { logHistoryEvent } from '@/lib/services/history.service';
 import { getFullName } from '@/lib/utils';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import type { BudgetActionProposal } from '@/types/ai';
+import { diffBudgetChanges } from '@/lib/services/budget-history.helper';
 
 const MIN_LIMIT = 100;
 const MAX_LIMIT = 10_000_000;
@@ -254,12 +255,18 @@ export async function POST(request: Request) {
     // --- Log to group history ---
     const actor = await getUserProfile(actorId);
     const actorName = getFullName(actor?.firstName, actor?.lastName) || actor?.username || 'A member';
-    const fullDescription = `🤖 ${actorName} approved an AI budget change: ${historyDescription}`;
+    const budgetDiff = diffBudgetChanges(groupDoc.budget, updatedBudget, actorName, true, historyDescription);
 
-    await logHistoryEvent(groupId, 'budget_updated', actorId, fullDescription, {
+    await logHistoryEvent(groupId, 'budget_updated', actorId, budgetDiff.description, {
       action,
       proposal,
+      changes: budgetDiff.changes,
+      monthlyBudgetUnchanged: budgetDiff.monthlyBudgetUnchanged,
+      currentMonthlyLimit: budgetDiff.currentMonthlyLimit,
+      newStatus: budgetDiff.newStatus,
+      statusChanged: budgetDiff.statusChanged,
       newBudget: updatedBudget,
+      oldBudget: groupDoc.budget || null,
       approvedByUserId: actorId,
       approvedByName: actorName,
       aiInitiated: true,

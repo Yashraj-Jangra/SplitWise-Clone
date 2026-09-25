@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { defaultExpenseCategories } from '@/lib/expense-categories';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 interface GroupBudgetTabProps {
   group: Group;
@@ -24,6 +25,25 @@ interface GroupBudgetTabProps {
 export function GroupBudgetTab({ group, expenses }: GroupBudgetTabProps) {
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
   const [budgetDialogOpen, setBudgetDialogOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'edit-budget') {
+        setBudgetDialogOpen(true);
+      }
+    }
+
+    const handleOpen = (payload?: { groupId?: string }) => {
+      if (!payload?.groupId || payload.groupId === group.id) {
+        setBudgetDialogOpen(true);
+      }
+    };
+    appEventEmitter.on('open-budget-dialog', handleOpen);
+    return () => {
+      appEventEmitter.off('open-budget-dialog', handleOpen);
+    };
+  }, [group.id]);
 
   const stats = React.useMemo(() => {
     return calculateGroupBudgetStats(group, expenses, selectedDate);

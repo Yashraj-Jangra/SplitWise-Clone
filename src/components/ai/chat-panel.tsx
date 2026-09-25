@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import { Send, Trash2, ArrowRight, Info, Square, Maximize2, ShieldCheck, Calculator, Database, Sparkles, Cpu, Clock } from 'lucide-react';
+import { Send, Trash2, ArrowRight, Info, Square, Maximize2, ShieldCheck, Calculator, Database, Sparkles, Cpu } from 'lucide-react';
 
 import {
   Tooltip,
@@ -126,29 +127,6 @@ function BudgetActionCard({ proposal, onApprove, onDeny, onConfigureManually, st
   const isLoading = status !== 'idle';
   const formatINR = (n?: number) => (n != null ? `\u20b9${n.toLocaleString('en-IN')}` : 'N/A');
 
-  // --- 10-Minute Expiry Countdown ---
-  const [remainingMs, setRemainingMs] = useState<number>(() => {
-    const expiresAt = proposal.expiresAt || ((proposal.createdAt || Date.now()) + 10 * 60 * 1000);
-    return Math.max(0, expiresAt - Date.now());
-  });
-
-  useEffect(() => {
-    const expiresAt = proposal.expiresAt || ((proposal.createdAt || Date.now()) + 10 * 60 * 1000);
-    const interval = setInterval(() => {
-      const left = Math.max(0, expiresAt - Date.now());
-      setRemainingMs(left);
-      if (left <= 0) {
-        clearInterval(interval);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [proposal.expiresAt, proposal.createdAt]);
-
-  const isExpired = remainingMs <= 0;
-  const mins = Math.floor(remainingMs / 60000);
-  const secs = Math.floor((remainingMs % 60000) / 1000);
-  const formattedTimeLeft = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
   const actionLabels: Record<string, string> = {
     adjust_budget_with_categories: proposal.isAutoSuggested ? 'Auto-Balanced Budget' : 'Adjust Budget & Categories',
     set_monthly_limit: 'Set Monthly Budget',
@@ -186,46 +164,25 @@ function BudgetActionCard({ proposal, onApprove, onDeny, onConfigureManually, st
   return (
     <div className="my-1.5 mx-1">
       <div className={`rounded-2xl border transition-all overflow-hidden ${
-        isExpired
-          ? 'border-border/30 bg-muted/10 opacity-75'
-          : proposal.isAutoSuggested
+        proposal.isAutoSuggested
           ? 'border-primary/30 bg-primary/5 backdrop-blur-sm'
           : 'border-amber-500/30 bg-amber-500/5 backdrop-blur-sm'
       }`}>
         {/* Header */}
         <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5 border-b border-border/20">
           <div className={`flex h-7 w-7 items-center justify-center rounded-lg border flex-shrink-0 ${
-            isExpired
-              ? 'bg-muted/20 border-border/30 text-muted-foreground'
-              : proposal.isAutoSuggested
+            proposal.isAutoSuggested
               ? 'bg-primary/15 border-primary/25 text-primary'
               : 'bg-amber-500/15 border-amber-500/25 text-amber-400'
           }`}>
             <Icons.Bot className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className={`text-xs font-semibold leading-tight ${
-                isExpired ? 'text-muted-foreground' : proposal.isAutoSuggested ? 'text-primary' : 'text-amber-400'
-              }`}>
-                {isExpired ? 'Budget Request (Expired)' : proposal.isAutoSuggested ? 'AI Budget Auto-Balance' : 'AI Budget Change Request'}
-              </p>
-              {/* Countdown badge */}
-              {!isExpired ? (
-                <span className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                  remainingMs < 120000
-                    ? 'border-red-500/30 bg-red-500/10 text-red-400 animate-pulse'
-                    : 'border-border/40 bg-muted/30 text-muted-foreground'
-                }`}>
-                  <Clock className="w-2.5 h-2.5" />
-                  <span>{formattedTimeLeft}</span>
-                </span>
-              ) : (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-border/30 bg-muted/20 text-muted-foreground">
-                  Expired
-                </span>
-              )}
-            </div>
+            <p className={`text-xs font-semibold leading-tight ${
+              proposal.isAutoSuggested ? 'text-primary' : 'text-amber-400'
+            }`}>
+              {proposal.isAutoSuggested ? 'AI Budget Auto-Balance' : 'AI Budget Change Request'}
+            </p>
             <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">{proposal.groupName}</p>
           </div>
           <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${actionColorClass[proposal.action] || 'text-foreground'}`}>
@@ -235,110 +192,99 @@ function BudgetActionCard({ proposal, onApprove, onDeny, onConfigureManually, st
 
         {/* Body */}
         <div className="px-4 py-3 space-y-2.5">
-          {isExpired ? (
-            <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-xs text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground">⏰ Proposal expired after 10 minutes</p>
-              <p className="text-[11px] text-muted-foreground">No changes were applied to your group budget. Type a new message to adjust the budget again.</p>
+          <p className="text-[12px] text-foreground leading-relaxed">{proposal.summary}</p>
+
+          {/* Monthly Limit change cards */}
+          <div className="grid grid-cols-2 gap-2">
+            {proposal.currentMonthlyLimit != null && (
+              <div className="rounded-xl bg-muted/20 border border-border/30 p-2.5">
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Current Budget</p>
+                <p className="text-sm font-bold text-foreground">{formatINR(proposal.currentMonthlyLimit)}</p>
+              </div>
+            )}
+            {newVal != null && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-2.5">
+                <p className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-0.5">New Budget</p>
+                <p className="text-sm font-bold text-primary">{formatINR(newVal)}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Auto-suggested category breakdown diff table */}
+          {proposal.categoryDiffs && Object.keys(proposal.categoryDiffs).length > 0 && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+              <div className="flex items-center justify-between border-b border-primary/10 pb-1.5">
+                <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Suggested Category Allocation
+                </span>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  Sum: {formatINR(newVal)}
+                </span>
+              </div>
+              <div className="space-y-1.5 pt-0.5">
+                {Object.entries(proposal.categoryDiffs).map(([catKey, diff]) => (
+                  <div key={catKey} className="flex items-center justify-between text-xs py-0.5">
+                    <span className="text-foreground/90 font-medium truncate max-w-[140px] text-[11px]">{catKey}</span>
+                    <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                      <span className="text-muted-foreground/70 line-through">₹{diff.oldLimit.toLocaleString('en-IN')}</span>
+                      <ArrowRight className="w-3 h-3 text-muted-foreground/60" />
+                      <span className="text-primary font-bold">₹{diff.newLimit.toLocaleString('en-IN')}</span>
+                      {diff.cutAmount > 0 && (
+                        <span className="text-emerald-500 text-[10px] font-semibold">(-₹{diff.cutAmount.toLocaleString('en-IN')})</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <>
-              <p className="text-[12px] text-foreground leading-relaxed">{proposal.summary}</p>
-
-              {/* Monthly Limit change cards */}
-              <div className="grid grid-cols-2 gap-2">
-                {proposal.currentMonthlyLimit != null && (
-                  <div className="rounded-xl bg-muted/20 border border-border/30 p-2.5">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Current Budget</p>
-                    <p className="text-sm font-bold text-foreground">{formatINR(proposal.currentMonthlyLimit)}</p>
-                  </div>
-                )}
-                {newVal != null && (
-                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-2.5">
-                    <p className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-0.5">New Budget</p>
-                    <p className="text-sm font-bold text-primary">{formatINR(newVal)}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Auto-suggested category breakdown diff table */}
-              {proposal.categoryDiffs && Object.keys(proposal.categoryDiffs).length > 0 && (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
-                  <div className="flex items-center justify-between border-b border-primary/10 pb-1.5">
-                    <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Suggested Category Allocation
-                    </span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      Sum: {formatINR(newVal)}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 pt-0.5">
-                    {Object.entries(proposal.categoryDiffs).map(([catKey, diff]) => (
-                      <div key={catKey} className="flex items-center justify-between text-xs py-0.5">
-                        <span className="text-foreground/90 font-medium truncate max-w-[140px] text-[11px]">{catKey}</span>
-                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                          <span className="text-muted-foreground/70 line-through">₹{diff.oldLimit.toLocaleString('en-IN')}</span>
-                          <ArrowRight className="w-3 h-3 text-muted-foreground/60" />
-                          <span className="text-primary font-bold">₹{diff.newLimit.toLocaleString('en-IN')}</span>
-                          {diff.cutAmount > 0 && (
-                            <span className="text-emerald-500 text-[10px] font-semibold">(-₹{diff.cutAmount.toLocaleString('en-IN')})</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Permission notice */}
-              <div className="flex items-start gap-2 rounded-xl bg-muted/10 border border-border/20 p-2.5">
-                <Icons.AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Requires your approval before changes take effect. This action will be logged in the group history log.
-                </p>
-              </div>
-            </>
           )}
+
+          {/* Permission notice */}
+          <div className="flex items-start gap-2 rounded-xl bg-muted/10 border border-border/20 p-2.5">
+            <Icons.AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Requires your approval before changes take effect. This action will be logged in the group history log.
+            </p>
+          </div>
         </div>
 
         {/* Actions */}
-        {!isExpired && (
-          <div className="flex flex-col gap-2 px-4 pb-4">
-            <div className="flex gap-2">
+        <div className="flex flex-col gap-2 px-4 pb-4">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onApprove}
+              disabled={isLoading}
+              className="flex-1 h-9 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-60 shadow-md shadow-emerald-900/30 flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Icons.Check className="w-3.5 h-3.5" />
+              <span>{status === 'approving' ? 'Applying...' : proposal.isAutoSuggested ? 'Apply Suggested' : 'Approve & Apply'}</span>
+            </button>
+            {onConfigureManually && (
               <button
                 type="button"
-                onClick={onApprove}
+                onClick={onConfigureManually}
                 disabled={isLoading}
-                className="flex-1 h-9 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-60 shadow-md shadow-emerald-900/30 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 h-9 rounded-xl text-xs font-semibold border border-border/40 bg-muted/20 hover:bg-muted/50 text-foreground transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Icons.Check className="w-3.5 h-3.5" />
-                <span>{status === 'approving' ? 'Applying...' : proposal.isAutoSuggested ? 'Apply Suggested' : 'Approve & Apply'}</span>
+                <Icons.Settings className="w-3.5 h-3.5 text-primary" />
+                <span>Configure Manually</span>
               </button>
-              {onConfigureManually && (
-                <button
-                  type="button"
-                  onClick={onConfigureManually}
-                  disabled={isLoading}
-                  className="flex-1 h-9 rounded-xl text-xs font-semibold border border-border/40 bg-muted/20 hover:bg-muted/50 text-foreground transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Icons.Settings className="w-3.5 h-3.5 text-primary" />
-                  <span>Configure Manually</span>
-                </button>
-              )}
-            </div>
-            <div className="flex items-center justify-between px-1 text-[10px] text-muted-foreground">
-              <span>Or type another prompt (e.g. &apos;Take 1k from Housing&apos;) to re-adjust</span>
-              <button
-                type="button"
-                onClick={onDeny}
-                disabled={isLoading}
-                className="text-muted-foreground hover:text-destructive underline decoration-dotted ml-2 cursor-pointer"
-              >
-                Dismiss
-              </button>
-            </div>
+            )}
           </div>
-        )}
+          <div className="flex items-center justify-between px-1 text-[10px] text-muted-foreground">
+            <span>Or type another prompt (e.g. &apos;Take 1k from Housing&apos;) to re-adjust</span>
+            <button
+              type="button"
+              onClick={onDeny}
+              disabled={isLoading}
+              className="text-muted-foreground hover:text-destructive underline decoration-dotted ml-2 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -346,9 +292,13 @@ function BudgetActionCard({ proposal, onApprove, onDeny, onConfigureManually, st
 
 
 export function ChatPanel({ groupId, groupName, className, onClose, variant = 'widget' }: ChatPanelProps) {
+  const router = useRouter();
   const { userProfile } = useAuth();
   const userId = userProfile?.uid || 'guest';
-  const storageKey = `splitit_ai_history_${userId}${groupId ? `_${groupId}` : ''}`;
+  const storageKey =
+    variant === 'widget'
+      ? `splitit_ai_widget_history_${userId}`
+      : `splitit_ai_history_${userId}${groupId ? `_${groupId}` : ''}`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -370,7 +320,10 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   // Load history from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
+      let saved = localStorage.getItem(storageKey);
+      if (!saved && variant === 'widget') {
+        saved = localStorage.getItem(`splitit_ai_history_${userId}`);
+      }
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -383,13 +336,20 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
           );
           if (valid.length > 0) {
             setMessages(valid);
+            // Rehydrate the latest active budget proposal from saved message history
+            const activeProposalMsg = [...valid].reverse().find(
+              (m) => m.content === '__BUDGET_ACTION_CARD__' && m.budgetProposal
+            );
+            if (activeProposalMsg?.budgetProposal) {
+              setPendingBudgetProposal(activeProposalMsg.budgetProposal);
+            }
           }
         }
       }
     } catch {
       // Ignore parse errors
     }
-  }, [storageKey]);
+  }, [storageKey, userId, variant]);
 
   // Save history to localStorage
   useEffect(() => {
@@ -412,6 +372,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
 
   const handleClearHistory = () => {
     setMessages([]);
+    setPendingBudgetProposal(null);
     localStorage.removeItem(storageKey);
   };
 
@@ -444,9 +405,11 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isStreaming, handleStop]);
 
-  const handleSend = async (userText?: string) => {
+  const handleSend = async (userText?: string, explicitGroupId?: string) => {
     const textToSend = (userText || input).trim();
     if (!textToSend || isStreaming) return;
+
+    const targetGroupId = explicitGroupId || groupId;
 
     setInput('');
     const userMsg: ChatMessage = { role: 'user', content: textToSend };
@@ -481,7 +444,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       setStreamStatus({ stage: 'calculating', label: 'Forecasting budget burn rate...' });
     } else if (isBalance) {
       setStreamStatus({ stage: 'calculating', label: 'Checking ledger & balances...' });
-    } else if (isExpense || groupId) {
+    } else if (isExpense || targetGroupId) {
       setStreamStatus({ stage: 'searching', label: 'Searching expense records...' });
     } else {
       setStreamStatus({ stage: 'analyzing', label: 'Understanding request...' });
@@ -497,7 +460,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
         body: JSON.stringify({
           message: textToSend,
           history: updatedMessages.slice(-6),
-          groupId,
+          groupId: targetGroupId,
         }),
         signal: controller.signal,
       });
@@ -565,13 +528,25 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 });
               } else if (data.budget_action) {
                 setStreamStatus(null);
-                setPendingBudgetProposal(data.budget_action as BudgetActionProposal);
+                const proposal = data.budget_action as BudgetActionProposal;
+                setPendingBudgetProposal(proposal);
                 setMessages((prev) => {
-                  const updated = [...prev];
+                  // Mark any previous active proposal cards as superseded
+                  const updated = prev.map((m) =>
+                    m.content === '__BUDGET_ACTION_CARD__' && m.budgetProposalId !== proposal.requestId
+                      ? {
+                          ...m,
+                          content: 'Budget change request superseded by a newer proposal.',
+                          budgetProposalId: undefined,
+                          budgetProposal: undefined,
+                        }
+                      : m
+                  );
                   const last = updated[updated.length - 1];
                   if (last && last.role === 'assistant') {
                     last.content = '__BUDGET_ACTION_CARD__';
-                    last.budgetProposalId = (data.budget_action as BudgetActionProposal).requestId;
+                    last.budgetProposalId = proposal.requestId;
+                    last.budgetProposal = proposal;
                   }
                   return updated;
                 });
@@ -606,22 +581,49 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
     }
   };
 
-  const handleBudgetApprove = async () => {
-    if (!pendingBudgetProposal || budgetActionStatus !== 'idle') return;
+  const handleSendRef = useRef(handleSend);
+  handleSendRef.current = handleSend;
+
+  useEffect(() => {
+    const handleSendPromptEvent = ({ prompt, groupId: targetGroupId }: { prompt: string; groupId?: string }) => {
+      if (!prompt) return;
+      if (isStreaming) {
+        handleStop();
+      }
+      setTimeout(() => {
+        handleSendRef.current(prompt, targetGroupId);
+      }, 50);
+    };
+
+    appEventEmitter.on('ai-send-prompt', handleSendPromptEvent);
+    return () => {
+      appEventEmitter.off('ai-send-prompt', handleSendPromptEvent);
+    };
+  }, [isStreaming, handleStop]);
+
+  const handleBudgetApprove = async (proposalToApprove?: BudgetActionProposal) => {
+    const proposal = proposalToApprove || pendingBudgetProposal;
+    if (!proposal || budgetActionStatus !== 'idle') return;
     setBudgetActionStatus('approving');
-    const targetGroupId = pendingBudgetProposal.groupId || groupId;
+    const targetGroupId = proposal.groupId || groupId;
+    const targetGroupName = proposal.groupName || 'group';
     try {
       const res = await fetch('/api/ai/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proposal: pendingBudgetProposal, approved: true }),
+        body: JSON.stringify({ proposal, approved: true }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Budget update failed');
-      // Replace the card message with a simple confirmation
+
+      const approvedSummary = proposal.newMonthlyLimit != null
+        ? `Budget for "${targetGroupName}" updated to ₹${proposal.newMonthlyLimit.toLocaleString('en-IN')}.`
+        : `Budget configuration for "${targetGroupName}" updated successfully.`;
+
+      // Replace the card message with a confirmation
       setMessages((prev) => prev.map((m) =>
-        m.budgetProposalId === pendingBudgetProposal.requestId
-          ? { ...m, content: 'Budget updated successfully.', budgetProposalId: undefined }
+        m.budgetProposalId === proposal.requestId
+          ? { ...m, content: `✅ ${approvedSummary}`, budgetProposalId: undefined, budgetProposal: undefined }
           : m
       ));
       
@@ -630,48 +632,32 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       appEventEmitter.emit('budget-updated', { groupId: targetGroupId, budget: data.newBudget });
       appEventEmitter.emit('data-changed');
 
-      if (onClose) {
-        onClose();
-      }
-
-      // Refresh page so the new budget is immediately shown on screen
-      if (typeof window !== 'undefined') {
-        if (targetGroupId) {
-          const targetUrl = `/groups/${targetGroupId}?tab=budget`;
-          if (window.location.pathname === `/groups/${targetGroupId}`) {
-            if (window.location.search.includes('tab=budget')) {
-              window.location.reload();
-            } else {
-              window.location.href = targetUrl;
-            }
-          } else {
-            window.location.href = targetUrl;
-          }
-        } else {
-          window.location.reload();
-        }
+      // Seamless background navigation: navigate background page without closing chat popup
+      if (targetGroupId) {
+        router.push(`/groups/${targetGroupId}?tab=budget`);
       }
     } catch (err: any) {
       setMessages((prev) => prev.map((m) =>
-        m.budgetProposalId === pendingBudgetProposal?.requestId
-          ? { ...m, content: `Failed to apply budget change: ${err.message || 'Unknown error'}`, budgetProposalId: undefined }
+        m.budgetProposalId === proposal.requestId
+          ? { ...m, content: `⚠️ Failed to apply budget change: ${err.message || 'Unknown error'}`, budgetProposalId: undefined, budgetProposal: undefined }
           : m
       ));
     } finally {
-      setPendingBudgetProposal(null);
+      setPendingBudgetProposal((curr) => (curr?.requestId === proposal.requestId ? null : curr));
       setBudgetActionStatus('idle');
     }
   };
 
-  const handleBudgetDeny = () => {
-    if (!pendingBudgetProposal) return;
+  const handleBudgetDeny = (proposalToDeny?: BudgetActionProposal) => {
+    const proposal = proposalToDeny || pendingBudgetProposal;
+    if (!proposal) return;
     setBudgetActionStatus('denying');
     setMessages((prev) => prev.map((m) =>
-      m.budgetProposalId === pendingBudgetProposal.requestId
-        ? { ...m, content: 'Budget change request denied. No changes were made.', budgetProposalId: undefined }
+      m.budgetProposalId === proposal.requestId
+        ? { ...m, content: 'Budget change request denied. No changes were made.', budgetProposalId: undefined, budgetProposal: undefined }
         : m
     ));
-    setPendingBudgetProposal(null);
+    setPendingBudgetProposal((curr) => (curr?.requestId === proposal.requestId ? null : curr));
     setBudgetActionStatus('idle');
   };
 
@@ -934,41 +920,52 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
             )
           ) : (
             <>
-              {messages.map((msg, idx) => (
-                msg.content === '__BUDGET_ACTION_CARD__' && pendingBudgetProposal && msg.budgetProposalId === pendingBudgetProposal.requestId
-                  ? (
-                    <BudgetActionCard
-                      key={idx}
-                      proposal={pendingBudgetProposal}
-                      onApprove={handleBudgetApprove}
-                      onDeny={handleBudgetDeny}
-                      onConfigureManually={() => {
-                        appEventEmitter.emit('open-budget-dialog', {
-                          groupId: pendingBudgetProposal.groupId,
-                          targetLimit: pendingBudgetProposal.newMonthlyLimit,
-                          expandCategories: true,
-                          categoryUpdates: pendingBudgetProposal.categoryUpdates,
-                        });
-                        if (onClose) onClose();
-                      }}
-                      status={budgetActionStatus}
-                    />
-                  ) : msg.content === '__BUDGET_ACTION_CARD__' ? (
+              {messages.map((msg, idx) => {
+                const proposal = msg.budgetProposal || (pendingBudgetProposal?.requestId === msg.budgetProposalId ? pendingBudgetProposal : null);
+                const isCurrentActive = proposal && pendingBudgetProposal?.requestId === proposal.requestId;
+
+                if (msg.content === '__BUDGET_ACTION_CARD__') {
+                  if (isCurrentActive && proposal) {
+                    return (
+                      <BudgetActionCard
+                        key={idx}
+                        proposal={proposal}
+                        onApprove={() => handleBudgetApprove(proposal)}
+                        onDeny={() => handleBudgetDeny(proposal)}
+                        onConfigureManually={() => {
+                          const targetId = proposal.groupId || groupId;
+                          if (targetId) {
+                            router.push(`/groups/${targetId}?tab=budget&action=edit-budget`);
+                          }
+                          appEventEmitter.emit('open-budget-dialog', {
+                            groupId: targetId,
+                            targetLimit: proposal.newMonthlyLimit,
+                            expandCategories: true,
+                            categoryUpdates: proposal.categoryUpdates,
+                          });
+                        }}
+                        status={budgetActionStatus}
+                      />
+                    );
+                  }
+                  return (
                     <div key={idx} className="my-1.5 mx-1 rounded-xl border border-border/30 bg-muted/10 p-3 text-xs text-muted-foreground italic">
                       Budget change proposal expired.
                     </div>
-                  ) : (
+                  );
+                }
 
-                    <MessageBubble
-                      key={idx}
-                      message={msg}
-                      userName={userProfile?.firstName || 'You'}
-                      isStreaming={isStreaming && idx === messages.length - 1 && msg.role === 'assistant'}
-                      status={isStreaming && idx === messages.length - 1 && msg.role === 'assistant' ? streamStatus : null}
-                      variant={variant}
-                    />
-                  )
-              ))}
+                return (
+                  <MessageBubble
+                    key={idx}
+                    message={msg}
+                    userName={userProfile?.firstName || 'You'}
+                    isStreaming={isStreaming && idx === messages.length - 1 && msg.role === 'assistant'}
+                    status={isStreaming && idx === messages.length - 1 && msg.role === 'assistant' ? streamStatus : null}
+                    variant={variant}
+                  />
+                );
+              })}
               <div ref={messagesEndRef} />
             </>
           )}
