@@ -675,5 +675,28 @@ describe('Financial Analytics & AI Intent Routing', () => {
       expect(snapshot.formattedText).toContain('Status: No budget configured');
     });
   });
+
+  describe('8. Natural Budget Action Intent Detection (detectQueryIntent)', () => {
+    it('accurately identifies various natural budget modification phrases', () => {
+      const phrases = [
+        'change the budget for test Group to ₹21,000',
+        'change test Group budget to 21000',
+        'update test Group budget to 21000',
+        'modify Goa Trip budget to 15000',
+        'adjust Flatmates budget to 25000',
+        'set our monthly budget to 30000',
+        'increase Goa budget by 5000',
+        'decrease Apartment budget by 2000',
+        'enable group budget',
+        'disable budget',
+        'set food budget to 8000',
+      ];
+
+      for (const phrase of phrases) {
+        const result = detectQueryIntent(phrase);
+        expect(result.intent, `Failed for phrase: "${phrase}"`).toBe('BUDGET_ACTION');
+      }
+    });
+  });
 });
 

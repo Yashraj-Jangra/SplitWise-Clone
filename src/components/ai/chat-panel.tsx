@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Send, Trash2, ArrowRight, Info, Square, Maximize2, ShieldCheck, Calculator, Database, Sparkles, Cpu, Clock } from 'lucide-react';
 
@@ -346,9 +347,13 @@ function BudgetActionCard({ proposal, onApprove, onDeny, onConfigureManually, st
 
 
 export function ChatPanel({ groupId, groupName, className, onClose, variant = 'widget' }: ChatPanelProps) {
+  const router = useRouter();
   const { userProfile } = useAuth();
   const userId = userProfile?.uid || 'guest';
-  const storageKey = `splitit_ai_history_${userId}${groupId ? `_${groupId}` : ''}`;
+  const storageKey =
+    variant === 'widget'
+      ? `splitit_ai_widget_history_${userId}`
+      : `splitit_ai_history_${userId}${groupId ? `_${groupId}` : ''}`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -370,7 +375,10 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   // Load history from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
+      let saved = localStorage.getItem(storageKey);
+      if (!saved && variant === 'widget') {
+        saved = localStorage.getItem(`splitit_ai_history_${userId}`);
+      }
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -389,7 +397,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
     } catch {
       // Ignore parse errors
     }
-  }, [storageKey]);
+  }, [storageKey, userId, variant]);
 
   // Save history to localStorage
   useEffect(() => {
@@ -610,6 +618,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
     if (!pendingBudgetProposal || budgetActionStatus !== 'idle') return;
     setBudgetActionStatus('approving');
     const targetGroupId = pendingBudgetProposal.groupId || groupId;
+    const targetGroupName = pendingBudgetProposal.groupName || 'group';
     try {
       const res = await fetch('/api/ai/budget', {
         method: 'POST',
@@ -618,10 +627,15 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Budget update failed');
-      // Replace the card message with a simple confirmation
+
+      const approvedSummary = pendingBudgetProposal.newMonthlyLimit != null
+        ? `Budget for "${targetGroupName}" updated to ₹${pendingBudgetProposal.newMonthlyLimit.toLocaleString('en-IN')}.`
+        : `Budget configuration for "${targetGroupName}" updated successfully.`;
+
+      // Replace the card message with a confirmation
       setMessages((prev) => prev.map((m) =>
         m.budgetProposalId === pendingBudgetProposal.requestId
-          ? { ...m, content: 'Budget updated successfully.', budgetProposalId: undefined }
+          ? { ...m, content: `✅ ${approvedSummary}`, budgetProposalId: undefined }
           : m
       ));
       
@@ -630,31 +644,14 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       appEventEmitter.emit('budget-updated', { groupId: targetGroupId, budget: data.newBudget });
       appEventEmitter.emit('data-changed');
 
-      if (onClose) {
-        onClose();
-      }
-
-      // Refresh page so the new budget is immediately shown on screen
-      if (typeof window !== 'undefined') {
-        if (targetGroupId) {
-          const targetUrl = `/groups/${targetGroupId}?tab=budget`;
-          if (window.location.pathname === `/groups/${targetGroupId}`) {
-            if (window.location.search.includes('tab=budget')) {
-              window.location.reload();
-            } else {
-              window.location.href = targetUrl;
-            }
-          } else {
-            window.location.href = targetUrl;
-          }
-        } else {
-          window.location.reload();
-        }
+      // Seamless background navigation: navigate background page without closing chat popup
+      if (targetGroupId) {
+        router.push(`/groups/${targetGroupId}?tab=budget`);
       }
     } catch (err: any) {
       setMessages((prev) => prev.map((m) =>
         m.budgetProposalId === pendingBudgetProposal?.requestId
-          ? { ...m, content: `Failed to apply budget change: ${err.message || 'Unknown error'}`, budgetProposalId: undefined }
+          ? { ...m, content: `⚠️ Failed to apply budget change: ${err.message || 'Unknown error'}`, budgetProposalId: undefined }
           : m
       ));
     } finally {
@@ -943,13 +940,16 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                       onApprove={handleBudgetApprove}
                       onDeny={handleBudgetDeny}
                       onConfigureManually={() => {
+                        const targetId = pendingBudgetProposal.groupId || groupId;
+                        if (targetId) {
+                          router.push(`/groups/${targetId}?tab=budget&action=edit-budget`);
+                        }
                         appEventEmitter.emit('open-budget-dialog', {
-                          groupId: pendingBudgetProposal.groupId,
+                          groupId: targetId,
                           targetLimit: pendingBudgetProposal.newMonthlyLimit,
                           expandCategories: true,
                           categoryUpdates: pendingBudgetProposal.categoryUpdates,
                         });
-                        if (onClose) onClose();
                       }}
                       status={budgetActionStatus}
                     />

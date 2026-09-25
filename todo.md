@@ -1,5 +1,30 @@
 # Session Progress & Context Preservation
 
+  - **1-Click Global Budget Modification with Seamless Background Navigation & Continuous Chat** ✨ 🖱️ 💬 ✅:
+    - **User Requirement**:
+      - "change this to to allow me to change the budget click and open in the same tab in background without closing the AI popup window like continuing"
+    - **Implementation**:
+      - **Global Scope Budget Proposal Generation ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Refactored budget action pipeline to emit interactive `budget_action` proposal cards directly in global chat when a group name is detected or single active group exists.
+        - Emits real-time SSE proposal card for immediate 1-click approval right from global assistant view.
+        - Updated system prompt instructions to allow global view and proposals with relative links.
+      - **Natural Phrasing Intent Detection ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Expanded `detectQueryIntent` to match natural budget modification phrasing (e.g. "change the budget for test Group to ₹21,000", "update test Group budget to 21000", "adjust Flatmates budget to 25000", "make Apartment budget 50000").
+      - **Non-Closing Seamless Background Navigation ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Integrated Next.js client-side `useRouter()`.
+        - Removed `onClose()` trigger and hard `window.location.reload()`.
+        - In `handleBudgetApprove`: executes server mutation, updates chat card to confirmed summary, clears client cache, emits `budget-updated` / `data-changed`, and smoothly transitions the background page via `router.push('/groups/' + targetGroupId + '?tab=budget')` without closing the AI popup window.
+        - In `onConfigureManually`: navigates to `/groups/${targetId}?tab=budget&action=edit-budget` in the background and emits `open-budget-dialog` without closing the assistant.
+      - **Persistent Continuous Chat History ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Configured `splitit_ai_widget_history_${userId}` for `variant === 'widget'`.
+        - Navigating the background page across routes (e.g. `/` → `/groups/grp_123`) no longer wipes or resets the active chat conversation.
+      - **Markdown Link Normalization ([`src/components/ai/formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx))**:
+        - Strips domain and localhost prefixes from markdown links and renders app paths via internal client `<Link>`, preventing unwanted new tab popups.
+      - **Automated Tests & Test Runner Configuration ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts), [`vitest.config.ts`](file:///d:/Projects/SplitWise-Clone/vitest.config.ts))**:
+        - Added test suite for natural budget action intent detection across 11 conversational phrases.
+        - Configured `pool: 'threads'` in Vitest configuration for robust execution on Windows.
+        - All 69 tests across all 6 test suites passed.
+
   - **Granular Activity Logging for Manual & AI Budget Changes** ✨ 📋 🔍 ✅:
     - **User Requirement**:
       - "good now make the activity logging for budgets better and detailed. enabled, disabled, edited full details of whats changed from what log them only changes. for AI made changes too use same detailed view. eg if only categorised budget is changed and whole budget is same in green write something like it wasent changed at top always. cover all possible edge cases. make a plan"

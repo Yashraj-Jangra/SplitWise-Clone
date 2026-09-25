@@ -85,8 +85,7 @@ export function detectQueryIntent(message: string): {
   }
 
   // Budget action check (modify/increase/decrease/enable/disable budget) — BEFORE generic BUDGET_RUNRATE
-  if (/\b(increase|raise|bump|boost|grow|add to|add more to)\b.*?\b(budget|limit)\b/i.test(lower) ||
-      /\b(decrease|reduce|lower|cut|shrink|drop)\b.*?\b(budget|limit)\b/i.test(lower) ||
+  if (/\b(change|update|modify|adjust|make|increase|raise|bump|boost|grow|add to|add more to|decrease|reduce|lower|cut|shrink|drop)\b.*?\b(budget|limit)\b/i.test(lower) ||
       /\b(set (the |my |our )?(monthly |group )?(budget|limit)|change (the |my |our )?(monthly |group )?(budget|limit))\b/i.test(lower) ||
       /\b(budget (to|at|should be)|change budget|update budget|modify budget|set budget)\b/i.test(lower) ||
       /\b(enable (the |my |our |group )?budget|disable (the |my |our |group )?budget|turn (on|off) (the |my |our |group )?budget)\b/i.test(lower) ||

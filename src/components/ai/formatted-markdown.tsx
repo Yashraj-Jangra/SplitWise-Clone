@@ -136,13 +136,28 @@ export function FormattedMarkdown({ content, className, isStreaming }: Formatted
 
           // Links
           a: ({ href, children }) => {
-            const isInternal = Boolean(href && href.startsWith('/'));
-            const isGroupAction = Boolean(href && href.startsWith('/groups/'));
+            let normalizedHref = href || '';
+            // If href contains domain or localhost prefix pointing to app routes, strip to relative path
+            if (/^https?:\/\/[^/]+(\/.*)$/.test(normalizedHref)) {
+              const pathPart = normalizedHref.replace(/^https?:\/\/[^/]+/, '');
+              if (
+                pathPart.startsWith('/groups') ||
+                pathPart.startsWith('/expenses') ||
+                pathPart.startsWith('/dashboard') ||
+                pathPart.startsWith('/settlements') ||
+                pathPart.startsWith('/analysis')
+              ) {
+                normalizedHref = pathPart;
+              }
+            }
+
+            const isInternal = Boolean(normalizedHref && normalizedHref.startsWith('/'));
+            const isGroupAction = Boolean(normalizedHref && normalizedHref.startsWith('/groups/'));
 
             if (isGroupAction) {
               return (
                 <Link
-                  href={href!}
+                  href={normalizedHref}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 rounded-xl bg-primary text-primary-foreground font-medium text-xs shadow-xs hover:bg-primary/90 transition-all active:scale-[0.98] cursor-pointer no-underline group"
                 >
                   <span className="font-semibold">{children}</span>
@@ -154,7 +169,7 @@ export function FormattedMarkdown({ content, className, isStreaming }: Formatted
             if (isInternal) {
               return (
                 <Link
-                  href={href!}
+                  href={normalizedHref}
                   className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
                 >
                   {children}
