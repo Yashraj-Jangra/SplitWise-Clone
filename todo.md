@@ -1,5 +1,9 @@
 # Session Progress & Context Preservation
 
+  - **Version Bump to 0.4.1** 📌 🚀 ✅:
+    - Bumped application version to `0.4.1` across `package.json`, `package-lock.json`, and `src/lib/version.ts`.
+
+
   - **Budget Proposal Timer Removal & Continuity Across Chat Minimize** ✨ ⏳ 💬 ✅:
     - **User Requirement**:
       - "remove the timer from budget proposal its just for backend and do not expire it immediatly as user close minimize the AI chat expire when cleared chat or make a new proposal"
