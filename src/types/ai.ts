@@ -31,6 +31,7 @@ export interface ChatMessage {
   isBlocked?: boolean;
   blockedReason?: GuardrailBlockedReason;
   budgetProposalId?: string;
+  budgetProposal?: BudgetActionProposal;
 }
 
 export interface AIInsight {

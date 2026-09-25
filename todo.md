@@ -1,5 +1,25 @@
 # Session Progress & Context Preservation
 
+  - **Budget Proposal Timer Removal & Continuity Across Chat Minimize** ✨ ⏳ 💬 ✅:
+    - **User Requirement**:
+      - "remove the timer from budget proposal its just for backend and do not expire it immediatly as user close minimize the AI chat expire when cleared chat or make a new proposal"
+    - **Implementation**:
+      - **Client Countdown Timer Removal ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Stripped out `remainingMs`, countdown badge, `1000ms` ticking interval, and `isExpired` branches from `BudgetActionCard`.
+        - Kept backend 10-minute expiry verification intact in [`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts) for secure server-side boundary checks.
+      - **Proposal Data Serialization & Continuity ([`src/types/ai.ts`](file:///d:/Projects/SplitWise-Clone/src/types/ai.ts), [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Extended `ChatMessage` with optional `budgetProposal?: BudgetActionProposal`.
+        - Persisted the proposal directly onto the assistant card message in `handleSend`.
+        - When user closes or minimizes the AI widget (`isOpen: false`), messages are preserved in `localStorage`.
+        - On re-opening/mounting, `ChatPanel` rehydrates `pendingBudgetProposal` from the latest active proposal message so the proposal never prematurely shows "expired" upon minimize.
+      - **Explicit Proposal Lifecycle & Expiration Rules**:
+        - **Cleared Chat (`Trash2` / `handleClearHistory`)**: Clears messages, removes storage, and resets `pendingBudgetProposal` to `null`.
+        - **Superseded by New Proposal**: When a new budget proposal arrives in `handleSend`, any previous proposal cards in history are marked superseded (`"Budget change request superseded by a newer proposal."`) and their proposal references are cleaned up.
+        - **Approved or Dismissed**: Upon approval or denial, the card message is updated to the confirmation/denial summary and the proposal reference is cleared.
+      - **Automated Tests & Quality Checks Verified**:
+        - Ran `npm run typecheck` (`tsc --noEmit`): 0 errors.
+        - Ran `npm test` (`vitest run`): all 69 unit tests across 6 test suites passed cleanly.
+
   - **1-Click Global Budget Transition & Automatic In-Group AI Proposal Trigger** ✨ 🖱️ 💬 ✅:
     - **User Requirement**:
       - "now it just takes u there and where is that apply dialog box. write clearly in global reply that after taking to that page I'll be able to modify and clicking that button sends a new prompt to AI to set the new budget after opening the group"
