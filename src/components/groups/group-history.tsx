@@ -135,6 +135,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   expense_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
   settlement_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
   group_updated: <Icons.Edit className="h-4 w-4 text-blue-500" />,
+  budget_updated: <Icons.Bot className="h-4 w-4 text-purple-500" />,
   // Deletions
   expense_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   settlement_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,

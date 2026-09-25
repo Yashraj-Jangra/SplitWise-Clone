@@ -94,6 +94,15 @@ describe('Financial Analytics & AI Intent Routing', () => {
       expect(detectQueryIntent("what is our safe budget pacing?").intent).toBe('BUDGET_RUNRATE');
     });
 
+    it('correctly classifies budget action queries (modify, increase, decrease, enable, disable, category)', () => {
+      expect(detectQueryIntent("increase our monthly budget by ₹5,000").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("reduce the group budget by 2000").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("set monthly budget to 30000").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("enable group budget").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("disable group budget").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("set food budget to 8000").intent).toBe('BUDGET_ACTION');
+    });
+
     it('correctly classifies spending spike queries', () => {
       expect(detectQueryIntent("what were my biggest spending spikes?").intent).toBe('SPENDING_SPIKE');
       expect(detectQueryIntent("show me my largest expense recently").intent).toBe('SPENDING_SPIKE');

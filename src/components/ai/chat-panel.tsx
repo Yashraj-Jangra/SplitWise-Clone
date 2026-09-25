@@ -21,7 +21,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import type { ChatMessage } from '@/types/ai';
+import type { ChatMessage, BudgetActionProposal } from '@/types/ai';
+import { appEventEmitter } from '@/lib/event-emitter';
 
 const GLOBAL_STARTER_PROMPTS = [
   "What's my spending trend this month vs last month?",
@@ -31,10 +32,10 @@ const GLOBAL_STARTER_PROMPTS = [
 ];
 
 const GROUP_STARTER_PROMPTS = [
+  "What is our group budget status?",
   "Break down each member's cut and share",
   "What's our group spending trend this month?",
-  "Who paid the most in this group?",
-  "How much did we spend on Food & Dining?",
+  "Increase our monthly budget by ₹5,000",
 ];
 
 interface ChatPanelProps {
@@ -110,6 +111,126 @@ function AssistantInfoTooltipContent({ variant = 'full' }: { variant?: 'widget' 
 
 
 
+// -- Budget Action Permission Card -----------------------------------------------
+interface BudgetActionCardProps {
+  proposal: BudgetActionProposal;
+  onApprove: () => void;
+  onDeny: () => void;
+  status: 'idle' | 'approving' | 'denying';
+}
+
+function BudgetActionCard({ proposal, onApprove, onDeny, status }: BudgetActionCardProps) {
+  const isLoading = status !== 'idle';
+  const formatINR = (n?: number) => (n != null ? `\u20b9${n.toLocaleString('en-IN')}` : 'N/A');
+
+  const actionLabels: Record<string, string> = {
+    set_monthly_limit: 'Set Monthly Budget',
+    increase_monthly_limit: 'Increase Monthly Budget',
+    decrease_monthly_limit: 'Decrease Monthly Budget',
+    enable_budget: 'Enable Budget',
+    disable_budget: 'Disable Budget',
+    set_category_limit: `Set ${proposal.categoryKey || 'Category'} Limit`,
+    remove_category_limit: `Remove ${proposal.categoryKey || 'Category'} Limit`,
+  };
+
+  const actionColorClass: Record<string, string> = {
+    set_monthly_limit: 'text-blue-400',
+    increase_monthly_limit: 'text-emerald-400',
+    decrease_monthly_limit: 'text-amber-400',
+    enable_budget: 'text-emerald-400',
+    disable_budget: 'text-red-400',
+    set_category_limit: 'text-blue-400',
+    remove_category_limit: 'text-red-400',
+  };
+
+  const computedNewLimit = (): number | undefined => {
+    if (proposal.newMonthlyLimit != null) return proposal.newMonthlyLimit;
+    if (proposal.deltaAmount != null && proposal.currentMonthlyLimit != null) {
+      return proposal.action === 'increase_monthly_limit'
+        ? proposal.currentMonthlyLimit + proposal.deltaAmount
+        : Math.max(100, proposal.currentMonthlyLimit - proposal.deltaAmount);
+    }
+    return undefined;
+  };
+
+  const newVal = computedNewLimit();
+
+  return (
+    <div className="my-1.5 mx-1">
+      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 backdrop-blur-sm overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5 border-b border-amber-500/20">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 border border-amber-500/25 flex-shrink-0">
+            <Icons.Bot className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-400 leading-tight">AI Budget Change Request</p>
+            <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">{proposal.groupName}</p>
+          </div>
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-current/20 bg-current/10 ${actionColorClass[proposal.action] || 'text-foreground'}`}>
+            {actionLabels[proposal.action] || proposal.action}
+          </span>
+        </div>
+
+        {/* Body */}
+        <div className="px-4 py-3 space-y-2.5">
+          <p className="text-[12px] text-foreground leading-relaxed">{proposal.summary}</p>
+
+          {/* Change details */}
+          <div className="grid grid-cols-2 gap-2">
+            {proposal.currentMonthlyLimit != null && (
+              <div className="rounded-xl bg-muted/20 border border-border/30 p-2.5">
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Current</p>
+                <p className="text-sm font-bold text-foreground">{formatINR(proposal.currentMonthlyLimit)}</p>
+              </div>
+            )}
+            {newVal != null && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-2.5">
+                <p className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-0.5">New Limit</p>
+                <p className="text-sm font-bold text-primary">{formatINR(newVal)}</p>
+              </div>
+            )}
+            {proposal.categoryKey && proposal.newCategoryLimit != null && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-2.5 col-span-2">
+                <p className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-0.5">{proposal.categoryKey}</p>
+                <p className="text-sm font-bold text-primary">{formatINR(proposal.newCategoryLimit)}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Permission notice */}
+          <div className="flex items-start gap-2 rounded-xl bg-muted/10 border border-border/20 p-2.5">
+            <Icons.AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              The AI is requesting permission to modify the group budget. This change will be logged in the group history.
+            </p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 px-4 pb-4">
+          <button
+            type="button"
+            onClick={onDeny}
+            disabled={isLoading}
+            className="flex-1 h-9 rounded-xl text-xs font-semibold border border-border/40 bg-muted/20 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
+          >
+            {status === 'denying' ? 'Denying...' : 'Deny'}
+          </button>
+          <button
+            type="button"
+            onClick={onApprove}
+            disabled={isLoading}
+            className="flex-1 h-9 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-60 shadow-md shadow-emerald-900/30"
+          >
+            {status === 'approving' ? 'Applying...' : 'Approve & Apply'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ChatPanel({ groupId, groupName, className, onClose, variant = 'widget' }: ChatPanelProps) {
   const { userProfile } = useAuth();
   const userId = userProfile?.uid || 'guest';
@@ -122,6 +243,8 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [pendingBudgetProposal, setPendingBudgetProposal] = useState<BudgetActionProposal | null>(null);
+  const [budgetActionStatus, setBudgetActionStatus] = useState<'idle' | 'approving' | 'denying'>('idle');
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -326,6 +449,18 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                   }
                   return updated;
                 });
+              } else if (data.budget_action) {
+                setStreamStatus(null);
+                setPendingBudgetProposal(data.budget_action as BudgetActionProposal);
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
+                  if (last && last.role === 'assistant') {
+                    last.content = '__BUDGET_ACTION_CARD__';
+                    last.budgetProposalId = (data.budget_action as BudgetActionProposal).requestId;
+                  }
+                  return updated;
+                });
               } else if (data.error) {
                 throw new Error(data.error);
               }
@@ -355,6 +490,49 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       setStreamStatus(null);
       setIsStreaming(false);
     }
+  };
+
+  const handleBudgetApprove = async () => {
+    if (!pendingBudgetProposal || budgetActionStatus !== 'idle') return;
+    setBudgetActionStatus('approving');
+    try {
+      const res = await fetch('/api/ai/budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposal: pendingBudgetProposal, approved: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Budget update failed');
+      // Replace the card message with a success message
+      setMessages((prev) => prev.map((m) =>
+        m.budgetProposalId === pendingBudgetProposal.requestId
+          ? { ...m, content: `Budget updated successfully. ${data.description || pendingBudgetProposal.summary}`, budgetProposalId: undefined }
+          : m
+      ));
+      // Emit event so group page refreshes
+      appEventEmitter.emit('data-changed');
+    } catch (err: any) {
+      setMessages((prev) => prev.map((m) =>
+        m.budgetProposalId === pendingBudgetProposal?.requestId
+          ? { ...m, content: `Failed to apply budget change: ${err.message || 'Unknown error'}`, budgetProposalId: undefined }
+          : m
+      ));
+    } finally {
+      setPendingBudgetProposal(null);
+      setBudgetActionStatus('idle');
+    }
+  };
+
+  const handleBudgetDeny = () => {
+    if (!pendingBudgetProposal) return;
+    setBudgetActionStatus('denying');
+    setMessages((prev) => prev.map((m) =>
+      m.budgetProposalId === pendingBudgetProposal.requestId
+        ? { ...m, content: 'Budget change request denied. No changes were made.', budgetProposalId: undefined }
+        : m
+    ));
+    setPendingBudgetProposal(null);
+    setBudgetActionStatus('idle');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -617,14 +795,29 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
           ) : (
             <>
               {messages.map((msg, idx) => (
-                <MessageBubble
-                  key={idx}
-                  message={msg}
-                  userName={userProfile?.firstName || 'You'}
-                  isStreaming={isStreaming && idx === messages.length - 1 && msg.role === 'assistant'}
-                  status={isStreaming && idx === messages.length - 1 && msg.role === 'assistant' ? streamStatus : null}
-                  variant={variant}
-                />
+                msg.content === '__BUDGET_ACTION_CARD__' && pendingBudgetProposal && msg.budgetProposalId === pendingBudgetProposal.requestId
+                  ? (
+                    <BudgetActionCard
+                      key={idx}
+                      proposal={pendingBudgetProposal}
+                      onApprove={handleBudgetApprove}
+                      onDeny={handleBudgetDeny}
+                      status={budgetActionStatus}
+                    />
+                  ) : msg.content === '__BUDGET_ACTION_CARD__' ? (
+                    <div key={idx} className="my-1.5 mx-1 rounded-xl border border-border/30 bg-muted/10 p-3 text-xs text-muted-foreground italic">
+                      Budget change proposal expired.
+                    </div>
+                  ) : (
+                    <MessageBubble
+                      key={idx}
+                      message={msg}
+                      userName={userProfile?.firstName || 'You'}
+                      isStreaming={isStreaming && idx === messages.length - 1 && msg.role === 'assistant'}
+                      status={isStreaming && idx === messages.length - 1 && msg.role === 'assistant' ? streamStatus : null}
+                      variant={variant}
+                    />
+                  )
               ))}
               <div ref={messagesEndRef} />
             </>

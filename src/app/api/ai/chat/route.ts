@@ -8,7 +8,7 @@ import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expens
 import { getFullName } from '@/lib/utils';
 import { streamCompletion } from '@/lib/ai/client';
 import { classifyInput, scanOutputForViolations } from '@/lib/ai/guardrail';
-import type { ChatMessage, RetrievedChunk } from '@/types/ai';
+import type { ChatMessage, RetrievedChunk, BudgetActionProposal } from '@/types/ai';
 
 export async function POST(request: Request) {
   try {
@@ -101,8 +101,8 @@ export async function POST(request: Request) {
     const isPureDraftOrConversational =
       (isExplicitDraft || isCasualGreetingOrGeneralHelp) && !hasFinancialKeywords && !groupId;
 
-    // Trigger semantic vector retrieval for any financial/transactional inquiry
-    const needsVectorSearch = !isPureDraftOrConversational;
+    // Trigger semantic vector retrieval for any financial/transactional inquiry (not needed for budget action parsing)
+    const needsVectorSearch = !isPureDraftOrConversational && queryIntent.intent !== 'BUDGET_ACTION';
 
     const needsLedgerSnapshot = !isPureDraftOrConversational;
 
@@ -138,6 +138,10 @@ export async function POST(request: Request) {
             } else if (queryIntent.intent === 'BUDGET_RUNRATE') {
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Forecasting budget burn rate...' })}\n\n`)
+              );
+            } else if (queryIntent.intent === 'BUDGET_ACTION') {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Reading current budget configuration...' })}\n\n`)
               );
             } else if (needsVectorSearch) {
               controller.enqueue(
@@ -239,6 +243,90 @@ export async function POST(request: Request) {
               contextBlock = buildContextBlock(chunks);
             } else {
               contextBlock = 'No matching expense records found for this query.';
+            }
+
+
+            // BUDGET_ACTION: parse intent and emit permission card SSE event
+            if (queryIntent.intent === 'BUDGET_ACTION' && groupId && snapshot) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'drafting', message: 'Preparing budget change proposal...' })}\n\n`)
+              );
+
+              const groupName = snapshot.groupName || groupId;
+              const currentBudget = snapshot.budget;
+              const rawFormattedText: string = snapshot.formattedText || '';
+              const budgetConfigSection = rawFormattedText.includes('FULL BUDGET CONFIGURATION:')
+                ? rawFormattedText.split('FULL BUDGET CONFIGURATION:')[1]?.split('\n---')[0]?.trim()
+                : 'No budget configured.';
+
+              const parseMessages: ChatMessage[] = [
+                {
+                  role: 'system',
+                  content: [
+                    'You are a budget action parser for a group expense app.',
+                    'Extract the user budget modification intent and output ONLY valid JSON with no markdown, no explanation.',
+                    '',
+                    `CURRENT GROUP: "${groupName}" (ID: ${groupId})`,
+                    'CURRENT BUDGET STATE:',
+                    budgetConfigSection,
+                    '',
+                    'Valid actions: set_monthly_limit, increase_monthly_limit, decrease_monthly_limit, enable_budget, disable_budget, set_category_limit, remove_category_limit',
+                    'Valid categoryKey values: Food and Drink, Transportation, Housing, Utilities, Entertainment, Shopping, Health and Wellness, Personal Care, Education, Gifts and Donations, Travel, Other',
+                    '',
+                    'Output this JSON schema exactly (no extra text):',
+                    '{"action":"<action>","newMonthlyLimit":<number|null>,"deltaAmount":<number|null>,"currentMonthlyLimit":<number>,"categoryKey":<string|null>,"newCategoryLimit":<number|null>,"summary":"<one sentence>","confidence":"high|medium|low","clarificationNeeded":<null|string>}',
+                  ].join('\n'),
+                },
+                { role: 'user', content: message },
+              ];
+
+              let parsedAction: any = null;
+              let rawParseOutput = '';
+              try {
+                for await (const tok of streamCompletion(parseMessages)) {
+                  rawParseOutput += tok;
+                }
+                const jsonMatch = rawParseOutput.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  parsedAction = JSON.parse(jsonMatch[0]);
+                }
+              } catch {
+                // Parse failed - fall through to clarification
+              }
+
+              if (!parsedAction || parsedAction.confidence === 'low' || parsedAction.clarificationNeeded) {
+                const clarification: string = parsedAction?.clarificationNeeded ||
+                  "I'm not sure exactly what budget change you'd like. Could you be more specific? For example: *\"Increase the budget by Rs.5,000\"*, *\"Set the monthly limit to Rs.30,000\"*, or *\"Set the Food & Drink limit to Rs.8,000\"*.";
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: clarification })}\n\n`));
+              } else {
+                const requestId = `budgetreq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+                const proposal: BudgetActionProposal = {
+                  action: parsedAction.action,
+                  groupId,
+                  groupName,
+                  newMonthlyLimit: parsedAction.newMonthlyLimit != null ? Number(parsedAction.newMonthlyLimit) : undefined,
+                  deltaAmount: parsedAction.deltaAmount != null ? Number(parsedAction.deltaAmount) : undefined,
+                  currentMonthlyLimit: parsedAction.currentMonthlyLimit != null ? Number(parsedAction.currentMonthlyLimit) : currentBudget?.monthlyLimit,
+                  categoryKey: parsedAction.categoryKey ?? undefined,
+                  newCategoryLimit: parsedAction.newCategoryLimit != null ? Number(parsedAction.newCategoryLimit) : undefined,
+                  summary: parsedAction.summary || 'Budget change proposed by AI',
+                  requestId,
+                };
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ budget_action: proposal })}\n\n`)
+                );
+              }
+
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              return;
+            }
+
+            // BUDGET_ACTION without groupId: explain limitation
+            if (queryIntent.intent === 'BUDGET_ACTION' && !groupId) {
+              const msg = 'Budget management is only available when viewing a specific group. Please navigate to a group page and ask me there to modify the budget.';
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: msg })}\n\n`));
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              return;
             }
 
             // Transition status to drafting when invoking the model

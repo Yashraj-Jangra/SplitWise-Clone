@@ -73,6 +73,16 @@ export function detectQueryIntent(message: string): {
     return { intent: 'MEMBER_CUT', isExplicitDraft: false, isCasualGreeting: false };
   }
 
+  // Budget action check (modify/increase/decrease/enable/disable budget) — BEFORE generic BUDGET_RUNRATE
+  if (/\b(increase|raise|bump|boost|grow|add to|add more to)\b.*?\b(budget|limit)\b/i.test(lower) ||
+      /\b(decrease|reduce|lower|cut|shrink|drop)\b.*?\b(budget|limit)\b/i.test(lower) ||
+      /\b(set (the |my |our )?(monthly |group )?(budget|limit)|change (the |my |our )?(monthly |group )?(budget|limit))\b/i.test(lower) ||
+      /\b(budget (to|at|should be)|change budget|update budget|modify budget|set budget)\b/i.test(lower) ||
+      /\b(enable (the |my |our |group )?budget|disable (the |my |our |group )?budget|turn (on|off) (the |my |our |group )?budget)\b/i.test(lower) ||
+      /\b(set (category|food|travel|shopping|rent|utilities|health|entertainment) (budget|limit))\b/i.test(lower)) {
+    return { intent: 'BUDGET_ACTION', isExplicitDraft: false, isCasualGreeting: false };
+  }
+
   // Budget forecast check (evaluate before generic pacing/trend)
   if (/\b(budget|limit|exceed|run out|safe to spend|budget pacing|budget forecast|will we exceed)\b/i.test(lower)) {
     return { intent: 'BUDGET_RUNRATE', isExplicitDraft: false, isCasualGreeting: false };
@@ -280,6 +290,28 @@ export async function buildFinancialSnapshot(
       lines.push('', '---', budgetForecast.formattedSummary);
     } else if (budgetInfo) {
       lines.push(`GROUP BUDGET: ₹${budgetInfo.currentSpent.toFixed(2)} spent of ₹${budgetInfo.monthlyLimit.toFixed(2)} monthly limit (${budgetInfo.percentage}%)`);
+    }
+
+    // Always show full budget config so AI can suggest meaningful changes
+    if (group?.budget) {
+      const b = group.budget;
+      lines.push('', 'FULL BUDGET CONFIGURATION:');
+      lines.push(`- Enabled: ${b.enabled}`);
+      lines.push(`- Monthly Limit: ${b.monthlyLimit > 0 ? `₹${b.monthlyLimit.toLocaleString('en-IN')}` : 'Not set'}`);
+      lines.push(`- Alert Thresholds: ${(b.alertThresholds || [75, 90, 100]).map(t => `${t}%`).join(', ')}`);
+      if (b.categoryLimits && Object.keys(b.categoryLimits).length > 0) {
+        lines.push('- Category Limits:');
+        Object.entries(b.categoryLimits).forEach(([cat, limit]) => {
+          lines.push(`  • ${cat}: ₹${Number(limit).toLocaleString('en-IN')}`);
+        });
+      } else {
+        lines.push('- Category Limits: None set');
+      }
+      if (b.updatedAt) {
+        lines.push(`- Last Updated: ${new Date(b.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`);
+      }
+    } else {
+      lines.push('', 'BUDGET: No budget configured for this group.');
     }
 
     // Attach Spikes if computed

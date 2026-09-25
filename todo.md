@@ -1,5 +1,33 @@
 # Session Progress & Context Preservation
 
+  - **AI Budget Management, Interactive Permission Card & Audit Trail** ✨ 🤖 🛡️ ✅:
+    - **Objective**: Grant the AI assistant full visibility into group and category budgets, empower users to configure/adjust budgets through natural conversational commands (e.g. increase, decrease, set overall or category limits, enable/disable), enforce strict user permission before applying any changes, and write an immutable audit event to the group history log.
+    - **Implementation**:
+      - **Financial Snapshot Grounding ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Injected full budget configuration into `buildFinancialSnapshot` (enabled status, monthly limit, alert thresholds, category limits, and last updated date).
+        - Added `BUDGET_ACTION` regex patterns to `detectQueryIntent` to catch budget modification inquiries (increase, raise, decrease, cut, set monthly/category limits, enable/disable) before generic pacing queries.
+      - **AI Intent Parsing & SSE Event ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Intercepts `BUDGET_ACTION` intent when `groupId` is present; feeds current budget context to a strict JSON action parser.
+        - Streams structured `BudgetActionProposal` over SSE (`data: {"budget_action": proposal}`) without hallucinations or premature database writes.
+      - **Glass-Pane Minimalist Permission Card ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Built `BudgetActionCard` adhering to the Dark-Mode Glass-Pane Minimalist Modal/Card System.
+        - Displays summary, current vs new limit badges, category details, warning notice, and dual-action buttons ("Approve & Apply" vs "Deny").
+        - Triggers real-time cache revalidation via `appEventEmitter.emit('data-changed')` on approval.
+      - **Budget Execution API Route ([`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts))**:
+        - Validates authenticated session and verifies group membership/admin privileges.
+        - Handles `set_monthly_limit`, `increase_monthly_limit`, `decrease_monthly_limit`, `enable_budget`, `disable_budget`, `set_category_limit`, `remove_category_limit`.
+        - Enforces boundary clamping (`MIN_LIMIT = 100`, `MAX_LIMIT = 10,000,000`) and validates reduction deltas.
+        - Persists group budget via `putItem` in `SplitItDB` and re-indexes group vectors via `queueVectorEmbedding`.
+      - **Group Audit Log Integration ([`src/components/groups/group-history.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-history.tsx))**:
+        - Added `'budget_updated'` to `HistoryEventType` in [`src/types/index.ts`](file:///d:/Projects/SplitWise-Clone/src/types/index.ts).
+        - Logs detailed audit events (`🤖 [User Name] approved an AI budget change: [Change description]`) with metadata (`aiInitiated: true`, `approvedByUserId`, etc.).
+        - Added dedicated `Icons.Bot` event icon in `group-history.tsx`.
+      - **Unit Tests ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts))**:
+        - Added test suite coverage verifying `detectQueryIntent` accurately identifies all permutations of budget action commands.
+    - **Verification**:
+      - `npm test` passes all 51/51 tests across 5 test suites.
+      - `npx tsc --noEmit` exits 0 (clean, 0 type errors).
+
   - **AI RAG Pipeline Fix, 1024-dim Vector Alignment & Deterministic DB Fallback** 🐛 🧠 ⚡ ✅:
     - **Issue**: The AI assistant reported lacking access to specific expense/transaction details and could only state who owes how much.
     - **Root Causes Fixed**:
