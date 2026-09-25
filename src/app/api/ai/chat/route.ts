@@ -406,28 +406,62 @@ export async function POST(request: Request) {
                   return words.some((w) => lowerMsg.includes(w));
                 });
 
+                // Extract requested budget number or operation from user's message
+                const cleanMsg = message.replace(/,/g, '');
+                const amountMatch = cleanMsg.match(/(?:to|by|at|set|of|is)?\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:₹|rs\.?|inr|k)?/i);
+                let requestedAmount: number | null = null;
+                if (amountMatch) {
+                  let rawNum = parseFloat(amountMatch[1]);
+                  if (/\d+k\b/i.test(cleanMsg) && rawNum < 1000) rawNum *= 1000;
+                  if (!isNaN(rawNum) && rawNum > 0) requestedAmount = rawNum;
+                }
+
+                const isIncrease = /\b(increase|raise|bump|boost|grow|add)\b/i.test(message);
+                const isDecrease = /\b(decrease|reduce|lower|cut|shrink|drop)\b/i.test(message);
+
+                const buildFollowUpPrompt = (groupName: string): string => {
+                  if (isIncrease && requestedAmount) return `Increase monthly budget by ₹${requestedAmount.toLocaleString('en-IN')}`;
+                  if (isDecrease && requestedAmount) return `Decrease monthly budget by ₹${requestedAmount.toLocaleString('en-IN')}`;
+                  if (requestedAmount) return `Set monthly budget to ₹${requestedAmount.toLocaleString('en-IN')}`;
+                  return `Adjust budget for "${groupName}"`;
+                };
+
                 if (matchedGroups.length === 1 || (userGroups.length === 1 && matchedGroups.length === 0)) {
                   const targetGroup = matchedGroups[0] || userGroups[0];
-                  const breakdown = computeBudgetBreakdown(targetGroup.budget);
-                  const configSummary = [
-                    `- Status: ${breakdown.enabled ? 'Enabled' : 'Disabled'}`,
-                    `- Total Monthly Limit: ${breakdown.monthlyLimit > 0 ? `₹${breakdown.monthlyLimit.toLocaleString('en-IN')}` : 'Not set'}`,
-                    `- Total Category Caps Sum: ₹${breakdown.totalCapped.toLocaleString('en-IN')}`,
-                    `- Flexible Pool: ₹${breakdown.flexiblePool.toLocaleString('en-IN')}`,
-                    ...breakdown.categoriesList.map((c) => `  • ${c.key}: ₹${c.limit.toLocaleString('en-IN')}`),
-                  ].join('\n');
+                  const followUpPrompt = buildFollowUpPrompt(targetGroup.name);
+                  const encodedPrompt = encodeURIComponent(followUpPrompt);
+                  const actionUrl = `/groups/${targetGroup.id}?tab=budget&action=ai-budget&prompt=${encodedPrompt}`;
+                  const formattedTarget = requestedAmount ? ` to **₹${requestedAmount.toLocaleString('en-IN')}**` : '';
+                  const buttonLabel = requestedAmount
+                    ? `Open "${targetGroup.name}" & Set Budget to ₹${requestedAmount.toLocaleString('en-IN')}`
+                    : `Open "${targetGroup.name}" to Modify Budget`;
 
-                  await emitBudgetProposal(targetGroup.id, targetGroup.name, targetGroup.budget, configSummary);
+                  const responseText = `Budget management is configured directly within each group. After opening **${targetGroup.name}** in the background, you'll be able to review and modify the budget.\n\nClick below to open the group and set the budget${formattedTarget}:\n\n👉 [${buttonLabel}](${actionUrl})`;
+
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: responseText })}\n\n`));
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                   return;
                 } else if (matchedGroups.length > 1) {
-                  const responseText = `I found multiple matching groups for your request. Which group's budget would you like to edit?\n\n` +
-                    matchedGroups.map((g) => `- [Open "${g.name}" to Edit Budget](/groups/${g.id}?tab=budget&action=edit-budget)`).join('\n');
+                  const responseText = `I found multiple matching groups for your request. After opening a group in the background, you'll be able to review and modify its budget:\n\n` +
+                    matchedGroups.map((g) => {
+                      const gPrompt = buildFollowUpPrompt(g.name);
+                      const gLabel = requestedAmount
+                        ? `Open "${g.name}" & Set Budget to ₹${requestedAmount.toLocaleString('en-IN')}`
+                        : `Open "${g.name}" to Modify Budget`;
+                      return `- [${gLabel}](/groups/${g.id}?tab=budget&action=ai-budget&prompt=${encodeURIComponent(gPrompt)})`;
+                    }).join('\n');
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: responseText })}\n\n`));
                   controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                   return;
                 } else if (userGroups.length > 0) {
-                  const responseText = `Which group's budget would you like to update? Please specify a group name or choose below:\n\n` +
-                    userGroups.map((g) => `- [Open "${g.name}" to Edit Budget](/groups/${g.id}?tab=budget&action=edit-budget)`).join('\n');
+                  const responseText = `Which group's budget would you like to update? After opening the group in the background, you'll be able to review and modify its budget:\n\n` +
+                    userGroups.map((g) => {
+                      const gPrompt = buildFollowUpPrompt(g.name);
+                      const gLabel = requestedAmount
+                        ? `Open "${g.name}" & Set Budget to ₹${requestedAmount.toLocaleString('en-IN')}`
+                        : `Open "${g.name}" to Modify Budget`;
+                      return `- [${gLabel}](/groups/${g.id}?tab=budget&action=ai-budget&prompt=${encodeURIComponent(gPrompt)})`;
+                    }).join('\n');
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: responseText })}\n\n`));
                   controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                   return;
@@ -487,7 +521,7 @@ CRITICAL FINANCIAL ACCURACY DIRECTIVE:
 - If asked about "trend": Present the Month-over-Month (MoM) % change (with 📈 / 📉), daily burn rate, and projected month-end spend.
 - If asked about "member cuts" or "who paid what": Present the member breakdown showing Paid Out of Pocket vs Consumed Cut vs Net position in a clean markdown table or list.
 - If asked about a "category timeline": Present the monthly trajectory and highlight top transactions.
-- In global scope, you can view all group budgets and propose budget modifications. When proposing budget modifications or directing users to group budgets, always use relative markdown links like [Open "<groupName>" to View Budget](/groups/<groupId>?tab=budget) without full domain or localhost prefixes.
+- In global scope, you have view-only access to group budgets because budget modifications are configured within each specific group. Write clearly in your reply that after taking the user to that group page in the background, they will be able to review and modify the budget. Direct the user with a button using format: [Open "<groupName>" & Set Budget to ₹<amount>](/groups/<groupId>?tab=budget&action=ai-budget&prompt=Set%20monthly%20budget%20to%20₹<amount>) without full domain or localhost prefixes.
 
 RELEVANT FINANCIAL RECORDS:
 ${contextBlock}

@@ -7,6 +7,9 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+import { appEventEmitter } from '@/lib/event-emitter';
+
 interface FormattedMarkdownProps {
   content: string;
   className?: string;
@@ -14,6 +17,8 @@ interface FormattedMarkdownProps {
 }
 
 export function FormattedMarkdown({ content, className, isStreaming }: FormattedMarkdownProps) {
+  const router = useRouter();
+
   if (!content) {
     return isStreaming ? (
       <span className="inline-block w-1.5 h-4 bg-foreground/70 animate-pulse rounded-xs" />
@@ -155,9 +160,36 @@ export function FormattedMarkdown({ content, className, isStreaming }: Formatted
             const isGroupAction = Boolean(normalizedHref && normalizedHref.startsWith('/groups/'));
 
             if (isGroupAction) {
+              let promptText: string | null = null;
+              let targetGroupId: string | null = null;
+              try {
+                const urlObj = new URL(normalizedHref, 'http://localhost');
+                promptText = urlObj.searchParams.get('prompt');
+                const match = urlObj.pathname.match(/\/groups\/([^/]+)/);
+                if (match) targetGroupId = match[1];
+              } catch {
+                // Ignore URL parse error
+              }
+
+              const handleClick = (e: React.MouseEvent) => {
+                if (targetGroupId) {
+                  e.preventDefault();
+                  // Clean URL for background navigation
+                  const cleanUrl = `/groups/${targetGroupId}?tab=budget`;
+                  router.push(cleanUrl);
+                  if (promptText) {
+                    appEventEmitter.emit('ai-send-prompt', {
+                      prompt: promptText,
+                      groupId: targetGroupId,
+                    });
+                  }
+                }
+              };
+
               return (
                 <Link
                   href={normalizedHref}
+                  onClick={handleClick}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 rounded-xl bg-primary text-primary-foreground font-medium text-xs shadow-xs hover:bg-primary/90 transition-all active:scale-[0.98] cursor-pointer no-underline group"
                 >
                   <span className="font-semibold">{children}</span>

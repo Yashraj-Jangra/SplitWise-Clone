@@ -452,9 +452,11 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isStreaming, handleStop]);
 
-  const handleSend = async (userText?: string) => {
+  const handleSend = async (userText?: string, explicitGroupId?: string) => {
     const textToSend = (userText || input).trim();
     if (!textToSend || isStreaming) return;
+
+    const targetGroupId = explicitGroupId || groupId;
 
     setInput('');
     const userMsg: ChatMessage = { role: 'user', content: textToSend };
@@ -489,7 +491,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       setStreamStatus({ stage: 'calculating', label: 'Forecasting budget burn rate...' });
     } else if (isBalance) {
       setStreamStatus({ stage: 'calculating', label: 'Checking ledger & balances...' });
-    } else if (isExpense || groupId) {
+    } else if (isExpense || targetGroupId) {
       setStreamStatus({ stage: 'searching', label: 'Searching expense records...' });
     } else {
       setStreamStatus({ stage: 'analyzing', label: 'Understanding request...' });
@@ -505,7 +507,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
         body: JSON.stringify({
           message: textToSend,
           history: updatedMessages.slice(-6),
-          groupId,
+          groupId: targetGroupId,
         }),
         signal: controller.signal,
       });
@@ -613,6 +615,26 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       setIsStreaming(false);
     }
   };
+
+  const handleSendRef = useRef(handleSend);
+  handleSendRef.current = handleSend;
+
+  useEffect(() => {
+    const handleSendPromptEvent = ({ prompt, groupId: targetGroupId }: { prompt: string; groupId?: string }) => {
+      if (!prompt) return;
+      if (isStreaming) {
+        handleStop();
+      }
+      setTimeout(() => {
+        handleSendRef.current(prompt, targetGroupId);
+      }, 50);
+    };
+
+    appEventEmitter.on('ai-send-prompt', handleSendPromptEvent);
+    return () => {
+      appEventEmitter.off('ai-send-prompt', handleSendPromptEvent);
+    };
+  }, [isStreaming, handleStop]);
 
   const handleBudgetApprove = async () => {
     if (!pendingBudgetProposal || budgetActionStatus !== 'idle') return;

@@ -1,28 +1,25 @@
 # Session Progress & Context Preservation
 
-  - **1-Click Global Budget Modification with Seamless Background Navigation & Continuous Chat** ✨ 🖱️ 💬 ✅:
+  - **1-Click Global Budget Transition & Automatic In-Group AI Proposal Trigger** ✨ 🖱️ 💬 ✅:
     - **User Requirement**:
-      - "change this to to allow me to change the budget click and open in the same tab in background without closing the AI popup window like continuing"
+      - "now it just takes u there and where is that apply dialog box. write clearly in global reply that after taking to that page I'll be able to modify and clicking that button sends a new prompt to AI to set the new budget after opening the group"
     - **Implementation**:
-      - **Global Scope Budget Proposal Generation ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
-        - Refactored budget action pipeline to emit interactive `budget_action` proposal cards directly in global chat when a group name is detected or single active group exists.
-        - Emits real-time SSE proposal card for immediate 1-click approval right from global assistant view.
-        - Updated system prompt instructions to allow global view and proposals with relative links.
-      - **Natural Phrasing Intent Detection ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
-        - Expanded `detectQueryIntent` to match natural budget modification phrasing (e.g. "change the budget for test Group to ₹21,000", "update test Group budget to 21000", "adjust Flatmates budget to 25000", "make Apartment budget 50000").
-      - **Non-Closing Seamless Background Navigation ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
-        - Integrated Next.js client-side `useRouter()`.
-        - Removed `onClose()` trigger and hard `window.location.reload()`.
-        - In `handleBudgetApprove`: executes server mutation, updates chat card to confirmed summary, clears client cache, emits `budget-updated` / `data-changed`, and smoothly transitions the background page via `router.push('/groups/' + targetGroupId + '?tab=budget')` without closing the AI popup window.
-        - In `onConfigureManually`: navigates to `/groups/${targetId}?tab=budget&action=edit-budget` in the background and emits `open-budget-dialog` without closing the assistant.
-      - **Persistent Continuous Chat History ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
-        - Configured `splitit_ai_widget_history_${userId}` for `variant === 'widget'`.
-        - Navigating the background page across routes (e.g. `/` → `/groups/grp_123`) no longer wipes or resets the active chat conversation.
-      - **Markdown Link Normalization ([`src/components/ai/formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx))**:
-        - Strips domain and localhost prefixes from markdown links and renders app paths via internal client `<Link>`, preventing unwanted new tab popups.
-      - **Automated Tests & Test Runner Configuration ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts), [`vitest.config.ts`](file:///d:/Projects/SplitWise-Clone/vitest.config.ts))**:
-        - Added test suite for natural budget action intent detection across 11 conversational phrases.
-        - Configured `pool: 'threads'` in Vitest configuration for robust execution on Windows.
+      - **Global Scope Guidance & Prompt Action Button ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Explicitly communicates to user in global reply:
+          *"Budget management is configured directly within each group. After opening **[groupName]** in the background, you'll be able to review and modify the budget."*
+        - Formulates targeted follow-up prompt (e.g. `Set monthly budget to ₹21,000` or `Increase monthly budget by ₹5,000`) and encodes it directly into the action link:
+          `👉 [Open "[groupName]" & Set Budget to ₹[amount]](/groups/[id]?tab=budget&action=ai-budget&prompt=[encodedPrompt])`.
+      - **Automatic In-Group Prompt Dispatch on Button Click ([`src/components/ai/formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx), [`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - `FormattedMarkdown` intercepts group action clicks:
+          - Navigates background page to `/groups/[id]?tab=budget` via client router without closing popup window.
+          - Emits `appEventEmitter.emit('ai-send-prompt', { prompt, groupId })`.
+        - `ChatPanel` listens to `ai-send-prompt`:
+          - Cancels any running stream and triggers `handleSend(prompt, targetGroupId)` with the explicit target group ID.
+          - Dispatches directly to `/api/ai/chat` with group scope.
+          - Chat immediately renders the interactive `BudgetActionCard` with the **"Approve & Apply"** dialog box / card right inside the active assistant window.
+      - **Instant Budget Dialog Sync on Group Page ([`src/components/groups/budget/group-budget-tab.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/group-budget-tab.tsx))**:
+        - Subscribed `GroupBudgetTab` to `open-budget-dialog` event and `action=edit-budget` URL search parameter to open `SetBudgetDialog` reliably.
+      - **Automated Tests Verified**:
         - All 69 tests across all 6 test suites passed.
 
   - **Granular Activity Logging for Manual & AI Budget Changes** ✨ 📋 🔍 ✅:
