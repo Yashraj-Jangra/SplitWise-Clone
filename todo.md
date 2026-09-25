@@ -1,5 +1,12 @@
 # Session Progress & Context Preservation
 
+  - **Group Details Active Tab Text Contrast & Visibility Fix** 🎨 🐛 ✅:
+    - **Issue**: In the group details page ([`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx)), the active tab pill had `data-[state=active]:bg-background` (dark gray/black), but did not override the default `TabsTrigger` active text color (`data-[state=active]:text-primary-foreground`). In dark mode, `--primary-foreground` is near-black, causing the active tab label ("Activity", "Budget", etc.) and icon to render completely invisible black-on-black.
+    - **Fix Applied**:
+      - Explicitly styled `TabsTrigger` with `text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-xs border border-transparent data-[state=active]:border-border/40`.
+      - Both active and inactive tab icons and labels now render with crisp contrast and clear hierarchy across all light and dark themes.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 51/51 tests across 5 test suites.
+
   - **Dashboard Quick Actions Cleanup & Mobile Header Plus Hide** 🎨 📱 ✅:
     - **Objective**: Clean up the home dashboard header by removing the "Record Expense" and "Settle Up" action buttons, and ensure the global `+` quick-actions dropdown (which contains options to add expenses, settlements, and create groups) is hidden on mobile devices and exclusively displayed on desktop view.
     - **Implementation**:
