@@ -1,5 +1,145 @@
 # Session Progress & Context Preservation
 
+  - **Pull Request #19 Opened (dev → master)** 🚀:
+    - Opened [PR #19](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/19): `✨ AI Budget Management, Smart Shortfall Auto-Balancing & Live Refresh (v0.4.0)`.
+    - Fully synchronized branch `dev` with remote `origin/dev`.
+
+  - **Version Bump (0.4.0)** 📌:
+    - Bumped application milestone version to `0.4.0` across [`package.json`](file:///d:/Projects/SplitWise-Clone/package.json), [`package-lock.json`](file:///d:/Projects/SplitWise-Clone/package-lock.json), and [`src/lib/version.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/version.ts).
+    - Milestone release marks the complete delivery of AI Budget Management, Smart Shortfall Auto-Balancing, 10-Minute Expiry Engine, and Live UI Refresh.
+
+  - **Live Page Refresh & Direct Budget Display After Budget Changes** ✨ 🔄 📊 ✅:
+    - **Requirement**: "after changing budget show the new budget too i.e refresh page, not something in ai chat".
+    - **Root Cause**:
+      - Approving a budget proposal in the AI chat panel only updated the chat card to static text and emitted `data-changed`.
+      - Route handler `GET /api/groups/[id]` lacked `export const dynamic = 'force-dynamic'` and `Cache-Control: no-store` headers, causing the browser HTTP cache to serve stale group data.
+      - `GroupDetailPage` (`src/app/(app)/groups/[groupId]/page.tsx`) initialized `activeTab` to `'expenses'` ignoring the `?tab=budget` query param.
+      - No full page refresh or active tab switch to `budget` occurred when the budget changed.
+    - **Implementation**:
+      - **Instant Page Navigation & Hard Refresh ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - In `handleBudgetApprove`, cleared client cache (`clearClientFetchCache()`), emitted `budget-updated` and `data-changed`.
+        - Navigated directly to `/groups/${targetGroupId}?tab=budget` and triggered a hard page refresh (`window.location.reload()`) so the browser reloads and immediately displays the new budget on screen.
+        - Kept AI chat confirmation concise ("Budget updated successfully."), completely avoiding unnecessary chat markdown breakdowns per user preference.
+      - **SetBudgetDialog Sync & Refresh ([`src/components/groups/budget/set-budget-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/set-budget-dialog.tsx))**:
+        - In `onSubmit` and `handleDisableBudget`, added `clearClientFetchCache()`, `budget-updated` event emission, and page reload to `/groups/${group.id}?tab=budget`.
+      - **Group Details Page Tab & Event Sync ([`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx))**:
+        - Initialized `activeTab` directly from `searchParams.get('tab')` to prevent any flash of the Activity tab when landing on `?tab=budget`.
+        - Added `budget-updated` listener to immediately update `group.budget` in state and switch `activeTab` to `'budget'`.
+      - **Route Handler Cache Invalidation ([`src/app/api/groups/[id]/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/groups/[id]/route.ts))**:
+        - Added `export const dynamic = 'force-dynamic'` and `export const revalidate = 0`.
+        - Added HTTP response headers `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate`, `Pragma: no-cache`, `Expires: 0`.
+      - **Client Fetch Cache Guard ([`src/lib/api.client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/api.client.ts))**:
+        - Configured `cache: 'no-store'` and `Cache-Control: no-cache, no-store, must-revalidate` in `fetchApi`.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 56/56 tests.
+
+  - **Smart AI Budget Auto-Suggestion, Manual Configuration & 10-Minute Expiry Engine** ✨ 🧠 🛡️ ✅:
+    - **Issue / Requirement**: When reducing group monthly budgets via AI (e.g. from ₹25,000 to ₹22,000), if the new limit fell below the sum of active category caps (₹23,000 across 5 categories), an allocation conflict of ₹1,000 previously broke the budget dialog state ("Over by ₹1,000").
+    - **Implementation**:
+      - **Mathematical Analytics & Auto-Suggestion ([`src/lib/ai/financial-analytics.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-analytics.ts))**:
+        - Implemented `computeBudgetBreakdown` calculating `monthlyLimit`, `totalCapped`, `flexiblePool`, `isOverAllocated`, and `shortfall`.
+        - Implemented `calculateSmartCategoryReduction`: dynamically calculates balanced category reductions proportional to category weights rounded to clean ₹100 steps, reconciling rounding drift on the largest cap to guarantee exact mathematical sync with zero overflow.
+        - Implemented `validateBudgetDelta`: validates whether changes fit within flexible pool and enforce ₹100 minimum limit.
+      - **Prompt Grounding ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Injected total category caps sum, active category count, and unallocated flexible pool into `buildFinancialSnapshot` so the LLM has explicit numerical grounding.
+      - **Chat Route Conflict Interception ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Automatically detects when a requested limit is lower than category caps and triggers `calculateSmartCategoryReduction`.
+        - Emits proposal card with `action: 'adjust_budget_with_categories'`, `isAutoSuggested: true`, `categoryUpdates`, and `categoryDiffs`.
+        - Stamped with `createdAt` and `expiresAt` (10-minute timeout).
+      - **Interactive Budget Card with 10-Min Live Countdown ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Live timer displaying `⏳ MM:SS remaining` with visual pulse when $< 2$ minutes.
+        - Auto-balanced category diff table displaying old vs new limits and negative deltas (-₹400, etc.).
+        - 3 actions: "Apply Suggested" (primary 1-click), "Configure Manually" (opens dialog on screen), and prompt iteration note.
+        - Auto-closes proposal upon 10-minute expiry and disables actions.
+      - **Event Emitter & On-Screen Configuration ([`src/lib/event-emitter.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/event-emitter.ts), [`src/components/groups/budget/set-budget-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/set-budget-dialog.tsx), [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx))**:
+        - Variadic listener support in `appEventEmitter`.
+        - "Configure Manually" fires `open-budget-dialog`, opening `SetBudgetDialog` with the target limit pre-filled and categories expanded, switching tab to `budget`.
+      - **Server Execution API Hardening ([`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts))**:
+        - Rejects expired proposals (`now > expiresAt`) with HTTP 400.
+        - Supports atomic compound updates (`adjust_budget_with_categories`).
+        - Enforces strict database invariant: `sum(categoryLimits) <= monthlyLimit`, refusing any invalid writes.
+      - **Unit Tests ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts))**:
+        - 5 new tests verifying `computeBudgetBreakdown`, `calculateSmartCategoryReduction` (exact 25k -> 22k with 23k caps test case), and `validateBudgetDelta`.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 56/56 tests across 5 test suites.
+
+  - **Relocate Quick Action Plus Button to Desktop Dashboard Only** ✨ 🎨 📱 ✅:
+
+    - **Objective**: Remove the `+` quick actions button from the top header entirely, and instead provide a prominent `+` button exclusively on the desktop dashboard (hidden on mobile devices, where the bottom navigation bar already provides the center `+` action).
+    - **Implementation**:
+      - **Top Header ([`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx))**:
+        - Completely removed `<GlobalQuickActions />` and its unused import from the top header navbar, leaving only search, notifications, and user navigation.
+      - **Desktop Dashboard Header ([`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx))**:
+        - Mounted `<GlobalQuickActions />` inside `<div className="hidden md:flex items-center">` right beside the personalized greeting.
+        - Custom trigger styled as a vibrant primary icon button (`h-10 w-10 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/25`) with hover scale micro-animation.
+        - Kept hidden on mobile devices to preserve bottom navigation bar clarity.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 51/51 tests across 5 test suites.
+
+  - **Group Details Active Tab Text Contrast & Visibility Fix** 🎨 🐛 ✅:
+    - **Issue**: In the group details page ([`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx)), the active tab pill had `data-[state=active]:bg-background` (dark gray/black), but did not override the default `TabsTrigger` active text color (`data-[state=active]:text-primary-foreground`). In dark mode, `--primary-foreground` is near-black, causing the active tab label ("Activity", "Budget", etc.) and icon to render completely invisible black-on-black.
+    - **Fix Applied**:
+      - Explicitly styled `TabsTrigger` with `text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-xs border border-transparent data-[state=active]:border-border/40`.
+      - Both active and inactive tab icons and labels now render with crisp contrast and clear hierarchy across all light and dark themes.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 51/51 tests across 5 test suites.
+
+  - **Dashboard Quick Actions Cleanup & Mobile Header Plus Hide** 🎨 📱 ✅:
+    - **Objective**: Clean up the home dashboard header by removing the "Record Expense" and "Settle Up" action buttons, and ensure the global `+` quick-actions dropdown (which contains options to add expenses, settlements, and create groups) is hidden on mobile devices and exclusively displayed on desktop view.
+    - **Implementation**:
+      - **Dashboard Header ([`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx))**:
+        - Removed the action buttons container and cleaned up unused `GlobalQuickActions`, `Button`, and `Icons` imports.
+        - Streamlined personalized greeting and subtitle layout.
+      - **Desktop-Only Quick Action Trigger ([`src/components/layout/global-quick-actions.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/global-quick-actions.tsx) & [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx))**:
+        - Added `className?: string` prop to `GlobalQuickActionsProps` and updated default `+` button styling to `hidden md:inline-flex`.
+        - Wrapped `<GlobalQuickActions />` in `<div className="hidden md:flex items-center">` within the top header in `app-shell.tsx` to prevent any mobile viewport clutter.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 51/51 tests across 5 test suites.
+
+  - **AI Budget Management, Interactive Permission Card & Audit Trail** ✨ 🤖 🛡️ ✅:
+    - **Objective**: Grant the AI assistant full visibility into group and category budgets, empower users to configure/adjust budgets through natural conversational commands (e.g. increase, decrease, set overall or category limits, enable/disable), enforce strict user permission before applying any changes, and write an immutable audit event to the group history log.
+    - **Implementation**:
+      - **Financial Snapshot Grounding ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Injected full budget configuration into `buildFinancialSnapshot` (enabled status, monthly limit, alert thresholds, category limits, and last updated date).
+        - Added `BUDGET_ACTION` regex patterns to `detectQueryIntent` to catch budget modification inquiries (increase, raise, decrease, cut, set monthly/category limits, enable/disable) before generic pacing queries.
+      - **AI Intent Parsing & SSE Event ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Intercepts `BUDGET_ACTION` intent when `groupId` is present; feeds current budget context to a strict JSON action parser.
+        - Streams structured `BudgetActionProposal` over SSE (`data: {"budget_action": proposal}`) without hallucinations or premature database writes.
+      - **Glass-Pane Minimalist Permission Card ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Built `BudgetActionCard` adhering to the Dark-Mode Glass-Pane Minimalist Modal/Card System.
+        - Displays summary, current vs new limit badges, category details, warning notice, and dual-action buttons ("Approve & Apply" vs "Deny").
+        - Triggers real-time cache revalidation via `appEventEmitter.emit('data-changed')` on approval.
+      - **Budget Execution API Route ([`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts))**:
+        - Validates authenticated session and verifies group membership/admin privileges.
+        - Handles `set_monthly_limit`, `increase_monthly_limit`, `decrease_monthly_limit`, `enable_budget`, `disable_budget`, `set_category_limit`, `remove_category_limit`.
+        - Enforces boundary clamping (`MIN_LIMIT = 100`, `MAX_LIMIT = 10,000,000`) and validates reduction deltas.
+        - Persists group budget via `putItem` in `SplitItDB` and re-indexes group vectors via `queueVectorEmbedding`.
+      - **Group Audit Log Integration ([`src/components/groups/group-history.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/group-history.tsx))**:
+        - Added `'budget_updated'` to `HistoryEventType` in [`src/types/index.ts`](file:///d:/Projects/SplitWise-Clone/src/types/index.ts).
+        - Logs detailed audit events (`🤖 [User Name] approved an AI budget change: [Change description]`) with metadata (`aiInitiated: true`, `approvedByUserId`, etc.).
+        - Added dedicated `Icons.Bot` event icon in `group-history.tsx`.
+      - **Unit Tests ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts))**:
+        - Added test suite coverage verifying `detectQueryIntent` accurately identifies all permutations of budget action commands.
+    - **Verification**:
+      - `npm test` passes all 51/51 tests across 5 test suites.
+      - `npx tsc --noEmit` exits 0 (clean, 0 type errors).
+
+  - **AI RAG Pipeline Fix, 1024-dim Vector Alignment & Deterministic DB Fallback** 🐛 🧠 ⚡ ✅:
+    - **Issue**: The AI assistant reported lacking access to specific expense/transaction details and could only state who owes how much.
+    - **Root Causes Fixed**:
+      1. *Vector Dimension Mismatch*: The embedding model (`liquid/lfm-2.5-embedding-350m:free`) produces 1024-dimension embeddings, but `SPLITITVECTORS` in Oracle 23ai was configured with `VECTOR(2048, FLOAT32)`, throwing `ORA-51803: vector dimension does not match` on all upserts and similarity queries (caught and omitted).
+      2. *Overly Restrictive SQL Filter*: `retriever.ts` had a strict `AND LOWER(textChunk) LIKE :textFilter` clause that eliminated semantic matches whenever the query keyword wasn't an exact substring of the chunk.
+      3. *Missing Transaction Fallback*: If vector retrieval returned 0 chunks (or failed due to embedding service/rate-limiting), `contextBlock` was left empty (`"No matching expense records found"`), leaving the LLM with zero transaction context despite 1,000+ expenses existing in `SplitItDB`.
+      4. *Financial Context Omission*: In [`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts), `recentExpenses` was suppressed when trends or member breakdowns were active, and set to `[]` in global scope.
+      5. *Loopback HTTP Embedding Failure*: [`src/lib/ai/queue-helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/queue-helper.ts) depended on loopback `fetch("${appUrl}/api/ai/embed-queue")`, which failed silently in local/containerized environments.
+    - **Changes Implemented**:
+      - Recreated `SPLITITVECTORS` table and `svec_idx` HNSW index with `VECTOR(1024, FLOAT32)` in [`scripts/setup-vector-table.ts`](file:///d:/Projects/SplitWise-Clone/scripts/setup-vector-table.ts).
+      - Extracted in-process indexing service [`src/lib/ai/indexing.service.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/indexing.service.ts) and updated [`src/lib/ai/queue-helper.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/queue-helper.ts) and [`src/app/api/ai/embed-queue/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/embed-queue/route.ts) to execute embedding jobs directly in-process without relying on external HTTP loopbacks.
+      - Softened retriever logic in [`src/lib/ai/retriever.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/retriever.ts): removed destructive SQL `LIKE` filter, lowered min similarity threshold to 0.25, and added soft keyword similarity boost (+0.05).
+      - Added deterministic DB fallback in [`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts): if vector retrieval returns fewer than 3 chunks or encounters an issue, automatically fetches real transaction records from `getExpensesByGroupId`/`getExpensesByUserId`, applies category/keyword scoring, and builds top-15 formatted chunks.
+      - Enriched [`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts) with unsuppressed recent expenses across both group and global user scopes.
+      - Updated [`scripts/backfill-embeddings.ts`](file:///d:/Projects/SplitWise-Clone/scripts/backfill-embeddings.ts) with idempotency prechecks (skipping already-indexed vectors) and exponential backoff on HTTP 429 rate limits.
+    - **Verification**:
+      - Oracle 23ai table validated with 1024-dim vector upserts and cosine distance queries.
+      - Intent detection, financial snapshot, and context block verified via end-to-end simulation.
+      - `npx tsc --noEmit` exits 0 (clean).
+      - `npm test` passes all 50/50 test cases across 5 test suites.
+
   - **Production Release Pull Request Opened (dev -> master)** 🚀 ✅:
     - Opened Pull Request [#18](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/18) merging `dev` into `master` with 0 conflicts and 100% test suite pass rate.
     - Captures all AI financial analytics extensions, security hardenings, mobile overflow fixes, tab-switching session persistence, and global quick-action workflows.

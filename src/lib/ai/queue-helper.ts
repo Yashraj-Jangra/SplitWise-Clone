@@ -1,5 +1,8 @@
+import { processEntityEmbedding } from './indexing.service';
+
 /**
- * Helper to trigger background embedding generation asynchronously
+ * Helper to trigger background embedding generation asynchronously in-process.
+ * Non-blocking for all write paths with graceful logging on error.
  */
 export function queueVectorEmbedding(
   id: string,
@@ -9,19 +12,11 @@ export function queueVectorEmbedding(
 ): void {
   if (process.env.AI_EMBEDDING_QUEUE_ENABLED === 'false') return;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231';
-  const secret = process.env.INTERNAL_API_SECRET || '';
-
-  // Fire and forget, completely non-blocking for write paths
-  fetch(`${appUrl}/api/ai/embed-queue`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${secret}`,
-    },
-    body: JSON.stringify({ id, groupId, entityType, action }),
-  }).catch((err) => {
-    // Non-fatal background error
-    console.warn(`[AI Embed Queue] Notice: Background embedding task deferred:`, err.message || err);
-  });
+  // Non-blocking in-process background task
+  Promise.resolve()
+    .then(() => processEntityEmbedding(id, groupId, entityType, action))
+    .catch((err) => {
+      console.warn(`[AI Embed Queue] Notice: Background embedding task error:`, err.message || err);
+    });
 }
+

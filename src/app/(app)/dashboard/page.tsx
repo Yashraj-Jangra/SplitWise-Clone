@@ -139,20 +139,17 @@ export default function DashboardPage() {
                   </h1>
                   <p className="text-sm sm:text-base text-muted-foreground">Here's what's happening with your finances today.</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center">
                   <GlobalQuickActions
-                      directAction="expense"
                       trigger={
-                          <Button size="sm" className="shadow-xs rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium">
-                              <Icons.Add className="mr-1.5 h-3.5 w-3.5" /> Record Expense
-                          </Button>
-                      }
-                  />
-                  <GlobalQuickActions
-                      directAction="settlement"
-                      trigger={
-                          <Button variant="outline" size="sm" className="shadow-xs rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium border-border/40 bg-card/50 hover:bg-muted">
-                              <Icons.Settle className="mr-1.5 h-3.5 w-3.5" /> Settle Up
+                          <Button
+                              size="icon"
+                              className="h-10 w-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                              aria-label="Quick Actions"
+                              title="Quick Actions"
+                          >
+                              <Icons.Add className="h-5 w-5" />
+                              <span className="sr-only">Quick Actions</span>
                           </Button>
                       }
                   />

@@ -3,7 +3,7 @@
 
 import { clearClientFetchCache } from './api.client';
 
-type Listener = () => void;
+type Listener = (...args: any[]) => void;
 
 class EventEmitter {
   private listeners: Map<string, Listener[]> = new Map();
@@ -25,15 +25,16 @@ class EventEmitter {
     this.listeners.set(event, filteredListeners);
   }
 
-  emit(event: string): void {
+  emit(event: string, ...args: any[]): void {
     if (event === 'data-changed') {
       clearClientFetchCache();
     }
     if (!this.listeners.has(event)) {
       return;
     }
-    this.listeners.get(event)!.forEach((listener) => listener());
+    this.listeners.get(event)!.forEach((listener) => listener(...args));
   }
 }
+
 
 export const appEventEmitter = new EventEmitter();

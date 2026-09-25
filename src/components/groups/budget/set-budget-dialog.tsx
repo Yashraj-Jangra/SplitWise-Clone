@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Icons } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
-import { updateGroup } from '@/lib/api.client';
+import { updateGroup, clearClientFetchCache } from '@/lib/api.client';
 import { useAuth } from '@/contexts/auth-context';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -166,22 +166,63 @@ export function SetBudgetDialog({
     prevCategorySumRef.current = categoryAllocations.sum;
   }, [categoryAllocations.sum, form]);
 
+  const pendingPayloadRef = React.useRef<{
+    targetLimit?: number;
+    expandCategories?: boolean;
+    categoryUpdates?: Record<string, number>;
+  } | null>(null);
+
+  React.useEffect(() => {
+    const handleOpenEvent = (payload?: {
+      groupId?: string;
+      targetLimit?: number;
+      expandCategories?: boolean;
+      categoryUpdates?: Record<string, number>;
+    }) => {
+      if (!payload?.groupId || payload.groupId === group.id) {
+        pendingPayloadRef.current = payload || null;
+        setOpen(true);
+      }
+    };
+
+    appEventEmitter.on('open-budget-dialog', handleOpenEvent);
+    return () => {
+      appEventEmitter.off('open-budget-dialog', handleOpenEvent);
+    };
+  }, [group.id, setOpen]);
+
   React.useEffect(() => {
     if (open) {
       const b = group.budget;
+      const payload = pendingPayloadRef.current;
+      pendingPayloadRef.current = null;
+
+      const mergedCategories = {
+        ...(b?.categoryLimits
+          ? Object.fromEntries(Object.entries(b.categoryLimits).map(([k, v]) => [k, String(v)]))
+          : {}),
+        ...(payload?.categoryUpdates
+          ? Object.fromEntries(Object.entries(payload.categoryUpdates).map(([k, v]) => [k, String(v)]))
+          : {}),
+      };
+
       form.reset({
-        monthlyLimit: b?.monthlyLimit || 25000,
+        monthlyLimit: payload?.targetLimit !== undefined ? payload.targetLimit : (b?.monthlyLimit || 25000),
         enabled: b ? b.enabled : true,
         threshold75: b?.alertThresholds ? b.alertThresholds.includes(75) : true,
         threshold90: b?.alertThresholds ? b.alertThresholds.includes(90) : true,
         threshold100: b?.alertThresholds ? b.alertThresholds.includes(100) : true,
-        categories: b?.categoryLimits
-          ? Object.fromEntries(Object.entries(b.categoryLimits).map(([k, v]) => [k, String(v)]))
-          : {},
+        categories: mergedCategories,
       });
-      setIsCategoryExpanded(false);
+
+      if (payload?.expandCategories || Object.keys(mergedCategories).length > 0) {
+        setIsCategoryExpanded(true);
+      } else {
+        setIsCategoryExpanded(false);
+      }
     }
   }, [open, group.budget, form]);
+
 
   async function onSubmit(values: BudgetFormValues) {
     if (!userProfile) return;
@@ -232,8 +273,23 @@ export function SetBudgetDialog({
           : 'Monthly budget disabled.',
       });
 
+      clearClientFetchCache();
+      appEventEmitter.emit('budget-updated', { groupId: group.id, budget: budgetData });
       appEventEmitter.emit('data-changed');
       setOpen(false);
+
+      if (typeof window !== 'undefined') {
+        const targetUrl = `/groups/${group.id}?tab=budget`;
+        if (window.location.pathname === `/groups/${group.id}`) {
+          if (window.location.search.includes('tab=budget')) {
+            window.location.reload();
+          } else {
+            window.location.href = targetUrl;
+          }
+        } else {
+          window.location.href = targetUrl;
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -262,8 +318,14 @@ export function SetBudgetDialog({
         userProfile.uid
       );
       toast({ title: 'Budget Disabled', description: 'Group budget tracking turned off.' });
+      clearClientFetchCache();
+      appEventEmitter.emit('budget-updated', { groupId: group.id, budget: { monthlyLimit: 0, enabled: false } });
       appEventEmitter.emit('data-changed');
       setOpen(false);
+
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     } catch (error: any) {
       toast({ title: 'Error', description: error?.message || 'Failed to remove budget.', variant: 'destructive' });
     } finally {

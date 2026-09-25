@@ -20,7 +20,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SearchDialog } from "./search-dialog";
 import { NotificationBell } from "./notification-bell";
-import { GlobalQuickActions } from "./global-quick-actions";
 import { BottomNavBar } from "./bottom-nav-bar";
 import { listenForForegroundMessages } from "@/lib/push-service";
 import { UpdateBanner } from "@/components/shared/update-banner";
@@ -349,7 +348,6 @@ function Header() {
         <div className="relative flex-1">
             <SearchDialog />
         </div>
-        <GlobalQuickActions />
         <NotificationBell />
         <UserNav />
       </header>

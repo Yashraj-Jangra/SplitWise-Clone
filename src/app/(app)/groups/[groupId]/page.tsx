@@ -62,7 +62,10 @@ export default function GroupDetailPage() {
   const [groupHistory, setGroupHistory] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState('expenses');
+  const tabParam = searchParams?.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    tabParam && TABS.some(t => t.value === tabParam) ? tabParam : 'expenses'
+  );
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
@@ -137,13 +140,33 @@ export default function GroupDetailPage() {
     loadGroupData();
 
     const handleDataChanged = () => loadGroupData(true);
+    const handleBudgetUpdated = (payload?: { groupId?: string; budget?: any }) => {
+      if (!payload?.groupId || payload.groupId === groupId) {
+        if (payload?.budget) {
+          setGroup((prev) => (prev ? { ...prev, budget: payload.budget } : prev));
+        }
+        loadGroupData(true);
+        setActiveTab('budget');
+      }
+    };
+    const handleOpenBudgetDialog = (payload?: { groupId?: string }) => {
+      if (!payload?.groupId || payload.groupId === groupId) {
+        setActiveTab('budget');
+      }
+    };
+
     appEventEmitter.on('data-changed', handleDataChanged);
+    appEventEmitter.on('budget-updated', handleBudgetUpdated);
+    appEventEmitter.on('open-budget-dialog', handleOpenBudgetDialog);
 
     return () => {
       appEventEmitter.off('data-changed', handleDataChanged);
+      appEventEmitter.off('budget-updated', handleBudgetUpdated);
+      appEventEmitter.off('open-budget-dialog', handleOpenBudgetDialog);
     };
 
-  }, [loadGroupData]);
+  }, [loadGroupData, groupId]);
+
 
   const activityItems: ActivityItem[] = useMemo(() => {
       const combined = [
@@ -354,7 +377,7 @@ export default function GroupDetailPage() {
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium shrink-0 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-xs transition-all"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium shrink-0 rounded-lg text-muted-foreground hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-xs border border-transparent data-[state=active]:border-border/40 transition-all"
                     title={tab.label}
                   >
                     <Icon className="h-4 w-4 shrink-0" />

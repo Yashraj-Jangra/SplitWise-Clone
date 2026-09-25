@@ -1,0 +1,191 @@
+import { getItem } from '@/lib/nosql';
+import { embed } from '@/lib/ai/embedder';
+import { upsertVector, deleteVector, deleteVectorsByPrefix, deleteVectorsByGroup } from '@/lib/ai/vector-store';
+import { buildExpenseChunk, buildSettlementChunk, buildGroupMetaChunk } from '@/lib/ai/context-builder';
+import { getUserProfile } from '@/lib/services/user.service';
+import { getFullName } from '@/lib/utils';
+
+export interface ProcessEmbeddingResult {
+  success: boolean;
+  action?: 'upsert' | 'delete';
+  usersIndexed?: number;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+}
+
+/**
+ * Directly processes an entity vector embedding or deletion in-process
+ * without requiring loopback HTTP network calls.
+ */
+export async function processEntityEmbedding(
+  id: string,
+  groupId: string,
+  entityType: 'expense' | 'settlement' | 'group',
+  action: 'upsert' | 'delete' = 'upsert'
+): Promise<ProcessEmbeddingResult> {
+  if (process.env.AI_EMBEDDING_QUEUE_ENABLED === 'false') {
+    return { success: true, skipped: true, reason: 'Embedding queue is disabled' };
+  }
+
+  if (!id || typeof id !== 'string' || id.length > 120) {
+    return { success: false, error: 'Invalid or missing id' };
+  }
+  if (!entityType || !['expense', 'settlement', 'group'].includes(entityType)) {
+    return { success: false, error: 'Invalid or unsupported entityType' };
+  }
+
+  if (action === 'delete') {
+    if (entityType === 'group') {
+      await deleteVectorsByGroup(id);
+      await deleteVectorsByPrefix(`GROUP#${id}#`);
+      await deleteVector(`GROUP#${id}`);
+    } else {
+      await deleteVectorsByPrefix(`EXPENSE#${id}#`);
+      await deleteVectorsByPrefix(`SETTLEMENT#${id}#`);
+      await deleteVector(`EXPENSE#${id}`);
+      await deleteVector(`SETTLEMENT#${id}`);
+    }
+    return { success: true, action: 'delete' };
+  }
+
+  if (entityType === 'expense' && groupId) {
+    const expenseDoc = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${id}`);
+    if (!expenseDoc) {
+      return { success: false, error: 'Expense document not found' };
+    }
+
+    const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
+    const groupName = groupDoc?.name || '';
+
+    // Hydrate user names
+    const allUserIds = new Set<string>();
+    (expenseDoc.payers || []).forEach((p: any) => p.userId && allUserIds.add(p.userId));
+    (expenseDoc.participants || []).forEach((p: any) => p.userId && allUserIds.add(p.userId));
+
+    const nameMap = new Map<string, string>();
+    for (const uid of allUserIds) {
+      const profile = await getUserProfile(uid);
+      nameMap.set(uid, getFullName(profile?.firstName, profile?.lastName) || 'Member');
+    }
+
+    const payersWithName = (expenseDoc.payers || []).map((p: any) => ({
+      name: nameMap.get(p.userId) || 'Member',
+      amount: p.amount,
+    }));
+
+    const participantsWithName = (expenseDoc.participants || []).map((p: any) => ({
+      name: nameMap.get(p.userId) || 'Member',
+      amountOwed: p.amountOwed,
+    }));
+
+    const textChunk = buildExpenseChunk({
+      id,
+      description: expenseDoc.description,
+      amount: expenseDoc.amount,
+      date: expenseDoc.date,
+      category: expenseDoc.category,
+      notes: expenseDoc.notes,
+      payers: payersWithName,
+      participants: participantsWithName,
+      groupName,
+    });
+
+    const embedding = await embed(textChunk);
+
+    // Upsert for every user involved so they can find it in their RAG query
+    for (const uid of allUserIds) {
+      await upsertVector({
+        id: `EXPENSE#${id}#${uid}`,
+        userId: uid,
+        groupId,
+        entityType: 'expense',
+        textChunk,
+        embedding,
+      });
+    }
+
+    return { success: true, action: 'upsert', usersIndexed: allUserIds.size };
+  }
+
+  if (entityType === 'settlement' && groupId) {
+    const settlementDoc = await getItem<any>(`GROUP#${groupId}`, `SETTLEMENT#${id}`);
+    if (!settlementDoc) {
+      return { success: false, error: 'Settlement document not found' };
+    }
+
+    const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
+    const groupName = groupDoc?.name || '';
+
+    const payer = await getUserProfile(settlementDoc.paidById);
+    const payee = await getUserProfile(settlementDoc.paidToId);
+
+    const textChunk = buildSettlementChunk({
+      amount: settlementDoc.amount,
+      date: settlementDoc.date,
+      paidByName: getFullName(payer?.firstName, payer?.lastName) || 'Member',
+      paidToName: getFullName(payee?.firstName, payee?.lastName) || 'Member',
+      groupName,
+      notes: settlementDoc.notes,
+    });
+
+    const embedding = await embed(textChunk);
+
+    const uids = [settlementDoc.paidById, settlementDoc.paidToId].filter(Boolean);
+    for (const uid of uids) {
+      await upsertVector({
+        id: `SETTLEMENT#${id}#${uid}`,
+        userId: uid,
+        groupId,
+        entityType: 'settlement',
+        textChunk,
+        embedding,
+      });
+    }
+
+    return { success: true, action: 'upsert', usersIndexed: uids.length };
+  }
+
+  if (entityType === 'group') {
+    const groupDoc = await getItem<any>(`GROUP#${id}`, 'METADATA');
+    if (!groupDoc) {
+      return { success: false, error: 'Group document not found' };
+    }
+
+    const memberIds: string[] = (groupDoc.members || [])
+      .map((m: any) => (typeof m === 'string' ? m : m.userId))
+      .filter(Boolean);
+
+    const memberNames: string[] = [];
+    for (const uid of memberIds) {
+      const profile = await getUserProfile(uid);
+      memberNames.push(getFullName(profile?.firstName, profile?.lastName) || profile?.username || 'Member');
+    }
+
+    const textChunk = buildGroupMetaChunk({
+      id,
+      name: groupDoc.name,
+      description: groupDoc.description,
+      memberNames,
+      totalExpenses: Number(groupDoc.totalExpenses || 0),
+      budgetLimit: groupDoc.budget?.monthlyLimit ? Number(groupDoc.budget.monthlyLimit) : undefined,
+    });
+
+    const embedding = await embed(textChunk);
+
+    for (const uid of memberIds) {
+      await upsertVector({
+        id: `GROUP#${id}#${uid}`,
+        userId: uid,
+        groupId: id,
+        entityType: 'group',
+        textChunk,
+        embedding,
+      });
+    }
+
+    return { success: true, action: 'upsert', usersIndexed: memberIds.length };
+  }
+
+  return { success: true, skipped: true, reason: 'Unsupported entityType' };
+}

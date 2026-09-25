@@ -25,7 +25,15 @@ async function fetchApi(url: string, options?: RequestInit) {
     }
   }
 
-  const res = await fetch(fullUrl, options);
+  const res = await fetch(fullUrl, {
+    cache: 'no-store',
+    ...options,
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+      ...options?.headers,
+    },
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `HTTP error! status: ${res.status}`);

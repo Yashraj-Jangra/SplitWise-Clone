@@ -9,8 +9,12 @@ import {
   calculateCategoryTimeline,
   calculateBudgetForecast,
   calculateSpendingSpikes,
+  computeBudgetBreakdown,
+  calculateSmartCategoryReduction,
+  validateBudgetDelta,
 } from '@/lib/ai/financial-analytics';
-import type { Group, Expense, UserProfile } from '@/types';
+import type { Group, Expense, UserProfile, GroupBudget } from '@/types';
+
 
 // Mock the services
 vi.mock('@/lib/services/group.service', () => ({
@@ -92,6 +96,15 @@ describe('Financial Analytics & AI Intent Routing', () => {
     it('correctly classifies budget run-rate queries', () => {
       expect(detectQueryIntent("will we exceed our budget this month?").intent).toBe('BUDGET_RUNRATE');
       expect(detectQueryIntent("what is our safe budget pacing?").intent).toBe('BUDGET_RUNRATE');
+    });
+
+    it('correctly classifies budget action queries (modify, increase, decrease, enable, disable, category)', () => {
+      expect(detectQueryIntent("increase our monthly budget by ₹5,000").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("reduce the group budget by 2000").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("set monthly budget to 30000").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("enable group budget").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("disable group budget").intent).toBe('BUDGET_ACTION');
+      expect(detectQueryIntent("set food budget to 8000").intent).toBe('BUDGET_ACTION');
     });
 
     it('correctly classifies spending spike queries', () => {
@@ -447,4 +460,125 @@ describe('Financial Analytics & AI Intent Routing', () => {
       expect(alice.netBalance + bob.netBalance).toBeCloseTo(0, 2);
     });
   });
+
+  describe('Budget Allocation Breakdown & Smart Auto-Suggestion', () => {
+    it('accurately computes category caps sum, flexible pool, and overflow state', () => {
+      const budget: GroupBudget = {
+        enabled: true,
+        monthlyLimit: 25000,
+        categoryLimits: {
+          Housing: 8000,
+          'Food and Drink': 5000,
+          Shopping: 5000,
+          Transportation: 3000,
+          Entertainment: 2000,
+        },
+      };
+
+      const breakdown = computeBudgetBreakdown(budget);
+      expect(breakdown.monthlyLimit).toBe(25000);
+      expect(breakdown.totalCapped).toBe(23000);
+      expect(breakdown.flexiblePool).toBe(2000);
+      expect(breakdown.isOverAllocated).toBe(false);
+      expect(breakdown.shortfall).toBe(0);
+      expect(breakdown.categoryCount).toBe(5);
+      expect(breakdown.categoriesList[0].key).toBe('Housing');
+      expect(breakdown.categoriesList[0].limit).toBe(8000);
+    });
+
+    it('identifies overflow when category caps exceed monthly limit', () => {
+      const budget: GroupBudget = {
+        enabled: true,
+        monthlyLimit: 22000,
+        categoryLimits: {
+          Housing: 8000,
+          'Food and Drink': 5000,
+          Shopping: 5000,
+          Transportation: 3000,
+          Entertainment: 2000,
+        },
+      };
+
+      const breakdown = computeBudgetBreakdown(budget);
+      expect(breakdown.isOverAllocated).toBe(true);
+      expect(breakdown.shortfall).toBe(1000);
+      expect(breakdown.flexiblePool).toBe(0);
+    });
+
+    it('smartly auto-reduces categories proportionally to resolve 1k shortfall (25k -> 22k with 23k caps)', () => {
+      const caps = {
+        Housing: 8000,
+        'Food and Drink': 5000,
+        Shopping: 5000,
+        Transportation: 3000,
+        Entertainment: 2000,
+      };
+
+      const result = calculateSmartCategoryReduction(caps, 22000);
+
+      expect(result.success).toBe(true);
+      expect(result.shortfall).toBe(1000);
+      expect(result.totalCut).toBe(1000);
+      expect(result.newTotalCapped).toBe(22000);
+      expect(result.newFlexiblePool).toBe(0);
+
+      // Verify each category was reduced cleanly to nice multiples of 100
+      expect(result.suggestedLimits.Housing).toBe(7600); // 8000 - 400
+      expect(result.suggestedLimits['Food and Drink']).toBe(4800); // 5000 - 200
+      expect(result.suggestedLimits.Shopping).toBe(4800); // 5000 - 200
+      expect(result.suggestedLimits.Transportation).toBe(2900); // 3000 - 100
+      expect(result.suggestedLimits.Entertainment).toBe(1900); // 2000 - 100
+
+      // Exact sum must equal 22,000
+      const sum = Object.values(result.suggestedLimits).reduce((a, b) => a + b, 0);
+      expect(sum).toBe(22000);
+
+      // Diff metadata
+      expect(result.categoryDiffs.Housing.cutAmount).toBe(400);
+      expect(result.categoryDiffs.Housing.oldLimit).toBe(8000);
+      expect(result.categoryDiffs.Housing.newLimit).toBe(7600);
+    });
+
+    it('returns zero cuts when target monthly budget is greater than or equal to category caps', () => {
+      const caps = {
+        Housing: 8000,
+        'Food and Drink': 5000,
+      };
+
+      const result = calculateSmartCategoryReduction(caps, 15000);
+      expect(result.totalCut).toBe(0);
+      expect(result.shortfall).toBe(0);
+      expect(result.suggestedLimits.Housing).toBe(8000);
+      expect(result.suggestedLimits['Food and Drink']).toBe(5000);
+      expect(result.newFlexiblePool).toBe(2000);
+    });
+
+    it('validates budget delta against flexible pool and minimum boundary', () => {
+      const budget: GroupBudget = {
+        enabled: true,
+        monthlyLimit: 25000,
+        categoryLimits: {
+          Housing: 8000,
+          Food: 5000,
+        },
+      };
+
+      // Valid: 20k >= 13k caps
+      const validCheck = validateBudgetDelta(budget, 20000);
+      expect(validCheck.valid).toBe(true);
+      expect(validCheck.flexiblePool).toBe(7000);
+
+      // Invalid: 10k < 13k caps (shortfall of 3k)
+      const invalidCheck = validateBudgetDelta(budget, 10000);
+      expect(invalidCheck.valid).toBe(false);
+      expect(invalidCheck.shortfall).toBe(3000);
+      expect(invalidCheck.reason).toContain('exceed');
+
+      // Invalid: below minimum 100
+      const belowMin = validateBudgetDelta(budget, 50);
+      expect(belowMin.valid).toBe(false);
+      expect(belowMin.reason).toContain('Minimum monthly budget is ₹100');
+    });
+  });
 });
+

@@ -103,7 +103,7 @@ export interface SettlementDocument {
   groupMemberIds?: string[]; // For security rules
 }
 
-export type HistoryEventType = 'expense_created' | 'expense_updated' | 'expense_deleted' | 'settlement_created' | 'settlement_updated' | 'settlement_deleted' | 'group_created' | 'group_updated' | 'member_added' | 'expense_restored' | 'member_removed' | 'settlement_restored';
+export type HistoryEventType = 'expense_created' | 'expense_updated' | 'expense_deleted' | 'settlement_created' | 'settlement_updated' | 'settlement_deleted' | 'group_created' | 'group_updated' | 'member_added' | 'expense_restored' | 'member_removed' | 'settlement_restored' | 'budget_updated';
 
 export interface HistoryEventDocument {
   groupId: string;

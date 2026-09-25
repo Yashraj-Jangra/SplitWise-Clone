@@ -108,6 +108,7 @@ import {
   Archive,
   BellRing,
   Info,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -196,6 +197,7 @@ export const Icons = {
   Baseline,
   Help: LifeBuoy,
   Info,
+  AlertTriangle,
   Bot,
   Receipt,
   LineChart,

@@ -1,11 +1,21 @@
 import { auth } from '@/lib/auth.server';
 import { embed } from '@/lib/ai/embedder';
 import { retrieveSimilar } from '@/lib/ai/retriever';
-import { buildContextBlock } from '@/lib/ai/context-builder';
+import { buildContextBlock, buildExpenseChunk } from '@/lib/ai/context-builder';
 import { buildFinancialSnapshot, detectQueryIntent } from '@/lib/ai/financial-context';
+import {
+  resolveCategoryKeywords,
+  computeBudgetBreakdown,
+  calculateSmartCategoryReduction,
+  validateBudgetDelta,
+} from '@/lib/ai/financial-analytics';
+import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
+import { getGroupById } from '@/lib/services/group.service';
+import { getFullName } from '@/lib/utils';
 import { streamCompletion } from '@/lib/ai/client';
+
 import { classifyInput, scanOutputForViolations } from '@/lib/ai/guardrail';
-import type { ChatMessage } from '@/types/ai';
+import type { ChatMessage, RetrievedChunk, BudgetActionProposal } from '@/types/ai';
 
 export async function POST(request: Request) {
   try {
@@ -98,11 +108,8 @@ export async function POST(request: Request) {
     const isPureDraftOrConversational =
       (isExplicitDraft || isCasualGreetingOrGeneralHelp) && !hasFinancialKeywords && !groupId;
 
-    // Checks if query requires semantic vector search across expenses/settlements
-    const needsVectorSearch =
-      !isPureDraftOrConversational &&
-      (/(paid for|bought|receipt|bill|purchase|flight|hotel|food|dinner|lunch|groceries|shopping|movie|taxi|cab|trip|yesterday)/i.test(lower) ||
-        queryIntent.intent === 'SEMANTIC_SEARCH');
+    // Trigger semantic vector retrieval for any financial/transactional inquiry (not needed for budget action parsing)
+    const needsVectorSearch = !isPureDraftOrConversational && queryIntent.intent !== 'BUDGET_ACTION';
 
     const needsLedgerSnapshot = !isPureDraftOrConversational;
 
@@ -139,6 +146,10 @@ export async function POST(request: Request) {
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Forecasting budget burn rate...' })}\n\n`)
               );
+            } else if (queryIntent.intent === 'BUDGET_ACTION') {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'calculating', message: 'Reading current budget configuration...' })}\n\n`)
+              );
             } else if (needsVectorSearch) {
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ status: 'searching', message: 'Searching expense records...' })}\n\n`)
@@ -168,21 +179,221 @@ export async function POST(request: Request) {
             snapshot = resolvedSnapshot;
 
             // Retrieve similar chunks from Oracle 23ai if query vector was computed
+            let chunks: RetrievedChunk[] = [];
             if (queryVector) {
               try {
-                const chunks = await retrieveSimilar(queryVector, session.user.id, {
+                chunks = await retrieveSimilar(queryVector, session.user.id, {
                   groupId,
                   textFilter: queryIntent.categoryQuery,
-                  topK: 8,
+                  topK: 10,
                 });
-                if (chunks.length > 0) {
-                  contextBlock = buildContextBlock(chunks);
-                } else {
-                  contextBlock = 'No matching expense records found for this query.';
-                }
               } catch (retrievalErr: any) {
                 console.warn('[RAG Chat] Vector retrieval note:', retrievalErr.message || retrievalErr);
               }
+            }
+
+            // DETERMINISTIC DATABASE FALLBACK:
+            // If vector retrieval returned 0 chunks (or queryVector was null/failed),
+            // fetch verified expense records directly from SplitItDB to guarantee context grounding!
+            if (chunks.length === 0 && !isPureDraftOrConversational) {
+              try {
+                const dbExpenses = groupId
+                  ? await getExpensesByGroupId(groupId).catch(() => [])
+                  : await getExpensesByUserId(session.user.id).catch(() => []);
+
+                if (dbExpenses.length > 0) {
+                  const filterKeywords = queryIntent.categoryQuery
+                    ? resolveCategoryKeywords(queryIntent.categoryQuery)
+                    : [];
+
+                  let matched = dbExpenses;
+                  if (filterKeywords.length > 0) {
+                    const filtered = dbExpenses.filter((e) => {
+                      const cat = (e.category || '').toLowerCase();
+                      const master = (e.masterCategory || '').toLowerCase();
+                      const desc = (e.description || '').toLowerCase();
+                      return filterKeywords.some((kw) => cat.includes(kw) || master.includes(kw) || desc.includes(kw));
+                    });
+                    if (filtered.length > 0) matched = filtered;
+                  }
+
+                  // Take top 15 relevant / recent expenses
+                  const fallbackList = matched.slice(0, 15);
+                  chunks = fallbackList.map((e) => ({
+                    id: e.id,
+                    entityType: 'expense',
+                    textChunk: buildExpenseChunk({
+                      id: e.id,
+                      description: e.description,
+                      amount: e.amount,
+                      date: e.date,
+                      category: e.category,
+                      notes: e.notes,
+                      payers: e.payers.map((p) => ({
+                        name: getFullName(p.user.firstName, p.user.lastName) || p.user.username,
+                        amount: p.amount,
+                      })),
+                      participants: e.participants.map((p) => ({
+                        name: getFullName(p.user.firstName, p.user.lastName) || p.user.username,
+                        amountOwed: p.amountOwed,
+                      })),
+                    }),
+                    similarity: 0.9,
+                  }));
+                }
+              } catch (fallbackErr: any) {
+                console.warn('[RAG Chat] Direct DB fallback note:', fallbackErr.message || fallbackErr);
+              }
+            }
+
+            if (chunks.length > 0) {
+              contextBlock = buildContextBlock(chunks);
+            } else {
+              contextBlock = 'No matching expense records found for this query.';
+            }
+
+
+            // BUDGET_ACTION: parse intent and emit permission card SSE event
+            if (queryIntent.intent === 'BUDGET_ACTION' && groupId && snapshot) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ status: 'drafting', message: 'Analyzing budget configuration & calculating fit...' })}\n\n`)
+              );
+
+              const groupDoc = await getGroupById(groupId).catch(() => null);
+              const groupName = groupDoc?.name || snapshot.groupName || groupId;
+              const currentBudget = groupDoc?.budget;
+              const breakdown = computeBudgetBreakdown(currentBudget);
+
+              const rawFormattedText: string = snapshot.formattedText || '';
+              const budgetConfigSection = rawFormattedText.includes('FULL BUDGET CONFIGURATION:')
+                ? rawFormattedText.split('FULL BUDGET CONFIGURATION:')[1]?.split('\n---')[0]?.trim()
+                : 'No budget configured.';
+
+              const parseMessages: ChatMessage[] = [
+                {
+                  role: 'system',
+                  content: [
+                    'You are a budget action parser for a group expense app.',
+                    'Extract the user budget modification intent and output ONLY valid JSON with no markdown, no explanation.',
+                    '',
+                    `CURRENT GROUP: "${groupName}" (ID: ${groupId})`,
+                    'CURRENT BUDGET STATE:',
+                    budgetConfigSection,
+                    '',
+                    'Valid actions: set_monthly_limit, increase_monthly_limit, decrease_monthly_limit, enable_budget, disable_budget, set_category_limit, remove_category_limit, adjust_budget_with_categories',
+                    'Valid categoryKey values: Food and Drink, Transportation, Housing, Utilities, Entertainment, Shopping, Health and Wellness, Personal Care, Education, Gifts and Donations, Travel, Other',
+                    '',
+                    'Output this JSON schema exactly (no extra text):',
+                    '{"action":"<action>","newMonthlyLimit":<number|null>,"deltaAmount":<number|null>,"currentMonthlyLimit":<number>,"categoryKey":<string|null>,"newCategoryLimit":<number|null>,"categoryUpdates":<object|null>,"summary":"<one sentence>","confidence":"high|medium|low","clarificationNeeded":<null|string>}',
+                  ].join('\n'),
+                },
+                { role: 'user', content: message },
+              ];
+
+              let parsedAction: any = null;
+              let rawParseOutput = '';
+              try {
+                for await (const tok of streamCompletion(parseMessages)) {
+                  rawParseOutput += tok;
+                }
+                const jsonMatch = rawParseOutput.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  parsedAction = JSON.parse(jsonMatch[0]);
+                }
+              } catch {
+                // Parse failed - fall through to clarification
+              }
+
+              if (!parsedAction || parsedAction.confidence === 'low' || parsedAction.clarificationNeeded) {
+                const clarification: string = parsedAction?.clarificationNeeded ||
+                  "I'm not sure exactly what budget change you'd like. Could you be more specific? For example: *\"Increase the budget by Rs.5,000\"*, *\"Set the monthly limit to Rs.30,000\"*, or *\"Set the Food & Drink limit to Rs.8,000\"*.";
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: clarification })}\n\n`));
+              } else {
+                const now = Date.now();
+                const EXPIRE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+                const requestId = `budgetreq_${now}_${Math.random().toString(36).substring(2, 7)}`;
+
+                // Compute effective target monthly limit
+                let targetMonthlyLimit = breakdown.monthlyLimit;
+                if (parsedAction.newMonthlyLimit != null) {
+                  targetMonthlyLimit = Number(parsedAction.newMonthlyLimit);
+                } else if (parsedAction.action === 'decrease_monthly_limit' && parsedAction.deltaAmount) {
+                  targetMonthlyLimit = Math.max(100, breakdown.monthlyLimit - Number(parsedAction.deltaAmount));
+                } else if (parsedAction.action === 'increase_monthly_limit' && parsedAction.deltaAmount) {
+                  targetMonthlyLimit = breakdown.monthlyLimit + Number(parsedAction.deltaAmount);
+                }
+
+                // Check if user provided explicit category overrides
+                const userCategoryUpdates: Record<string, number> | undefined =
+                  parsedAction.categoryUpdates && typeof parsedAction.categoryUpdates === 'object'
+                    ? parsedAction.categoryUpdates
+                    : parsedAction.categoryKey && parsedAction.newCategoryLimit != null
+                    ? { [parsedAction.categoryKey]: Number(parsedAction.newCategoryLimit) }
+                    : undefined;
+
+                // Validate proposed change against active category caps
+                const validation = validateBudgetDelta(currentBudget, targetMonthlyLimit, userCategoryUpdates);
+
+                if (!validation.valid && validation.shortfall > 0 && breakdown.totalCapped > 0 && !userCategoryUpdates) {
+                  // AUTO-SUGGESTION: Target limit is lower than active category caps.
+                  // Automatically balance categories proportionally with ₹100 rounding!
+                  const smartReduction = calculateSmartCategoryReduction(breakdown.categoryLimits, targetMonthlyLimit);
+
+                  const proposal: BudgetActionProposal = {
+                    action: 'adjust_budget_with_categories',
+                    groupId,
+                    groupName,
+                    newMonthlyLimit: targetMonthlyLimit,
+                    currentMonthlyLimit: breakdown.monthlyLimit,
+                    isAutoSuggested: true,
+                    shortfall: smartReduction.shortfall,
+                    categoryUpdates: smartReduction.suggestedLimits,
+                    categoryDiffs: smartReduction.categoryDiffs,
+                    summary: `Your requested budget (₹${targetMonthlyLimit.toLocaleString('en-IN')}) is ₹${smartReduction.shortfall.toLocaleString('en-IN')} lower than active category caps (₹${breakdown.totalCapped.toLocaleString('en-IN')}). SplitIt AI auto-balanced your categories to fit ₹${targetMonthlyLimit.toLocaleString('en-IN')} exactly.`,
+                    requestId,
+                    createdAt: now,
+                    expiresAt: now + EXPIRE_TIMEOUT,
+                  };
+
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ budget_action: proposal })}\n\n`)
+                  );
+                } else {
+                  // Standard action or user-specified compound action
+                  const isCompound = Boolean(userCategoryUpdates && (parsedAction.newMonthlyLimit != null || parsedAction.deltaAmount != null));
+                  const proposal: BudgetActionProposal = {
+                    action: isCompound ? 'adjust_budget_with_categories' : parsedAction.action,
+                    groupId,
+                    groupName,
+                    newMonthlyLimit: parsedAction.newMonthlyLimit != null ? Number(parsedAction.newMonthlyLimit) : (isCompound ? targetMonthlyLimit : undefined),
+                    deltaAmount: parsedAction.deltaAmount != null ? Number(parsedAction.deltaAmount) : undefined,
+                    currentMonthlyLimit: breakdown.monthlyLimit,
+                    categoryKey: parsedAction.categoryKey ?? undefined,
+                    newCategoryLimit: parsedAction.newCategoryLimit != null ? Number(parsedAction.newCategoryLimit) : undefined,
+                    categoryUpdates: userCategoryUpdates,
+                    summary: parsedAction.summary || 'Budget change proposed by AI',
+                    requestId,
+                    createdAt: now,
+                    expiresAt: now + EXPIRE_TIMEOUT,
+                  };
+
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ budget_action: proposal })}\n\n`)
+                  );
+                }
+              }
+
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              return;
+            }
+
+
+            // BUDGET_ACTION without groupId: explain limitation
+            if (queryIntent.intent === 'BUDGET_ACTION' && !groupId) {
+              const msg = 'Budget management is only available when viewing a specific group. Please navigate to a group page and ask me there to modify the budget.';
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: msg })}\n\n`));
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              return;
             }
 
             // Transition status to drafting when invoking the model
