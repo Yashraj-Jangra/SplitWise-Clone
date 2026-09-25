@@ -1,6 +1,36 @@
 # Session Progress & Context Preservation
 
+  - **Smart AI Budget Auto-Suggestion, Manual Configuration & 10-Minute Expiry Engine** ✨ 🧠 🛡️ ✅:
+    - **Issue / Requirement**: When reducing group monthly budgets via AI (e.g. from ₹25,000 to ₹22,000), if the new limit fell below the sum of active category caps (₹23,000 across 5 categories), an allocation conflict of ₹1,000 previously broke the budget dialog state ("Over by ₹1,000").
+    - **Implementation**:
+      - **Mathematical Analytics & Auto-Suggestion ([`src/lib/ai/financial-analytics.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-analytics.ts))**:
+        - Implemented `computeBudgetBreakdown` calculating `monthlyLimit`, `totalCapped`, `flexiblePool`, `isOverAllocated`, and `shortfall`.
+        - Implemented `calculateSmartCategoryReduction`: dynamically calculates balanced category reductions proportional to category weights rounded to clean ₹100 steps, reconciling rounding drift on the largest cap to guarantee exact mathematical sync with zero overflow.
+        - Implemented `validateBudgetDelta`: validates whether changes fit within flexible pool and enforce ₹100 minimum limit.
+      - **Prompt Grounding ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Injected total category caps sum, active category count, and unallocated flexible pool into `buildFinancialSnapshot` so the LLM has explicit numerical grounding.
+      - **Chat Route Conflict Interception ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - Automatically detects when a requested limit is lower than category caps and triggers `calculateSmartCategoryReduction`.
+        - Emits proposal card with `action: 'adjust_budget_with_categories'`, `isAutoSuggested: true`, `categoryUpdates`, and `categoryDiffs`.
+        - Stamped with `createdAt` and `expiresAt` (10-minute timeout).
+      - **Interactive Budget Card with 10-Min Live Countdown ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - Live timer displaying `⏳ MM:SS remaining` with visual pulse when $< 2$ minutes.
+        - Auto-balanced category diff table displaying old vs new limits and negative deltas (-₹400, etc.).
+        - 3 actions: "Apply Suggested" (primary 1-click), "Configure Manually" (opens dialog on screen), and prompt iteration note.
+        - Auto-closes proposal upon 10-minute expiry and disables actions.
+      - **Event Emitter & On-Screen Configuration ([`src/lib/event-emitter.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/event-emitter.ts), [`src/components/groups/budget/set-budget-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/set-budget-dialog.tsx), [`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx))**:
+        - Variadic listener support in `appEventEmitter`.
+        - "Configure Manually" fires `open-budget-dialog`, opening `SetBudgetDialog` with the target limit pre-filled and categories expanded, switching tab to `budget`.
+      - **Server Execution API Hardening ([`src/app/api/ai/budget/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/budget/route.ts))**:
+        - Rejects expired proposals (`now > expiresAt`) with HTTP 400.
+        - Supports atomic compound updates (`adjust_budget_with_categories`).
+        - Enforces strict database invariant: `sum(categoryLimits) <= monthlyLimit`, refusing any invalid writes.
+      - **Unit Tests ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts))**:
+        - 5 new tests verifying `computeBudgetBreakdown`, `calculateSmartCategoryReduction` (exact 25k -> 22k with 23k caps test case), and `validateBudgetDelta`.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 56/56 tests across 5 test suites.
+
   - **Relocate Quick Action Plus Button to Desktop Dashboard Only** ✨ 🎨 📱 ✅:
+
     - **Objective**: Remove the `+` quick actions button from the top header entirely, and instead provide a prominent `+` button exclusively on the desktop dashboard (hidden on mobile devices, where the bottom navigation bar already provides the center `+` action).
     - **Implementation**:
       - **Top Header ([`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx))**:

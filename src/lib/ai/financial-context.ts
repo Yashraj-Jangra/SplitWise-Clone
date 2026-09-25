@@ -8,7 +8,9 @@ import {
   calculateMemberCuts,
   calculateBudgetForecast,
   calculateSpendingSpikes,
+  computeBudgetBreakdown,
 } from '@/lib/ai/financial-analytics';
+
 import type {
   SpendingTrendResult,
   CategoryTimelineResult,
@@ -294,25 +296,28 @@ export async function buildFinancialSnapshot(
 
     // Always show full budget config so AI can suggest meaningful changes
     if (group?.budget) {
-      const b = group.budget;
+      const breakdown = computeBudgetBreakdown(group.budget);
       lines.push('', 'FULL BUDGET CONFIGURATION:');
-      lines.push(`- Enabled: ${b.enabled}`);
-      lines.push(`- Monthly Limit: ${b.monthlyLimit > 0 ? `₹${b.monthlyLimit.toLocaleString('en-IN')}` : 'Not set'}`);
-      lines.push(`- Alert Thresholds: ${(b.alertThresholds || [75, 90, 100]).map(t => `${t}%`).join(', ')}`);
-      if (b.categoryLimits && Object.keys(b.categoryLimits).length > 0) {
-        lines.push('- Category Limits:');
-        Object.entries(b.categoryLimits).forEach(([cat, limit]) => {
-          lines.push(`  • ${cat}: ₹${Number(limit).toLocaleString('en-IN')}`);
+      lines.push(`- Status: ${breakdown.enabled ? 'Enabled' : 'Disabled'}`);
+      lines.push(`- Total Monthly Limit: ${breakdown.monthlyLimit > 0 ? `₹${breakdown.monthlyLimit.toLocaleString('en-IN')}` : 'Not set'}`);
+      lines.push(`- Total Category Caps Sum: ₹${breakdown.totalCapped.toLocaleString('en-IN')} (${breakdown.categoryCount} active categories)`);
+      lines.push(`- Flexible Group Pool: ₹${breakdown.flexiblePool.toLocaleString('en-IN')} (unallocated pool for other expenses)`);
+      if (breakdown.categoriesList.length > 0) {
+        lines.push('- Category Caps Breakdown:');
+        breakdown.categoriesList.forEach((c) => {
+          lines.push(`  • ${c.key}: ₹${c.limit.toLocaleString('en-IN')} (${c.pctOfMonthly}% of budget)`);
         });
       } else {
-        lines.push('- Category Limits: None set');
+        lines.push('- Category Caps: None configured');
       }
-      if (b.updatedAt) {
-        lines.push(`- Last Updated: ${new Date(b.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`);
+      lines.push(`- Flexible Pool Rule: Any decrease in monthly budget up to ₹${breakdown.flexiblePool.toLocaleString('en-IN')} is absorbed from the flexible pool. Any decrease greater than ₹${breakdown.flexiblePool.toLocaleString('en-IN')} causes a shortfall against category caps.`);
+      if (group.budget.updatedAt) {
+        lines.push(`- Last Updated: ${new Date(group.budget.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`);
       }
     } else {
       lines.push('', 'BUDGET: No budget configured for this group.');
     }
+
 
     // Attach Spikes if computed
     if (spikes && spikes.length > 0) {

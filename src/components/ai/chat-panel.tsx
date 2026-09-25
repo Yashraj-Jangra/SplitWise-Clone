@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Send, Trash2, ArrowRight, Info, Square, Maximize2, ShieldCheck, Calculator, Database, Sparkles, Cpu } from 'lucide-react';
+import { Send, Trash2, ArrowRight, Info, Square, Maximize2, ShieldCheck, Calculator, Database, Sparkles, Cpu, Clock } from 'lucide-react';
+
 import {
   Tooltip,
   TooltipContent,
@@ -116,14 +117,39 @@ interface BudgetActionCardProps {
   proposal: BudgetActionProposal;
   onApprove: () => void;
   onDeny: () => void;
+  onConfigureManually?: () => void;
   status: 'idle' | 'approving' | 'denying';
 }
 
-function BudgetActionCard({ proposal, onApprove, onDeny, status }: BudgetActionCardProps) {
+function BudgetActionCard({ proposal, onApprove, onDeny, onConfigureManually, status }: BudgetActionCardProps) {
   const isLoading = status !== 'idle';
   const formatINR = (n?: number) => (n != null ? `\u20b9${n.toLocaleString('en-IN')}` : 'N/A');
 
+  // --- 10-Minute Expiry Countdown ---
+  const [remainingMs, setRemainingMs] = useState<number>(() => {
+    const expiresAt = proposal.expiresAt || ((proposal.createdAt || Date.now()) + 10 * 60 * 1000);
+    return Math.max(0, expiresAt - Date.now());
+  });
+
+  useEffect(() => {
+    const expiresAt = proposal.expiresAt || ((proposal.createdAt || Date.now()) + 10 * 60 * 1000);
+    const interval = setInterval(() => {
+      const left = Math.max(0, expiresAt - Date.now());
+      setRemainingMs(left);
+      if (left <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [proposal.expiresAt, proposal.createdAt]);
+
+  const isExpired = remainingMs <= 0;
+  const mins = Math.floor(remainingMs / 60000);
+  const secs = Math.floor((remainingMs % 60000) / 1000);
+  const formattedTimeLeft = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
   const actionLabels: Record<string, string> = {
+    adjust_budget_with_categories: proposal.isAutoSuggested ? 'Auto-Balanced Budget' : 'Adjust Budget & Categories',
     set_monthly_limit: 'Set Monthly Budget',
     increase_monthly_limit: 'Increase Monthly Budget',
     decrease_monthly_limit: 'Decrease Monthly Budget',
@@ -134,13 +160,14 @@ function BudgetActionCard({ proposal, onApprove, onDeny, status }: BudgetActionC
   };
 
   const actionColorClass: Record<string, string> = {
-    set_monthly_limit: 'text-blue-400',
-    increase_monthly_limit: 'text-emerald-400',
-    decrease_monthly_limit: 'text-amber-400',
-    enable_budget: 'text-emerald-400',
-    disable_budget: 'text-red-400',
-    set_category_limit: 'text-blue-400',
-    remove_category_limit: 'text-red-400',
+    adjust_budget_with_categories: 'text-primary border-primary/30 bg-primary/10',
+    set_monthly_limit: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+    increase_monthly_limit: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+    decrease_monthly_limit: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
+    enable_budget: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+    disable_budget: 'text-red-400 border-red-400/30 bg-red-400/10',
+    set_category_limit: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+    remove_category_limit: 'text-red-400 border-red-400/30 bg-red-400/10',
   };
 
   const computedNewLimit = (): number | undefined => {
@@ -157,79 +184,165 @@ function BudgetActionCard({ proposal, onApprove, onDeny, status }: BudgetActionC
 
   return (
     <div className="my-1.5 mx-1">
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 backdrop-blur-sm overflow-hidden">
+      <div className={`rounded-2xl border transition-all overflow-hidden ${
+        isExpired
+          ? 'border-border/30 bg-muted/10 opacity-75'
+          : proposal.isAutoSuggested
+          ? 'border-primary/30 bg-primary/5 backdrop-blur-sm'
+          : 'border-amber-500/30 bg-amber-500/5 backdrop-blur-sm'
+      }`}>
         {/* Header */}
-        <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5 border-b border-amber-500/20">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 border border-amber-500/25 flex-shrink-0">
-            <Icons.Bot className="w-4 h-4 text-amber-400" />
+        <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5 border-b border-border/20">
+          <div className={`flex h-7 w-7 items-center justify-center rounded-lg border flex-shrink-0 ${
+            isExpired
+              ? 'bg-muted/20 border-border/30 text-muted-foreground'
+              : proposal.isAutoSuggested
+              ? 'bg-primary/15 border-primary/25 text-primary'
+              : 'bg-amber-500/15 border-amber-500/25 text-amber-400'
+          }`}>
+            <Icons.Bot className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-amber-400 leading-tight">AI Budget Change Request</p>
+            <div className="flex items-center gap-2">
+              <p className={`text-xs font-semibold leading-tight ${
+                isExpired ? 'text-muted-foreground' : proposal.isAutoSuggested ? 'text-primary' : 'text-amber-400'
+              }`}>
+                {isExpired ? 'Budget Request (Expired)' : proposal.isAutoSuggested ? 'AI Budget Auto-Balance' : 'AI Budget Change Request'}
+              </p>
+              {/* Countdown badge */}
+              {!isExpired ? (
+                <span className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                  remainingMs < 120000
+                    ? 'border-red-500/30 bg-red-500/10 text-red-400 animate-pulse'
+                    : 'border-border/40 bg-muted/30 text-muted-foreground'
+                }`}>
+                  <Clock className="w-2.5 h-2.5" />
+                  <span>{formattedTimeLeft}</span>
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-border/30 bg-muted/20 text-muted-foreground">
+                  Expired
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">{proposal.groupName}</p>
           </div>
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-current/20 bg-current/10 ${actionColorClass[proposal.action] || 'text-foreground'}`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${actionColorClass[proposal.action] || 'text-foreground'}`}>
             {actionLabels[proposal.action] || proposal.action}
           </span>
         </div>
 
         {/* Body */}
         <div className="px-4 py-3 space-y-2.5">
-          <p className="text-[12px] text-foreground leading-relaxed">{proposal.summary}</p>
+          {isExpired ? (
+            <div className="rounded-xl bg-muted/20 border border-border/30 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">⏰ Proposal expired after 10 minutes</p>
+              <p className="text-[11px] text-muted-foreground">No changes were applied to your group budget. Type a new message to adjust the budget again.</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-[12px] text-foreground leading-relaxed">{proposal.summary}</p>
 
-          {/* Change details */}
-          <div className="grid grid-cols-2 gap-2">
-            {proposal.currentMonthlyLimit != null && (
-              <div className="rounded-xl bg-muted/20 border border-border/30 p-2.5">
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Current</p>
-                <p className="text-sm font-bold text-foreground">{formatINR(proposal.currentMonthlyLimit)}</p>
+              {/* Monthly Limit change cards */}
+              <div className="grid grid-cols-2 gap-2">
+                {proposal.currentMonthlyLimit != null && (
+                  <div className="rounded-xl bg-muted/20 border border-border/30 p-2.5">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Current Budget</p>
+                    <p className="text-sm font-bold text-foreground">{formatINR(proposal.currentMonthlyLimit)}</p>
+                  </div>
+                )}
+                {newVal != null && (
+                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-2.5">
+                    <p className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-0.5">New Budget</p>
+                    <p className="text-sm font-bold text-primary">{formatINR(newVal)}</p>
+                  </div>
+                )}
               </div>
-            )}
-            {newVal != null && (
-              <div className="rounded-xl bg-primary/5 border border-primary/20 p-2.5">
-                <p className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-0.5">New Limit</p>
-                <p className="text-sm font-bold text-primary">{formatINR(newVal)}</p>
-              </div>
-            )}
-            {proposal.categoryKey && proposal.newCategoryLimit != null && (
-              <div className="rounded-xl bg-primary/5 border border-primary/20 p-2.5 col-span-2">
-                <p className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-0.5">{proposal.categoryKey}</p>
-                <p className="text-sm font-bold text-primary">{formatINR(proposal.newCategoryLimit)}</p>
-              </div>
-            )}
-          </div>
 
-          {/* Permission notice */}
-          <div className="flex items-start gap-2 rounded-xl bg-muted/10 border border-border/20 p-2.5">
-            <Icons.AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
-              The AI is requesting permission to modify the group budget. This change will be logged in the group history.
-            </p>
-          </div>
+              {/* Auto-suggested category breakdown diff table */}
+              {proposal.categoryDiffs && Object.keys(proposal.categoryDiffs).length > 0 && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <div className="flex items-center justify-between border-b border-primary/10 pb-1.5">
+                    <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Suggested Category Allocation
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Sum: {formatINR(newVal)}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 pt-0.5">
+                    {Object.entries(proposal.categoryDiffs).map(([catKey, diff]) => (
+                      <div key={catKey} className="flex items-center justify-between text-xs py-0.5">
+                        <span className="text-foreground/90 font-medium truncate max-w-[140px] text-[11px]">{catKey}</span>
+                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                          <span className="text-muted-foreground/70 line-through">₹{diff.oldLimit.toLocaleString('en-IN')}</span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground/60" />
+                          <span className="text-primary font-bold">₹{diff.newLimit.toLocaleString('en-IN')}</span>
+                          {diff.cutAmount > 0 && (
+                            <span className="text-emerald-500 text-[10px] font-semibold">(-₹{diff.cutAmount.toLocaleString('en-IN')})</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Permission notice */}
+              <div className="flex items-start gap-2 rounded-xl bg-muted/10 border border-border/20 p-2.5">
+                <Icons.AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Requires your approval before changes take effect. This action will be logged in the group history log.
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 px-4 pb-4">
-          <button
-            type="button"
-            onClick={onDeny}
-            disabled={isLoading}
-            className="flex-1 h-9 rounded-xl text-xs font-semibold border border-border/40 bg-muted/20 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-all disabled:opacity-50"
-          >
-            {status === 'denying' ? 'Denying...' : 'Deny'}
-          </button>
-          <button
-            type="button"
-            onClick={onApprove}
-            disabled={isLoading}
-            className="flex-1 h-9 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-60 shadow-md shadow-emerald-900/30"
-          >
-            {status === 'approving' ? 'Applying...' : 'Approve & Apply'}
-          </button>
-        </div>
+        {!isExpired && (
+          <div className="flex flex-col gap-2 px-4 pb-4">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onApprove}
+                disabled={isLoading}
+                className="flex-1 h-9 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-60 shadow-md shadow-emerald-900/30 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Icons.Check className="w-3.5 h-3.5" />
+                <span>{status === 'approving' ? 'Applying...' : proposal.isAutoSuggested ? 'Apply Suggested' : 'Approve & Apply'}</span>
+              </button>
+              {onConfigureManually && (
+                <button
+                  type="button"
+                  onClick={onConfigureManually}
+                  disabled={isLoading}
+                  className="flex-1 h-9 rounded-xl text-xs font-semibold border border-border/40 bg-muted/20 hover:bg-muted/50 text-foreground transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Icons.Settings className="w-3.5 h-3.5 text-primary" />
+                  <span>Configure Manually</span>
+                </button>
+              )}
+            </div>
+            <div className="flex items-center justify-between px-1 text-[10px] text-muted-foreground">
+              <span>Or type another prompt (e.g. &apos;Take 1k from Housing&apos;) to re-adjust</span>
+              <button
+                type="button"
+                onClick={onDeny}
+                disabled={isLoading}
+                className="text-muted-foreground hover:text-destructive underline decoration-dotted ml-2 cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 export function ChatPanel({ groupId, groupName, className, onClose, variant = 'widget' }: ChatPanelProps) {
   const { userProfile } = useAuth();
@@ -802,6 +915,15 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                       proposal={pendingBudgetProposal}
                       onApprove={handleBudgetApprove}
                       onDeny={handleBudgetDeny}
+                      onConfigureManually={() => {
+                        appEventEmitter.emit('open-budget-dialog', {
+                          groupId: pendingBudgetProposal.groupId,
+                          targetLimit: pendingBudgetProposal.newMonthlyLimit,
+                          expandCategories: true,
+                          categoryUpdates: pendingBudgetProposal.categoryUpdates,
+                        });
+                        if (onClose) onClose();
+                      }}
                       status={budgetActionStatus}
                     />
                   ) : msg.content === '__BUDGET_ACTION_CARD__' ? (
@@ -809,6 +931,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                       Budget change proposal expired.
                     </div>
                   ) : (
+
                     <MessageBubble
                       key={idx}
                       message={msg}

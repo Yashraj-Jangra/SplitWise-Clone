@@ -44,6 +44,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'groupId is required' }, { status: 400 });
     }
 
+    // --- 10-Minute Expiration Verification ---
+    if (proposal.expiresAt && Date.now() > proposal.expiresAt) {
+      return NextResponse.json(
+        { error: 'This budget change proposal has expired (10 minute limit). No changes were made. Please request a new budget change.' },
+        { status: 400 }
+      );
+    }
+
     // --- Authorisation: must be a group member ---
     const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
     if (!groupDoc) {
@@ -72,6 +80,40 @@ export async function POST(request: Request) {
     const actorId = session.user.id;
 
     switch (action) {
+      case 'adjust_budget_with_categories': {
+        if (typeof newMonthlyLimit !== 'number' || isNaN(newMonthlyLimit) || newMonthlyLimit < MIN_LIMIT) {
+          return NextResponse.json({ error: `newMonthlyLimit must be at least ₹${MIN_LIMIT}` }, { status: 400 });
+        }
+        const clamped = clampLimit(newMonthlyLimit);
+        const oldLimit = updatedBudget.monthlyLimit;
+        updatedBudget.monthlyLimit = clamped;
+        updatedBudget.enabled = true;
+
+        if (proposal.categoryUpdates) {
+          const merged = { ...(updatedBudget.categoryLimits || {}) };
+          Object.entries(proposal.categoryUpdates).forEach(([k, v]) => {
+            const num = Number(v);
+            if (!isNaN(num) && num >= 0) {
+              if (num === 0) {
+                delete merged[k];
+              } else {
+                merged[k] = num;
+              }
+            }
+          });
+          updatedBudget.categoryLimits = Object.keys(merged).length > 0 ? merged : undefined;
+        }
+
+        const diffSummary = proposal.categoryDiffs
+          ? Object.entries(proposal.categoryDiffs)
+              .map(([k, d]) => `${k}: ₹${d.oldLimit.toLocaleString('en-IN')} → ₹${d.newLimit.toLocaleString('en-IN')}`)
+              .join(', ')
+          : '';
+
+        historyDescription = `AI adjusted monthly budget from ₹${oldLimit.toLocaleString('en-IN')} to ₹${clamped.toLocaleString('en-IN')}${diffSummary ? ` with categories (${diffSummary})` : ''} on behalf of user.`;
+        break;
+      }
+
       case 'set_monthly_limit': {
         if (typeof newMonthlyLimit !== 'number' || isNaN(newMonthlyLimit)) {
           return NextResponse.json({ error: 'newMonthlyLimit must be a number' }, { status: 400 });
@@ -170,6 +212,19 @@ export async function POST(request: Request) {
       default:
         return NextResponse.json({ error: `Unknown budget action: ${action}` }, { status: 400 });
     }
+
+    // --- Hard Invariant Assertion: Category caps sum cannot exceed monthlyLimit ---
+    if (updatedBudget.enabled && updatedBudget.monthlyLimit > 0 && updatedBudget.categoryLimits) {
+      const catSum = Object.values(updatedBudget.categoryLimits).reduce<number>((a, b) => a + Number(b), 0);
+      if (catSum > updatedBudget.monthlyLimit) {
+        const overflow = catSum - updatedBudget.monthlyLimit;
+        return NextResponse.json({
+          error: `Total category caps (₹${catSum.toLocaleString('en-IN')}) exceed the monthly budget (₹${updatedBudget.monthlyLimit.toLocaleString('en-IN')}) by ₹${overflow.toLocaleString('en-IN')}. Please adjust category caps.`,
+        }, { status: 400 });
+      }
+    }
+
+
 
     // Stamp audit metadata
     updatedBudget.updatedAt = new Date().toISOString();

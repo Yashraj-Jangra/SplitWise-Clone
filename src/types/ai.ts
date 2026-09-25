@@ -165,9 +165,24 @@ export interface SpendingSpike {
   groupName?: string;
 }
 
+export interface CategoryDiff {
+  oldLimit: number;
+  newLimit: number;
+  cutAmount: number;
+  percentageCut: number;
+}
+
 export interface BudgetActionProposal {
   /** What operation the user requested */
-  action: 'set_monthly_limit' | 'increase_monthly_limit' | 'decrease_monthly_limit' | 'enable_budget' | 'disable_budget' | 'set_category_limit' | 'remove_category_limit';
+  action:
+    | 'set_monthly_limit'
+    | 'increase_monthly_limit'
+    | 'decrease_monthly_limit'
+    | 'enable_budget'
+    | 'disable_budget'
+    | 'set_category_limit'
+    | 'remove_category_limit'
+    | 'adjust_budget_with_categories';
   /** The group this budget action targets */
   groupId: string;
   groupName: string;
@@ -181,8 +196,20 @@ export interface BudgetActionProposal {
   categoryKey?: string;
   /** New limit for the category */
   newCategoryLimit?: number;
+
+  // Auto-suggestion & compound fields
+  isAutoSuggested?: boolean;
+  shortfall?: number;
+  categoryUpdates?: Record<string, number>;
+  categoryDiffs?: Record<string, CategoryDiff>;
+
   /** Human-readable summary of what the AI proposes to change */
   summary: string;
   /** Unique request ID to correlate approval with the action */
   requestId: string;
+
+  /** Timestamp created and 10-minute expiry time */
+  createdAt?: number;
+  expiresAt?: number;
 }
+

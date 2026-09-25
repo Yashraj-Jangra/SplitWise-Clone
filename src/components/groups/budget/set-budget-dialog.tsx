@@ -166,22 +166,63 @@ export function SetBudgetDialog({
     prevCategorySumRef.current = categoryAllocations.sum;
   }, [categoryAllocations.sum, form]);
 
+  const pendingPayloadRef = React.useRef<{
+    targetLimit?: number;
+    expandCategories?: boolean;
+    categoryUpdates?: Record<string, number>;
+  } | null>(null);
+
+  React.useEffect(() => {
+    const handleOpenEvent = (payload?: {
+      groupId?: string;
+      targetLimit?: number;
+      expandCategories?: boolean;
+      categoryUpdates?: Record<string, number>;
+    }) => {
+      if (!payload?.groupId || payload.groupId === group.id) {
+        pendingPayloadRef.current = payload || null;
+        setOpen(true);
+      }
+    };
+
+    appEventEmitter.on('open-budget-dialog', handleOpenEvent);
+    return () => {
+      appEventEmitter.off('open-budget-dialog', handleOpenEvent);
+    };
+  }, [group.id, setOpen]);
+
   React.useEffect(() => {
     if (open) {
       const b = group.budget;
+      const payload = pendingPayloadRef.current;
+      pendingPayloadRef.current = null;
+
+      const mergedCategories = {
+        ...(b?.categoryLimits
+          ? Object.fromEntries(Object.entries(b.categoryLimits).map(([k, v]) => [k, String(v)]))
+          : {}),
+        ...(payload?.categoryUpdates
+          ? Object.fromEntries(Object.entries(payload.categoryUpdates).map(([k, v]) => [k, String(v)]))
+          : {}),
+      };
+
       form.reset({
-        monthlyLimit: b?.monthlyLimit || 25000,
+        monthlyLimit: payload?.targetLimit !== undefined ? payload.targetLimit : (b?.monthlyLimit || 25000),
         enabled: b ? b.enabled : true,
         threshold75: b?.alertThresholds ? b.alertThresholds.includes(75) : true,
         threshold90: b?.alertThresholds ? b.alertThresholds.includes(90) : true,
         threshold100: b?.alertThresholds ? b.alertThresholds.includes(100) : true,
-        categories: b?.categoryLimits
-          ? Object.fromEntries(Object.entries(b.categoryLimits).map(([k, v]) => [k, String(v)]))
-          : {},
+        categories: mergedCategories,
       });
-      setIsCategoryExpanded(false);
+
+      if (payload?.expandCategories || Object.keys(mergedCategories).length > 0) {
+        setIsCategoryExpanded(true);
+      } else {
+        setIsCategoryExpanded(false);
+      }
     }
   }, [open, group.budget, form]);
+
 
   async function onSubmit(values: BudgetFormValues) {
     if (!userProfile) return;

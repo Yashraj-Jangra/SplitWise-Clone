@@ -137,13 +137,22 @@ export default function GroupDetailPage() {
     loadGroupData();
 
     const handleDataChanged = () => loadGroupData(true);
+    const handleOpenBudgetDialog = (payload?: { groupId?: string }) => {
+      if (!payload?.groupId || payload.groupId === groupId) {
+        setActiveTab('budget');
+      }
+    };
+
     appEventEmitter.on('data-changed', handleDataChanged);
+    appEventEmitter.on('open-budget-dialog', handleOpenBudgetDialog);
 
     return () => {
       appEventEmitter.off('data-changed', handleDataChanged);
+      appEventEmitter.off('open-budget-dialog', handleOpenBudgetDialog);
     };
 
-  }, [loadGroupData]);
+  }, [loadGroupData, groupId]);
+
 
   const activityItems: ActivityItem[] = useMemo(() => {
       const combined = [

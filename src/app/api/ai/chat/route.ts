@@ -3,10 +3,17 @@ import { embed } from '@/lib/ai/embedder';
 import { retrieveSimilar } from '@/lib/ai/retriever';
 import { buildContextBlock, buildExpenseChunk } from '@/lib/ai/context-builder';
 import { buildFinancialSnapshot, detectQueryIntent } from '@/lib/ai/financial-context';
-import { resolveCategoryKeywords } from '@/lib/ai/financial-analytics';
+import {
+  resolveCategoryKeywords,
+  computeBudgetBreakdown,
+  calculateSmartCategoryReduction,
+  validateBudgetDelta,
+} from '@/lib/ai/financial-analytics';
 import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
+import { getGroupById } from '@/lib/services/group.service';
 import { getFullName } from '@/lib/utils';
 import { streamCompletion } from '@/lib/ai/client';
+
 import { classifyInput, scanOutputForViolations } from '@/lib/ai/guardrail';
 import type { ChatMessage, RetrievedChunk, BudgetActionProposal } from '@/types/ai';
 
@@ -249,11 +256,14 @@ export async function POST(request: Request) {
             // BUDGET_ACTION: parse intent and emit permission card SSE event
             if (queryIntent.intent === 'BUDGET_ACTION' && groupId && snapshot) {
               controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ status: 'drafting', message: 'Preparing budget change proposal...' })}\n\n`)
+                encoder.encode(`data: ${JSON.stringify({ status: 'drafting', message: 'Analyzing budget configuration & calculating fit...' })}\n\n`)
               );
 
-              const groupName = snapshot.groupName || groupId;
-              const currentBudget = snapshot.budget;
+              const groupDoc = await getGroupById(groupId).catch(() => null);
+              const groupName = groupDoc?.name || snapshot.groupName || groupId;
+              const currentBudget = groupDoc?.budget;
+              const breakdown = computeBudgetBreakdown(currentBudget);
+
               const rawFormattedText: string = snapshot.formattedText || '';
               const budgetConfigSection = rawFormattedText.includes('FULL BUDGET CONFIGURATION:')
                 ? rawFormattedText.split('FULL BUDGET CONFIGURATION:')[1]?.split('\n---')[0]?.trim()
@@ -270,11 +280,11 @@ export async function POST(request: Request) {
                     'CURRENT BUDGET STATE:',
                     budgetConfigSection,
                     '',
-                    'Valid actions: set_monthly_limit, increase_monthly_limit, decrease_monthly_limit, enable_budget, disable_budget, set_category_limit, remove_category_limit',
+                    'Valid actions: set_monthly_limit, increase_monthly_limit, decrease_monthly_limit, enable_budget, disable_budget, set_category_limit, remove_category_limit, adjust_budget_with_categories',
                     'Valid categoryKey values: Food and Drink, Transportation, Housing, Utilities, Entertainment, Shopping, Health and Wellness, Personal Care, Education, Gifts and Donations, Travel, Other',
                     '',
                     'Output this JSON schema exactly (no extra text):',
-                    '{"action":"<action>","newMonthlyLimit":<number|null>,"deltaAmount":<number|null>,"currentMonthlyLimit":<number>,"categoryKey":<string|null>,"newCategoryLimit":<number|null>,"summary":"<one sentence>","confidence":"high|medium|low","clarificationNeeded":<null|string>}',
+                    '{"action":"<action>","newMonthlyLimit":<number|null>,"deltaAmount":<number|null>,"currentMonthlyLimit":<number>,"categoryKey":<string|null>,"newCategoryLimit":<number|null>,"categoryUpdates":<object|null>,"summary":"<one sentence>","confidence":"high|medium|low","clarificationNeeded":<null|string>}',
                   ].join('\n'),
                 },
                 { role: 'user', content: message },
@@ -299,27 +309,84 @@ export async function POST(request: Request) {
                   "I'm not sure exactly what budget change you'd like. Could you be more specific? For example: *\"Increase the budget by Rs.5,000\"*, *\"Set the monthly limit to Rs.30,000\"*, or *\"Set the Food & Drink limit to Rs.8,000\"*.";
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: clarification })}\n\n`));
               } else {
-                const requestId = `budgetreq_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-                const proposal: BudgetActionProposal = {
-                  action: parsedAction.action,
-                  groupId,
-                  groupName,
-                  newMonthlyLimit: parsedAction.newMonthlyLimit != null ? Number(parsedAction.newMonthlyLimit) : undefined,
-                  deltaAmount: parsedAction.deltaAmount != null ? Number(parsedAction.deltaAmount) : undefined,
-                  currentMonthlyLimit: parsedAction.currentMonthlyLimit != null ? Number(parsedAction.currentMonthlyLimit) : currentBudget?.monthlyLimit,
-                  categoryKey: parsedAction.categoryKey ?? undefined,
-                  newCategoryLimit: parsedAction.newCategoryLimit != null ? Number(parsedAction.newCategoryLimit) : undefined,
-                  summary: parsedAction.summary || 'Budget change proposed by AI',
-                  requestId,
-                };
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ budget_action: proposal })}\n\n`)
-                );
+                const now = Date.now();
+                const EXPIRE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+                const requestId = `budgetreq_${now}_${Math.random().toString(36).substring(2, 7)}`;
+
+                // Compute effective target monthly limit
+                let targetMonthlyLimit = breakdown.monthlyLimit;
+                if (parsedAction.newMonthlyLimit != null) {
+                  targetMonthlyLimit = Number(parsedAction.newMonthlyLimit);
+                } else if (parsedAction.action === 'decrease_monthly_limit' && parsedAction.deltaAmount) {
+                  targetMonthlyLimit = Math.max(100, breakdown.monthlyLimit - Number(parsedAction.deltaAmount));
+                } else if (parsedAction.action === 'increase_monthly_limit' && parsedAction.deltaAmount) {
+                  targetMonthlyLimit = breakdown.monthlyLimit + Number(parsedAction.deltaAmount);
+                }
+
+                // Check if user provided explicit category overrides
+                const userCategoryUpdates: Record<string, number> | undefined =
+                  parsedAction.categoryUpdates && typeof parsedAction.categoryUpdates === 'object'
+                    ? parsedAction.categoryUpdates
+                    : parsedAction.categoryKey && parsedAction.newCategoryLimit != null
+                    ? { [parsedAction.categoryKey]: Number(parsedAction.newCategoryLimit) }
+                    : undefined;
+
+                // Validate proposed change against active category caps
+                const validation = validateBudgetDelta(currentBudget, targetMonthlyLimit, userCategoryUpdates);
+
+                if (!validation.valid && validation.shortfall > 0 && breakdown.totalCapped > 0 && !userCategoryUpdates) {
+                  // AUTO-SUGGESTION: Target limit is lower than active category caps.
+                  // Automatically balance categories proportionally with ₹100 rounding!
+                  const smartReduction = calculateSmartCategoryReduction(breakdown.categoryLimits, targetMonthlyLimit);
+
+                  const proposal: BudgetActionProposal = {
+                    action: 'adjust_budget_with_categories',
+                    groupId,
+                    groupName,
+                    newMonthlyLimit: targetMonthlyLimit,
+                    currentMonthlyLimit: breakdown.monthlyLimit,
+                    isAutoSuggested: true,
+                    shortfall: smartReduction.shortfall,
+                    categoryUpdates: smartReduction.suggestedLimits,
+                    categoryDiffs: smartReduction.categoryDiffs,
+                    summary: `Your requested budget (₹${targetMonthlyLimit.toLocaleString('en-IN')}) is ₹${smartReduction.shortfall.toLocaleString('en-IN')} lower than active category caps (₹${breakdown.totalCapped.toLocaleString('en-IN')}). SplitIt AI auto-balanced your categories to fit ₹${targetMonthlyLimit.toLocaleString('en-IN')} exactly.`,
+                    requestId,
+                    createdAt: now,
+                    expiresAt: now + EXPIRE_TIMEOUT,
+                  };
+
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ budget_action: proposal })}\n\n`)
+                  );
+                } else {
+                  // Standard action or user-specified compound action
+                  const isCompound = Boolean(userCategoryUpdates && (parsedAction.newMonthlyLimit != null || parsedAction.deltaAmount != null));
+                  const proposal: BudgetActionProposal = {
+                    action: isCompound ? 'adjust_budget_with_categories' : parsedAction.action,
+                    groupId,
+                    groupName,
+                    newMonthlyLimit: parsedAction.newMonthlyLimit != null ? Number(parsedAction.newMonthlyLimit) : (isCompound ? targetMonthlyLimit : undefined),
+                    deltaAmount: parsedAction.deltaAmount != null ? Number(parsedAction.deltaAmount) : undefined,
+                    currentMonthlyLimit: breakdown.monthlyLimit,
+                    categoryKey: parsedAction.categoryKey ?? undefined,
+                    newCategoryLimit: parsedAction.newCategoryLimit != null ? Number(parsedAction.newCategoryLimit) : undefined,
+                    categoryUpdates: userCategoryUpdates,
+                    summary: parsedAction.summary || 'Budget change proposed by AI',
+                    requestId,
+                    createdAt: now,
+                    expiresAt: now + EXPIRE_TIMEOUT,
+                  };
+
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ budget_action: proposal })}\n\n`)
+                  );
+                }
               }
 
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
               return;
             }
+
 
             // BUDGET_ACTION without groupId: explain limitation
             if (queryIntent.intent === 'BUDGET_ACTION' && !groupId) {
