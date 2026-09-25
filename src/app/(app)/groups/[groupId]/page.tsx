@@ -276,7 +276,17 @@ export default function GroupDetailPage() {
     const setDocId = searchParams.get('settlementId');
     const action = searchParams.get('action');
 
-    if (action === 'settle') {
+    if (action === 'edit-budget') {
+      setActiveTab('budget');
+      if (!loading && group) {
+        const timer = setTimeout(() => {
+          appEventEmitter.emit('open-budget-dialog', { groupId, expandCategories: true });
+        }, 50);
+        const cleanUrl = `${window.location.pathname}?tab=budget`;
+        window.history.replaceState({}, '', cleanUrl);
+        return () => clearTimeout(timer);
+      }
+    } else if (action === 'settle') {
       if (setDocId) {
         // Look up the settlement to pre-fill payer/recipient/amount
         const found = settlements.find(s => s.id === setDocId);
@@ -330,7 +340,7 @@ export default function GroupDetailPage() {
         setActiveTab(tabParam);
       }
     }
-  }, [searchParams, settlements, userProfile]);
+  }, [searchParams, settlements, userProfile, loading, group, groupId]);
 
   const handleViewExpense = (expenseId: string) => {
     setTargetItemId(`exp-${expenseId}`);

@@ -1,5 +1,32 @@
 # Session Progress & Context Preservation
 
+  - **Global Context View-Only Group Budgets & Zero-Click Navigation** ✨ 🌐 🎯 ✅:
+    - **User Requirement**:
+      - "give the AI access to view the budgets too of all groups just view (categorised too) and not edit budgets and to edit u hv to open that group (currently thats how it works) and add a button to take user to that group if user asks to edit then continue editing it"
+    - **Implementation**:
+      - **Global Financial Context View-Only Grounding ([`src/lib/ai/financial-context.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/ai/financial-context.ts))**:
+        - Added `groupBudgets` array to `FinancialSnapshot`.
+        - Iterated over all groups the user belongs to (`userGroups`), running `computeBudgetBreakdown` on each.
+        - Appended `ALL GROUPS BUDGET OVERVIEW (VIEW-ONLY ACCESS)` section into `formattedText` with explicit status (Active / Disabled / Not configured), monthly limits, category allocations sum, category caps breakdown, flexible pool balance, and direct manage URL (`/groups/<id>?tab=budget&action=edit-budget`).
+        - Injected clear system instructions that the AI has view-only permissions in global scope and cannot perform edits.
+      - **Global Scope Budget Edit Interception ([`src/app/api/ai/chat/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/ai/chat/route.ts))**:
+        - When `!groupId` (global context) and user triggers `BUDGET_ACTION`:
+          - Refuses in-chat mutation proposal execution.
+          - Smart group matching matches mentioned group names against `userGroups`.
+          - Streams clear guidance and direct action link button: `[Open "<GroupName>" to Edit Budget](/groups/<id>?tab=budget&action=edit-budget)`.
+          - If multiple groups match or none match, lists all user groups as clickable action buttons.
+      - **Interactive Action Button Rendering in AI Chat ([`src/components/ai/formatted-markdown.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/formatted-markdown.tsx))**:
+        - Enhanced markdown link renderer: internal `/groups/` links with action params are automatically styled as primary interactive button pills with `<ArrowRight>` using `next/link`.
+      - **Zero-Click Transition to Group Budget Editing ([`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx))**:
+        - Handled `action === 'edit-budget'`:
+          - Immediately switches active tab to `budget`.
+          - Waits until `!loading && group` finishes loading and DOM renders.
+          - Emits `open-budget-dialog` with `{ groupId, expandCategories: true }`, automatically opening `SetBudgetDialog` with categorized caps expanded and ready for editing.
+          - Cleans up query parameter from browser address bar via `window.history.replaceState`.
+      - **Unit Tests ([`src/__tests__/financial-analytics.test.ts`](file:///d:/Projects/SplitWise-Clone/src/__tests__/financial-analytics.test.ts))**:
+        - Added test suite `7. Global Context Multi-Group Budget View & Navigation` verifying `groupBudgets` snapshot structure, category breakdown, flexible pool, view-only banner, and direct management link generation.
+
+
   - **Pull Request #19 Opened (dev → master)** 🚀:
     - Opened [PR #19](https://github.com/Yashraj-Jangra/SplitWise-Clone/pull/19): `✨ AI Budget Management, Smart Shortfall Auto-Balancing & Live Refresh (v0.4.0)`.
     - Fully synchronized branch `dev` with remote `origin/dev`.

@@ -10,7 +10,7 @@ import {
   validateBudgetDelta,
 } from '@/lib/ai/financial-analytics';
 import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
-import { getGroupById } from '@/lib/services/group.service';
+import { getGroupById, getGroupsByUserId } from '@/lib/services/group.service';
 import { getFullName } from '@/lib/utils';
 import { streamCompletion } from '@/lib/ai/client';
 
@@ -388,10 +388,34 @@ export async function POST(request: Request) {
             }
 
 
-            // BUDGET_ACTION without groupId: explain limitation
+            // BUDGET_ACTION without groupId: explain limitation and provide navigation button(s)
             if (queryIntent.intent === 'BUDGET_ACTION' && !groupId) {
-              const msg = 'Budget management is only available when viewing a specific group. Please navigate to a group page and ask me there to modify the budget.';
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: msg })}\n\n`));
+              const userGroups = await getGroupsByUserId(session.user.id).catch(() => []);
+              const lowerMsg = message.toLowerCase();
+
+              // Smart group matching: check if user mentioned any group name in their prompt
+              const matchedGroups = userGroups.filter((g) => {
+                const gName = g.name.toLowerCase().trim();
+                if (lowerMsg.includes(gName)) return true;
+                const words = gName.split(/\s+/).filter((w) => w.length > 2);
+                return words.some((w) => lowerMsg.includes(w));
+              });
+
+              let responseText = '';
+              if (matchedGroups.length === 1) {
+                const target = matchedGroups[0];
+                responseText = `Budget configuration is managed within each specific group. To edit or adjust the budget for **${target.name}**, please open the group's budget page below:\n\n[Open "${target.name}" to Edit Budget](/groups/${target.id}?tab=budget&action=edit-budget)`;
+              } else if (matchedGroups.length > 1) {
+                responseText = `I found multiple matching groups for your request. To edit a group's budget, open that group below:\n\n` +
+                  matchedGroups.map((g) => `- [Open "${g.name}" to Edit Budget](/groups/${g.id}?tab=budget&action=edit-budget)`).join('\n');
+              } else if (userGroups.length > 0) {
+                responseText = `Budget configuration is managed within each specific group. Which group's budget would you like to edit?\n\n` +
+                  userGroups.map((g) => `- [Open "${g.name}" to Edit Budget](/groups/${g.id}?tab=budget&action=edit-budget)`).join('\n');
+              } else {
+                responseText = 'Budget management is only available when viewing a specific group. You do not belong to any active groups yet.';
+              }
+
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ token: responseText })}\n\n`));
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
               return;
             }
@@ -443,6 +467,7 @@ CRITICAL FINANCIAL ACCURACY DIRECTIVE:
 - If asked about "trend": Present the Month-over-Month (MoM) % change (with 📈 / 📉), daily burn rate, and projected month-end spend.
 - If asked about "member cuts" or "who paid what": Present the member breakdown showing Paid Out of Pocket vs Consumed Cut vs Net position in a clean markdown table or list.
 - If asked about a "category timeline": Present the monthly trajectory and highlight top transactions.
+- In global scope, you have VIEW-ONLY access to inspect all group budgets and their categorized allocations listed under "ALL GROUPS BUDGET OVERVIEW". You CANNOT edit budgets from global scope. If asked to modify a budget, direct the user to the group link: [Open "<groupName>" to Edit Budget](/groups/<groupId>?tab=budget&action=edit-budget).
 
 RELEVANT FINANCIAL RECORDS:
 ${contextBlock}

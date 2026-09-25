@@ -4,6 +4,8 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 interface FormattedMarkdownProps {
   content: string;
@@ -133,16 +135,44 @@ export function FormattedMarkdown({ content, className, isStreaming }: Formatted
           ),
 
           // Links
-          a: ({ href, children }) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children }) => {
+            const isInternal = Boolean(href && href.startsWith('/'));
+            const isGroupAction = Boolean(href && href.startsWith('/groups/'));
+
+            if (isGroupAction) {
+              return (
+                <Link
+                  href={href!}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 rounded-xl bg-primary text-primary-foreground font-medium text-xs shadow-xs hover:bg-primary/90 transition-all active:scale-[0.98] cursor-pointer no-underline group"
+                >
+                  <span className="font-semibold">{children}</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              );
+            }
+
+            if (isInternal) {
+              return (
+                <Link
+                  href={href!}
+                  className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
+                >
+                  {children}
+                </Link>
+              );
+            }
+
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
+              >
+                {children}
+              </a>
+            );
+          },
 
           // Horizontal rule
           hr: () => <hr className="my-2.5 border-border/30" />,

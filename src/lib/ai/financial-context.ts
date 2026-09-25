@@ -39,6 +39,15 @@ export interface FinancialSnapshot {
     currentSpent: number;
     percentage: number;
   };
+  groupBudgets?: {
+    groupId: string;
+    groupName: string;
+    enabled: boolean;
+    monthlyLimit: number;
+    categoryLimits?: Record<string, number>;
+    totalCapped: number;
+    flexiblePool: number;
+  }[];
   intent?: QueryIntent;
   trendData?: SpendingTrendResult;
   categoryData?: CategoryTimelineResult;
@@ -429,6 +438,52 @@ export async function buildFinancialSnapshot(
     });
   }
 
+  // Attach All Groups' Budgets Overview (View-Only)
+  const groupBudgets = userGroups.map((g) => {
+    const breakdown = computeBudgetBreakdown(g.budget);
+    return {
+      groupId: g.id,
+      groupName: g.name,
+      enabled: breakdown.enabled,
+      monthlyLimit: breakdown.monthlyLimit,
+      categoryLimits: breakdown.categoryLimits,
+      totalCapped: breakdown.totalCapped,
+      flexiblePool: breakdown.flexiblePool,
+    };
+  });
+
+  if (userGroups.length > 0) {
+    lines.push('', '---', 'ALL GROUPS BUDGET OVERVIEW (VIEW-ONLY ACCESS):');
+    lines.push('NOTE: You have view-only access to view and analyze budgets and categorized limits for all groups the user belongs to.');
+    lines.push('You CANNOT edit or update budgets from global context. To edit a group budget, the user must open that group.');
+    lines.push('');
+
+    userGroups.forEach((g) => {
+      const breakdown = computeBudgetBreakdown(g.budget);
+      lines.push(`Group "${g.name}" (ID: ${g.id}):`);
+      if (breakdown.enabled && breakdown.monthlyLimit > 0) {
+        lines.push(`- Status: Budget Active`);
+        lines.push(`- Monthly Limit: ₹${breakdown.monthlyLimit.toLocaleString('en-IN')}`);
+        lines.push(`- Category Allocations Sum: ₹${breakdown.totalCapped.toLocaleString('en-IN')} (${breakdown.categoryCount} active categories)`);
+        lines.push(`- Flexible Pool: ₹${breakdown.flexiblePool.toLocaleString('en-IN')} (unallocated pool for other expenses)`);
+        if (breakdown.categoriesList.length > 0) {
+          lines.push('- Category Caps:');
+          breakdown.categoriesList.forEach((c) => {
+            lines.push(`  • ${c.key}: ₹${c.limit.toLocaleString('en-IN')} (${c.pctOfMonthly}% of budget)`);
+          });
+        } else {
+          lines.push('- Category Caps: None set (100% Flexible Pool)');
+        }
+      } else if (g.budget && !breakdown.enabled) {
+        lines.push(`- Status: Budget Disabled`);
+      } else {
+        lines.push(`- Status: No budget configured`);
+      }
+      lines.push(`- Direct Link to Manage: /groups/${g.id}?tab=budget&action=edit-budget`);
+      lines.push('');
+    });
+  }
+
   // Always provide recent verified personal expenses across groups
   if (recentExpenses.length > 0) {
     lines.push('', '---', 'RECENT PERSONAL TRANSACTIONS ACROSS GROUPS:');
@@ -444,6 +499,7 @@ export async function buildFinancialSnapshot(
     youOwe,
     monthlySpent: trendData?.currentMonthSpent || 0,
     recentExpenses,
+    groupBudgets,
     intent: detectedIntent,
     trendData,
     categoryData,

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   detectQueryIntent,
+  buildFinancialSnapshot,
 } from '@/lib/ai/financial-context';
 import {
   resolveCategoryKeywords,
@@ -27,8 +28,13 @@ vi.mock('@/lib/services/expense.service', () => ({
   getExpensesByUserId: vi.fn(),
 }));
 
-import { getGroupById } from '@/lib/services/group.service';
+vi.mock('@/lib/services/balance.service', () => ({
+  getAllUserBalances: vi.fn().mockResolvedValue([]),
+}));
+
+import { getGroupById, getGroupsByUserId } from '@/lib/services/group.service';
 import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
+import { getAllUserBalances } from '@/lib/services/balance.service';
 
 function makeUser(uid: string, name: string): UserProfile {
   return {
@@ -578,6 +584,95 @@ describe('Financial Analytics & AI Intent Routing', () => {
       const belowMin = validateBudgetDelta(budget, 50);
       expect(belowMin.valid).toBe(false);
       expect(belowMin.reason).toContain('Minimum monthly budget is ₹100');
+    });
+  });
+
+  describe('7. Global Context Multi-Group Budget View & Navigation', () => {
+    it('builds view-only group budgets snapshot with category allocations and navigation links', async () => {
+      const g1: Group = {
+        id: 'grp_1',
+        name: 'Apartment Flatmates',
+        currency: 'INR',
+        createdBy: u1,
+        members: [u1, u2],
+        totalExpenses: 25000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        budget: {
+          enabled: true,
+          monthlyLimit: 30000,
+          categoryLimits: {
+            Rent: 18000,
+            Groceries: 7000,
+          },
+        },
+      };
+
+      const g2: Group = {
+        id: 'grp_2',
+        name: 'Road Trip',
+        currency: 'INR',
+        createdBy: u1,
+        members: [u1, u3],
+        totalExpenses: 5000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        budget: {
+          enabled: false,
+          monthlyLimit: 15000,
+        },
+      };
+
+      const g3: Group = {
+        id: 'grp_3',
+        name: 'Casual Friends',
+        currency: 'INR',
+        createdBy: u1,
+        members: [u1],
+        totalExpenses: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      vi.mocked(getGroupsByUserId).mockResolvedValue([g1, g2, g3]);
+      vi.mocked(getExpensesByUserId).mockResolvedValue([]);
+      vi.mocked(getAllUserBalances).mockResolvedValue([]);
+
+      const snapshot = await buildFinancialSnapshot('u1', undefined, 'what are our budgets?');
+
+      expect(snapshot.scope).toBe('global');
+      expect(snapshot.groupBudgets).toBeDefined();
+      expect(snapshot.groupBudgets?.length).toBe(3);
+
+      const b1 = snapshot.groupBudgets?.find((b) => b.groupId === 'grp_1');
+      expect(b1).toBeDefined();
+      expect(b1?.enabled).toBe(true);
+      expect(b1?.monthlyLimit).toBe(30000);
+      expect(b1?.totalCapped).toBe(25000);
+      expect(b1?.flexiblePool).toBe(5000);
+
+      const b2 = snapshot.groupBudgets?.find((b) => b.groupId === 'grp_2');
+      expect(b2?.enabled).toBe(false);
+
+      const b3 = snapshot.groupBudgets?.find((b) => b.groupId === 'grp_3');
+      expect(b3?.monthlyLimit).toBe(0);
+
+      // Verify formatted text has view-only banner and group links
+      expect(snapshot.formattedText).toContain('ALL GROUPS BUDGET OVERVIEW (VIEW-ONLY ACCESS)');
+      expect(snapshot.formattedText).toContain('Group "Apartment Flatmates" (ID: grp_1):');
+      expect(snapshot.formattedText).toContain('Status: Budget Active');
+      expect(snapshot.formattedText).toContain('Monthly Limit: ₹30,000');
+      expect(snapshot.formattedText).toContain('Category Allocations Sum: ₹25,000 (2 active categories)');
+      expect(snapshot.formattedText).toContain('Flexible Pool: ₹5,000');
+      expect(snapshot.formattedText).toContain('Rent: ₹18,000 (60% of budget)');
+      expect(snapshot.formattedText).toContain('Groceries: ₹7,000 (23.3% of budget)');
+      expect(snapshot.formattedText).toContain('/groups/grp_1?tab=budget&action=edit-budget');
+
+      expect(snapshot.formattedText).toContain('Group "Road Trip" (ID: grp_2):');
+      expect(snapshot.formattedText).toContain('Status: Budget Disabled');
+
+      expect(snapshot.formattedText).toContain('Group "Casual Friends" (ID: grp_3):');
+      expect(snapshot.formattedText).toContain('Status: No budget configured');
     });
   });
 });
