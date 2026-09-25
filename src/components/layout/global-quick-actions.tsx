@@ -33,7 +33,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getGroupsByUserId } from "@/lib/api.client";
 import { appEventEmitter } from "@/lib/event-emitter";
-import { getInitials } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import type { Group } from "@/types";
 import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
 import { AddSettlementDialog } from "@/components/settlements/add-settlement-dialog";
@@ -44,9 +44,10 @@ interface GlobalQuickActionsProps {
   trigger?: React.ReactNode;
   /** If set, clicking trigger immediately prompts for this action without the dropdown */
   directAction?: "expense" | "settlement" | "group";
+  className?: string;
 }
 
-export function GlobalQuickActions({ trigger, directAction }: GlobalQuickActionsProps) {
+export function GlobalQuickActions({ trigger, directAction, className }: GlobalQuickActionsProps) {
   const { userProfile } = useAuth();
   const isMobile = useIsMobile();
 
@@ -216,7 +217,10 @@ export function GlobalQuickActions({ trigger, directAction }: GlobalQuickActions
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-xl border-border/40 bg-background/60 hover:bg-muted/60 transition-colors shadow-xs"
+                className={cn(
+                  "hidden md:inline-flex h-9 w-9 rounded-xl border-border/40 bg-background/60 hover:bg-muted/60 transition-colors shadow-xs",
+                  className
+                )}
                 aria-label="Quick Actions"
                 title="Quick Actions"
               >

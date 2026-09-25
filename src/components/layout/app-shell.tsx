@@ -349,7 +349,9 @@ function Header() {
         <div className="relative flex-1">
             <SearchDialog />
         </div>
-        <GlobalQuickActions />
+        <div className="hidden md:flex items-center">
+            <GlobalQuickActions />
+        </div>
         <NotificationBell />
         <UserNav />
       </header>

@@ -1,5 +1,16 @@
 # Session Progress & Context Preservation
 
+  - **Dashboard Quick Actions Cleanup & Mobile Header Plus Hide** 🎨 📱 ✅:
+    - **Objective**: Clean up the home dashboard header by removing the "Record Expense" and "Settle Up" action buttons, and ensure the global `+` quick-actions dropdown (which contains options to add expenses, settlements, and create groups) is hidden on mobile devices and exclusively displayed on desktop view.
+    - **Implementation**:
+      - **Dashboard Header ([`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx))**:
+        - Removed the action buttons container and cleaned up unused `GlobalQuickActions`, `Button`, and `Icons` imports.
+        - Streamlined personalized greeting and subtitle layout.
+      - **Desktop-Only Quick Action Trigger ([`src/components/layout/global-quick-actions.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/global-quick-actions.tsx) & [`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx))**:
+        - Added `className?: string` prop to `GlobalQuickActionsProps` and updated default `+` button styling to `hidden md:inline-flex`.
+        - Wrapped `<GlobalQuickActions />` in `<div className="hidden md:flex items-center">` within the top header in `app-shell.tsx` to prevent any mobile viewport clutter.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 51/51 tests across 5 test suites.
+
   - **AI Budget Management, Interactive Permission Card & Audit Trail** ✨ 🤖 🛡️ ✅:
     - **Objective**: Grant the AI assistant full visibility into group and category budgets, empower users to configure/adjust budgets through natural conversational commands (e.g. increase, decrease, set overall or category limits, enable/disable), enforce strict user permission before applying any changes, and write an immutable audit event to the group history log.
     - **Implementation**:
