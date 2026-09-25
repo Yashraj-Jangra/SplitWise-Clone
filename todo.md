@@ -1,5 +1,16 @@
 # Session Progress & Context Preservation
 
+  - **Relocate Quick Action Plus Button to Desktop Dashboard Only** ✨ 🎨 📱 ✅:
+    - **Objective**: Remove the `+` quick actions button from the top header entirely, and instead provide a prominent `+` button exclusively on the desktop dashboard (hidden on mobile devices, where the bottom navigation bar already provides the center `+` action).
+    - **Implementation**:
+      - **Top Header ([`src/components/layout/app-shell.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/layout/app-shell.tsx))**:
+        - Completely removed `<GlobalQuickActions />` and its unused import from the top header navbar, leaving only search, notifications, and user navigation.
+      - **Desktop Dashboard Header ([`src/app/(app)/dashboard/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/dashboard/page.tsx))**:
+        - Mounted `<GlobalQuickActions />` inside `<div className="hidden md:flex items-center">` right beside the personalized greeting.
+        - Custom trigger styled as a vibrant primary icon button (`h-10 w-10 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/25`) with hover scale micro-animation.
+        - Kept hidden on mobile devices to preserve bottom navigation bar clarity.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 51/51 tests across 5 test suites.
+
   - **Group Details Active Tab Text Contrast & Visibility Fix** 🎨 🐛 ✅:
     - **Issue**: In the group details page ([`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx)), the active tab pill had `data-[state=active]:bg-background` (dark gray/black), but did not override the default `TabsTrigger` active text color (`data-[state=active]:text-primary-foreground`). In dark mode, `--primary-foreground` is near-black, causing the active tab label ("Activity", "Budget", etc.) and icon to render completely invisible black-on-black.
     - **Fix Applied**:

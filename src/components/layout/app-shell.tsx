@@ -20,7 +20,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SearchDialog } from "./search-dialog";
 import { NotificationBell } from "./notification-bell";
-import { GlobalQuickActions } from "./global-quick-actions";
 import { BottomNavBar } from "./bottom-nav-bar";
 import { listenForForegroundMessages } from "@/lib/push-service";
 import { UpdateBanner } from "@/components/shared/update-banner";
@@ -348,9 +347,6 @@ function Header() {
         </Sheet>
         <div className="relative flex-1">
             <SearchDialog />
-        </div>
-        <div className="hidden md:flex items-center">
-            <GlobalQuickActions />
         </div>
         <NotificationBell />
         <UserNav />
