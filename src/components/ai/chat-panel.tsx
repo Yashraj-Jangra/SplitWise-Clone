@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/popover';
 import type { ChatMessage, BudgetActionProposal } from '@/types/ai';
 import { appEventEmitter } from '@/lib/event-emitter';
+import { clearClientFetchCache } from '@/lib/api.client';
 
 const GLOBAL_STARTER_PROMPTS = [
   "What's my spending trend this month vs last month?",
@@ -608,6 +609,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   const handleBudgetApprove = async () => {
     if (!pendingBudgetProposal || budgetActionStatus !== 'idle') return;
     setBudgetActionStatus('approving');
+    const targetGroupId = pendingBudgetProposal.groupId || groupId;
     try {
       const res = await fetch('/api/ai/budget', {
         method: 'POST',
@@ -616,14 +618,39 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Budget update failed');
-      // Replace the card message with a success message
+      // Replace the card message with a simple confirmation
       setMessages((prev) => prev.map((m) =>
         m.budgetProposalId === pendingBudgetProposal.requestId
-          ? { ...m, content: `Budget updated successfully. ${data.description || pendingBudgetProposal.summary}`, budgetProposalId: undefined }
+          ? { ...m, content: 'Budget updated successfully.', budgetProposalId: undefined }
           : m
       ));
-      // Emit event so group page refreshes
+      
+      // Clear client fetch cache and emit events
+      clearClientFetchCache();
+      appEventEmitter.emit('budget-updated', { groupId: targetGroupId, budget: data.newBudget });
       appEventEmitter.emit('data-changed');
+
+      if (onClose) {
+        onClose();
+      }
+
+      // Refresh page so the new budget is immediately shown on screen
+      if (typeof window !== 'undefined') {
+        if (targetGroupId) {
+          const targetUrl = `/groups/${targetGroupId}?tab=budget`;
+          if (window.location.pathname === `/groups/${targetGroupId}`) {
+            if (window.location.search.includes('tab=budget')) {
+              window.location.reload();
+            } else {
+              window.location.href = targetUrl;
+            }
+          } else {
+            window.location.href = targetUrl;
+          }
+        } else {
+          window.location.reload();
+        }
+      }
     } catch (err: any) {
       setMessages((prev) => prev.map((m) =>
         m.budgetProposalId === pendingBudgetProposal?.requestId

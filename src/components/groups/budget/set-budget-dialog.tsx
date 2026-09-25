@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Icons } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
-import { updateGroup } from '@/lib/api.client';
+import { updateGroup, clearClientFetchCache } from '@/lib/api.client';
 import { useAuth } from '@/contexts/auth-context';
 import { appEventEmitter } from '@/lib/event-emitter';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
@@ -273,8 +273,23 @@ export function SetBudgetDialog({
           : 'Monthly budget disabled.',
       });
 
+      clearClientFetchCache();
+      appEventEmitter.emit('budget-updated', { groupId: group.id, budget: budgetData });
       appEventEmitter.emit('data-changed');
       setOpen(false);
+
+      if (typeof window !== 'undefined') {
+        const targetUrl = `/groups/${group.id}?tab=budget`;
+        if (window.location.pathname === `/groups/${group.id}`) {
+          if (window.location.search.includes('tab=budget')) {
+            window.location.reload();
+          } else {
+            window.location.href = targetUrl;
+          }
+        } else {
+          window.location.href = targetUrl;
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -303,8 +318,14 @@ export function SetBudgetDialog({
         userProfile.uid
       );
       toast({ title: 'Budget Disabled', description: 'Group budget tracking turned off.' });
+      clearClientFetchCache();
+      appEventEmitter.emit('budget-updated', { groupId: group.id, budget: { monthlyLimit: 0, enabled: false } });
       appEventEmitter.emit('data-changed');
       setOpen(false);
+
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     } catch (error: any) {
       toast({ title: 'Error', description: error?.message || 'Failed to remove budget.', variant: 'destructive' });
     } finally {

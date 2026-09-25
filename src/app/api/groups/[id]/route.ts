@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
 import { getGroupById, updateGroup, deleteGroupPermanently, verifyGroupMembership } from '@/lib/services/group.service';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth.api.getSession({ headers: request.headers });
@@ -20,7 +23,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (!group) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
-    return NextResponse.json(group);
+    return NextResponse.json(group, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching group details:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,5 +1,29 @@
 # Session Progress & Context Preservation
 
+  - **Live Page Refresh & Direct Budget Display After Budget Changes** ✨ 🔄 📊 ✅:
+    - **Requirement**: "after changing budget show the new budget too i.e refresh page, not something in ai chat".
+    - **Root Cause**:
+      - Approving a budget proposal in the AI chat panel only updated the chat card to static text and emitted `data-changed`.
+      - Route handler `GET /api/groups/[id]` lacked `export const dynamic = 'force-dynamic'` and `Cache-Control: no-store` headers, causing the browser HTTP cache to serve stale group data.
+      - `GroupDetailPage` (`src/app/(app)/groups/[groupId]/page.tsx`) initialized `activeTab` to `'expenses'` ignoring the `?tab=budget` query param.
+      - No full page refresh or active tab switch to `budget` occurred when the budget changed.
+    - **Implementation**:
+      - **Instant Page Navigation & Hard Refresh ([`src/components/ai/chat-panel.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/ai/chat-panel.tsx))**:
+        - In `handleBudgetApprove`, cleared client cache (`clearClientFetchCache()`), emitted `budget-updated` and `data-changed`.
+        - Navigated directly to `/groups/${targetGroupId}?tab=budget` and triggered a hard page refresh (`window.location.reload()`) so the browser reloads and immediately displays the new budget on screen.
+        - Kept AI chat confirmation concise ("Budget updated successfully."), completely avoiding unnecessary chat markdown breakdowns per user preference.
+      - **SetBudgetDialog Sync & Refresh ([`src/components/groups/budget/set-budget-dialog.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/groups/budget/set-budget-dialog.tsx))**:
+        - In `onSubmit` and `handleDisableBudget`, added `clearClientFetchCache()`, `budget-updated` event emission, and page reload to `/groups/${group.id}?tab=budget`.
+      - **Group Details Page Tab & Event Sync ([`src/app/(app)/groups/[groupId]/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/(app)/groups/[groupId]/page.tsx))**:
+        - Initialized `activeTab` directly from `searchParams.get('tab')` to prevent any flash of the Activity tab when landing on `?tab=budget`.
+        - Added `budget-updated` listener to immediately update `group.budget` in state and switch `activeTab` to `'budget'`.
+      - **Route Handler Cache Invalidation ([`src/app/api/groups/[id]/route.ts`](file:///d:/Projects/SplitWise-Clone/src/app/api/groups/[id]/route.ts))**:
+        - Added `export const dynamic = 'force-dynamic'` and `export const revalidate = 0`.
+        - Added HTTP response headers `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate`, `Pragma: no-cache`, `Expires: 0`.
+      - **Client Fetch Cache Guard ([`src/lib/api.client.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/api.client.ts))**:
+        - Configured `cache: 'no-store'` and `Cache-Control: no-cache, no-store, must-revalidate` in `fetchApi`.
+    - **Verification**: `npx tsc --noEmit` exits 0 (clean); `npm test` passes all 56/56 tests.
+
   - **Smart AI Budget Auto-Suggestion, Manual Configuration & 10-Minute Expiry Engine** ✨ 🧠 🛡️ ✅:
     - **Issue / Requirement**: When reducing group monthly budgets via AI (e.g. from ₹25,000 to ₹22,000), if the new limit fell below the sum of active category caps (₹23,000 across 5 categories), an allocation conflict of ₹1,000 previously broke the budget dialog state ("Over by ₹1,000").
     - **Implementation**:

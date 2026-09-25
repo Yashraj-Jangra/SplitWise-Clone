@@ -62,7 +62,10 @@ export default function GroupDetailPage() {
   const [groupHistory, setGroupHistory] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState('expenses');
+  const tabParam = searchParams?.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    tabParam && TABS.some(t => t.value === tabParam) ? tabParam : 'expenses'
+  );
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
@@ -137,6 +140,15 @@ export default function GroupDetailPage() {
     loadGroupData();
 
     const handleDataChanged = () => loadGroupData(true);
+    const handleBudgetUpdated = (payload?: { groupId?: string; budget?: any }) => {
+      if (!payload?.groupId || payload.groupId === groupId) {
+        if (payload?.budget) {
+          setGroup((prev) => (prev ? { ...prev, budget: payload.budget } : prev));
+        }
+        loadGroupData(true);
+        setActiveTab('budget');
+      }
+    };
     const handleOpenBudgetDialog = (payload?: { groupId?: string }) => {
       if (!payload?.groupId || payload.groupId === groupId) {
         setActiveTab('budget');
@@ -144,10 +156,12 @@ export default function GroupDetailPage() {
     };
 
     appEventEmitter.on('data-changed', handleDataChanged);
+    appEventEmitter.on('budget-updated', handleBudgetUpdated);
     appEventEmitter.on('open-budget-dialog', handleOpenBudgetDialog);
 
     return () => {
       appEventEmitter.off('data-changed', handleDataChanged);
+      appEventEmitter.off('budget-updated', handleBudgetUpdated);
       appEventEmitter.off('open-budget-dialog', handleOpenBudgetDialog);
     };
 
