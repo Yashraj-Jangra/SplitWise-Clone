@@ -48,43 +48,8 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
   });
 }
 
-export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
-  const debtors = balances
-    .filter(b => b.netBalance < 0)
-    .map(b => ({ user: b.user, amount: Math.abs(b.netBalance) }));
-
-  const creditors = balances
-    .filter(b => b.netBalance > 0)
-    .map(b => ({ user: b.user, amount: b.netBalance }));
-
-  debtors.sort((a, b) => b.amount - a.amount);
-  creditors.sort((a, b) => b.amount - a.amount);
-
-  const settlements: SimplifiedSettlement[] = [];
-  let i = 0;
-  let j = 0;
-
-  while (i < debtors.length && j < creditors.length) {
-    const debtor = debtors[i];
-    const creditor = creditors[j];
-    const amountToSettle = Math.min(debtor.amount, creditor.amount);
-
-    if (amountToSettle > 0.01) {
-      settlements.push({
-        from: debtor.user,
-        to: creditor.user,
-        amount: amountToSettle,
-      });
-
-      debtor.amount -= amountToSettle;
-      creditor.amount -= amountToSettle;
-    }
-
-    if (debtor.amount < 0.01) i++;
-    if (creditor.amount < 0.01) j++;
-  }
-  return settlements;
-}
+import { simplifyDebts } from '@splitit/core';
+export { simplifyDebts };
 
 export async function getAllUserBalances(userId: string): Promise<Balance[]> {
   const userGroups = await getGroupsByUserId(userId);

@@ -238,43 +238,7 @@ export async function getAllUserBalances(userId: string): Promise<Balance[]> {
   return fetchApi(`/api/expenses?userId=${userId}`); // balances endpoint or calculations
 }
 
-export function simplifyDebts(balances: Balance[]) {
-  const debtors = balances
-    .filter(b => b.netBalance < 0)
-    .map(b => ({ user: b.user, amount: Math.abs(b.netBalance) }));
-
-  const creditors = balances
-    .filter(b => b.netBalance > 0)
-    .map(b => ({ user: b.user, amount: b.netBalance }));
-
-  debtors.sort((a, b) => b.amount - a.amount);
-  creditors.sort((a, b) => b.amount - a.amount);
-
-  const settlements: any[] = [];
-  let i = 0;
-  let j = 0;
-
-  while (i < debtors.length && j < creditors.length) {
-    const debtor = debtors[i];
-    const creditor = creditors[j];
-    const amountToSettle = Math.min(debtor.amount, creditor.amount);
-
-    if (amountToSettle > 0.01) {
-      settlements.push({
-        from: debtor.user,
-        to: creditor.user,
-        amount: amountToSettle,
-      });
-
-      debtor.amount -= amountToSettle;
-      creditor.amount -= amountToSettle;
-    }
-
-    if (debtor.amount < 0.01) i++;
-    if (creditor.amount < 0.01) j++;
-  }
-  return settlements;
-}
+export { simplifyDebts } from '@splitit/core';
 
 export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent[]> {
   return fetchApi(`/api/history?groupId=${groupId}`);

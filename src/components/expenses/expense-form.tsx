@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cn, getFullName, getInitials } from '@/lib/utils';
 import { useSiteSettings } from '@/contexts/site-settings-context';
 import { classifyExpense, getMasterCategory } from '@/lib/expense-categories';
+import { calculateSplitAmounts, validateSplit } from '@splitit/core';
 import { Icons } from '@/components/icons';
 import { CURRENCY_SYMBOL } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
@@ -811,60 +812,19 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     const splitType = getValues('splitType');
     const totalAmount = Number(getValues('amount')) || 0;
 
-    const selectedParticipants = allParticipants.filter((p: any) => p.selected);
-    const numSelected = selectedParticipants.length;
-
-    if (totalAmount <= 0 || numSelected === 0) {
-      allParticipants.forEach((_: any, index: number) => {
-        setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
-      });
-      return;
-    }
-
-    let amounts: number[] = [];
-
-    if (splitType === 'equally') {
-      amounts = Array(numSelected).fill(totalAmount / numSelected);
-    } else if (splitType === 'by_shares') {
-      const totalShares = selectedParticipants.reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
-      if (totalShares > 0) {
-        amounts = selectedParticipants.map(p => (totalAmount * (Number(p.shares) || 0)) / totalShares);
-      } else {
-        amounts = Array(numSelected).fill(0);
-      }
-    } else if (splitType === 'by_percentage') {
-      amounts = selectedParticipants.map((p: any) => (totalAmount * (Number(p.percentage) || 0)) / 100);
-    } else { // unequally
+    if (splitType === 'unequally') {
       allParticipants.forEach((p: any, index: number) => {
         if (!p.selected) {
           setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
         }
       });
-      return; // Don't auto-calculate for unequal split
+      return;
     }
 
-    if (amounts.length > 0) {
-      // Correct for rounding errors
-      const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
-      const sumOfRounded = roundedAmounts.reduce((s, a) => s + a, 0);
-      let remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
-
-      if (Math.abs(remainder) > 0) {
-        for (let i = 0; i < Math.abs(remainder * 100); i++) {
-          roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
-        }
-      }
-
-      let roundedIndex = 0;
-      allParticipants.forEach((p: any, index: number) => {
-        if (p.selected) {
-          setValue(`participants.${index}.amountOwed`, roundedAmounts[roundedIndex], { shouldDirty: true });
-          roundedIndex++;
-        } else {
-          setValue(`participants.${index}.amountOwed`, 0, { shouldDirty: true });
-        }
-      });
-    }
+    const results = calculateSplitAmounts(totalAmount, allParticipants, splitType);
+    results.forEach((res, index) => {
+      setValue(`participants.${index}.amountOwed`, res.amountOwed, { shouldDirty: true });
+    });
   }, [getValues, setValue]);
 
   React.useEffect(() => {
@@ -951,67 +911,50 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
 
     // --- Validation Logic ---
     const totalAmount = Number(values.amount);
-    if (values.payerType === 'multiple') {
-      const totalPaid = values.multiPayers?.reduce((acc, p) => acc + (p.amount || 0), 0) || 0;
-      if (Math.abs(totalPaid - totalAmount) > 0.01) {
-        form.setError('multiPayers', { type: 'manual', message: `The total paid amount (${totalPaid.toFixed(2)}) must equal the expense amount (${totalAmount.toFixed(2)}).` });
+    const validationError = validateSplit({
+      totalAmount,
+      splitType: values.splitType,
+      participants: values.participants,
+      multiPayerAmounts: values.payerType === 'multiple' ? values.multiPayers?.map(p => p.amount || 0) : undefined,
+    });
+
+    if (validationError) {
+      if (validationError.field === 'payers') {
+        form.setError('multiPayers', {
+          type: 'manual',
+          message: `The total paid amount (${validationError.totalPaid.toFixed(2)}) must equal the expense amount (${validationError.totalAmount.toFixed(2)}).`,
+        });
         return;
       }
-    }
-    if (values.splitType === 'unequally') {
-      const totalOwed = values.participants.filter(p => p.selected).reduce((acc, p) => acc + (p.amountOwed || 0), 0);
-      if (Math.abs(totalOwed - totalAmount) > 0.01) {
-        form.setError('participants', { type: 'manual', message: `The sum of owed amounts (${totalOwed.toFixed(2)}) must equal the total expense amount (${totalAmount.toFixed(2)}).` });
+      if (validationError.field === 'participants' && validationError.kind === 'amounts') {
+        form.setError('participants', {
+          type: 'manual',
+          message: `The sum of owed amounts (${validationError.totalOwed.toFixed(2)}) must equal the total expense amount (${validationError.totalAmount.toFixed(2)}).`,
+        });
         return;
       }
-    }
-    if (values.splitType === 'by_percentage') {
-      const totalPercentage = values.participants.filter(p => p.selected).reduce((acc, p) => acc + (p.percentage || 0), 0);
-      if (Math.abs(totalPercentage - 100) > 0.01) {
-        form.setError('participants', { type: 'manual', message: `The sum of percentages (${totalPercentage}%) must equal 100%.` });
+      if (validationError.field === 'participants' && validationError.kind === 'percentage') {
+        form.setError('participants', {
+          type: 'manual',
+          message: `The sum of percentages (${validationError.totalPercentage}%) must equal 100%.`,
+        });
         return;
       }
     }
     // --- End Validation ---
 
     // --- Recalculate final participant data on submit to ensure accuracy ---
-    const selectedParticipantsRaw = values.participants.filter(p => p.selected);
-    const numSelected = selectedParticipantsRaw.length;
-    let finalParticipants: { userId: string, amountOwed: number, share: number }[] = [];
-
-    if (totalAmount > 0 && numSelected > 0) {
-      let amounts: number[];
-
-      if (values.splitType === 'by_shares') {
-        const totalShares = selectedParticipantsRaw.reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
-        amounts = totalShares > 0
-          ? selectedParticipantsRaw.map(p => (totalAmount * (Number(p.shares) || 0)) / totalShares)
-          : Array(numSelected).fill(0);
-      } else if (values.splitType === 'by_percentage') {
-        amounts = selectedParticipantsRaw.map(p => (totalAmount * (Number(p.percentage) || 0)) / 100);
-      } else if (values.splitType === 'unequally') {
-        amounts = selectedParticipantsRaw.map(p => Number(p.amountOwed) || 0);
-      } else { // 'equally'
-        amounts = Array(numSelected).fill(totalAmount / numSelected);
-      }
-
-      // Correct for rounding errors
-      const roundedAmounts = amounts.map(a => parseFloat(a.toFixed(2)));
-      const sumOfRounded = roundedAmounts.reduce((s, a) => s + a, 0);
-      let remainder = parseFloat((totalAmount - sumOfRounded).toFixed(2));
-
-      if (Math.abs(remainder) > 0) {
-        for (let i = 0; i < Math.abs(remainder * 100); i++) {
-          roundedAmounts[i % numSelected] += 0.01 * Math.sign(remainder);
-        }
-      }
-
-      finalParticipants = selectedParticipantsRaw.map((p, i) => ({
-        userId: p.userId,
-        amountOwed: roundedAmounts[i],
-        share: Number(p.shares) || 1
-      }));
-    }
+    const splitResults = calculateSplitAmounts(totalAmount, values.participants, values.splitType);
+    const finalParticipants = splitResults
+      .filter((_, idx) => values.participants[idx].selected)
+      .map((res) => {
+        const p = values.participants.find(part => part.userId === res.userId);
+        return {
+          userId: res.userId,
+          amountOwed: res.amountOwed,
+          share: Number(p?.shares) || 1,
+        };
+      });
 
 
     const payers = values.payerType === 'single' && values.singlePayerId
