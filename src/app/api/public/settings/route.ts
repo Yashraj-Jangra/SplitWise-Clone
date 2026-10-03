@@ -23,6 +23,8 @@ export async function GET() {
             privacyPolicy: settings.privacyPolicy,
             termsAndConditions: settings.termsAndConditions,
             notFoundPage: settings.notFoundPage,
+            minMobileVersion: (settings as any).minMobileVersion || '1.0.0',
+            latestMobileVersion: (settings as any).latestMobileVersion || '1.0.0',
             maintenanceMode: settings.maintenanceMode
                 ? {
                     enabled: settings.maintenanceMode.enabled,

@@ -1,5 +1,173 @@
 # Session Progress & Context Preservation
 
+  - **iOS & Android Mobile Master Architecture & Implementation Plan** 📱 📋 🚀 ✅:
+    - **User Requirement**:
+      - "make a plan with everything how much efforts and time require to make a iOS and android app for this with all features except the admin panel for public use. I want it sleek minimal and modern, smooth animations, less detailed graphs only AI freautes but all major functionality like notifications, expense, settlements, groups etc. run a full scan and what components we can reuse without rewrting whole code"
+    - **Full Codebase Audit & Scan Completed**:
+      - Scanned ~36,500 lines across 240+ files in the repository.
+      - Identified ~12,000 lines of backend REST APIs (56 routes), services (11 files), AI/RAG engine (10 files), and domain math that are 100% reusable without rewriting.
+      - Classified admin panel (~6,050 lines across 25 files) as strictly excluded from the mobile scope.
+      - Cataloged web UI (~18,684 lines across 99 files) for native reimplementation using React Native primitives, NativeWind v4, and Reanimated 3.
+    - **Architecture & Tech Stack Defined**:
+      - Framework: React Native with Expo SDK & Expo Router v4 (monorepo layout under `mobile/` and shared `packages/core/`).
+      - Motion & Interaction: 60/120 FPS Reanimated 3 + Gesture Handler, `@gorhom/bottom-sheet` with spring dampening, and `expo-haptics`.
+      - Minimalist Metrics: Skia-powered Victory Native XL replacing heavy desktop Recharts dashboards with 6-bar monthly velocity micro-charts, segmented category capsule bars, and circular budget pacing rings.
+      - Deep AI Capabilities: Native camera receipt scanner with MiniMax Vision OCR auto-fill, real-time debounced category suggestions, streaming financial assistant with RAG context grounding, and 1-tap in-chat budget auto-balancing proposals.
+      - All Major Features: Full expense splitting (equal, unequal, shares, percentage), multi-payer support, simplified debts, UPI deep linking (`upi://pay`) & high-contrast QR codes, group detail segmented views, push notifications (APNs & FCM via Expo Push), and in-app support ticketing.
+    - **Compliance & Backend Adaptations**:
+      - Detailed 7 additive backend enhancements (Better-Auth Expo plugin, Sign in with Apple per App Store Guideline 4.8, unified push token registration, and self-service account deletion per Guideline 5.1.1(v)).
+    - **Phase 0 Execution Completed & Verified** ✨ 🏗️ 🗄️ ✅:
+      - **Shared Domain Package (`packages/core/`)**:
+        - Created `packages/core/package.json` (`@splitit/core`) and strict standalone `tsconfig.json`.
+        - Extracted pure mathematical & domain engines:
+          - `packages/core/src/split.ts` (`calculateSplitAmounts`, `reconcileToTotal`, `validateSplit`).
+          - `packages/core/src/debts.ts` (`simplifyDebts` greedy debt reducer).
+          - `packages/core/src/categories.ts` (ontology taxonomy, `classifyExpense`, `getMasterCategory`).
+          - `packages/core/src/diffs.ts` (`diffBudgetChanges` audit diff generator).
+          - `packages/core/src/budget.ts` (`computeBudgetBreakdown`, `calculateSmartCategoryReduction`, `validateBudgetDelta`).
+          - `packages/core/src/names.ts` (`getFullName`, `getInitials`).
+          - `packages/core/src/constants.ts` (currencies, symbols, formatting).
+        - Wired `@splitit/core` path aliases across `tsconfig.json` and `vitest.config.ts`.
+        - Refactored web consumers (`expense-form.tsx`, `balance.service.ts`, `api.client.ts`, `budget-history.helper.ts`, `financial-analytics.ts`, `splitting.test.ts`).
+      - **Additive Backend Enhancements**:
+        - `src/lib/auth.server.ts`: Added `splitit://` and `exp://` to `trustedOrigins`, registered Apple in `trustedProviders`, and configured Apple OAuth.
+        - `src/app/api/push/subscribe/route.ts`: Added `{ platform: 'expo', expoPushToken }` support alongside legacy WebPush.
+        - `src/lib/services/dispatch.service.ts`: Implemented native Expo Push API dispatch (`https://exp.host/--/api/v2/push/send`) concurrently with VAPID.
+        - `src/app/api/public/settings/route.ts`: Added `minMobileVersion` and `latestMobileVersion` exposure.
+      - **Zero Regressions Verified**:
+        - `npx tsc --noEmit`: 0 errors.
+        - `npx vitest run`: 79/79 unit tests passed across 8 test suites (including @splitit/core utility tests and mobile backend endpoint tests).
+    - **13-Phase WBS & Estimates Produced**:
+      - Total dev effort estimated at **65 – 88 dev-days** (~13–18 weeks solo + AI, ~8–10 weeks for 2 developers, ~9–11 weeks for fast-track MVP).
+      - Master architecture and implementation plan finalized in [`docs/mobile-app-plan.md`](file:///d:/Projects/SplitWise-Clone/docs/mobile-app-plan.md).
+    - **Mobile Project Scaffolding & Native Auth (Phases 1 & 2) Completed** ✨ 📱 🔐 ✅:
+      - Initialized separate mobile repository `d:\Projects\SplitIt-Mobile` on branch `dev`.
+      - Configured Expo SDK 52 + Expo Router v4 + Gesture Handler + Reanimated 3 + Lucide Icons + Haptics.
+      - Linked `@splitit/core` from `../SplitWise-Clone/packages/core`.
+      - Built and integrated high-end dark-mode 3D illustration (`assets/illustrations/login-hero.jpg`).
+      - Implemented independent native Login (`app/(auth)/login.tsx`) and Signup (`app/(auth)/signup.tsx`) screens:
+        - 1-tap Google OAuth via WebBrowser & Better-Auth session exchange.
+        - Apple Sign In for iOS App Store compliance.
+        - Email/Password authentication with show/hide password toggle.
+        - SecureStore session persistence (`expo-secure-store`).
+        - Automatic NavigationGate redirecting unauthenticated users to login and authenticated users to main tabs.
+      - Implemented core tab screens (Home, Groups, Activity, Profile) and Add Expense modal (`app/expenses/new.tsx`) with live split calculations via `@splitit/core`.
+      - Verified typecheck: `npx tsc --noEmit` 0 errors.
+      - Saved atomic commits on branch `dev` in `SplitIt-Mobile`.
+    - **Phase 3: Group Detail Stack Completed** ✨ 👥 📊 ✅:
+      - Implemented unified Group Detail screen (`app/groups/[id]/index.tsx`) with 4 segmented tabs:
+        - **Expenses**: Search bar, category filter pills, pull-to-refresh, positive/negative impact pills, FAB (+) for adding expenses.
+        - **Balances**: Simplified debts ("Who pays whom") computed via `@splitit/core/debts` (`simplifyDebts`), pairwise standings, and 1-tap "Settle" trigger button.
+        - **Budget**: Minimalist Circular Budget Pacing Ring micro-visualization (`<BudgetPacingRing />`) with safe daily burn allowance (`₹1,050/day (10 days left)`), category progress bars, and AI auto-balancing notice.
+        - **Activity**: Granular audit timeline feed with color-coded budget diff callouts (green "monthly budget unchanged" badge, red/green category adjustments).
+      - Implemented Group Settings screen (`app/groups/[id]/settings.tsx`) for managing group name, members, and archiving.
+      - Connected group cards in `app/(tabs)/groups.tsx` to `/groups/[id]` route.
+      - Zero type errors: `npx tsc --noEmit` passed cleanly.
+    - **Phase 4: Settlements & UPI Integration Completed** ✨ 🤝 ⚡ ✅:
+      - Implemented Settle Up modal screen (`app/settle/new.tsx`):
+        - Debtor / Creditor avatar flow with pre-populated balances.
+        - Flexible amount input supporting partial repayments.
+        - Three payment methods: 1-tap UPI app intent launcher, High-Contrast QR Code, and Offline/Cash recording.
+        - Security disclaimer stating direct P2P routing per App Store Guideline 3.1.5.
+      - Implemented High-Contrast UPI QR modal (`app/settle/qr.tsx`):
+        - Native SVG QR code generated with `react-native-qrcode-svg` on white rounded container against pitch dark backdrop.
+        - Recipient name, amount display, and 1-tap "Copy UPI ID" button with `expo-clipboard` and tactile haptics.
+        - Direct "I Have Paid" confirmation recording payment into the group audit feed.
+      - Implemented UPI utility suite (`src/utils/upi.ts`) formulating standard `upi://pay?pa=...` intents.
+      - Registered modal routes in `app/_layout.tsx` and wired "Settle" buttons in Group Balances tab.
+      - Zero type errors: `npx tsc --noEmit` passed cleanly.
+    - **Phase 5: Deep AI Integration Completed** ✨ 🧠 📷 ✅:
+      - Implemented conversational AI financial assistant modal (`app/ai/chat.tsx`):
+        - Live token streaming via SSE reader (`aiService.streamChat`).
+        - Pre-configured quick financial suggestion prompt pills.
+        - Interactive `BudgetActionCard` with category adjustment delta tags and 1-tap "Approve & Apply" button.
+      - Implemented Camera Receipt Scanner screen (`app/ai/scanner.tsx`):
+        - Live camera viewfinder using modern `CameraView` from `expo-camera`.
+        - Visual framing corner guides, flashlight/torch toggle, and gallery image picker (`expo-image-picker`).
+        - Image pre-processing and compression via `expo-image-manipulator` to 1400px JPEG.
+        - Integration with MiniMax Vision OCR extracting totals, merchant name, category, and date.
+        - 1-tap "Use in Expense" button passing extracted data into Add Expense form.
+      - Integrated AI trigger capsules across Home (`app/(tabs)/index.tsx`), Group Detail (`app/groups/[id]/index.tsx`), and Add Expense (`app/expenses/new.tsx`).
+      - Verified typecheck: `npx tsc --noEmit` 0 errors.
+
+    - **Phase 6: Push Notifications, Customer Support, & Store Compliance Completed** ✨ 🔔 🎧 🛡️ ✅:
+      - **Push Notifications & In-App Center (`app/notifications/`)**:
+        - Implemented `src/services/notification.service.ts` managing Expo push token acquisition, Android notification channels, and backend subscription dispatch (`/api/push/subscribe`).
+        - In-app Notification Center (`app/notifications/index.tsx`) with filter chips (All / Unread), relative timestamps, and 1-tap "Mark all as read".
+        - Notification Preferences screen (`app/notifications/preferences.tsx`) with granular delivery channel toggles (In-App, Push, Email) and event categories (Expenses, Settlements, Budgets, Support).
+        - Push notification response deep-link handler wired into root layout (`app/_layout.tsx`).
+      - **Customer Support System (`app/support/`)**:
+        - Customer Support overview screen (`app/support/index.tsx`) with status badges (Open, In Progress, Resolved).
+        - New Support Ticket submission modal (`app/support/new.tsx`) with category chips (General, Billing, Bug, Feature, Account).
+        - Live Ticket Message discussion thread (`app/support/[id].tsx`) with user/agent chat bubbles and reply input bar.
+      - **Group Creation & Expense Detail Modals**:
+        - New Group creation modal (`app/groups/new.tsx`) with group type pills, currency selector (INR, USD, EUR, GBP), and member invitation pills.
+        - Expense Detail modal (`app/expenses/[id].tsx`) with full split breakdown, delete action, and 1-tap "Settle Your Share" action.
+      - **App Store & Google Play Store Legal Compliance (`app/legal/`)**:
+        - In-App Privacy Policy (`app/legal/privacy.tsx`) declaring zero-tracking and minimal data usage.
+        - In-App Terms of Service (`app/legal/terms.tsx`) featuring explicit App Store 3.1.5 non-escrow notice.
+        - Self-Service Account Deletion screen (`app/legal/delete-account.tsx`) complying with Apple App Store Guideline 5.1.1(v) requiring "DELETE" typing confirmation and calling `DELETE /api/user/delete-account`.
+      - Verified typecheck: `npx tsc --noEmit` 0 errors.
+      - Atomic commits saved on branch `dev` in `SplitIt-Mobile`: `98f01ac` and `d1c0f51`.
+
+    - **Mobile Dev Server, Metro Watcher & Expo Go SDK 53 Compatibility Fixes** 🐛 📦 🔧 ✅:
+      - **Metro Monorepo Resolution**: Configured `watchFolders = [corePackageRoot]` in `metro.config.js` to seamlessly resolve `@splitit/core` from `../SplitWise-Clone/packages/core`.
+      - **Reanimated & Worklets Dependency**: Installed `react-native-worklets@^0.13.0` required by `react-native-reanimated@4.5.1`.
+      - **Expo Go SDK 53 Android Push Guard**:
+        - Diagnosed fatal unhandled exception: `expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go.`
+        - Static import of `expo-notifications` executed `DevicePushTokenAutoRegistration.fx.js` side-effect on startup, which calls `warnOfExpoGoPushUsage()` and unconditionally throws on Android in Expo Go.
+        - Converted to dynamic guarded module loader `getNotificationsModule()` using `import type * as NotificationsType` and checking `isRunningInExpoGo() && Platform.OS === 'android'`.
+        - Guarded `registerForPushNotifications()` and `setupResponseListener()` to safely no-op in Expo Go without crashing, preserving 100% functionality for EAS/native dev builds.
+        - In-app notification center and preference APIs remain 100% active and functional via REST.
+        - Verified Android bundling (4,142 modules) with code 0.
+        - Verified `npx tsc --noEmit`: 0 errors.
+        - Atomic commits saved on branch `dev` in `SplitIt-Mobile`: `fa8f4aa`, `2ed5f03`, `dba8556`.
+      - **Backend Dev Server & Dynamic LAN API Routing**:
+        - Started Next.js backend server daemon bound to `0.0.0.0:3231` supporting full REST, Oracle DB, AI, and auth flows.
+        - Implemented dynamic API Base URL resolution in `SplitIt-Mobile/src/services/auth.service.ts` using `Constants.expoConfig?.hostUri` to dynamically connect physical phones in Expo Go to the host PC (`http://192.168.1.8:3231`) without manual IP configuration.
+        - Atomic commit saved on branch `dev` in `SplitIt-Mobile`: `0037c72`.
+
+    - **Mobile UI Overhaul & Website Parity Redesign** 🎨 ✨ 📱 ✅:
+      - **User Requirement**:
+        - "the UI themeing nothing is nice. the add expense dialog box make it just like website. groups section make it better too with images. header image in group page just like in website. add most of all looks and features like in website in our app"
+      - **Add Expense Dialog Parity (`app/expenses/new.tsx`)**:
+        - Redesigned to match the website's `expense-form.tsx`:
+        - 56x56 square category selector tile with dynamic Lucide icon and category picker modal.
+        - Dynamic AI auto-categorization chip powered by `@splitit/core` (`classifyExpense`) that detects merchant types from description and lets users 1-tap apply suggestions.
+        - Clamped hero amount input (`text-[36px]` font-bold with currency prefix and zero-decimal handling).
+        - Interactive "Paid by [you] and split [equally]" sentence links opening smooth bottom sheet selection modals.
+        - Horizontal participant avatars with selection rings and multi-selection toggles.
+        - Date picker with calendar modal, notes input, and receipt camera scanner shortcut.
+        - Real-time split calculation breakdown displaying each member's exact calculated share via `@splitit/core`.
+      - **Groups Tab Screen Revamp (`app/(tabs)/groups.tsx`)**:
+        - Added search bar with instant clear action.
+        - Dynamic sort dropdown supporting "Recently active", "Name (A-Z)", "You are owed", and "You owe".
+        - Segmented "Active" and "Archived" toggle pills.
+        - Rich 200px cover image cards with Unsplash curated travel/dining/apartment backdrops and dark multi-layer gradients.
+        - High-contrast net balance status pills (`You're owed ₹...`, `You owe ₹...`, `Settled up`).
+        - Overlapping member avatar circles with `+N` count indicators.
+      - **Group Detail Header Image Parity (`app/groups/[id]/index.tsx`)**:
+        - 175px hero cover image container with dark gradient overlay.
+        - Floating circular dark-glass control buttons (Back, AI Assistant, Settings) with tactile haptics.
+        - Drop-shadow group title and description overlaid on hero banner.
+        - Quick action pills (`+ Add Expense`, `🤝 Settle Up`).
+        - Docked 4-column glass stats ribbon displaying Total Spent, Members count, Your Balance, and Monthly Budget.
+      - **Theme & Type Compatibility (`src/constants/theme.ts`)**:
+        - Added `glassDark`, `glassCard`, `glassBorder`, and `radius.xs`.
+        - Replaced `StyleSheet.absoluteFillObject` with `StyleSheet.absoluteFill` for React Native 0.86 compatibility.
+      - **Typecheck Verified**: `npx tsc --noEmit` exits 0 with 0 errors.
+      - **Backend Data Hydration & Undefined Filter Crash Fix (`group.service.ts`, `app/groups/[id]/index.tsx`)** 🐛 🛡️:
+        - Diagnosed Render Error: `Cannot read property 'filter' of undefined` at `app/groups/[id]/index.tsx:76`.
+        - `getGroupDetails` previously fetched only `/api/groups/[id]` which returns group metadata without embedded expenses, balances, or history.
+        - Updated `getGroupDetails` to fetch `/api/groups/[id]`, `/api/expenses?groupId=[id]`, `/api/groups/[id]/balances`, and `/api/history?groupId=[id]` concurrently via `Promise.allSettled`.
+        - Cleanly mapped expenses, member balances, simplified debts using `@splitit/core` `simplifyDebts`, group budget, and activity history.
+        - Added comprehensive null-safety defaults (`expenses || []`, `members || []`, `simplifiedDebts || []`, `activities || []`, `budget || {...}`) and empty state cards across all 4 group tabs.
+      - **Atomic Commits Saved**: `bceb2f8` and `88575f2` on branch `dev` in `SplitIt-Mobile`.
+
+    - **Next Planned Steps**:
+      - Phase 9: Minimalist Micro-Metrics & Interactive Micro-Visualizations Polish.
+      - Phase 10: Performance Optimization, Offline Hydration via MMKV/TanStack Query, and Native Build Validation.
+
   - **Version Bump to 0.4.1** 📌 🚀 ✅:
     - Bumped application version to `0.4.1` across `package.json`, `package-lock.json`, and `src/lib/version.ts`.
 
@@ -784,10 +952,45 @@
   - **New page**: Created [`src/app/auth/reset-password/page.tsx`](file:///d:/Projects/SplitWise-Clone/src/app/auth/reset-password/page.tsx) + [`reset-password-form.tsx`](file:///d:/Projects/SplitWise-Clone/src/components/auth/reset-password-form.tsx) with token validation, 4-level strength meter, confirm password, Better Auth `resetPassword` integration, success view, and invalid-token error view.
   - **TypeScript**: `npx tsc --noEmit` exits 0 — no type errors.
 
+- **Mobile App Minimalist Redesign & UX Polish (Complete)** 🎨 📱 ⚡:
+  - **User Feedback & Request**: Redesign mobile app from boxed card-heavy "AI generated" look to an ultra-clean, minimal, open-canvas, sleek design inspired by Apple Wallet, Cash App, and Linear.
+  - **Design System Overhaul (`src/constants/theme.ts`)**:
+    - Replaced generic dark grays with OLED pitch black canvas (`#000000`) and subtle dark elevations (`#0A0A0C`, `#141417`, `#1A1A1E`).
+    - Replaced heavy borders with ultralight hairlines (`rgba(255, 255, 255, 0.06)`).
+    - Refined typography scales and luminous emerald/rose accents.
+  - **Home Dashboard (`app/(tabs)/index.tsx`)**:
+    - Replaced boxed balance card with open-canvas hero typography (`+₹14,250`) and secondary net owed pills.
+    - Added tactile quick-action dock (`+ Add Expense`, `🤝 Settle Up`).
+    - Replaced vertical group cards with horizontal active group pebble carousel.
+    - Replaced transaction cards with continuous Apple Wallet style flat ledger list with subtle hairline separators.
+  - **Groups Hub (`app/(tabs)/groups.tsx`)**:
+    - Replaced boxed search card with integrated spotlight search input.
+    - Added horizontal filter pills (`All`, `You are owed`, `You owe`, `Archived`).
+    - Transformed group items into 190px cinematic cards with cover imagery, subtle vignette gradient, and glass balance pill.
+  - **Group Detail Ledger (`app/groups/[id]/index.tsx`)**:
+    - Built seamless hero header with subtle vignette gradient and back navigation.
+    - Borderless 4-stat metric strip (`SPENT`, `MEMBERS`, `YOUR NET`, `BUDGET`).
+    - Minimalist segmented sliding pill tab bar (`Expenses`, `Balances`, `Budget`, `Activity`).
+  - **Add Expense Fluid Entry (`app/expenses/new.tsx`)**:
+    - Replaced standard form inputs with Cash App / Revolut inspired centered amount input (`₹44px font`).
+    - Added conversational sentence dock: *"Paid by [You] and split [Equally]"*.
+    - Replaced checkboxes with tactile member avatar rings with inclusion checkmarks.
+    - Added floating category modal with search and `@splitit/core` live auto-categorization.
+  - **Activity Feed (`app/(tabs)/activity.tsx`)**:
+    - Date-grouped timeline stream (`Today`, `Yesterday`, `Earlier this week`) with flat open list items.
+  - **Profile Screen (`app/(tabs)/profile.tsx`)**:
+    - Open user hero with initials avatar, grouped settings rows with chevron indicators, and sleek logout action.
+  - **Settle Up Modal (`app/settle/new.tsx`)**:
+    - Clean P2P debtor-creditor transfer cards, large amount entry, and payment method selector.
+  - **Typecheck & Quality**:
+    - `npx tsc --noEmit` exits 0 with zero errors in both repositories.
+    - Local atomic commit saved on `dev` branch in `SplitIt-Mobile`.
+
 ## Next Steps
 - Run `npx tsx scripts/backfill-embeddings.ts` to vectorize historical expenses and settlements in Oracle DB.
 - Test end-to-end password reset flow with a real email: `/auth/forgot-password` → email → `/auth/reset-password?token=...` → submit → redirect to login.
 - Verify expense/settlement/budget notifications fire correctly end-to-end (in-app + push + email).
 - Set up monthly cron job on VPS to call `/api/reminders/trigger` for monthly summaries and inactivity checks.
 - Production deployment to Oracle Cloud Infrastructure (OCI).
+
 

@@ -169,7 +169,10 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
       },
     };
 
-    const pushPromises = subscriptions.map((sub: any) =>
+    const webSubscriptions = subscriptions.filter((s: any) => s.platform !== 'expo' && s.endpoint);
+    const expoSubscriptions = subscriptions.filter((s: any) => (s.platform === 'expo' || s.expoPushToken) && s.expoPushToken);
+
+    const pushPromises: Promise<any>[] = webSubscriptions.map((sub: any) =>
       sendVapidPush(
         { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
         pushPayload,
@@ -177,6 +180,35 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
         console.error(`Failed push to sub ${sub.id}:`, err);
       })
     );
+
+    if (expoSubscriptions.length > 0) {
+      const expoMessages = expoSubscriptions.map((sub: any) => ({
+        to: sub.expoPushToken,
+        title,
+        body: notifBody,
+        sound: 'default',
+        badge: 1,
+        data: pushPayload.data,
+      }));
+
+      const expoHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      if (process.env.EXPO_ACCESS_TOKEN) {
+        expoHeaders['Authorization'] = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
+      }
+
+      pushPromises.push(
+        fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: expoHeaders,
+          body: JSON.stringify(expoMessages),
+        }).catch((err) => {
+          console.error('Failed sending Expo push notifications:', err);
+        })
+      );
+    }
 
     Promise.allSettled(pushPromises);
   }

@@ -10,15 +10,37 @@ export async function POST(request: Request) {
     }
     const userId = session.user.id;
 
-    const { deviceId, endpoint, p256dh, auth: authSecret, deviceName } = await request.json();
+    const body = await request.json();
+    const { platform = 'webpush', deviceId, endpoint, p256dh, auth: authSecret, expoPushToken, deviceName } = body;
 
-    if (!deviceId || !endpoint || !p256dh || !authSecret) {
-      return NextResponse.json({ error: 'Missing required subscription parameters.' }, { status: 400 });
+    if (!deviceId) {
+      return NextResponse.json({ error: 'deviceId is required' }, { status: 400 });
+    }
+
+    if (platform === 'expo') {
+      if (!expoPushToken) {
+        return NextResponse.json({ error: 'expoPushToken is required for expo platform.' }, { status: 400 });
+      }
+      const subData = {
+        deviceId,
+        userId,
+        platform: 'expo',
+        expoPushToken,
+        deviceName: deviceName || 'Mobile Device',
+        lastSeen: new Date().toISOString(),
+      };
+      await putItem(`USER#${userId}`, `PUSH_SUB#${deviceId}`, 'PUSH_SUB', subData, `DEVICE#${deviceId}`, 'PUSH_SUB');
+      return NextResponse.json({ success: true });
+    }
+
+    if (!endpoint || !p256dh || !authSecret) {
+      return NextResponse.json({ error: 'Missing required subscription parameters for web push.' }, { status: 400 });
     }
 
     const subData = {
       deviceId,
       userId,
+      platform: 'webpush',
       endpoint,
       p256dh,
       auth: authSecret,

@@ -11,10 +11,16 @@ export const auth = betterAuth({
   plugins: [
     admin(),
   ],
+  trustedOrigins: [
+    'splitit://',
+    'exp://',
+    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231',
+    process.env.BETTER_AUTH_URL || 'http://localhost:3231',
+  ].filter(Boolean),
   account: {
     accountLinking: {
       enabled: true,
-      trustedProviders: ["google"],
+      trustedProviders: ["google", "apple"],
       // Allow creating a new linked Google account for existing email/password users.
       // Without this, old migrated users signing in with Google get `account_not_linked`.
       allowNewAccountCreation: true,
@@ -157,6 +163,14 @@ export const auth = betterAuth({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
+    ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+      ? {
+          apple: {
+            clientId: process.env.APPLE_CLIENT_ID,
+            clientSecret: process.env.APPLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
