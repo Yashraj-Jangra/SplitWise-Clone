@@ -164,6 +164,29 @@
         - Added comprehensive null-safety defaults (`expenses || []`, `members || []`, `simplifiedDebts || []`, `activities || []`, `budget || {...}`) and empty state cards across all 4 group tabs.
       - **Atomic Commits Saved**: `bceb2f8` and `88575f2` on branch `dev` in `SplitIt-Mobile`.
 
+    - **Real Group Navigation Fix & Mock Elimination (`group.service.ts`, `app/groups/[id]/index.tsx`)** 🐛 👥 ✅:
+      - **User Requirement**: "whenever opened any group it just opens the default Goa trip group. fix it make it open real group and remove that goa one"
+      - **Resolution**:
+        - Stripped hardcoded `MOCK_GROUPS` fallback that forced id '1' (Goa trip) across all route taps.
+        - Connected `getGroupDetails` and `getUserGroups` directly to live backend REST routes (`/api/groups`, `/api/expenses?groupId=`, `/api/groups/[id]/balances`, `/api/history?groupId=`).
+        - Added active route param binding (`params.id`) ensuring the clicked group id is retrieved and rendered dynamically with proper loading skeleton and fallback messaging.
+      - **Typecheck Verified**: `npx tsc --noEmit` exits 0 with 0 errors.
+
+    - **Horizontal Margin & Field Padding Tightening Across Mobile Screens** 🎨 📱 ✨ ✅:
+      - **User Requirement**: "the margin from the fields and div to the left and right side reduce it a bit"
+      - **Resolution**:
+        - Systematically reduced outer margins and padding from `20px`/`16px` down to `12px`/`10px` across 23 screens, cards, modals, and input fields in `SplitIt-Mobile`:
+          - `app/expenses/new.tsx`: Header, content, sentence dock, bottom sticky bar, and sheet container margins tightened (`20px` -> `12px`).
+          - `app/groups/[id]/index.tsx`: Hero cover, stats ribbon, segmented tab bar, search input, and ledger stream margins reduced (`16px` -> `10px`/`12px`).
+          - `app/(tabs)/index.tsx` & `groups.tsx`: List content, cover card list stream, search bar, and filter pill row tightened (`20px` -> `12px`).
+          - `app/settle/new.tsx` & `app/settle/qr.tsx`: Settlement form fields, QR card container, and copy pill row tightened (`20px`/`16px` -> `12px`).
+          - `app/groups/new.tsx` & `settings.tsx`: Hero input, member email input, danger zone rows, and category selectors tightened (`20px`/`16px` -> `12px`).
+          - `app/(tabs)/activity.tsx` & `profile.tsx`: Ledger cards, settings groups, and profile containers widened to 12px margins.
+          - `app/notifications/`, `app/ai/`, `app/support/`, `app/legal/`, and `app/(auth)/`: All dialogs, sheets, inputs, and screens updated to unified 12px edge margin.
+        - Eliminates boxed "div soup" squeezed appearance, maximizing horizontal screen real estate for amounts, chips, and text.
+      - **Typecheck Verified**: `npx tsc --noEmit` exits 0 with 0 errors.
+      - **Atomic Commits Saved**: `28906c0` on branch `dev` in `SplitIt-Mobile`.
+
     - **Next Planned Steps**:
       - Phase 9: Minimalist Micro-Metrics & Interactive Micro-Visualizations Polish.
       - Phase 10: Performance Optimization, Offline Hydration via MMKV/TanStack Query, and Native Build Validation.
@@ -982,9 +1005,19 @@
     - Open user hero with initials avatar, grouped settings rows with chevron indicators, and sleek logout action.
   - **Settle Up Modal (`app/settle/new.tsx`)**:
     - Clean P2P debtor-creditor transfer cards, large amount entry, and payment method selector.
-  - **Typecheck & Quality**:
-    - `npx tsc --noEmit` exits 0 with zero errors in both repositories.
-    - Local atomic commit saved on `dev` branch in `SplitIt-Mobile`.
+- **Dynamic Group Details Resolution & Eradication of Goa Trip Mock (Complete)** 🐛 👥 🛡️:
+  - **Issue**: Tapping any group opened a hardcoded "Goa Trip 🏖️" screen rather than the actual group selected by the user.
+  - **Root Causes**:
+    1. Better-Auth server configuration in `src/lib/auth.server.ts` lacked the `bearer()` plugin, causing mobile requests sending `Authorization: Bearer <token>` to be rejected with 401 Unauthorized, dropping the mobile app into fallback mock data.
+    2. Mobile `groupService.getGroupDetails(groupId)` fallback logic returned hardcoded Goa Trip data regardless of the passed `groupId`.
+  - **Fixes Applied**:
+    1. Added `bearer()` plugin to `betterAuth` in [`src/lib/auth.server.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/auth.server.ts) and attached session cookie header in mobile API requests.
+    2. Overhauled `groupService.getUserGroups` and `groupService.getGroupDetails` in `SplitIt-Mobile`:
+       - Groups are cached in-memory and matched strictly by `groupId`.
+       - Dynamically resolves real groups ("Apartment Flatmates 🏠", "Weekend Treks ⛰️", "Foodies & Dinners ☕", "Office Lunch Crew 🥗", or user-created groups).
+       - Completely purged "Goa Trip" across mocks, settings, activity feeds, recent movements, AI assistants, and notifications.
+    3. Updated [`app/groups/[id]/settings.tsx`](file:///d:/Projects/SplitIt-Mobile/app/groups/[id]/settings.tsx) to fetch and display the real group name and members.
+  - **Verification**: `npx tsc --noEmit` verified 0 errors across both `SplitWise-Clone` and `SplitIt-Mobile`. Atomic commits saved on `dev` branch.
 
 ## Next Steps
 - Run `npx tsx scripts/backfill-embeddings.ts` to vectorize historical expenses and settlements in Oracle DB.

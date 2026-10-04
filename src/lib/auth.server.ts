@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth';
-import { admin } from 'better-auth/plugins';
+import { admin, bearer } from 'better-auth/plugins';
 import { nosqlAuthAdapter } from './nosql-auth-adapter';
 import { getSiteSettings } from './services/settings.service';
 import nodemailer from 'nodemailer';
@@ -10,6 +10,7 @@ export const auth = betterAuth({
   database: nosqlAuthAdapter(),
   plugins: [
     admin(),
+    bearer(),
   ],
   trustedOrigins: [
     'splitit://',
