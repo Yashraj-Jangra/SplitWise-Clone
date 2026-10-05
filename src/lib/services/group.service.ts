@@ -3,7 +3,7 @@ import type { Group, GroupDocument, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifyMemberAdded, notifyMemberRemoved } from '@/lib/notification-service';
-import { getFullName } from '../utils';
+import { getFullName } from '@splitit/core';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { deleteVectorsByGroup } from '@/lib/ai/vector-store';
 import { diffBudgetChanges } from './budget-history.helper';
@@ -300,6 +300,3 @@ export async function verifyGroupMembership(groupId: string, userId: string): Pr
   const memberIds = (groupDoc.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
   return memberIds.includes(userId);
 }
-
-// Circular imports helper (resolved at runtime)
-import { getGroupBalances } from './balance.service';

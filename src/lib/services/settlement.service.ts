@@ -3,7 +3,7 @@ import type { Settlement, SettlementDocument, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifySettlementAdded } from '@/lib/notification-service';
-import { getFullName } from '../utils';
+import { getFullName } from '@splitit/core';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { getGroupsByUserId } from './group.service';
 

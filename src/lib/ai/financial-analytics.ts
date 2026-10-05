@@ -1,6 +1,6 @@
 import { getGroupById } from '@/lib/services/group.service';
 import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
-import { getFullName } from '@/lib/utils';
+import { getFullName } from '@splitit/core';
 import { defaultExpenseCategories } from '@/lib/expense-categories';
 import type {
   SpendingTrendResult,

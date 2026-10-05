@@ -5,7 +5,7 @@ import { logHistoryEvent } from './history.service';
 import { notifyExpenseAdded, notifyExpenseUpdated, notifyExpenseDeleted, notifyBudgetAlert } from '@/lib/notification-service';
 import { getSiteSettings } from './settings.service';
 import { getMasterCategory } from '../expense-categories';
-import { getFullName } from '../utils';
+import { getFullName } from '@splitit/core';
 import { format } from 'date-fns';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { getGroupsByUserId } from './group.service';

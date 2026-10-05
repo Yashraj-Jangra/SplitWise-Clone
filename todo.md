@@ -997,33 +997,45 @@
   - **Add Expense Fluid Entry (`app/expenses/new.tsx`)**:
     - Replaced standard form inputs with Cash App / Revolut inspired centered amount input (`₹44px font`).
     - Added conversational sentence dock: *"Paid by [You] and split [Equally]"*.
-    - Replaced checkboxes with tactile member avatar rings with inclusion checkmarks.
-    - Added floating category modal with search and `@splitit/core` live auto-categorization.
-  - **Activity Feed (`app/(tabs)/activity.tsx`)**:
-    - Date-grouped timeline stream (`Today`, `Yesterday`, `Earlier this week`) with flat open list items.
-  - **Profile Screen (`app/(tabs)/profile.tsx`)**:
-    - Open user hero with initials avatar, grouped settings rows with chevron indicators, and sleek logout action.
-  - **Settle Up Modal (`app/settle/new.tsx`)**:
-    - Clean P2P debtor-creditor transfer cards, large amount entry, and payment method selector.
-- **Dynamic Group Details Resolution & Eradication of Goa Trip Mock (Complete)** 🐛 👥 🛡️:
-  - **Issue**: Tapping any group opened a hardcoded "Goa Trip 🏖️" screen rather than the actual group selected by the user.
-  - **Root Causes**:
-    1. Better-Auth server configuration in `src/lib/auth.server.ts` lacked the `bearer()` plugin, causing mobile requests sending `Authorization: Bearer <token>` to be rejected with 401 Unauthorized, dropping the mobile app into fallback mock data.
-    2. Mobile `groupService.getGroupDetails(groupId)` fallback logic returned hardcoded Goa Trip data regardless of the passed `groupId`.
-  - **Fixes Applied**:
-    1. Added `bearer()` plugin to `betterAuth` in [`src/lib/auth.server.ts`](file:///d:/Projects/SplitWise-Clone/src/lib/auth.server.ts) and attached session cookie header in mobile API requests.
-    2. Overhauled `groupService.getUserGroups` and `groupService.getGroupDetails` in `SplitIt-Mobile`:
-       - Groups are cached in-memory and matched strictly by `groupId`.
-       - Dynamically resolves real groups ("Apartment Flatmates 🏠", "Weekend Treks ⛰️", "Foodies & Dinners ☕", "Office Lunch Crew 🥗", or user-created groups).
-       - Completely purged "Goa Trip" across mocks, settings, activity feeds, recent movements, AI assistants, and notifications.
-    3. Updated [`app/groups/[id]/settings.tsx`](file:///d:/Projects/SplitIt-Mobile/app/groups/[id]/settings.tsx) to fetch and display the real group name and members.
-  - **Verification**: `npx tsc --noEmit` verified 0 errors across both `SplitWise-Clone` and `SplitIt-Mobile`. Atomic commits saved on `dev` branch.
+    - Replace- **Complete Resolution of Data Hydration, 500 Route Failures, and Mobile Live Feeds** 🐛 ⚡ 📱 ✅:
+  - **Issue Reported**: Records and data were not showing up on mobile; screens showed empty lists or dropped into static fallbacks.
+  - **Root Cause Analysis & Backend Resolution**:
+    1. **Circular Import Webpack Failure**: `group.service.ts` had an unused circular import (`import { getGroupBalances } from './balance.service'`). In Next.js App Router this broke runtime evaluation (`__webpack_modules__[moduleId] is not a function`).
+    2. **Tailwind-Merge Leaking into Server Runtime**: `group.service.ts`, `expense.service.ts`, `settlement.service.ts`, `budget-utils.ts`, and AI modules imported `getFullName` from `@/lib/utils` or `../utils`, which statically required `tailwind-merge`. In server workers, this triggered `Cannot find module './vendor-chunks/tailwind-merge.js'`. Moved `getFullName` to `@splitit/core` and updated all backend imports.
+    3. **Better-Auth Server External Package**: Added `'better-auth'` to `serverExternalPackages` in [`next.config.ts`](file:///d:/Projects/SplitWise-Clone/next.config.ts), stopping Webpack from failing to split it into missing `./vendor-chunks/better-auth.js`.
+    4. **Middleware Bearer Auth Recognition**: [`src/middleware.ts`](file:///d:/Projects/SplitWise-Clone/src/middleware.ts) was redirecting requests without cookies to `/auth/login` HTML. Updated it to recognize `Authorization: Bearer <token>` and return 401 JSON for `/api/*`.
+    5. **Verified Backend Endpoints**: All endpoints (`GET /api/groups`, `GET /api/groups/[id]`, `GET /api/expenses`, `GET /api/groups/[id]/balances`, `GET /api/history`) verified returning HTTP 200 with real records.
+  - **Mobile Architecture & Live Screen Integration (`SplitIt-Mobile`)**:
+    1. **`src/services/group.service.ts`**: Fixed `getUserGroups` to accept empty or populated arrays from the backend without requiring `data.length > 0` before returning, eliminating fallback drops.
+    2. **`src/services/expense.service.ts`**: Created dedicated service implementing `getUserExpenses`, `createExpense`, and `deleteExpense` communicating directly with `/api/expenses`.
+    3. **Dashboard (`app/(tabs)/index.tsx`)**: Replaced static mock ledger (`tx_1, tx_2, tx_3`) with live user expenses from `expenseService.getUserExpenses()`. Dynamically computes net balances, total owed, and total owe from active groups.
+    4. **Activity Stream (`app/(tabs)/activity.tsx`)**: Replaced hardcoded static activity list with dynamic feed hooked to live user expenses and pull-to-refresh.
+    5. **Add Expense Modal (`app/expenses/new.tsx`)**: Replaced dummy `setTimeout` in `handleSave` with real API calls to `expenseService.createExpense`. Dynamically loads active user groups and member participants.
+    6. **Group Detail Screen (`app/groups/[id]/index.tsx`)**: Added `RefreshControl` pull-to-refresh and passed `groupId` to Add Expense modal so expenses are properly recorded to the selected group.
+  - **Group Detail Search & Filter Modernization (`SplitIt-Mobile`)** 🎨 🔍 ✅:
+    - **Header Search Integration**: Added sleek circular glass Search button (`<Search size={17} color="#FFFFFF" />`) to the hero top bar in [`app/groups/[id]/index.tsx`](file:///d:/Projects/SplitIt-Mobile/app/groups/%5Bid%5D/index.tsx) alongside AI Assistant and Settings buttons.
+    - **Removed Body Filters & Inline Search**: Removed the inline search box and completely removed category filter pills (`All`, `Food & Drink`, `Transport`, `Groceries`) from the expenses tab body, creating an open, uncluttered ledger stream starting directly below the segmented tab bar.
+    - **Dedicated Search Screen (`app/groups/[id]/search.tsx`)**: Created dedicated, fast search screen featuring an autofocused search bar, live query filtering across expense title, payer name, category, and amount, group context indicators, and Apple Wallet style ledger results.
+    - **Stack Route Registration**: Configured `groups/[id]/search` in [`app/_layout.tsx`](file:///d:/Projects/SplitIt-Mobile/app/_layout.tsx) with seamless fade animation.
+  - **Mobile Branding & Asset Synchronization (`SplitIt-Mobile`)** 🎨 🏷️ ✅:
+    - **Logo & App Icon Assets**: Copied official 1024x1024, 512x512, and 192x192 Quantum/SplitIt logo assets from [`SplitWise-Clone/public/icons`](file:///d:/Projects/SplitWise-Clone/public/icons) into `SplitIt-Mobile/assets/brand/`, updating `icon.png`, `splash-icon.png`, and `android-icon-foreground.png`.
+    - **Vector QuantumLogo & GoogleLogo Components**: Created [`QuantumLogo.tsx`](file:///d:/Projects/SplitIt-Mobile/src/components/brand/QuantumLogo.tsx) (exact vector arcs and atomic circles) and [`GoogleLogo.tsx`](file:///d:/Projects/SplitIt-Mobile/src/components/brand/GoogleLogo.tsx) (authentic 4-color Google G icon).
+    - **Auth Screen Branding (`login.tsx` & `signup.tsx`)**: Replaced generic 3D illustrations with the website's official landing backdrop image, centered glowing brand logo badges, matching titles ("Welcome" / "Create Account"), subtitles ("Sign in to access your expenses & balances" / "Join SplitIt to split bills effortlessly"), and authentic "Continue with Google" buttons.
+    - **App-Wide Branding**: Added the official SplitIt brand mark and title to the `HomeScreen` header ([`app/(tabs)/index.tsx`](file:///d:/Projects/SplitIt-Mobile/app/%28tabs%29/index.tsx)) and added a branded version footer to `ProfileScreen` ([`app/(tabs)/profile.tsx`](file:///d:/Projects/SplitIt-Mobile/app/%28tabs%29/profile.tsx)).
+    - **Group Cover Images**: Aligned fallback group cover image across [`group.service.ts`](file:///d:/Projects/SplitIt-Mobile/src/services/group.service.ts), [`groups.tsx`](file:///d:/Projects/SplitIt-Mobile/app/%28tabs%29/groups.tsx), and [`groups/[id]/index.tsx`](file:///d:/Projects/SplitIt-Mobile/app/groups/%5Bid%5D/index.tsx) with the website's `FALLBACK_GROUP_COVER_IMAGES`.
+    - **Verification**: `npx tsc --noEmit` passed with 0 errors across both repositories.
 
 ## Next Steps
 - Run `npx tsx scripts/backfill-embeddings.ts` to vectorize historical expenses and settlements in Oracle DB.
 - Test end-to-end password reset flow with a real email: `/auth/forgot-password` → email → `/auth/reset-password?token=...` → submit → redirect to login.
 - Verify expense/settlement/budget notifications fire correctly end-to-end (in-app + push + email).
 - Set up monthly cron job on VPS to call `/api/reminders/trigger` for monthly summaries and inactivity checks.
+## Next Steps
+- Run `npx tsx scripts/backfill-embeddings.ts` to vectorize historical expenses and settlements in Oracle DB.
+- Test end-to-end password reset flow with a real email: `/auth/forgot-password` → email → `/auth/reset-password?token=...` → submit → redirect to login.
+- Verify expense/settlement/budget notifications fire correctly end-to-end (in-app + push + email).
+- Set up monthly cron job on VPS to call `/api/reminders/trigger` for monthly summaries and inactivity checks.
 - Production deployment to Oracle Cloud Infrastructure (OCI).
+
 
 

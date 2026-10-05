@@ -1,6 +1,6 @@
 import type { Group, Expense, GroupBudget } from '@/types';
 import { CURRENCY_SYMBOL } from './constants';
-import { getFullName } from './utils';
+import { getFullName } from '@splitit/core';
 
 export type BudgetStatus = 'healthy' | 'caution' | 'warning' | 'overbudget' | 'no_budget';
 
