@@ -1047,6 +1047,30 @@
          - `npx tsc --noEmit` passed with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`.
          - `npx vitest run` passed 79/79 unit tests across 8 test suites.
 
+  - **Expense Info Screen Redesign & Audit Log Parser Modernization (`SplitIt-Mobile`)** 🎨 🧾 🌳 💬 ✅:
+    - **User Requirement**:
+      - "make the expense info page something like this, just design reference not exactly but theming, simple sleek and focused and detailed, below goes all the records like modified on this date etc like logs, check the website and add all necessary things like the edit button, parser for logs etc, make sure nothing is left"
+    - **Design Reference Implementation (`app/expenses/[id].tsx`)**:
+      - **Header Band & Overlapping Emblem**: Sage/dark accent top band (`#26332C`) with back navigation, action buttons (`Camera/Receipt`, `Trash/Delete`, `Pencil/Edit`), and prominent circular category badge overlapping the canvas seam (`#F3F4F6` emblem with dynamic category icon).
+      - **Hero Typography & Metadata**: Large title, hero amount (`₹450.00`), subtitle (`Added by Bhuvansh K. on 3 Mar 2026`), and optional notes box.
+      - **Connected Payer & Split Tree**: Implemented tree-branch visual layout:
+        - Payer circular avatar with `MOHIT Y. paid ₹450.00`.
+        - Continuous vertical trunk line with horizontal branch connectors:
+          - `├── You owe ₹150.00`
+          - `├── MOHIT Y. owes ₹150.00`
+          - `└── Bhuvansh K. owes ₹150.00`
+      - **Activity & History Records / Log Parser**:
+        - Integrated `parseComplexChange` in `@splitit/core/history` parsing diffs from `GET /api/history?groupId=...&expenseId=...`.
+        - Visualized changes: strike-through red `from` -> green `to`, `Added` with user-plus icon, `Removed` with user-minus icon.
+        - Color-coded badges for `Created` (emerald), `Updated` (sky blue), `Comment` (blue), `Deleted` (rose), `Restored` (purple).
+      - **Bottom Comment Dock**: Floating dark pill input bar (`#1C1C20`) with text input, send icon (`Send`), in-memory session persistence, and tactile haptic feedback.
+      - **Edit Expense Modal**: Pencil icon opens full edit modal (title, amount, category pills, notes) wired to `expenseService.updateExpense` calling `PUT /api/expenses/[id]`.
+      - **Receipt Modal**: Camera icon opens full-screen receipt preview or enables attaching image from gallery via `expo-image-picker`.
+    - **Shared Core & Backend Endpoints**:
+      - Extracted `parseComplexChange` into canonical `@splitit/core/history.ts`.
+      - Implemented `getExpenseById` in backend `src/lib/services/expense.service.ts` and added `GET` handler to `src/app/api/expenses/[id]/route.ts`.
+      - Added 3 unit tests for `parseComplexChange` in `src/__tests__/core-utils.test.ts` (82/82 tests passing).
+
 ## Next Steps
 - Run `npx tsx scripts/backfill-embeddings.ts` to vectorize historical expenses and settlements in Oracle DB.
 - Test end-to-end password reset flow with a real email: `/auth/forgot-password` → email → `/auth/reset-password?token=...` → submit → redirect to login.

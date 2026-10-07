@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getFullName, getInitials, classifyExpense, getMasterCategory, defaultExpenseCategories } from '@splitit/core';
+import { getFullName, getInitials, classifyExpense, getMasterCategory, defaultExpenseCategories, parseComplexChange } from '@splitit/core';
 
 describe('@splitit/core utility functions', () => {
   describe('Name utilities', () => {
@@ -54,6 +54,44 @@ describe('@splitit/core utility functions', () => {
       expect(getMasterCategory('Rent', defaultExpenseCategories)).toBe('Housing');
       expect(getMasterCategory('Electricity', defaultExpenseCategories)).toBe('Utilities');
       expect(getMasterCategory('NonExistentSub', defaultExpenseCategories)).toBe('Uncategorized');
+    });
+  });
+
+  describe('History log parsing', () => {
+    it('parses changed share/payment accurately', () => {
+      const res = parseComplexChange("changed Rohit's share from ₹200 to ₹150");
+      expect(res).toHaveLength(1);
+      expect(res[0]).toEqual({
+        type: 'changed',
+        name: 'Rohit',
+        from: '₹200',
+        to: '₹150',
+      });
+    });
+
+    it('parses added participant and payment accurately', () => {
+      const res = parseComplexChange("added Priya who paid ₹450; added Aman to split (owes ₹150)");
+      expect(res).toHaveLength(2);
+      expect(res[0]).toEqual({
+        type: 'added',
+        name: 'Priya',
+        detail: 'paid ₹450',
+      });
+      expect(res[1]).toEqual({
+        type: 'added',
+        name: 'Aman',
+        detail: 'owes ₹150',
+      });
+    });
+
+    it('parses removed participant accurately', () => {
+      const res = parseComplexChange("removed Sneha from split (was owing ₹150)");
+      expect(res).toHaveLength(1);
+      expect(res[0]).toEqual({
+        type: 'removed',
+        name: 'Sneha',
+        detail: 'was owing ₹150',
+      });
     });
   });
 });

@@ -5,3 +5,4 @@ export * from './debts';
 export * from './categories';
 export * from './diffs';
 export * from './budget';
+export * from './history';

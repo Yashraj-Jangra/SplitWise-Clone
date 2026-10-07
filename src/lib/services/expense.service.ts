@@ -310,6 +310,39 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   queueVectorEmbedding(expenseId, groupId, 'expense', 'delete');
 }
 
+export async function getExpenseById(expenseId: string, groupId: string): Promise<Expense | null> {
+  const r = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
+  if (!r) return null;
+
+  const userIds = new Set<string>();
+  if (r.expenseCreatorId) userIds.add(r.expenseCreatorId);
+  (r.payers || []).forEach((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    if (uid) userIds.add(uid);
+  });
+  (r.participants || []).forEach((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    if (uid) userIds.add(uid);
+  });
+
+  const users = await hydrateUsers(Array.from(userIds));
+  const userMap = new Map(users.map(u => [u.uid, u]));
+
+  const creator = userMap.get(r.expenseCreatorId) || getFallbackUser(r.expenseCreatorId);
+  const payers = (r.payers || []).map((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    const u = userMap.get(uid) || getFallbackUser(uid);
+    return { amount: p.amount || 0, user: u } as ExpensePayer;
+  });
+  const participants = (r.participants || []).map((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    const u = userMap.get(uid) || getFallbackUser(uid);
+    return { amountOwed: p.amountOwed || 0, share: p.share || undefined, user: u } as ExpenseParticipant;
+  });
+
+  return mapExpenseRow(r, payers, participants, creator);
+}
+
 export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
   const items = await queryByPk<any>(`GROUP#${groupId}`);
   const expenseDocs = items.filter(i => i.id && i.description && i.amount !== undefined);
