@@ -1,4 +1,4 @@
-import { getItem, putItem, queryByPk, queryByEntityType, deleteItem } from '@/lib/nosql';
+import { getItem, getItemBySk, putItem, queryByPk, queryByEntityType, deleteItem } from '@/lib/nosql';
 import type { Expense, ExpenseDocument, UserProfile, ExpensePayer, ExpenseParticipant } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
@@ -310,8 +310,14 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   queueVectorEmbedding(expenseId, groupId, 'expense', 'delete');
 }
 
-export async function getExpenseById(expenseId: string, groupId: string): Promise<Expense | null> {
-  const r = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
+export async function getExpenseById(expenseId: string, groupId?: string): Promise<Expense | null> {
+  let r: any = null;
+  if (groupId) {
+    r = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
+  }
+  if (!r) {
+    r = await getItemBySk<any>(`EXPENSE#${expenseId}`);
+  }
   if (!r) return null;
 
   const userIds = new Set<string>();
@@ -397,7 +403,8 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
     .filter(e => {
       const isPayer = e.payers.some(p => p.user.uid === userId);
       const isParticipant = e.participants.some(p => p.user.uid === userId);
-      return isPayer || isParticipant;
+      const isCreator = e.expenseCreator?.uid === userId;
+      return isPayer || isParticipant || isCreator;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

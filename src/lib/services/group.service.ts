@@ -83,6 +83,7 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
 export async function getGroupsByUserId(userId: string): Promise<Group[]> {
   const allGroups = await queryByEntityType<any>('GROUP');
   const userGroups = allGroups.filter((g: any) => {
+    if (g.createdById === userId) return true;
     if (!g.members) return false;
     return g.members.some((m: any) => (typeof m === 'string' ? m : m.userId) === userId);
   });
