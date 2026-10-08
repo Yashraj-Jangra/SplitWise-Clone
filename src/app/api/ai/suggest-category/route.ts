@@ -49,7 +49,7 @@ INSTRUCTIONS:
 1. Select the most accurate sub-category from the approved list above.
 2. Select its corresponding master category.
 3. Determine confidence as 'high', 'medium', or 'low'.
-4. If ambiguous (e.g. "Payment", "Stuff"), choose sub-category "Other" under "Miscellaneous".
+4. If ambiguous (e.g. "Payment", "Stuff"), choose sub-category "Other" under "Uncategorized".
 5. Return ONLY a JSON object with this exact schema:
 {
   "category": "<Exact Sub-Category Name>",
@@ -97,7 +97,7 @@ INSTRUCTIONS:
         masterCategory = CATEGORY_MAP[matchedKey];
       } else {
         subCategory = 'Other';
-        masterCategory = 'Miscellaneous';
+        masterCategory = 'Uncategorized';
       }
     }
 

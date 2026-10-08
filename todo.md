@@ -1,5 +1,29 @@
 # Session Progress & Context Preservation
 
+  - **Category Hierarchy, Dynamic Settings & Master Category Cross-Platform Parity Completed** ✨ 🌐 📱 ✅:
+    - **User Requirement**:
+      - "match the categories and master caterogy structure of website to mobile app / both should be cross compatible / check how the website featches and matches categories and make it same"
+    - **Canonical Category System & Wire Format Parity**:
+      - Website canonical structure: 12 Master Categories (`Food and Drink`, `Transportation`, `Housing`, `Utilities`, `Entertainment`, `Shopping`, `Health and Wellness`, `Personal Care`, `Education`, `Gifts and Donations`, `Travel`, `Uncategorized`) with fallback to `{ master: 'Uncategorized', sub: 'Other' }`.
+      - Wire model parity: Subcategory string stored in `category` (e.g. `'Groceries'`) and parent stored in `masterCategory` (e.g. `'Food and Drink'`).
+      - Added `getCategoryDetails` helper to `@splitit/core` and website `expense-categories.ts` returning both subcategory and master category objects.
+      - Aligned AI category suggestion endpoint fallback from `'Miscellaneous'` to `'Uncategorized'`.
+    - **Mobile Dynamic Settings & Classifier Engine (`d:/Projects/SplitIt-Mobile/src/services/settings.service.ts`)**:
+      - Implemented dynamic settings service matching website's `GET /api/public/settings` endpoint.
+      - Cached settings in memory with 5-minute TTL and offline fallback to `@splitit/core` `defaultExpenseCategories`.
+      - Implemented keyword regex classifier (`classifyExpense`) mirroring website logic (`expenseCategories.map(...)` keyword matching) for auto-categorization as the user types an expense title.
+      - Implemented `getMasterCategory` and `getCategoryDetails` with canonical sub/master resolution.
+    - **Unified Lucide Icon Mapping (`d:/Projects/SplitIt-Mobile/src/utils/category-icons.tsx`)**:
+      - Recreated website Lucide icon registry using `lucide-react-native` with 1:1 parity (`Utensils`, `Car`, `Home`, `Zap`, `Sparkles`, `ShoppingBag`, `HeartPulse`, `Heart`, `GraduationCap`, `Gift`, `Plane`, `Receipt`, etc.).
+      - Created reusable `<CategoryIcon>` component handling subcategory, master category, custom colors, and sizes across all mobile views.
+    - **Service & Screen Alignment Across Mobile App**:
+      - `src/services/expense.service.ts`: Normalized `category` and `masterCategory` in `getUserExpenses`, `getExpenseDetails`, `updateExpense`, and `createExpense` via `settingsService` (defaulting to `'Uncategorized'` / `'Other'`).
+      - `src/services/group.service.ts`: Normalized group expense category mapping to use `settingsService`.
+      - `app/expenses/new.tsx`: Dynamic auto-categorization on title change via `settingsService.classifyExpense`, category picker modal with master category sections and keyword search, and dynamic icons.
+      - `app/expenses/[id].tsx`: Replaced hardcoded edit pills with dynamic categorized master tab selector and `<CategoryIcon>`.
+      - `app/(tabs)/index.tsx`, `app/(tabs)/activity.tsx`, `app/groups/[id]/index.tsx`, `app/groups/[id]/search.tsx`: Replaced static/hardcoded icons with `<CategoryIcon>`.
+    - **Verification**: `npx tsc --noEmit` passed with 0 errors in both `SplitIt-Mobile` and `SplitWise-Clone`. All 82 Vitest tests passed in `SplitWise-Clone`.
+
   - **Expense List Views: Right-Side Amounts & Color Scheme Parity with Website Completed** 🎨 📱 ✨ ✅:
     - **User Requirement**:
       - "the expenses list view / the amounts shown in the right side / make them like in website same format same coloring scheme / covera all edge cases too"

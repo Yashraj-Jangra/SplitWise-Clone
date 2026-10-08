@@ -138,3 +138,26 @@ export function getMasterCategory(
   }
   return 'Uncategorized';
 }
+
+export function getCategoryDetails(
+  subCategoryName: string,
+  categories: Record<string, MasterCategory>
+): { master: string; sub: string; icon: string } {
+  for (const masterCategoryName in (categories || {})) {
+    const masterCategory = categories[masterCategoryName];
+    if (masterCategory?.subCategories?.[subCategoryName]) {
+      const sub = masterCategory.subCategories[subCategoryName];
+      return {
+        master: masterCategoryName,
+        sub: subCategoryName,
+        icon: sub.icon || 'Wallet',
+      };
+    }
+  }
+  return {
+    master: 'Uncategorized',
+    sub: subCategoryName || 'Other',
+    icon: 'Wallet',
+  };
+}
+
