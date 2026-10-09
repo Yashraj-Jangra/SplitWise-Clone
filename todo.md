@@ -1,5 +1,42 @@
 # Session Progress & Context Preservation
 
+  - **Paid By & Split Options Full Feature Parity Across Mobile App (`SplitIt-Mobile`) & Core System (`SplitWise-Clone`) Completed** ✨ 🌐 📱 🧪 ✅:
+    - **User Requirement**:
+      - "the paid by and split option / make them just like website / make all features correct and verify with tests / go creative with this / max efforts"
+    - **Payer Selection Architecture (`src/components/expenses/PayerSelectModal.tsx`)**:
+      - **Segmented Mode Toggle**: Seamlessly switches between "Single person" and "Multiple people" with glowing active pills.
+      - **Single Person Picker**: Full member list displaying avatars, names, instant checkmark selection, auto-confirmation, and full 100% amount assignment.
+      - **Multiple People Matrix**:
+        - Live currency inputs (`₹`) per member with quick pre-filled amounts.
+        - **"Paid all" Quick Chip**: Instant single-tap attribution of entire expense to one participant.
+        - **"Split paid equally" Helper Action**: Divides the total cost equally among active contributors in a single tap.
+        - **Live Allocation Dock**: Real-time calculated status badge showing exact balance (`Balanced` in emerald `#10B981`, `₹X.XX left` in amber `#F59E0B`, or `₹X.XX over` in rose `#EF4444`).
+        - **Strict Balance Guard**: Enforces sum of paid amounts equals expense total via `@splitit/core` `validateSplit` before allowing confirmation.
+    - **Split Options Engine & Modal (`src/components/expenses/SplitOptionsModal.tsx`)**:
+      - **4 Full Split Modes with Website Parity**:
+        1. **Equally (`=`)**: Even division across all selected members with cent-perfect 2-decimal remainder reconciliation (surplus allocated deterministically to first participants).
+        2. **Unequally / Exact (`1.23`)**: Direct currency input per member with dynamic real-time total owed vs. total required calculation and remainder badge.
+        3. **By Percentage (`%`)**: Direct percentage inputs (`%`) with live calculated currency preview (`₹X.XX`) for each member; validates total sum equals exactly 100.00%.
+        4. **By Shares (`+/-`)**: Fluid increment/decrement stepper controls (`-` / `+`) per member with live total shares tally and dynamic per-share value calculation (`1 share = ₹X.XX`).
+      - **Member Inclusion / Exclusion Checkboxes**: Members can be included or toggled off; excluded members owe ₹0.00 and their share is redistributed across active members.
+      - **Quick Tools**: "Select all", "Deselect all", and "Reset to equal" shortcuts.
+    - **Conversational Sentence Dock & Dynamic Summaries (`app/expenses/new.tsx`)**:
+      - Recreated website's signature conversational sentence dock: `"Paid by {paidByText} and {splitText}."` with interactive green trigger chips.
+      - Added dynamic net position subtitle: `"You get back ₹X.XX"`, `"You owe ₹X.XX"`, or `"You are all square."` computed live as amounts, payers, and splits change.
+    - **Expense Detail & Edit Screen Parity (`app/expenses/[id].tsx`)**:
+      - **Multi-Payer Tree View**: In the expense detail screen, if multiple people contributed to paying the expense, displays a dedicated multi-payer section showing each payer's avatar, name, and exact paid amount (`MOHIT Y. paid ₹200.00`, `You paid ₹250.00`).
+      - **Edit Modal Triggers**: Added "PAID BY" and "SPLIT" selectors into the Edit Expense sheet allowing updating payers and split types with full validation.
+    - **Service & Normalization Alignment (`src/services/expense.service.ts`)**:
+      - Normalized `splitType` (`shares` -> `by_shares`, `percentage` -> `by_percentage`) in both `createExpense` and `updateExpense`.
+      - Expanded `CreateExpensePayload` and `updateExpense` to support multi-payer payloads (`payers: Array<{ userId, amount }>`) and participant shares (`participants: Array<{ userId, amountOwed, share }>`).
+    - **Unit Test Suite & Verification (`SplitWise-Clone/src/__tests__/splitting.test.ts`)**:
+      - Added 7 comprehensive unit tests verifying `calculateSplitAmounts` for unequal split and `validateSplit` covering multi-payer validation, unequal sum validation, percentage 100% validation, and their corresponding failure states.
+      - **Vitest Run**: All 8 test suites, 89/89 tests passing with 0 failures.
+      - **Typecheck Gate**: `npx tsc --noEmit` passing with 0 errors in both `SplitWise-Clone` and `SplitIt-Mobile`.
+    - **Commits**:
+      - `SplitWise-Clone`: `dev ed482f4` (`🧪 add unit tests for multi-payer and split validation`)
+      - `SplitIt-Mobile`: `dev 39e46c6` (`✨ add rich paid by and split options with live validation`)
+
   - **Category Hierarchy, Dynamic Settings & Master Category Cross-Platform Parity Completed** ✨ 🌐 📱 ✅:
     - **User Requirement**:
       - "match the categories and master caterogy structure of website to mobile app / both should be cross compatible / check how the website featches and matches categories and make it same"
