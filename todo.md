@@ -1,6 +1,92 @@
 # Session Progress & Context Preservation
 
-  - **Paid By & Split Options Full Feature Parity Across Mobile App (`SplitIt-Mobile`) & Core System (`SplitWise-Clone`) Completed** ✨ 🌐 📱 🧪 ✅:
+  - **UI/UX Restoration & Complete Theme Unification Completed** 🎨 📱 ✨ ✅:
+    - **User Requirement**:
+      - "i didint meant completly clone / bring our functionalities back the add expense page was good but with new coloring / change the colors everywhere too / same consistant UI/UX everywhere / make sure its functional / run a full deep scan"
+    - **Full Functionality Restored to Add Expense (`app/expenses/new.tsx`)**:
+      - Preserved core high-value flows:
+        - Sleek header with close, title, and camera receipt scanner (`/ai/scanner`).
+        - Centered currency hero input (`₹` in `#1CC29F` + amount input + description).
+        - Smart AI Category Suggestion Pill (`Sparkles` icon with instant 1-tap apply).
+        - Natural Conversational Sentence Dock (`Paid by [ you ▾ ] and split [ equally ▾ ]`) with live dynamic net balance indicator.
+        - Horizontal Participant Rings with tap-to-toggle inclusion, square check badges, active mint ring highlight, and live calculated per-person share badges.
+        - Meta Action Pills: Group selector (opens Group sheet), Category picker (with search & master groups), Date, and expandable Notes textarea.
+        - Sticky bottom primary action button (`Record ₹X Expense`) with loading state and haptics.
+        - Phone- and keyboard-optimized via `KeyboardAvoidingView` so inputs and controls are never obscured.
+    - **Global Theme Unification (`src/constants/theme.ts`)**:
+      - Replaced generic pitch black `#000000` with refined obsidian charcoal canvas (`#131417`), matte surface (`#1A1B1F`), elevated cards (`#222429`), and signature Splitwise mint/teal accent (`#1CC29F`).
+      - Updated `BalanceHistoryGraph.tsx`, `SplitOptionsModal.tsx`, `PayerSelectModal.tsx`, and tab navigation layouts to inherit the unified palette seamlessly.
+    - **Deep Scan & Quality Gates**:
+      - `npx tsc --noEmit` passed with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`.
+      - All 94 Vitest unit tests in `SplitWise-Clone` passing (`npm test`).
+      - Local atomic git commits on `dev`.
+
+  - **Splitwise Authentic Phone-Optimized UI/UX Refinement & Design System Completed** 🎨 📱 ✨ ✅:
+    - **User Requirement**:
+      - "the split options and screen make it phone optimised / like the split option tabs make them sleek just underline the text like in text with smooth transition / its all mostly UI/UX refinements / see how the splitwise app is keyboard optimised it never hides any details / make it like this the theming too current one just looks completly AI generated / first make a design.md file for such simple and focused design / look the icons use, the simple tab management, all user focused / make a super detailed plan first to refactor the UI/UX / also use smooth animations / every time cover all edge cases high efforts"
+    - **Design System Architecture (`SplitIt-Mobile/design.md`)**:
+      - Comprehensive design tokens and specifications mirroring the native Splitwise dark interface (`#18191B` canvas, `#222427` surface, `#1CC29F` teal/mint primary).
+      - Documented baseline input patterns, animated underline tab system, square checkbox components, accessory toolbar docked flush above the keyboard, and edge case precision rules (`.2f`).
+    - **Animated Underline Tabs & Horizontal Carousel (`SplitOptionsModal.tsx` & `PayerSelectModal.tsx`)**:
+      - Replaced bulky pill buttons with sleek text tabs and a dynamic sliding underline indicator animated via `Animated.spring`.
+      - Integrated horizontal paging with synchronous underline transitions and banner guides (`Split equally`, `Specify exact amounts`, etc.).
+      - Replaced rounded radios with authentic Splitwise square green checkboxes (`[✓]` with `#1CC29F` fill).
+      - Pinned bottom summary bar showing live per-person math (`₹X.XX/person (N people)`) and quick `All [✓]` bulk toggle.
+    - **Keyboard-Optimized Baseline Input Architecture (`app/expenses/new.tsx`)**:
+      - Replaced heavy generic card containers with Splitwise signature baseline input layout:
+        - `[ 📄 ]` receipt box + clean description baseline.
+        - `[ ₹ ]` currency box + bold amount input with vibrant `#1CC29F` mint baseline.
+        - Conversational summary chips: `Paid by [ you ] and split [ equally ]` with dynamic net balance preview.
+        - Keyboard-anchored accessory toolbar docked flush above the software keyboard (`👥 Group` | `Category`, `Date`, `Camera`, `Notes`), keeping all financial inputs 100% visible during numeric entry.
+    - **Verification**: `npx tsc --noEmit` passing with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`. All 94 Vitest tests passing.
+
+  - **Balance Widget Redesign: Dedicated Non-Overlapping In-Flow Sparkline Track Completed** 🎨 📱 ⚡ ✅:
+    - **User Requirement**:
+      - "redesign it / the graph is completly overlapped by details / place it such it doesnt overlaps never and looks good too / make this widget nice new / first plan then execute"
+    - **Plan Artifact Generated**:
+      - Created comprehensive architectural plan in `balance_widget_redesign_plan.md` defining the 3-tier vertical isolation model.
+    - **3-Tier Zero-Overlap Layout Architecture (`app/(tabs)/index.tsx`)**:
+      - **Tier 1 (Header Metrics)**: `TOTAL BALANCE` eyebrow, 30-day percentage trend badge, prominent hero balance (`+₹4,553.40`), and descriptive subtitle.
+      - **Tier 2 (Dedicated In-Flow Graph Track)**: Dedicated `75px` vertical track between header and footer containing `BalanceHistoryGraph`. Absolutely zero text rendered within this tier, mathematically guaranteeing 0% collision or overlap regardless of trajectory spikes or zero-crossings.
+      - **Tier 3 (Footer Breakdown)**: Clean unboxed stats for `Owed to you` and `You owe` with subtle hairline divider and directional micro-icons.
+    - **Fintech Aesthetic & Graph Enhancements (`BalanceHistoryGraph.tsx`)**:
+      - Converted graph from absolute background positioning to responsive in-flow container.
+      - Elevated gradient opacities (`0.24` -> `0.02`) with 2px stroke, subtle zero-axis reference line (`₹0`), and 5.5px ambient glowing endpoint indicator.
+    - **Verification**: `npx tsc --noEmit` passing with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`. All 94 Vitest tests passing.
+    - **User Requirement**:
+      - "make the split options and paid by options use full screen so that they are always shown and never hidden from keyboard / the theming make it better sleek and modern / cover all edge cases and small details like % can only go .2f / live updates the price with % share or any other / the whole page make it scrolable horizontally to switch between different types of share / less div focused design / user focused design"
+    - **Full-Screen & Keyboard-Safe Architecture (`PayerSelectModal.tsx` & `SplitOptionsModal.tsx`)**:
+      - Converted both modals to `presentationStyle="fullScreen"` with `<SafeAreaView style={styles.fullScreen}>` on pure OLED Black (`#000000`).
+      - Wrapped interactive body in `<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>` with `keyboardDismissMode="on-drag"` and `keyboardShouldPersistTaps="handled"`.
+      - Inputs, list elements, and bottom action docks are permanently visible and comfortably accessible without keyboard overlap.
+    - **Horizontal Paging Gesture Navigation (`pagingEnabled` ScrollView)**:
+      - **Split Options**: Paged across all 4 split modes (`Equally` -> `Exact` -> `Percent` -> `Shares`). Users can swipe horizontally across the screen or tap the sleek top tabs, triggering responsive haptic feedback and instant mode switching.
+      - **Payer Options**: Paged across `Single Person` and `Multiple People` with seamless swipe transitions.
+    - **Live Dynamic Price Calculations & Strict `.2f` Precision**:
+      - **Percentage Mode**: Enforced strict max 2 decimal places (`.2f`, clamped at 100.00%). Calculated currency price updates live on every keystroke (`= ₹{price}` in emerald `#10B981`).
+      - **Shares Mode**: Live recalculation of per-share price (`= ₹{price} ({pct}%)`) on every `+` / `-` stepper tap.
+      - **Exact Mode**: Live recalculation of each participant's share percentage (`{pct}% of total`).
+      - **Multiple Payers**: Strict `.2f` currency validation, live `{pct}% of total` badge, quick "All" allocation chip, and "Split paid equally" shortcut.
+    - **Verification**: `npx tsc --noEmit` passing with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`. All 94 Vitest tests passing.
+    - **User Requirement**:
+      - "the overall owes/owed on homepage make it work / and in its background add the same graph thats in website widget that shows history of balance red/green same logic copy it / and make it seemlessly integrate in current balance make sure it looks good and doesnt overlap"
+      - "the theming keep it sleek minimal theme matching and less div design focused design"
+    - **Core Balance Calculation Engine (`packages/core/src/balance-history.ts` & `index.ts`)**:
+      - Exported pure calculation function `calculateBalanceHistory(transactions, days = 30, referenceDate)` mirroring website Recharts `NetBalanceCard` zero-split logic.
+      - Generates cumulative balance time series with zero-crossing `gradientOffset` (split between emerald `#10B981` and rose `#F43F5E`), `domain` bounds (`[min, max]`), and 30-day percentage trend change.
+      - **Unit Tests (`src/__tests__/balance-history.test.ts`)**: Added 5 comprehensive test suites covering empty transactions, purely positive, purely negative, zero-crossing trajectory, and trend percentage calculation. All 9 test suites and 94/94 tests passing (`npm test`).
+    - **Mobile Live Balance Aggregation (`SplitIt-Mobile/src/services/balance.service.ts` & `group.service.ts`)**:
+      - Connected `getUserBalanceSummary()` aggregating live P2P debt simplifications across groups via `@splitit/core` `simplifyDebts`.
+      - Updated `groupService.getUserGroups()` to fetch real group net balances in parallel from `/api/groups/${g.id}/balances` instead of defaulting to 0.
+      - Computes accurate `totalOwed`, `totalOwe`, and `netBalance` with seamless pull-to-refresh.
+    - **Sleek Minimal Focused Hero Redesign (`SplitIt-Mobile/app/(tabs)/index.tsx` & `BalanceHistoryGraph.tsx`)**:
+      - Eliminated heavy boxed-in "div soup" (`#18181B` container box, card borders, drop shadows, nested badge pill containers, and circular icon wrappers).
+      - Re-architected as an open-canvas, typography-first hero layout directly on OLED Pitch Black (`#000000`):
+        - **Whispered Eyebrow**: `TOTAL BALANCE` with subtle inline trend (e.g. `· ↑ 14% (30d)`) in emerald/rose with zero container nesting.
+        - **Focused Hero Number**: High-contrast, confident `+₹2,050.00` or `-₹120.00` typography (`fontSize: 38`, `fontWeight: '900'`, `letterSpacing: -1.4`).
+        - **Integrated Ambient Graph**: Ethereal SVG sparkline (`BalanceHistoryGraph`) spanning gently behind metrics with soft ambient gradient fill, smooth cubic Bezier stroke, and hairline zero-reference line.
+        - **Unboxed Dual Stat Columns**: Direct, focused columns for `Owed to you` and `You owe` with inline colored indicators and clean divider hairline.
+    - **Verification**: `npx tsc --noEmit` passing with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`. All 94 Vitest tests passing.
     - **User Requirement**:
       - "the paid by and split option / make them just like website / make all features correct and verify with tests / go creative with this / max efforts"
     - **Payer Selection Architecture (`src/components/expenses/PayerSelectModal.tsx`)**:
