@@ -194,9 +194,9 @@ describe('Expense Splitting Calculations', () => {
       });
     });
 
-    it('validates 3-way split with 33.33, 33.33, 33.34 summing to exactly 100%', () => {
-      const percentages = calculateEqualPercentages(3);
-      expect(percentages).toEqual([33.33, 33.33, 33.34]);
+    it('validates 3-way split with 33.34, 33.33, 33.33 summing to exactly 100%', () => {
+      const percentages = calculateEqualPercentages(3); // [33.34, 33.33, 33.33] with payer priority
+      expect(percentages).toEqual([33.34, 33.33, 33.33]);
       const totalPct = percentages.reduce((acc, p) => acc + p, 0);
       expect(parseFloat(totalPct.toFixed(2))).toBe(100.00);
 
@@ -213,12 +213,17 @@ describe('Expense Splitting Calculations', () => {
     });
   });
 
-  describe('Equal Split Helpers (Penny & Percent Allocation)', () => {
-    it('calculates equal percentages summing to exactly 100.00% across all participant counts', () => {
-      // 3 people: exactly 33.33, 33.33, 33.34
+  describe('Equal Split Helpers (Penny & Percent Allocation with Payer Priority)', () => {
+    it('calculates equal percentages summing to exactly 100.00% across all participant counts with payer priority', () => {
+      // 3 people (payer at index 0 by default): [33.34, 33.33, 33.33]
       const p3 = calculateEqualPercentages(3);
-      expect(p3).toEqual([33.33, 33.33, 33.34]);
+      expect(p3).toEqual([33.34, 33.33, 33.33]);
       expect(p3.reduce((s, p) => s + p, 0)).toBeCloseTo(100.00, 5);
+
+      // 3 people with payer at index 2: [33.33, 33.33, 33.34]
+      const p3WithPayer2 = calculateEqualPercentages(3, 2);
+      expect(p3WithPayer2).toEqual([33.33, 33.33, 33.34]);
+      expect(p3WithPayer2.reduce((s, p) => s + p, 0)).toBeCloseTo(100.00, 5);
 
       // 2 people: 50, 50
       expect(calculateEqualPercentages(2)).toEqual([50, 50]);
@@ -226,14 +231,14 @@ describe('Expense Splitting Calculations', () => {
       // 4 people: 25, 25, 25, 25
       expect(calculateEqualPercentages(4)).toEqual([25, 25, 25, 25]);
 
-      // 6 people: 16.66 * 2 + 16.67 * 4 = 100.00
+      // 6 people: 16.67 * 4 + 16.66 * 2 = 100.00
       const p6 = calculateEqualPercentages(6);
-      expect(p6).toEqual([16.66, 16.66, 16.67, 16.67, 16.67, 16.67]);
+      expect(p6).toEqual([16.67, 16.67, 16.67, 16.67, 16.66, 16.66]);
       expect(parseFloat(p6.reduce((s, p) => s + p, 0).toFixed(2))).toBe(100.00);
 
-      // 7 people: 14.28 * 3 + 14.29 * 4 = 100.00
+      // 7 people: 14.29 * 4 + 14.28 * 3 = 100.00
       const p7 = calculateEqualPercentages(7);
-      expect(p7).toEqual([14.28, 14.28, 14.28, 14.29, 14.29, 14.29, 14.29]);
+      expect(p7).toEqual([14.29, 14.29, 14.29, 14.29, 14.28, 14.28, 14.28]);
       expect(parseFloat(p7.reduce((s, p) => s + p, 0).toFixed(2))).toBe(100.00);
 
       // Edge cases
@@ -241,20 +246,25 @@ describe('Expense Splitting Calculations', () => {
       expect(calculateEqualPercentages(0)).toEqual([]);
     });
 
-    it('calculates equal currency amounts summing to exactly totalAmount with penny reconciliation', () => {
-      // 1000 across 3 people: 333.33, 333.33, 333.34
-      const a3 = calculateEqualAmounts(1000, 3);
-      expect(a3).toEqual([333.33, 333.33, 333.34]);
+    it('calculates equal currency amounts summing to exactly totalAmount with payer priority', () => {
+      // 1000 across 3 people (payer at index 0): 333.34, 333.33, 333.33
+      const a3 = calculateEqualAmounts(1000, 3, 0);
+      expect(a3).toEqual([333.34, 333.33, 333.33]);
       expect(a3.reduce((s, a) => s + a, 0)).toBe(1000.00);
 
-      // 100 across 3 people: 33.33, 33.33, 33.34
+      // 1000 across 3 people with payer at index 2: 333.33, 333.33, 333.34
+      const a3Payer2 = calculateEqualAmounts(1000, 3, 2);
+      expect(a3Payer2).toEqual([333.33, 333.33, 333.34]);
+      expect(a3Payer2.reduce((s, a) => s + a, 0)).toBe(1000.00);
+
+      // 100 across 3 people: 33.34, 33.33, 33.33
       const a100 = calculateEqualAmounts(100, 3);
-      expect(a100).toEqual([33.33, 33.33, 33.34]);
+      expect(a100).toEqual([33.34, 33.33, 33.33]);
       expect(a100.reduce((s, a) => s + a, 0)).toBe(100.00);
 
-      // 10 across 3 people: 3.33, 3.33, 3.34
+      // 10 across 3 people: 3.34, 3.33, 3.33
       const a10 = calculateEqualAmounts(10, 3);
-      expect(a10).toEqual([3.33, 3.33, 3.34]);
+      expect(a10).toEqual([3.34, 3.33, 3.33]);
       expect(a10.reduce((s, a) => s + a, 0)).toBe(10.00);
 
       // Edge cases
@@ -263,21 +273,37 @@ describe('Expense Splitting Calculations', () => {
       expect(calculateEqualAmounts(100, 0)).toEqual([]);
     });
 
-    it('ensures percentage split amounts owed match total exactly without floating-point loss', () => {
-      const percentages = calculateEqualPercentages(3); // [33.33, 33.33, 33.34]
+    it('ensures percentage split amounts owed match total exactly without floating-point loss (fixing 333.33 vs 333.30 bug)', () => {
+      // For 1000 across 3 people with percentages [33.34, 33.33, 33.33], each person should owe 333.33
+      // and the payer gets the 1-cent penny adjustment (333.34), never 333.30!
+      const percentages = calculateEqualPercentages(3, 0); // [33.34, 33.33, 33.33]
       const results = calculateSplitAmounts(1000, [
         { userId: 'u1', selected: true, percentage: percentages[0] },
         { userId: 'u2', selected: true, percentage: percentages[1] },
         { userId: 'u3', selected: true, percentage: percentages[2] },
-      ], 'by_percentage');
+      ], 'by_percentage', 'u1');
 
       expect(results).toEqual([
-        { userId: 'u1', amountOwed: 333.30 },
-        { userId: 'u2', amountOwed: 333.30 },
-        { userId: 'u3', amountOwed: 333.40 },
+        { userId: 'u1', amountOwed: 333.34 },
+        { userId: 'u2', amountOwed: 333.33 },
+        { userId: 'u3', amountOwed: 333.33 },
       ]);
       const totalOwed = results.reduce((acc, r) => acc + r.amountOwed, 0);
       expect(totalOwed).toBe(1000.00);
+
+      // If u3 is the payer, u3 receives the penny adjustment 333.34
+      const resultsPayer3 = calculateSplitAmounts(1000, [
+        { userId: 'u1', selected: true, percentage: 33.33 },
+        { userId: 'u2', selected: true, percentage: 33.33 },
+        { userId: 'u3', selected: true, percentage: 33.34 },
+      ], 'by_percentage', 'u3');
+
+      expect(resultsPayer3).toEqual([
+        { userId: 'u1', amountOwed: 333.33 },
+        { userId: 'u2', amountOwed: 333.33 },
+        { userId: 'u3', amountOwed: 333.34 },
+      ]);
+      expect(resultsPayer3.reduce((acc, r) => acc + r.amountOwed, 0)).toBe(1000.00);
     });
 
     it('calculates shares percentages summing to exactly 100.00% with 2 decimal precision', () => {
@@ -344,6 +370,34 @@ describe('Expense Splitting Calculations', () => {
       // 4. Unequally: sums to 100.00%
       const unPcts = calculateSplitPercentages(100, participants, 'unequally');
       expect(unPcts).toEqual({ u1: 33.33, u2: 33.33, u3: 33.34, u4: 0 });
+    });
+
+    it('allocates the penny remainder to the payer across equal and shares splits', () => {
+      const participants = [
+        { userId: 'u1', selected: true, shares: 1 },
+        { userId: 'u2', selected: true, shares: 1 },
+        { userId: 'u3', selected: true, shares: 1 },
+      ];
+
+      // Equal split with payer u2: u2 gets 33.34
+      const eqResults = calculateSplitAmounts(100, participants, 'equally', 'u2');
+      expect(eqResults).toEqual([
+        { userId: 'u1', amountOwed: 33.33 },
+        { userId: 'u2', amountOwed: 33.34 },
+        { userId: 'u3', amountOwed: 33.33 },
+      ]);
+
+      // Shares split with payer u3: u3 gets 33.34
+      const shResults = calculateSplitAmounts(100, participants, 'by_shares', 'u3');
+      expect(shResults).toEqual([
+        { userId: 'u1', amountOwed: 33.33 },
+        { userId: 'u2', amountOwed: 33.33 },
+        { userId: 'u3', amountOwed: 33.34 },
+      ]);
+
+      // Equal percentages with payer u2: u2 gets 33.34%
+      const eqPcts = calculateSplitPercentages(100, participants, 'equally', 'u2');
+      expect(eqPcts).toEqual({ u1: 33.33, u2: 33.34, u3: 33.33 });
     });
   });
 });

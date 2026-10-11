@@ -792,6 +792,8 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
 
   const watchedAmount = watch('amount');
   const watchedSplitType = watch('splitType');
+  const watchedPayerType = watch('payerType');
+  const watchedSinglePayerId = watch('singlePayerId');
   const watchedParticipants = useWatch({ control: form.control, name: 'participants' }) || watch('participants');
   const hasSelectedParticipants = watchedParticipants?.some((p: any) => p.selected) ?? false;
 
@@ -811,6 +813,9 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     const allParticipants = getValues('participants') || [];
     const splitType = getValues('splitType');
     const totalAmount = Number(getValues('amount')) || 0;
+    const payerType = getValues('payerType');
+    const singlePayerId = getValues('singlePayerId');
+    const payerId = payerType === 'single' ? singlePayerId : undefined;
 
     if (splitType === 'unequally') {
       allParticipants.forEach((p: any, index: number) => {
@@ -821,7 +826,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
       return;
     }
 
-    const results = calculateSplitAmounts(totalAmount, allParticipants, splitType);
+    const results = calculateSplitAmounts(totalAmount, allParticipants, splitType, payerId);
     results.forEach((res, index) => {
       setValue(`participants.${index}.amountOwed`, res.amountOwed, { shouldDirty: true });
     });
@@ -831,7 +836,7 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     if (watchedSplitType !== 'unequally') {
       calculateSplits();
     }
-  }, [watchedAmount, watchedSplitType, participantDeps, calculateSplits]);
+  }, [watchedAmount, watchedSplitType, watchedPayerType, watchedSinglePayerId, participantDeps, calculateSplits]);
 
 
   React.useEffect(() => {
@@ -944,7 +949,8 @@ export function ExpenseForm({ group, userProfile, isEditing, expenseToEdit, onCl
     // --- End Validation ---
 
     // --- Recalculate final participant data on submit to ensure accuracy ---
-    const splitResults = calculateSplitAmounts(totalAmount, values.participants, values.splitType);
+    const submitPayerId = values.payerType === 'single' ? values.singlePayerId : undefined;
+    const splitResults = calculateSplitAmounts(totalAmount, values.participants, values.splitType, submitPayerId);
     const finalParticipants = splitResults
       .filter((_, idx) => values.participants[idx].selected)
       .map((res) => {
