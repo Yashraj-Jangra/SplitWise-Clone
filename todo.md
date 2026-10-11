@@ -1,5 +1,95 @@
 # Session Progress & Context Preservation
 
+  - **Group Details Header & Tab Bar Layout Refinements Completed** 🎨 📱 ✨ ✅:
+    - **User Requirement**:
+      - "remove no. of members in group details in mobile app that is just below the banner image / theres a extra line below tabs group and expense list remove that"
+    - **Removed Members Stat (`app/groups/[id]/index.tsx`)**:
+      - Removed the `MEMBERS` column and its adjacent vertical hairline divider from the `statStrip` row beneath the collapsing header.
+      - Retained a balanced 3-stat typographic strip: `SPENT` | `YOUR NET` | `BUDGET`.
+    - **Removed Redundant Tab Bar Bottom Border**:
+      - Removed `borderBottomWidth: 1` and `borderBottomColor: THEME.colors.hairline` from both `tabBarInFlowContainer` and `fixedTabBarContainer`.
+      - Eliminates the harsh full-width divider line sitting between the tab bar and the expense list card (`ledgerStream`).
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors across `SplitIt-Mobile`.
+
+  - **User Selection Checkboxes & Locked Inputs for Payees & Split Modes Completed** ✨ 📱 ⚡ ✅:
+    - **User Requirement**:
+      - "add select user option for multiple users as payee or split options / cover all cases like when unselected lock its input field and dont show cut etc / check current state then make a plan to fix and implement / also make it better on hover click hold theres no margin"
+    - **Multiple Payers Selection & Locked States (`PayerSelectModal.tsx`)**:
+      - Added `selectedPayers: Record<string, boolean>` state tracking which group members are active payers.
+      - Rendered square Splitwise checkbox (`[✓]`) on the left of every multi-payer row. Tapping the row or checkbox toggles payer inclusion with haptics.
+      - When unselected:
+        - Input field is locked (`editable={false}`, `pointerEvents="none"`).
+        - Value shows `0.00` in muted gray (`#6B7280`) with muted border; `All` button is disabled.
+        - Subline shows `Didn't pay` (clean, un-cut).
+        - Row dims to `0.45` opacity with stable, non-collapsing layout.
+      - Added bulk `All [✓]` quick toggle in top helper row.
+      - Updated `Split paid equally` shortcut to divide total among active selected payers using `calculateEqualAmounts`.
+      - Added quick `· Tap to balance` remainder shortcut in bottom dock.
+    - **Split Options Checkboxes & Locked States Across All 4 Modes (`SplitOptionsModal.tsx`)**:
+      - Added square Splitwise checkbox (`[✓]`) on the left of EVERY participant row across all modes (`equally`, `unequally`, `by_percentage`, `by_shares`).
+      - In `unequally`: When unselected, input box remains rendered, locked (`editable={false}`), displaying `0.00` in muted gray with `Excluded` subline.
+      - In `by_percentage`: When unselected, percentage box remains rendered, locked (`editable={false}`), displaying `0.00 %` in muted gray with `Excluded` subline.
+      - In `by_shares`: When unselected, stepper remains rendered, locked (`pointerEvents="none"`, buttons disabled), displaying `0` with `Excluded` subline.
+      - Right controls are never `null` or collapsed, eliminating layout shifts and cut-off text.
+    - **Generous Hover/Press Margins & Touch Ergonomics**:
+      - Updated `memberRow`, `multiPayerRow`, and `participantRow` with `paddingHorizontal: 12`, `paddingVertical: 10`, `marginVertical: 3`, and `borderRadius: 14`.
+      - Completely resolved edge-bleeding and marginless click/hold feedback.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`.
+      - All 98 Vitest tests passed in `SplitWise-Clone`.
+      - Changes cleanly committed locally on `dev`.
+
+  - **Add Expense Screen Redesign & Keyboard-Anchored Accessory Toolbar Completed** 🎨 📱 ⚡ ✅:
+    - **User Requirement**:
+      - "the select category option (icon only) move it to left side of details and add underline for input fields same as in website mobile view / make the date notes option stay above keyboard always adjust screen such (never something gets overlapped by keyboard) / the group selection - remove it just display the current group's name the expense will be adding in / if not inside a group ask user to select group and user can also set one group as default that works when clicked from homescreen / make plan then execute everything carefully / keep theme like website minimal and no/less div focused"
+    - **Category Button & Underline Inputs (`app/expenses/new.tsx`)**:
+      - Positioned category button on the left of details: 64x64px rounded surface box with primary category icon and centered title label below, matching the website mobile view and user screenshot.
+      - Right column features clean underline inputs (`borderBottomWidth: 1.5`):
+        - Description input with placeholder `Description` and auto-capitalization.
+        - Inline AI category suggestion chip with 1-tap apply.
+        - Amount input with `₹` currency symbol in `THEME.colors.primary` and bold amount entry.
+    - **Zero-Overlap Keyboard-Anchored Accessory Toolbar**:
+      - Docked accessory toolbar (`Date` and `Notes`) directly above the software keyboard and bottom action button outside the `ScrollView`.
+      - Provides Date preset selector sheet (`Today`, `Yesterday`, `2 days ago`, `Last week`).
+      - Inline expanding Note input docked right above the keyboard so inputs and details are never obscured.
+    - **Group Display & Default Group Architecture (`group.service.ts` & `new.tsx`)**:
+      - Removed group selection pill from the form body; displays active group cleanly in the header: `in <Group Name> ▾`.
+      - Added `getDefaultGroupId()` and `setDefaultGroupId(groupId)` using `expo-secure-store`.
+      - If opened without a group and no default is set, automatically prompts user to choose a group.
+      - Integrated "Set as default group for new expenses" toggle in the group picker sheet with visual star badges.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`.
+      - All 98 Vitest tests passed in `SplitWise-Clone`.
+      - Changes cleanly committed locally on `dev`.
+
+  - **Mathematically Sound Percentage & Penny Split Reconciliation Completed** 🧮 📱 ✨ ✅:
+    - **User Requirement**:
+      - "the split suggestion why its 99.9? it should be 100 where does the 0.01 goes? adjust it always in one person like make 33.33, 33.33 and 33.34 .2f just like we hv in website make it logically and mathematically correct add test and verify it too cover all cases and different split types for similar bug"
+    - **Root Cause Analysis**:
+      - Previously, `SplitOptionsModal.tsx` assigned equal percentages via `(100 / selectedCount).toFixed(2)`. For 3 participants, `100 / 3 = 33.3333...` was truncated/formatted to `33.33%` across all three members, resulting in `99.99%` and an unallocated remainder of `0.01%`.
+      - In addition, tolerance check `Math.abs(percentageRemaining) <= 0.01` prematurely treated `99.99%` as balanced, falsely displaying `100% Allocated` while showing `99.99% of 100%`.
+      - Live per-person currency subline was computed as raw `(totalAmount * userPct) / 100 = 1000 * 33.33 / 100 = 333.30`, dropping ₹0.10 in sum.
+    - **Mathematical Precision & Integer Point Allocation (`packages/core/src/split.ts`)**:
+      - Added `calculateEqualPercentages(count: number): number[]`:
+        - Uses 10,000 basis points (`100.00%`).
+        - Distributes base basis points `floor(10000 / count)` and assigns remaining fractional points to the trailing participants (`count - 1 - (i % count)`).
+        - For 3 participants: `[33.33, 33.33, 33.34]` -> exact sum `100.00%`.
+      - Added `calculateEqualAmounts(totalAmount: number, count: number): number[]`:
+        - Uses cent-based integer math (`round(totalAmount * 100)`).
+        - Distributes base cents and reconciles remaining pennies to the trailing participants.
+        - For ₹1,000 across 3 participants: `[333.33, 333.33, 333.34]` -> exact sum `₹1000.00`.
+    - **UI/UX & Live Subline Rebalancing (`SplitIt-Mobile/src/components/expenses/SplitOptionsModal.tsx`)**:
+      - Modal initialization and member toggles (`toggleSelectMember`, `handleToggleAll`) dynamically allocate balanced percentages and amounts using `calculateEqualPercentages` and `calculateEqualAmounts`.
+      - Live participant price sublines (`livePctPrice`, `liveSharePrice`) now reference `splitBreakdown[p.id]` (from `calculateSplitAmounts` via `reconcileToTotal`), rendering penny-reconciled amounts (`₹333.30, ₹333.30, ₹333.40`, summing to `₹1000.00`).
+      - Tightened balanced tolerance threshold from `0.01` to `< 0.005`, preventing false `100% Allocated` badges.
+      - Interactive Quick Auto-Balance: Dock status badge detects any unbalanced percentage or exact sum and displays `· Tap to balance`, automatically reconciling the remaining penny or percent into the last selected participant with haptic feedback.
+    - **Comprehensive Test Coverage & Quality Gates**:
+      - Added test suite in `SplitWise-Clone/src/__tests__/splitting.test.ts` covering counts 0, 1, 2, 3, 4, 6, 7 and monetary values ₹1000, ₹100, ₹10, ₹0 with backward penny distribution checks.
+      - Vitest test suite: All 9 test files, 98 tests passing (100%).
+      - `npx tsc --noEmit` passing with 0 errors across both `SplitIt-Mobile` and `SplitWise-Clone`.
+
+
   - **UI/UX Restoration & Complete Theme Unification Completed** 🎨 📱 ✨ ✅:
     - **User Requirement**:
       - "i didint meant completly clone / bring our functionalities back the add expense page was good but with new coloring / change the colors everywhere too / same consistant UI/UX everywhere / make sure its functional / run a full deep scan"

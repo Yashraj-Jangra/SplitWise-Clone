@@ -35,6 +35,49 @@ export function reconcileToTotal(amounts: number[], total: number): number[] {
 }
 
 /**
+ * Calculates equal percentage allocations that sum EXACTLY to 100.00%,
+ * adjusting any fractional penny remainders to the end participants.
+ * e.g. for count=3: [33.33, 33.33, 33.34] -> sum = 100.00%
+ */
+export function calculateEqualPercentages(count: number): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [100];
+
+  const totalPoints = 10000; // 100.00%
+  const basePoints = Math.floor(totalPoints / count);
+  const remainderPoints = totalPoints - basePoints * count;
+
+  const result = Array(count).fill(basePoints / 100);
+  for (let i = 0; i < remainderPoints; i++) {
+    const idx = count - 1 - (i % count);
+    result[idx] = parseFloat(((basePoints + 1) / 100).toFixed(2));
+  }
+  return result;
+}
+
+/**
+ * Calculates equal currency splits that sum EXACTLY to `totalAmount`,
+ * adjusting any fractional penny remainders to the end participants.
+ * e.g. for totalAmount=1000, count=3: [333.33, 333.33, 333.34] -> sum = 1000.00
+ */
+export function calculateEqualAmounts(totalAmount: number, count: number): number[] {
+  if (count <= 0) return [];
+  if (totalAmount <= 0) return Array(count).fill(0);
+  if (count === 1) return [parseFloat(totalAmount.toFixed(2))];
+
+  const totalCents = Math.round(totalAmount * 100);
+  const baseCents = Math.floor(totalCents / count);
+  const remainderCents = totalCents - baseCents * count;
+
+  const result = Array(count).fill(baseCents / 100);
+  for (let i = 0; i < remainderCents; i++) {
+    const idx = count - 1 - (i % count);
+    result[idx] = parseFloat(((baseCents + 1) / 100).toFixed(2));
+  }
+  return result;
+}
+
+/**
  * Computes each participant's owed amount for a split. Unselected participants owe 0.
  * For `unequally`, the entered amounts are kept as-is (validated separately).
  */
