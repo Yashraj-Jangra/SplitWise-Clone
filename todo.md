@@ -1,5 +1,28 @@
 # Session Progress & Context Preservation
 
+  - **Robust 0.2f Precision & Multi-Mode Percentage/Amount Reconciliation Completed** 🧮 📱 ✨ ✅:
+    - **User Requirement**:
+      - "the % I asked to fix adjusting rounding / make it robust round off % and amount both / not only in just unequal split, in equal, shares / make the % 0.2f too / recheck all cases I want no case to be left / check how website works use same method / displaying, split every amount must be same and correct all with 0.2f (recheck every type twice)"
+    - **Core Splitting Engine Enhancements (`packages/core/src/split.ts`)**:
+      - Enhanced `reconcileToTotal` with stable largest-remainder (Hamilton-Hare) allocation, prioritizing participants with highest fractional remainders while preserving original index order for equal quotients.
+      - Added `calculateSharesPercentages(shares: number[]): number[]`: Computes share percentage allocations summing to exactly `100.00%` with strict 2-decimal precision (`0.2f`).
+      - Added `calculateAmountsPercentages(amounts: number[], totalAmount: number): number[]`: Computes exact 2-decimal percentage allocations summing to `100.00%` when balanced.
+      - Added unified `calculateSplitPercentages(totalAmount, participants, splitType): Record<string, number>`: Computes participant percentage allocations across `equally`, `by_shares`, `by_percentage`, and `unequally`, ensuring every percentage is 2 decimals and sums to `100.00%`.
+      - Ensured `calculateSplitAmounts` always formats `amountOwed` for `unequally` with strict 2-decimal float precision.
+    - **Mobile Adjust Split Modal Refinements (`SplitOptionsModal.tsx`)**:
+      - Added `splitPercentages` memo hook across all 4 modes.
+      - In `equally`: Subline displays `= ₹{liveEqualPrice.toFixed(2)} ({liveEqualPct.toFixed(2)}%)` and right status shows `₹{liveEqualPrice.toFixed(2)}`, strictly matching the penny-reconciled amount and 100.00% percentage.
+      - In `by_shares`: Subline displays `= ₹{liveSharePrice.toFixed(2)} ({liveSharePct.toFixed(2)}%)`, strictly 2 decimals (replacing legacy `toFixed(1)`), summing to `totalAmount` and `100.00%`.
+      - In `unequally`: Subline displays `{liveExactPct.toFixed(2)}% of total`, strictly 2 decimals, summing to `100.00%` when balanced.
+      - In `by_percentage`: Subline displays `= ₹{livePctPrice.toFixed(2)}`, bottom bar displays `{percentageSum.toFixed(2)}% of 100.00%`, and balanced label displays `100.00% Allocated`.
+      - In `handleConfirm`: Every confirmed participant receives 2-decimal `percentage` and 2-decimal `exactAmount`.
+    - **Expense Creation UI (`app/expenses/new.tsx`)**:
+      - Updated `memberShareText` in participant avatar scroll from `toFixed(0)` to `toFixed(2)`, ensuring consistent 2-decimal display everywhere.
+    - **Verification**:
+      - Added 3 new unit tests in `src/__tests__/splitting.test.ts` verifying `calculateSharesPercentages`, `calculateAmountsPercentages`, and `calculateSplitPercentages`.
+      - All 101 tests passed in Vitest (`101 passed`).
+      - Both `SplitIt-Mobile` and `SplitWise-Clone` passed `npx tsc --noEmit` with 0 errors.
+
   - **Group Details Header & Tab Bar Layout Refinements Completed** 🎨 📱 ✨ ✅:
     - **User Requirement**:
       - "remove no. of members in group details in mobile app that is just below the banner image / theres a extra line below tabs group and expense list remove that"

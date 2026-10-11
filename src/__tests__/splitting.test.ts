@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSplitAmounts, validateSplit, calculateEqualPercentages, calculateEqualAmounts } from '@splitit/core';
+import {
+  calculateSplitAmounts,
+  validateSplit,
+  calculateEqualPercentages,
+  calculateEqualAmounts,
+  calculateSharesPercentages,
+  calculateAmountsPercentages,
+  calculateSplitPercentages,
+} from '@splitit/core';
 
 describe('Expense Splitting Calculations', () => {
   it('splits equally without remainder', () => {
@@ -270,6 +278,72 @@ describe('Expense Splitting Calculations', () => {
       ]);
       const totalOwed = results.reduce((acc, r) => acc + r.amountOwed, 0);
       expect(totalOwed).toBe(1000.00);
+    });
+
+    it('calculates shares percentages summing to exactly 100.00% with 2 decimal precision', () => {
+      // 3 people with 1 share each: exactly [33.34, 33.33, 33.33] summing to 100.00%
+      const p3 = calculateSharesPercentages([1, 1, 1]);
+      expect(p3).toEqual([33.34, 33.33, 33.33]);
+      expect(parseFloat(p3.reduce((s, p) => s + p, 0).toFixed(2))).toBe(100.00);
+
+      // 2 people with 1 and 2 shares: [33.33, 66.67]
+      const p12 = calculateSharesPercentages([1, 2]);
+      expect(p12).toEqual([33.33, 66.67]);
+      expect(parseFloat(p12.reduce((s, p) => s + p, 0).toFixed(2))).toBe(100.00);
+
+      // 3 people with 1, 2, 3 shares: [16.67, 33.33, 50.00]
+      const p123 = calculateSharesPercentages([1, 2, 3]);
+      expect(p123).toEqual([16.67, 33.33, 50.00]);
+      expect(parseFloat(p123.reduce((s, p) => s + p, 0).toFixed(2))).toBe(100.00);
+
+      // Edge cases
+      expect(calculateSharesPercentages([])).toEqual([]);
+      expect(calculateSharesPercentages([0, 0])).toEqual([0, 0]);
+    });
+
+    it('calculates amounts percentages summing to 100.00% for balanced splits', () => {
+      // For 100.00: 33.33, 33.33, 33.34 -> exactly [33.33, 33.33, 33.34]
+      const p100 = calculateAmountsPercentages([33.33, 33.33, 33.34], 100);
+      expect(p100).toEqual([33.33, 33.33, 33.34]);
+      expect(parseFloat(p100.reduce((s, p) => s + p, 0).toFixed(2))).toBe(100.00);
+
+      // For 1000.00: 333.33, 333.33, 333.34 -> sums to 100.00%
+      const p1000 = calculateAmountsPercentages([333.33, 333.33, 333.34], 1000);
+      expect(p1000).toEqual([33.33, 33.33, 33.34]);
+      expect(parseFloat(p1000.reduce((s, p) => s + p, 0).toFixed(2))).toBe(100.00);
+
+      // Partial / unbalanced input keeps 2-decimal format without forcing 100%
+      const partial = calculateAmountsPercentages([50], 100);
+      expect(partial).toEqual([50]);
+    });
+
+    it('calculates unified split percentages across equally, by_shares, by_percentage, and unequally', () => {
+      const participants = [
+        { userId: 'u1', selected: true, shares: 1, percentage: 33.33, amountOwed: 33.33 },
+        { userId: 'u2', selected: true, shares: 1, percentage: 33.33, amountOwed: 33.33 },
+        { userId: 'u3', selected: true, shares: 1, percentage: 33.34, amountOwed: 33.34 },
+        { userId: 'u4', selected: false, shares: 1, percentage: 0, amountOwed: 0 },
+      ];
+
+      // 1. Equally: sums to 100.00%, u4 is 0
+      const eqPcts = calculateSplitPercentages(100, participants, 'equally');
+      expect(eqPcts.u4).toBe(0);
+      const eqSum = eqPcts.u1 + eqPcts.u2 + eqPcts.u3;
+      expect(parseFloat(eqSum.toFixed(2))).toBe(100.00);
+
+      // 2. By shares: sums to 100.00%
+      const shPcts = calculateSplitPercentages(100, participants, 'by_shares');
+      expect(shPcts.u4).toBe(0);
+      const shSum = shPcts.u1 + shPcts.u2 + shPcts.u3;
+      expect(parseFloat(shSum.toFixed(2))).toBe(100.00);
+
+      // 3. By percentage: sums to 100.00%
+      const pctPcts = calculateSplitPercentages(100, participants, 'by_percentage');
+      expect(pctPcts).toEqual({ u1: 33.33, u2: 33.33, u3: 33.34, u4: 0 });
+
+      // 4. Unequally: sums to 100.00%
+      const unPcts = calculateSplitPercentages(100, participants, 'unequally');
+      expect(unPcts).toEqual({ u1: 33.33, u2: 33.33, u3: 33.34, u4: 0 });
     });
   });
 });

@@ -16,8 +16,8 @@ export interface SplitResult {
 const round2 = (n: number) => parseFloat(n.toFixed(2));
 
 /**
- * Rounds each amount to 2 decimals, then hands out the leftover pennies
- * round-robin so the result sums exactly to `total`.
+ * Rounds each amount to 2 decimals, then hands out the leftover pennies/cents
+ * using the largest-remainder method (stable sort) so the result sums exactly to `total`.
  */
 export function reconcileToTotal(amounts: number[], total: number): number[] {
   if (amounts.length === 0) return [];
@@ -26,9 +26,18 @@ export function reconcileToTotal(amounts: number[], total: number): number[] {
   if (remainder !== 0) {
     const pennies = Math.round(Math.abs(remainder) * 100);
     const step = 0.01 * Math.sign(remainder);
+    
+    // Sort indices by largest fractional difference so the highest fractional share gets adjusted first.
+    // Preserves original order for equal fractions.
+    const diffs = amounts.map((a, idx) => ({
+      idx,
+      diff: step > 0 ? (a - rounded[idx]) : (rounded[idx] - a),
+    }));
+    diffs.sort((a, b) => b.diff - a.diff);
+
     for (let i = 0; i < pennies; i++) {
-      const idx = i % rounded.length;
-      rounded[idx] = round2(rounded[idx] + step);
+      const targetIdx = diffs[i % diffs.length].idx;
+      rounded[targetIdx] = round2(rounded[targetIdx] + step);
     }
   }
   return rounded;
@@ -78,6 +87,94 @@ export function calculateEqualAmounts(totalAmount: number, count: number): numbe
 }
 
 /**
+ * Calculates percentage allocations from weighted shares that sum EXACTLY to 100.00%,
+ * adjusting any fractional remainders so that all percentages are 2 decimals.
+ * e.g. for shares=[1, 1, 1]: [33.34, 33.33, 33.33] -> sum = 100.00%
+ */
+export function calculateSharesPercentages(shares: number[]): number[] {
+  if (shares.length === 0) return [];
+  const totalShares = shares.reduce((sum, s) => sum + (Number(s) || 0), 0);
+  if (totalShares <= 0) return Array(shares.length).fill(0);
+  const raw = shares.map((s) => (100 * (Number(s) || 0)) / totalShares);
+  return reconcileToTotal(raw, 100);
+}
+
+/**
+ * Calculates percentage allocations from currency amounts that sum EXACTLY to 100.00%
+ * when total owed equals totalAmount (or calculates 2-decimal percentages otherwise).
+ */
+export function calculateAmountsPercentages(amounts: number[], totalAmount: number): number[] {
+  if (amounts.length === 0) return [];
+  if (totalAmount <= 0) return Array(amounts.length).fill(0);
+  const raw = amounts.map((a) => (100 * (Number(a) || 0)) / totalAmount);
+  const sumAmounts = amounts.reduce((sum, a) => sum + (Number(a) || 0), 0);
+  if (Math.abs(sumAmounts - totalAmount) <= TOLERANCE) {
+    return reconcileToTotal(raw, 100);
+  }
+  return raw.map((r) => parseFloat(r.toFixed(2)));
+}
+
+/**
+ * Computes each participant's allocated percentage for a split (summing to 100.00% when balanced).
+ * Unselected participants have 0.
+ */
+export function calculateSplitPercentages(
+  totalAmount: number,
+  participants: SplitParticipantInput[],
+  splitType: SplitType
+): Record<string, number> {
+  const selected = participants.filter((p) => p.selected);
+  const n = selected.length;
+  if (n === 0) {
+    return Object.fromEntries(participants.map((p) => [p.userId, 0]));
+  }
+
+  if (splitType === 'by_percentage') {
+    return Object.fromEntries(
+      participants.map((p) => [
+        p.userId,
+        p.selected ? parseFloat((Number(p.percentage) || 0).toFixed(2)) : 0,
+      ])
+    );
+  }
+
+  if (splitType === 'by_shares') {
+    const sharesArr = selected.map((p) => Number(p.shares) || 1);
+    const pcts = calculateSharesPercentages(sharesArr);
+    let idx = 0;
+    return Object.fromEntries(
+      participants.map((p) => [
+        p.userId,
+        p.selected ? pcts[idx++] : 0,
+      ])
+    );
+  }
+
+  if (splitType === 'unequally') {
+    const amountsArr = selected.map((p) => Number(p.amountOwed) || 0);
+    const pcts = calculateAmountsPercentages(amountsArr, totalAmount);
+    let idx = 0;
+    return Object.fromEntries(
+      participants.map((p) => [
+        p.userId,
+        p.selected ? pcts[idx++] : 0,
+      ])
+    );
+  }
+
+  // equally:
+  const raw = Array(n).fill(100 / n);
+  const pcts = reconcileToTotal(raw, 100);
+  let idx = 0;
+  return Object.fromEntries(
+    participants.map((p) => [
+      p.userId,
+      p.selected ? pcts[idx++] : 0,
+    ])
+  );
+}
+
+/**
  * Computes each participant's owed amount for a split. Unselected participants owe 0.
  * For `unequally`, the entered amounts are kept as-is (validated separately).
  */
@@ -96,7 +193,7 @@ export function calculateSplitAmounts(
   if (splitType === 'unequally') {
     return participants.map((p) => ({
       userId: p.userId,
-      amountOwed: p.selected ? Number(p.amountOwed) || 0 : 0,
+      amountOwed: p.selected ? parseFloat((Number(p.amountOwed) || 0).toFixed(2)) : 0,
     }));
   }
 
