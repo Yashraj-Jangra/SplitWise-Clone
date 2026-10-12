@@ -1,5 +1,178 @@
 # Session Progress & Context Preservation
 
+  - **Group FAB to Add Expense Screen Smooth App-Launch Morph Transition Completed** ✨ 📱 🎨 ⚡ ✅:
+    - **User Requirement**:
+      - "for the + button in group add a nice animation like the add expense screen opens through that + button just like opening animaton of any app in phone smooth"
+    - **Physical Mechanics & Architecture Implemented**:
+      - *Native Stack Transparent Modal (`app/_layout.tsx`)*: Configured `expenses/new` with `presentation: 'transparentModal'`, `animation: 'none'`, and `contentStyle: { backgroundColor: 'transparent' }`, ensuring the group screen and FAB remain mounted and visible underneath while giving React Native complete GPU-accelerated control over the container transition.
+      - *Group FAB Coordinate Tracking & Burst Effect (`app/groups/[id]/index.tsx`)*:
+        - Recorded physical screen coordinates of the FAB (`fabButtonRef.measureInWindow`) on layout and on press.
+        - Enhanced `handleAddExpense` with tactile medium haptics, spring rotation (`0deg -> 45deg`), scale pop (`1.0 -> 0.88 -> 1.05`), and an expanding emerald pulse ring radiating outward.
+        - Navigates to `/expenses/new` with `origin: 'fab'` and `fabX`/`fabY` coordinates.
+        - Added `useFocusEffect` to smoothly reset FAB rotation and scale to resting state when returning to the group.
+      - *Container Transform & Morphing Launch (`app/expenses/new.tsx`)*:
+        - Container emerges directly from the measured `+` button center coordinates.
+        - Implemented spring transform with native driver (`damping: 24, stiffness: 240, mass: 0.8`): scales from FAB size (`52x52`) to full screen while translating from `(deltaX, deltaY)` to `(0, 0)`.
+        - Cross-fades an emerald aura overlay into the rich dark `#09090B` theme surface.
+        - Content unfolds smoothly with staggered opacity (`0 -> 1`) and gentle slide (`16px -> 0px`).
+        - Implemented symmetric reverse collapse animation on `handleClose()` (tapped `X` close button, saved expense, or Android hardware back gesture), shrinking cleanly back into the `+` button.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors across `SplitIt-Mobile`.
+
+  - **Back Navigation Screen Data Blanking & Transition Flash Resolved** 🐛 📱 ⚡ ✅:
+    - **User Requirement**:
+      - "the animations are smooth when opening new group or page the previous page data doesnt just disappear while navigating or in the in-transition state but when clicked back the previous page blanks out fix it"
+    - **Root Cause Analysis Identified & Resolved**:
+      - *Root Cause 1 (Default White Native Container Background)*: React Navigation's root stack used default colors without an explicit `ThemeProvider`, causing the native `ScreenStack` container to render a default light/white background (`#F2F2F2`) behind screens. Any frame during pop transition momentarily exposed this white/blank surface.
+      - *Root Cause 2 (Off-Screen -100% Back Translation in `slide_from_right`)*: On Android in `react-native-screens`, `slide_from_right` exit animation moved the previous screen all the way from `-100%` (far left offscreen) to `0%`. During the initial frames of popping back, the screen behind the exiting card was completely empty.
+      - *Root Cause 3 (React Freeze Suspense Blur Delays)*: `react-freeze` was enabled on blur by default in `react-native-screens`, freezing inactive screens in the background. On popping back, `DelayedFreeze` (a 0ms timeout) suspended the component tree, producing a blank flash before unfreezing.
+      - *Root Cause 4 (Loading State Screen Wipes on Re-evaluation)*: `app/groups/[id]/index.tsx`, `app/(tabs)/groups.tsx`, and `app/(tabs)/activity.tsx` previously fell back to blank `<ActivityIndicator />` screens whenever `loading: true` or state was evaluated.
+    - **Engineering Solutions Applied across `SplitIt-Mobile`**:
+      - `app/_layout.tsx`:
+        - Wrapped root stack in `<ThemeProvider value={splitItNavTheme}>` with dark `#09090B` backgrounds, matching all screen surfaces and eliminating white transition flashes.
+        - Configured `screenOptions` with `animation: 'ios_from_right'`, which retains the underlying screen with subtle parallax (`-30%` to `0%` on Android, native parallax and swipe back on iOS), keeping the previous screen in view throughout the pop transition.
+        - Set `freezeOnBlur: false` on the root stack and bottom tabs (`app/(tabs)/_layout.tsx`), eliminating blank unfreeze suspense frames.
+        - Explicitly registered `<Stack.Screen name="groups/[id]/index" />` and `<Stack.Screen name="groups/[id]/settings" />`.
+      - `src/services/group.service.ts`:
+        - Introduced in-memory `_groupDetailsMap` and synchronous accessors `getInMemoryGroups()` and `getInMemoryGroupDetail(groupId)`.
+      - `src/services/expense.service.ts`:
+        - Introduced in-memory `_cachedUserExpenses` and `_cachedExpenseDetailsMap` and synchronous accessors `getInMemoryUserExpenses()` and `getInMemoryExpenseDetails(expenseId)`.
+      - `app/groups/[id]/index.tsx`:
+        - Synchronously initialized `group` state from `groupService.getInMemoryGroupDetail(targetId)`.
+        - Replaced destructive loading guard with `if (!group)` so that existing group details remain 100% rendered during background re-fetching and back transitions.
+      - `app/(tabs)/groups.tsx` & `app/(tabs)/activity.tsx`:
+        - Synchronously initialized lists from in-memory cache and updated loading guards to only show initial spinners when data lists are completely empty.
+      - `app/expenses/[id].tsx`, `app/groups/[id]/search.tsx`, `app/groups/[id]/settings.tsx`:
+        - Initialized state synchronously from in-memory services to prevent blank screens or input flashing.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors in `SplitIt-Mobile`.
+
+  - **AI Chat Keyboard Adaptive Smooth Positioning & Input Clearance Fixed** 💬 📱 ⚡ ✅:
+    - **User Requirement**:
+      - "the chat input for AI chat a little bot of its portion still gets hidden by keyboard fix it and make it smoothly chage its position with keyboard opening and closing"
+    - **Root Cause Analysis Identified & Resolved**:
+      - *Root Cause 1 (iOS 54px Under-Lift)*: `keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 10 : 0}` was subtracting ~54px from React Native's `KeyboardAvoidingView` lift calculation (`bottomPadding = keyboardHeight - keyboardVerticalOffset`). This left 54px of the input bar hidden behind the keyboard.
+      - *Root Cause 2 (Android Jump & Pull-Down Glitch)*: `onKeyboardShow` was animating a custom `keyboardAnim` to 300px while `handleContainerLayout` simultaneously detected the window shrank and forced `keyboardAnim` down to 0 in 60ms, creating a violent jump and drop.
+      - *Root Cause 3 (Un-Animated Jump in Padding)*: `inputContainer` had an un-animated inline ternary `paddingBottom: isKeyboardOpen ? 6 : Math.max(insets.bottom, 12)`, which instantly snapped from 34px to 6px on the very first frame of keyboard open. 6px also failed to clear navigation gestures on edge-to-edge screens.
+    - **Engineering Solutions Applied (`app/ai/chat.tsx`)**:
+      - Zeroed out `keyboardVerticalOffset={0}` on `KeyboardAvoidingView`, ensuring the container lifts by the exact, full keyboard height on iOS.
+      - Introduced `bottomPaddingAnim = useRef(new Animated.Value(closedBottomPadding)).current`, which smoothly interpolates from `Math.max(insets.bottom, 12)` down to `10px` (iOS) / `12px` (Android) using the exact native keyboard duration (`e.duration || 250ms`) and cubic bezier curve (`Easing.bezier(0.25, 0.1, 0.25, 1)`).
+      - Removed the conflicting `keyboardAnim` and `handleContainerLayout`, letting Android OS handle window resizing smoothly via native `adjustResize` without double-lifting or glitching.
+      - Added `paddingTop: 8` and `paddingBottom: 10/12px` on the input capsule so the entire container, its border, and shadows have ample, clean breathing room above the soft keyboard.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors in `SplitIt-Mobile`.
+
+  - **Header Left-Alignment Standardization Across All App Screens Completed** 🎨 📱 ✨ ✅:
+    - **User Requirement**:
+      - "in some areas of headers like the notifications page, group name when scrolled the header is alligned about center it should not, it should be on left side at such position it looks good / scan all places and main reason and fix it"
+    - **Root Cause Analysis Identified & Resolved**:
+      - *Root Cause 1 (`justifyContent: 'space-between'` + unweighted title)*: Header containers placed the back button on the left, an unweighted title in the middle, and asymmetrical action buttons or dummy spacers on the right. Because of unequal side widths (e.g. 36px left vs 124px right on group screen), titles were forced into an awkward, squeezed off-center position.
+      - *Root Cause 2 (Explicit Centering)*: In `app/groups/[id]/index.tsx`, `collapsedTitleWrap` had `alignItems: 'center'` and `collapsedTitleText` had `textAlign: 'center'`. When scrolled, the group title was placed in the center between the back button and the 3 action buttons.
+      - *Root Cause 3 (Artificial Placeholder Spacers)*: In `app/notifications/preferences.tsx`, `app/settle/new.tsx`, `app/settle/qr.tsx`, and legal screens, dummy `<View style={{ width: 38 }} />` boxes were placed specifically to force center-alignment.
+    - **Standardized Clean Native Fix Pattern Applied Across 16 Screens & Modals**:
+      - `app/groups/[id]/index.tsx`: Updated `collapsedTitleWrap` (`alignItems: 'flex-start'`, `paddingLeft: 10`, `flex: 1`), `collapsedTitleTouch` (`alignSelf: 'flex-start'`), and `collapsedTitleText` (`textAlign: 'left'`). The group name now docks crisply to the left right next to the back button when scrolling.
+      - `app/notifications/index.tsx`: Updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`, `numberOfLines: 1`. Clean left alignment next to the back button.
+      - `app/notifications/preferences.tsx`: Removed dummy `<View style={{ width: 38 }} />`, updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`.
+      - `app/groups/[id]/settings.tsx`: Updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`, `numberOfLines: 1`.
+      - `app/groups/new.tsx`: Updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`, `numberOfLines: 1`.
+      - `app/settle/new.tsx`: Removed dummy `<View style={{ width: 36 }} />`, updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`, `numberOfLines: 1`.
+      - `app/settle/qr.tsx`: Removed dummy `<View style={{ width: 32 }} />`, updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`, `numberOfLines: 1`.
+      - `app/support/index.tsx`: Updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`, `numberOfLines: 1`.
+      - `app/support/new.tsx`: Updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`, `numberOfLines: 1`.
+      - `app/legal/privacy.tsx`, `app/legal/terms.tsx`, `app/legal/delete-account.tsx`: Removed artificial 38px dummy spacers, updated `headerTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`.
+      - `app/ai/chat.tsx`: Updated `headerCenter` with `flex: 1`, `marginLeft: 12`, `alignItems: 'flex-start'`, `justifyContent: 'center'`, aligning the title and live subtitle directly beside the close button.
+      - `app/expenses/new.tsx`: Updated `headerTitleWrap` (`flex: 1`, `marginLeft: 12`, `alignItems: 'flex-start'`) and `headerTitle` (`textAlign: 'left'`), removing redundant placeholder.
+      - `src/components/expenses/PayerSelectModal.tsx` & `SplitOptionsModal.tsx`: Updated `appBarTitle` with `flex: 1`, `marginLeft: 12`, `textAlign: 'left'`.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors in `SplitIt-Mobile`.
+
+  - **Unified Expense Add & Edit Screen with Deep Dirty-State Detection & Logs Integration Completed** 📱 ✨ 🎨 ⚡ ✅:
+    - **User Requirement**:
+      - "for editing expense use the same screen as adding expense but with old vaules too / just display at top if its add expense or edit expense / make it better if no change and tell me the edit and add logs parser state will it use the parser from the site itself using API calls"
+    - **Architecture & Implementation (`app/expenses/new.tsx`, `app/expenses/[id].tsx`, `src/services/expense.service.ts`)**:
+      - **Single Reusable Screen (`app/expenses/new.tsx`)**:
+        - Supported both Create (`/expenses/new`) and Edit (`/expenses/new?expenseId=...&groupId=...`) within the flagship new expense screen.
+        - Dynamic header label: Displays **"Edit expense"** in edit mode and **"Add an expense"** in create mode.
+        - In edit mode, hides the OCR camera scan button and aligns the header title symmetrically.
+      - **Instant 0ms Cache Hydration & Complete Prepopulation**:
+        - Instantly hydrates amount, title, categories, date, notes, payers, and split mode from `getCachedExpenseDetails(expenseId)`.
+        - Fetches full group members and matches participants so existing checkboxes, percentages, and amounts match the saved state.
+        - Preserves user category without AI auto-classification overrides (`userOverriddenCategory = true`).
+      - **Deep Dirty Change Detection ("Make it better if no change")**:
+        - Records a complete snapshot `initialSnapshot` on mount.
+        - `hasChanges` memo compares amount, description, category, master category, notes, date, group, single vs multiple payers, payer amounts, split mode, and participants (toggles, weights, exact amounts).
+        - If unchanged in edit mode:
+          - Bottom save button displays **"No changes to save"** with a dimmed border (`opacity: 0.8`), disabled click, and muted icon.
+          - Displays an ambient indicator pill: `Expense details unchanged` to clearly reassure the user.
+        - If modified:
+          - Save button lights up with vibrant primary emerald styling and text **"Save Changes"**.
+      - **Seamless Routing & Auto-Refresh (`app/expenses/[id].tsx`)**:
+        - The pencil icon in `[id].tsx` navigates directly to `/expenses/new?expenseId=${expenseId}&groupId=${groupId}`.
+        - Removed 300+ lines of duplicate inline modal code and sub-modals from `[id].tsx`.
+        - Integrated `useFocusEffect` to automatically re-fetch expense details and audit logs when returning to the detail screen.
+      - **Logs & Changes Parser State Explained**:
+        - Edit and add logs are generated on the server by the site's REST API (`PUT /api/expenses/:id`) via `logHistoryEvent`.
+        - Mobile fetches these audit logs via `GET /api/history?groupId=...&expenseId=...`.
+        - Both the web application and mobile app format and parse complex payer/split history entries using the shared `@splitit/core` engine (`parseComplexChange`).
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors in both `SplitIt-Mobile` and `SplitWise-Clone`.
+
+
+  - **Mobile Flagship AI Chat Top-Notch Speech Bubbles & Dynamic Keyboard Positioning Patched** 💬 📱 🎨 ⚡ ✅:
+    - **User Requirement**:
+      - "in AI chat its still not keyboard compatible / the chat and input box (most of the main content) must stay strictly above keyboard / the squicircle like box for chat its nice but the sharp one edge move it from bottom to top for both of user and AI chat"
+    - **Architecture & Implementation (`app/ai/chat.tsx`)**:
+      - **Top Sharp Notch for Squircle Speech Bubbles**:
+        - User bubble (`bubbleUser`): Moved the sharp corner from bottom-right to top-right (`borderTopRightRadius: 4`, with all other 3 corners rounded `18px`). Now points directly toward the user avatar.
+        - Assistant bubble (`bubbleAssistant`): Moved the sharp corner from bottom-left to top-left (`borderTopLeftRadius: 4`, with all other 3 corners rounded `18px`). Now points directly toward the bot avatar.
+      - **Guaranteed Above-Keyboard Positioning**:
+        - *Layout-Sensing Android & iOS Keyboard Offset*: Implemented a dynamic listener that measures whether the Android OS window shrank (`handleContainerLayout`). If the window does not automatically resize, `keyboardAnim` lifts the entire inner content wrapper by the exact keyboard height (`e.endCoordinates.height`). If the window already resized, offset stays 0 to prevent double-push.
+        - *iOS Keyboard Avoiding Offset*: Padded `KeyboardAvoidingView` on iOS with `keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 10 : 0}` to account for modal sheet insets.
+        - *Compact Welcome State on Keyboard Focus*: When `isKeyboardOpen` is true on the welcome screen, the 380px starter cards grid collapses into a sleek 44px 1-row horizontal chip bar (`Quick Financial Prompts`), freeing over 300px of vertical space so chat and input stay spacious and strictly above the keyboard.
+        - *Follow-Up Chips Auto-Hide*: Hidden when keyboard is open to dedicate 100% of visible viewport to messages and typing.
+        - *Multi-Staged Auto-Scroll*: Pinned scroll to bottom at 0ms, 60ms, and 200ms of keyboard show transition.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors across `SplitIt-Mobile`.
+
+
+  - **Mobile Auth Screens Keyboard-Adaptive Redesign & Hero Slide Collapse Completed** 🎨 📱 ✨ ✅:
+    - **User Requirement**:
+      - "the signin and sign up page make them mobile and keyboard compatible / move the google button below / the details email passwrod everything hides when keyboard is opened / do a thing gracefully and smoothly hide the image at top like sliding at top and goes away when opened keyboard / plan urself and do u hv any suggestions ?"
+    - **Architecture & Implementation (`app/(auth)/login.tsx` & `app/(auth)/signup.tsx`)**:
+      - **Keyboard-Adaptive Hero Slide Collapse**:
+        - Replaced static hero container with `Animated.View` powered by `keyboardAnim` (`0` when keyboard hidden, `1` when keyboard open).
+        - Listens to native `keyboardWillShow` / `keyboardWillHide` on iOS and `keyboardDidShow` / `keyboardDidHide` on Android with platform-matched curves (`duration: 250ms`).
+        - Interpolated sliding disappearance: `height: 210 -> 0`, `opacity: 1 -> 0`, `transform: [{ translateY: 0 -> -32 }]`, and `marginBottom: 18 -> 0`. The banner seamlessly slides up and vanishes behind the safe area bar.
+        - Fades in a sleek compact brand header (`SplitIt` title + mini 28px icon badge) so brand identity is preserved without consuming vertical input space.
+      - **Form & Social Authentication Hierarchy**:
+        - Relocated Google & Apple OAuth buttons below the credentials form, placing primary email/password inputs immediately within view.
+        - Added input focus chaining:
+          - Login: Email `returnKeyType="next"` -> auto-focuses Password input; Password `returnKeyType="go"` -> triggers `handleEmailLogin()`.
+          - Sign Up: 4-tier chain (Full Name -> Email -> Password -> Confirm Password -> Submit).
+        - Wrapped screens in `TouchableWithoutFeedback onPress={Keyboard.dismiss}` and `keyboardDismissMode="on-drag"` for native mobile gesture dismiss.
+    - **Verification**:
+      - `npx tsc --noEmit` passed with 0 errors in `SplitIt-Mobile`.
+      - Pre-commit type check gate passed.
+
+  - **Mobile Social Sign-In GET 404 & Deep Link Token Forwarding Fixed** 🛡️ 📱 🌐 ✅:
+    - **User Issue**:
+      - `GET /api/auth/sign-in/social?provider=google&callbackURL=exp%3A%2F%2F192.168.1.53%3A8081%2F--%2Fauth%2Fcallback 404 in 9ms`
+    - **Root Cause**:
+      - Better Auth exposes `/api/auth/sign-in/social` strictly as a `POST` endpoint that accepts a JSON body (`{ provider, callbackURL }`) and returns `{ url: string, redirect: true }`.
+      - When `SplitIt-Mobile` used `WebBrowser.openAuthSessionAsync` directly pointing at `/api/auth/sign-in/social`, the in-app browser performed an HTTP `GET`, which Better Auth rejected with 404.
+      - Furthermore, upon successful Google OAuth callback, Better Auth redirects to `callbackURL` without query parameters, leaving the mobile app unable to extract the generated session token to authenticate subsequent requests.
+    - **Full-Stack Solution**:
+      - **Backend (`src/app/api/auth/[...all]/route.ts`)**:
+        - Added GET handler interception for `/api/auth/sign-in/social` that calls `auth.api.signInSocial({ body: { provider, callbackURL } })` and returns an immediate 307 Redirect to Google's OAuth consent screen.
+        - Added mobile callback token forwarding: when Better Auth responds with a redirect location to `exp://` or `splitit://`, the handler extracts `session_token` from response cookies / `set-auth-token` header and appends `?token=<token>&session_token=<token>` to the redirect URL.
+      - **Mobile (`src/services/auth.service.ts`)**:
+        - Updated `signInWithGoogle` to pre-fetch the OAuth URL directly via `POST /api/auth/sign-in/social` before opening `WebBrowser.openAuthSessionAsync`, eliminating initial redirect latency.
+        - Kept fallback to GET `${API_BASE_URL}/api/auth/sign-in/social` which now safely 307-redirects to Google.
+        - Extracted genuine session token from the callback redirect params and verified profile via `/api/user/profile` with `Authorization: Bearer <token>`.
+    - **Verification**:
+      - Tested HTTP request to `http://localhost:3231/api/auth/sign-in/social?provider=google&callbackURL=...`: returned `Status: 307` and redirected directly to Google OAuth.
+      - Both `SplitIt-Mobile` and `SplitWise-Clone` passed `npx tsc --noEmit` with 0 errors.
+
   - **Group Banner Hardware Acceleration & Progressive Expense Loading Completed** ⚡ 📱 ✨ ✅:
     - **User Requirement**:
       - "the banner image at top in group the animation of iit starts to lag when there are too many expense records / I asked u to add progressive loading as user scrolls then load older records and not all at once / fix both / make a plan"
