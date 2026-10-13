@@ -1,5 +1,19 @@
 # Session Progress & Context Preservation
 
+  - **Group Activity & Expense History Parity & Audit Logs Completed** ✨ 📱 🎨 🧪 ✅:
+    - **User Requirement**:
+      - "the activity tabs in group its list view is not good looking make it like in website simple sleek and minimal. in expense info too just divided by a line and no div. make it exactly like website - the icons, coloring, strike through text button to take there, restore button, the delete button for admin only, normal users cant see and wont even work. study the website well and make it same working no gaps. reverify everything"
+    - **Implementation Highlights**:
+      - *Group Activity Tab Minimal Redesign*: Replaced bulky card design with sleek hairline divider rows (`StyleSheet.hairlineWidth`). Matched all website event icons and color schemes (emerald creation, blue updates, red deletions, purple restorations, electric purple AI badge).
+      - *Deleted Expense Tracking & Strikethrough*: Applied strikethrough text styling to deleted expenses and hidden direct navigation when deleted.
+      - *Take There / View Expense Button*: Added `ArrowRight` action button navigating directly to expense detail screen.
+      - *Restore Action*: Added `RotateCcw` button calling `restoreExpense`/`restoreSettlement` with haptics, spinner, and automatic data refresh.
+      - *Admin-Only Delete Guard*: Strictly gated delete button with `currentUser.role === 'admin'`. Completely hidden from non-admin users and guarded against execution.
+      - *Granular Accordion Changes*: Integrated `@splitit/core` `parseComplexChange` for detailed payer and split diffs.
+      - *Expense Info History Line Dividers*: Removed `logCard` div styling in `app/expenses/[id].tsx`, replacing with hairline dividers (`borderBottomWidth: StyleSheet.hairlineWidth`) and website color badges.
+      - *Test Suite*: Added 14 unit tests in `src/__tests__/history-audit.test.ts` (134 total passing tests in Vitest).
+      - *Type Check*: `npx tsc --noEmit` verified with 0 errors in both `SplitWise-Clone` and `SplitIt-Mobile`.
+
   - **Group FAB to Add Expense Screen Smooth App-Launch Morph Transition Completed** ✨ 📱 🎨 ⚡ ✅:
     - **User Requirement**:
       - "for the + button in group add a nice animation like the add expense screen opens through that + button just like opening animaton of any app in phone smooth"
