@@ -7,3 +7,4 @@ export * from './diffs';
 export * from './budget';
 export * from './history';
 export * from './balance-history';
+export * from './split-utils';
