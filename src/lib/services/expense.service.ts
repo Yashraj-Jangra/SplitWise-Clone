@@ -9,6 +9,7 @@ import { getFullName } from '@splitit/core';
 import { format } from 'date-fns';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { getGroupsByUserId } from './group.service';
+import { invalidateGroupBalanceCache } from './balance.service';
 
 function getFallbackUser(userId: string): UserProfile {
   return {
@@ -186,6 +187,7 @@ export async function addExpense(
   );
 
   queueVectorEmbedding(expenseId, expenseData.groupId, 'expense', 'upsert');
+  invalidateGroupBalanceCache(expenseData.groupId);
   return expenseId;
 }
 
@@ -226,6 +228,7 @@ export async function updateExpense(
   );
 
   queueVectorEmbedding(expenseId, expenseData.groupId, 'expense', 'upsert');
+  invalidateGroupBalanceCache(expenseData.groupId);
 
   // Adjust group total & check budget
   const diff = expenseData.amount - oldAmount;
@@ -308,6 +311,7 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   }
 
   queueVectorEmbedding(expenseId, groupId, 'expense', 'delete');
+  invalidateGroupBalanceCache(groupId);
 }
 
 export async function getExpenseById(expenseId: string, groupId?: string): Promise<Expense | null> {

@@ -1,5 +1,13 @@
 # Session Progress & Context Preservation
 
+  - **Backend Performance Optimization & Lightweight Members Endpoint** ⚡ 🛡️ 🗄️ ✅:
+    - **Optimization Details**:
+      - *Lightweight Group Members Endpoint (`src/app/api/groups/[id]/members/route.ts`)*: Added a dedicated `GET` handler returning hydrated group members without querying all expenses, settlements, or audit history. Guarded with Better-Auth session verification and `verifyGroupMembership` (zero security risk).
+      - *Bounded In-Memory Cache on Balances (`src/lib/services/balance.service.ts`)*: Added `balanceCache` with 20s TTL for `getGroupBalances(groupId)`, with automatic targeted invalidation via `invalidateGroupBalanceCache(groupId)` across expense and settlement mutations (`createExpense`, `updateExpense`, `deleteExpense`, `addSettlement`, `updateSettlement`, `deleteSettlement`).
+      - *User Groups In-Memory Cache (`src/lib/services/group.service.ts`)*: Added `userGroupsCache` with 15s TTL for `getGroupsByUserId(userId)`, eliminating redundant full-table entity queries and user hydration cycles on concurrent GET requests.
+      - *Type Check*: `npx tsc --noEmit` verified with 0 errors.
+
+
   - **Group Activity & Expense History Parity & Audit Logs Completed** ✨ 📱 🎨 🧪 ✅:
     - **User Requirement**:
       - "the activity tabs in group its list view is not good looking make it like in website simple sleek and minimal. in expense info too just divided by a line and no div. make it exactly like website - the icons, coloring, strike through text button to take there, restore button, the delete button for admin only, normal users cant see and wont even work. study the website well and make it same working no gaps. reverify everything"
