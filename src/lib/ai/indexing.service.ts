@@ -3,7 +3,7 @@ import { embed } from '@/lib/ai/embedder';
 import { upsertVector, deleteVector, deleteVectorsByPrefix, deleteVectorsByGroup } from '@/lib/ai/vector-store';
 import { buildExpenseChunk, buildSettlementChunk, buildGroupMetaChunk } from '@/lib/ai/context-builder';
 import { getUserProfile } from '@/lib/services/user.service';
-import { getFullName } from '@/lib/utils';
+import { getFullName } from '@splitit/core';
 
 export interface ProcessEmbeddingResult {
   success: boolean;

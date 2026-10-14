@@ -66,10 +66,12 @@ export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent
 
 export async function getHistoryForExpense(expenseId: string, groupId: string): Promise<HistoryEvent[]> {
   const historyDocs = await getHistoryByGroupId(groupId);
+  const target = String(expenseId);
   return historyDocs.filter(h => {
-    if (h.data?.expenseId === expenseId) return true;
-    if (h.data?.originalExpenseId === expenseId) return true;
-    return false;
+    const hExpId = String(h.data?.expenseId || '');
+    const hNewId = String(h.data?.newExpenseId || '');
+    const hOrigId = String(h.data?.originalExpenseId || '');
+    return hExpId === target || hNewId === target || hOrigId === target;
   });
 }
 

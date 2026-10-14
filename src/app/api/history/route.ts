@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth.server';
 import { getHistoryByGroupId, getHistoryForExpense } from '@/lib/services/history.service';
 import { verifyGroupMembership } from '@/lib/services/group.service';
+import { getExpenseById } from '@/lib/services/expense.service';
 
 export async function GET(request: Request) {
   try {
@@ -11,8 +12,15 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const groupId = searchParams.get('groupId');
+    let groupId = searchParams.get('groupId');
     const expenseId = searchParams.get('expenseId');
+
+    if (!groupId && expenseId) {
+      const expense = await getExpenseById(expenseId);
+      if (expense) {
+        groupId = expense.groupId;
+      }
+    }
 
     if (!groupId) {
       return NextResponse.json({ error: 'groupId parameter is required' }, { status: 400 });

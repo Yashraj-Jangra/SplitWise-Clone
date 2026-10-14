@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     'google-auth-library',
     'oracledb',
     'nosql',
+    'better-auth',
   ],
   images: {
     remotePatterns: [

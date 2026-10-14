@@ -41,13 +41,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // --- Check for session cookie ---
+  // --- Check for session cookie or Bearer token ---
+  const authHeader = request.headers.get('authorization');
+  const hasBearerToken = authHeader?.startsWith('Bearer ');
   const sessionCookie = 
     request.cookies.get('better-auth.session_token')?.value ||
     request.cookies.get('__Secure-better-auth.session_token')?.value ||
     request.cookies.get('__session')?.value;
 
-  if (!sessionCookie) {
+  if (!sessionCookie && !hasBearerToken) {
+    // If it's an API route, return 401 JSON instead of an HTML redirect
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // No session — redirect to login, preserving the intended destination
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);

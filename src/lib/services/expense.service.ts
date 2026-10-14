@@ -1,14 +1,15 @@
-import { getItem, putItem, queryByPk, queryByEntityType, deleteItem } from '@/lib/nosql';
+import { getItem, getItemBySk, putItem, queryByPk, queryByEntityType, deleteItem } from '@/lib/nosql';
 import type { Expense, ExpenseDocument, UserProfile, ExpensePayer, ExpenseParticipant } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifyExpenseAdded, notifyExpenseUpdated, notifyExpenseDeleted, notifyBudgetAlert } from '@/lib/notification-service';
 import { getSiteSettings } from './settings.service';
 import { getMasterCategory } from '../expense-categories';
-import { getFullName } from '../utils';
+import { getFullName } from '@splitit/core';
 import { format } from 'date-fns';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { getGroupsByUserId } from './group.service';
+import { invalidateGroupBalanceCache } from './balance.service';
 
 function getFallbackUser(userId: string): UserProfile {
   return {
@@ -186,6 +187,7 @@ export async function addExpense(
   );
 
   queueVectorEmbedding(expenseId, expenseData.groupId, 'expense', 'upsert');
+  invalidateGroupBalanceCache(expenseData.groupId);
   return expenseId;
 }
 
@@ -226,6 +228,7 @@ export async function updateExpense(
   );
 
   queueVectorEmbedding(expenseId, expenseData.groupId, 'expense', 'upsert');
+  invalidateGroupBalanceCache(expenseData.groupId);
 
   // Adjust group total & check budget
   const diff = expenseData.amount - oldAmount;
@@ -308,6 +311,46 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   }
 
   queueVectorEmbedding(expenseId, groupId, 'expense', 'delete');
+  invalidateGroupBalanceCache(groupId);
+}
+
+export async function getExpenseById(expenseId: string, groupId?: string): Promise<Expense | null> {
+  let r: any = null;
+  if (groupId) {
+    r = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
+  }
+  if (!r) {
+    r = await getItemBySk<any>(`EXPENSE#${expenseId}`);
+  }
+  if (!r) return null;
+
+  const userIds = new Set<string>();
+  if (r.expenseCreatorId) userIds.add(r.expenseCreatorId);
+  (r.payers || []).forEach((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    if (uid) userIds.add(uid);
+  });
+  (r.participants || []).forEach((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    if (uid) userIds.add(uid);
+  });
+
+  const users = await hydrateUsers(Array.from(userIds));
+  const userMap = new Map(users.map(u => [u.uid, u]));
+
+  const creator = userMap.get(r.expenseCreatorId) || getFallbackUser(r.expenseCreatorId);
+  const payers = (r.payers || []).map((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    const u = userMap.get(uid) || getFallbackUser(uid);
+    return { amount: p.amount || 0, user: u } as ExpensePayer;
+  });
+  const participants = (r.participants || []).map((p: any) => {
+    const uid = typeof p === 'string' ? p : p.userId;
+    const u = userMap.get(uid) || getFallbackUser(uid);
+    return { amountOwed: p.amountOwed || 0, share: p.share || undefined, user: u } as ExpenseParticipant;
+  });
+
+  return mapExpenseRow(r, payers, participants, creator);
 }
 
 export async function getExpensesByGroupId(groupId: string): Promise<Expense[]> {
@@ -364,7 +407,8 @@ export async function getExpensesByUserId(userId: string): Promise<Expense[]> {
     .filter(e => {
       const isPayer = e.payers.some(p => p.user.uid === userId);
       const isParticipant = e.participants.some(p => p.user.uid === userId);
-      return isPayer || isParticipant;
+      const isCreator = e.expenseCreator?.uid === userId;
+      return isPayer || isParticipant || isCreator;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

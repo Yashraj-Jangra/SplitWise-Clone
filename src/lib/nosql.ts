@@ -170,6 +170,28 @@ export async function getItem<T = any>(pk: string, sk: string): Promise<T | null
 }
 
 /**
+ * Get a single document by Sort Key (sk) across all partitions
+ */
+export async function getItemBySk<T = any>(sk: string): Promise<T | null> {
+  const cacheKey = `getItemBySk:${sk}`;
+  const cached = readCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data as T;
+  }
+
+  const rows = await executeOracleQuery<{ DATA: string | object }>(
+    `SELECT data FROM SplitItDB WHERE sk = :sk`,
+    { sk }
+  );
+
+  if (!rows || rows.length === 0) return null;
+  const raw = rows[0].DATA;
+  const result = (typeof raw === 'string' ? JSON.parse(raw) : raw) as T;
+  setReadCache(cacheKey, result);
+  return result;
+}
+
+/**
  * Insert or Update a single document in SplitItDB
  */
 export async function putItem(

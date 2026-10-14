@@ -3,7 +3,28 @@ import { getGroupById, getGroupsByUserId } from './group.service';
 import { getExpensesByGroupId } from './expense.service';
 import { getSettlementsByGroupId } from './settlement.service';
 
+interface CachedBalance {
+  expiresAt: number;
+  data: Balance[];
+}
+
+const balanceCache = new Map<string, CachedBalance>();
+const BALANCE_CACHE_TTL_MS = 20_000;
+
+export function invalidateGroupBalanceCache(groupId?: string): void {
+  if (groupId) {
+    balanceCache.delete(groupId);
+  } else {
+    balanceCache.clear();
+  }
+}
+
 export async function getGroupBalances(groupId: string): Promise<Balance[]> {
+  const cached = balanceCache.get(groupId);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data;
+  }
+
   const group = await getGroupById(groupId);
   if (!group) return [];
   
@@ -39,52 +60,24 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
     }
   });
 
-  return group.members.map(member => {
+  const result = group.members.map(member => {
     const netBalance = parseFloat((memberBalances[member.uid] || 0).toFixed(2));
     return {
       user: member,
       netBalance,
     };
   });
+
+  balanceCache.set(groupId, {
+    expiresAt: Date.now() + BALANCE_CACHE_TTL_MS,
+    data: result,
+  });
+
+  return result;
 }
 
-export function simplifyDebts(balances: Balance[]): SimplifiedSettlement[] {
-  const debtors = balances
-    .filter(b => b.netBalance < 0)
-    .map(b => ({ user: b.user, amount: Math.abs(b.netBalance) }));
-
-  const creditors = balances
-    .filter(b => b.netBalance > 0)
-    .map(b => ({ user: b.user, amount: b.netBalance }));
-
-  debtors.sort((a, b) => b.amount - a.amount);
-  creditors.sort((a, b) => b.amount - a.amount);
-
-  const settlements: SimplifiedSettlement[] = [];
-  let i = 0;
-  let j = 0;
-
-  while (i < debtors.length && j < creditors.length) {
-    const debtor = debtors[i];
-    const creditor = creditors[j];
-    const amountToSettle = Math.min(debtor.amount, creditor.amount);
-
-    if (amountToSettle > 0.01) {
-      settlements.push({
-        from: debtor.user,
-        to: creditor.user,
-        amount: amountToSettle,
-      });
-
-      debtor.amount -= amountToSettle;
-      creditor.amount -= amountToSettle;
-    }
-
-    if (debtor.amount < 0.01) i++;
-    if (creditor.amount < 0.01) j++;
-  }
-  return settlements;
-}
+import { simplifyDebts } from '@splitit/core';
+export { simplifyDebts };
 
 export async function getAllUserBalances(userId: string): Promise<Balance[]> {
   const userGroups = await getGroupsByUserId(userId);

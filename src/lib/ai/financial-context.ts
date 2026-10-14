@@ -1,7 +1,7 @@
 import { getGroupById, getGroupsByUserId } from '@/lib/services/group.service';
 import { getGroupBalances, getAllUserBalances, simplifyDebts } from '@/lib/services/balance.service';
 import { getExpensesByGroupId, getExpensesByUserId } from '@/lib/services/expense.service';
-import { getFullName } from '@/lib/utils';
+import { getFullName } from '@splitit/core';
 import {
   calculateSpendingTrends,
   calculateCategoryTimeline,

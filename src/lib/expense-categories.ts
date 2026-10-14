@@ -84,7 +84,7 @@ export const defaultExpenseCategories: Record<string, MasterCategory> = {
   },
   'Uncategorized': {
     subCategories: {
-      'Other': { icon: 'Wallet', keywords: [] },
+      'Other': { icon: 'Wallet', keywords: ['other', 'others', 'misc', 'miscellaneous', 'general'] },
     },
   },
 };
@@ -122,11 +122,37 @@ export function classifyExpense(description: string, categories: Record<string, 
 }
 
 export function getMasterCategory(subCategoryName: string, categories: Record<string, MasterCategory>): string {
+    if (!subCategoryName) return 'Uncategorized';
+    const normalizedSub = subCategoryName.toLowerCase() === 'others' ? 'Other' : subCategoryName;
     for (const masterCategoryName in (categories || {})) {
         const masterCategory = categories[masterCategoryName];
-        if (masterCategory && masterCategory.subCategories && masterCategory.subCategories[subCategoryName]) {
+        if (masterCategory && masterCategory.subCategories && (masterCategory.subCategories[normalizedSub] || masterCategory.subCategories[subCategoryName])) {
             return masterCategoryName;
         }
     }
     return 'Uncategorized';
 }
+
+export function getCategoryDetails(
+  subCategoryName: string,
+  categories: Record<string, MasterCategory>
+): { master: string; sub: string; icon: string } {
+  const normalizedSub = subCategoryName?.toLowerCase() === 'others' ? 'Other' : (subCategoryName || 'Other');
+  for (const masterCategoryName in (categories || {})) {
+    const masterCategory = categories[masterCategoryName];
+    if (masterCategory?.subCategories?.[normalizedSub]) {
+      const sub = masterCategory.subCategories[normalizedSub];
+      return {
+        master: masterCategoryName,
+        sub: normalizedSub,
+        icon: (sub as any).icon || 'Wallet',
+      };
+    }
+  }
+  return {
+    master: 'Uncategorized',
+    sub: normalizedSub,
+    icon: 'Wallet',
+  };
+}
+

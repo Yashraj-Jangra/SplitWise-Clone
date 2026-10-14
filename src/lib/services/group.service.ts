@@ -3,7 +3,7 @@ import type { Group, GroupDocument, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifyMemberAdded, notifyMemberRemoved } from '@/lib/notification-service';
-import { getFullName } from '../utils';
+import { getFullName } from '@splitit/core';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { deleteVectorsByGroup } from '@/lib/ai/vector-store';
 import { diffBudgetChanges } from './budget-history.helper';
@@ -63,6 +63,7 @@ export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | '
   };
 
   await putItem(`GROUP#${id}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupData.createdById}`, `GROUP#${id}`);
+  invalidateUserGroupsCache();
   queueVectorEmbedding(id, id, 'group', 'upsert');
   return id;
 }
@@ -80,9 +81,40 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
   return mapGroupRow(g, members, createdBy || getFallbackUser(g.createdById));
 }
 
+interface CachedUserGroups {
+  expiresAt: number;
+  data: Group[];
+}
+
+const userGroupsCache = new Map<string, CachedUserGroups>();
+const USER_GROUPS_CACHE_TTL_MS = 15_000;
+
+export function invalidateUserGroupsCache(userId?: string): void {
+  if (userId) {
+    userGroupsCache.delete(userId);
+  } else {
+    userGroupsCache.clear();
+  }
+}
+
+export async function getGroupMembers(groupId: string): Promise<UserProfile[]> {
+  const g = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
+  if (!g) return [];
+
+  const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+  if (memberIds.length === 0) return [];
+  return hydrateUsers(memberIds);
+}
+
 export async function getGroupsByUserId(userId: string): Promise<Group[]> {
+  const cached = userGroupsCache.get(userId);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data;
+  }
+
   const allGroups = await queryByEntityType<any>('GROUP');
   const userGroups = allGroups.filter((g: any) => {
+    if (g.createdById === userId) return true;
     if (!g.members) return false;
     return g.members.some((m: any) => (typeof m === 'string' ? m : m.userId) === userId);
   });
@@ -101,12 +133,19 @@ export async function getGroupsByUserId(userId: string): Promise<Group[]> {
   const hydratedList = await hydrateUsers(Array.from(userIds));
   const userMap = new Map<string, UserProfile>(hydratedList.map(u => [u.uid, u]));
 
-  return userGroups.map((g: any) => {
+  const result = userGroups.map((g: any) => {
     const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
     const members = memberIds.map(id => userMap.get(id) || getFallbackUser(id));
     const createdBy = userMap.get(g.createdById) || getFallbackUser(g.createdById);
     return mapGroupRow(g, members, createdBy);
   });
+
+  userGroupsCache.set(userId, {
+    expiresAt: Date.now() + USER_GROUPS_CACHE_TTL_MS,
+    data: result,
+  });
+
+  return result;
 }
 
 export async function getAllGroups(): Promise<Group[]> {
@@ -167,6 +206,7 @@ export async function addMembersToGroup(groupId: string, memberIds: string[], ac
   }
 
   queueVectorEmbedding(groupId, groupId, 'group', 'upsert');
+  invalidateUserGroupsCache();
 }
 
 export async function addMemberToGroup(groupId: string, newMemberUserId: string, actorId: string): Promise<void> {
@@ -201,6 +241,7 @@ export async function removeMemberFromGroup(groupId: string, memberIdToRemove: s
   }
 
   queueVectorEmbedding(groupId, groupId, 'group', 'upsert');
+  invalidateUserGroupsCache();
 }
 
 export async function updateGroup(groupId: string, data: Partial<GroupDocument>, actorId: string): Promise<void> {
@@ -258,6 +299,7 @@ export async function updateGroup(groupId: string, data: Partial<GroupDocument>,
   }
 
   queueVectorEmbedding(groupId, groupId, 'group', 'upsert');
+  invalidateUserGroupsCache();
 }
 
 export async function archiveGroup(groupId: string, actorId: string): Promise<void> {
@@ -266,6 +308,7 @@ export async function archiveGroup(groupId: string, actorId: string): Promise<vo
 
   groupDoc.archivedAt = new Date().toISOString();
   await putItem(`GROUP#${groupId}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupDoc.createdById}`, `GROUP#${groupId}`);
+  invalidateUserGroupsCache();
 
   const actor = await getUserProfile(actorId);
   const actorName = getFullName(actor?.firstName, actor?.lastName);
@@ -279,6 +322,7 @@ export async function restoreGroup(groupId: string, actorId: string): Promise<vo
 
   groupDoc.archivedAt = null;
   await putItem(`GROUP#${groupId}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupDoc.createdById}`, `GROUP#${groupId}`);
+  invalidateUserGroupsCache();
 
   const actor = await getUserProfile(actorId);
   const actorName = getFullName(actor?.firstName, actor?.lastName);
@@ -290,6 +334,7 @@ export async function restoreGroup(groupId: string, actorId: string): Promise<vo
 export async function deleteGroupPermanently(groupId: string): Promise<void> {
   await deletePartition(`GROUP#${groupId}`);
   await deleteVectorsByGroup(groupId);
+  invalidateUserGroupsCache();
   queueVectorEmbedding(groupId, groupId, 'group', 'delete');
 }
 
@@ -300,6 +345,3 @@ export async function verifyGroupMembership(groupId: string, userId: string): Pr
   const memberIds = (groupDoc.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
   return memberIds.includes(userId);
 }
-
-// Circular imports helper (resolved at runtime)
-import { getGroupBalances } from './balance.service';

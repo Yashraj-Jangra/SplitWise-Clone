@@ -3,9 +3,10 @@ import type { Settlement, SettlementDocument, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { logHistoryEvent } from './history.service';
 import { notifySettlementAdded } from '@/lib/notification-service';
-import { getFullName } from '../utils';
+import { getFullName } from '@splitit/core';
 import { queueVectorEmbedding } from '@/lib/ai/queue-helper';
 import { getGroupsByUserId } from './group.service';
+import { invalidateGroupBalanceCache } from './balance.service';
 
 function getFallbackUser(userId: string): UserProfile {
   return {
@@ -82,6 +83,7 @@ export async function addSettlement(
   }
 
   queueVectorEmbedding(settlementId, settlementData.groupId, 'settlement', 'upsert');
+  invalidateGroupBalanceCache(settlementData.groupId);
   return settlementId;
 }
 
@@ -178,6 +180,7 @@ export async function updateSettlement(
   );
 
   queueVectorEmbedding(settlementId, oldData.groupId, 'settlement', 'upsert');
+  invalidateGroupBalanceCache(oldData.groupId);
 
   const [actor, newPaidBy, newPaidTo, oldPaidBy, oldPaidTo] = await Promise.all([
     getUserProfile(actorId),
@@ -204,5 +207,6 @@ export async function updateSettlement(
 
 export async function deleteSettlement(settlementId: string, groupId: string, actorId: string): Promise<void> {
   await deleteItem(`GROUP#${groupId}`, `SETTLEMENT#${settlementId}`);
+  invalidateGroupBalanceCache(groupId);
   queueVectorEmbedding(settlementId, groupId, 'settlement', 'delete');
 }
