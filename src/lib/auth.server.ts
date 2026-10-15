@@ -15,6 +15,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     'splitit://',
     'exp://',
+    'https://split.cvweb.qzz.io',
     process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3231',
     process.env.BETTER_AUTH_URL || 'http://localhost:3231',
   ].filter(Boolean),
