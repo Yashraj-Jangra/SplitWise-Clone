@@ -46,7 +46,9 @@ function mapGroupRow(g: any, members: UserProfile[], createdBy: UserProfile): Gr
 
 export async function createGroup(groupData: Omit<GroupDocument, 'createdAt' | 'totalExpenses' | 'groupCreatorId' | 'archivedAt'>): Promise<string> {
   const id = `grp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const members = groupData.memberIds.map(uid => ({ userId: uid, joinedAt: new Date().toISOString() }));
+  const rawMemberIds = Array.isArray(groupData.memberIds) ? groupData.memberIds : [];
+  const memberIds = Array.from(new Set([groupData.createdById, ...rawMemberIds].filter(Boolean)));
+  const members = memberIds.map(uid => ({ userId: uid, joinedAt: new Date().toISOString() }));
 
   const groupDoc = {
     id,
@@ -216,6 +218,10 @@ export async function addMemberToGroup(groupId: string, newMemberUserId: string,
 export async function removeMemberFromGroup(groupId: string, memberIdToRemove: string, actorId: string): Promise<void> {
   const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found.");
+
+  if (memberIdToRemove === groupDoc.createdById) {
+    throw new Error("Cannot remove the group creator.");
+  }
 
   let currentMembers: any[] = groupDoc.members || [];
   currentMembers = currentMembers.filter(m => (typeof m === 'string' ? m : m.userId) !== memberIdToRemove);
