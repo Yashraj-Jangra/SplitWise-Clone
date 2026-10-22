@@ -140,6 +140,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   expense_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   settlement_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   member_removed: <Icons.UserMinus className="h-4 w-4 text-red-500" />,
+  member_left: <Icons.UserMinus className="h-4 w-4 text-amber-500" />,
   // Restorations
   expense_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
   settlement_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,

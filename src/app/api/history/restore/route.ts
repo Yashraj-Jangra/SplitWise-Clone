@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     }
   } catch (error: any) {
     console.error('Error restoring history item:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const isClientError = error.message?.includes('already been restored') || error.message?.includes('cannot be restored');
+    return NextResponse.json({ error: error.message }, { status: isClientError ? 400 : 500 });
   }
 }

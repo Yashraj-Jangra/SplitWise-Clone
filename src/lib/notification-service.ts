@@ -382,17 +382,22 @@ export const notifyMemberLeft = (
   actorId: string,
   groupId: string,
   groupName: string,
-  removedUserName: string
+  removedUserName: string,
+  isSelfLeave = false,
+  actorName?: string
 ) =>
   dispatchNotification({
     type: 'member_removed',
     recipientIds,
-    title: 'Member Removed',
-    body: `${removedUserName} was removed from "${groupName}".`,
+    title: isSelfLeave ? 'Member Left Group' : 'Member Removed',
+    body: isSelfLeave
+      ? `${removedUserName} left "${groupName}".`
+      : `${actorName || 'An admin'} removed ${removedUserName} from "${groupName}".`,
     actorId,
     groupId,
     target: 'group',
     groupName,
+    actionUrl: `/groups/${groupId}`,
   });
 
 export const notifyGroupUpdated = (

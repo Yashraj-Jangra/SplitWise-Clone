@@ -38,11 +38,12 @@ export function simplifyDebts<U extends DebtUser>(balances: NetBalance<U>[]): De
     const debtor = debtors[i];
     const creditor = creditors[j];
     const amount = Math.min(debtor.amount, creditor.amount);
+    const roundedAmount = Math.round(amount * 100) / 100;
 
-    if (amount > EPSILON) {
-      transfers.push({ from: debtor.user, to: creditor.user, amount });
-      debtor.amount -= amount;
-      creditor.amount -= amount;
+    if (roundedAmount > EPSILON) {
+      transfers.push({ from: debtor.user, to: creditor.user, amount: roundedAmount });
+      debtor.amount -= roundedAmount;
+      creditor.amount -= roundedAmount;
     }
 
     if (debtor.amount < EPSILON) i++;

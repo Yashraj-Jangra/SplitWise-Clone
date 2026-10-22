@@ -47,6 +47,18 @@ export async function logHistoryEvent(groupId: string, eventType: string, actorI
   }
 }
 
+function getFallbackUser(userId: string): UserProfile {
+  return {
+    uid: userId || 'unknown',
+    firstName: 'Former',
+    lastName: 'Member',
+    username: 'former_member',
+    email: '',
+    role: 'user',
+    createdAt: new Date().toISOString(),
+  };
+}
+
 export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent[]> {
   const items = await queryByPk<any>(`GROUP#${groupId}`);
   const historyDocs = items.filter(i => i.id && i.eventType && i.description);
@@ -57,11 +69,9 @@ export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent
 
   return historyDocs
     .map(r => {
-      const actor = actorMap.get(r.actorId);
-      if (!actor) return null;
+      const actor = actorMap.get(r.actorId) || getFallbackUser(r.actorId);
       return mapHistoryRow(r, actor);
     })
-    .filter((h): h is HistoryEvent => h !== null)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
@@ -82,6 +92,10 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
 
   if (!historyEvent || historyEvent.eventType !== 'expense_deleted' || !historyEvent.data) {
     throw new Error("This history event cannot be restored.");
+  }
+
+  if (historyEvent.restored) {
+    throw new Error("This expense has already been restored.");
   }
 
   const dataToRestore = { ...historyEvent.data };
@@ -117,9 +131,14 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
 
     const groupDoc = await getItem<any>(`GROUP#${dataToRestore.groupId}`, 'METADATA');
     const currentMembers: any[] = groupDoc?.members || [];
+    const additionalUserIds = [
+      ...(dataToRestore.participants || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+      ...(dataToRestore.payers || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+    ];
     const allMemberIds = [...new Set([
       ...currentMembers.map((m: any) => typeof m === 'string' ? m : m.userId),
       groupDoc?.createdById,
+      ...additionalUserIds,
     ].filter(Boolean))];
     const recipientIds = allMemberIds.filter(id => id !== actorId);
     if (recipientIds.length > 0) {
@@ -145,6 +164,10 @@ export async function restoreSettlement(historyEventId: string, actorId: string)
 
   if (!historyEvent || historyEvent.eventType !== 'settlement_deleted' || !historyEvent.data) {
     throw new Error("This history event cannot be restored.");
+  }
+
+  if (historyEvent.restored) {
+    throw new Error("This settlement has already been restored.");
   }
 
   const dataToRestore = { ...historyEvent.data };

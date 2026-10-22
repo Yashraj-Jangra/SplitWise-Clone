@@ -183,6 +183,29 @@ export async function getAllSettlements(): Promise<Settlement[]> {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
+export async function getSettlementById(settlementId: string, groupId?: string): Promise<Settlement | null> {
+  let doc: any = null;
+  if (groupId) {
+    doc = await getItem<any>(`GROUP#${groupId}`, `SETTLEMENT#${settlementId}`);
+  }
+  if (!doc) {
+    const all = await queryByEntityType<any>('SETTLEMENT');
+    doc = all.find(s => s.id === settlementId);
+  }
+  if (!doc) return null;
+
+  const [paidBy, paidTo] = await Promise.all([
+    getUserProfile(doc.paidById),
+    getUserProfile(doc.paidToId),
+  ]);
+
+  return mapSettlementRow(
+    doc,
+    paidBy || getFallbackUser(doc.paidById),
+    paidTo || getFallbackUser(doc.paidToId)
+  );
+}
+
 export async function updateSettlement(
   settlementId: string,
   data: Partial<SettlementDocument>,
@@ -245,8 +268,39 @@ export async function updateSettlement(
   if (data.amount !== undefined && data.amount !== oldData.amount) {
     changes.push({ field: 'Amount', from: `₹${Number(oldData.amount).toFixed(2)}`, to: `₹${Number(data.amount).toFixed(2)}` });
   }
+  if (data.paidById && data.paidById !== oldData.paidById) {
+    const [oldPayer, newPayer] = await Promise.all([
+      getUserProfile(oldData.paidById),
+      getUserProfile(data.paidById),
+    ]);
+    changes.push({
+      field: 'Payer',
+      from: getFullName(oldPayer?.firstName, oldPayer?.lastName),
+      to: getFullName(newPayer?.firstName, newPayer?.lastName),
+    });
+  }
+  if (data.paidToId && data.paidToId !== oldData.paidToId) {
+    const [oldPayee, newPayee] = await Promise.all([
+      getUserProfile(oldData.paidToId),
+      getUserProfile(data.paidToId),
+    ]);
+    changes.push({
+      field: 'Payee',
+      from: getFullName(oldPayee?.firstName, oldPayee?.lastName),
+      to: getFullName(newPayee?.firstName, newPayee?.lastName),
+    });
+  }
+  const oldDateStr = oldData.date ? new Date(oldData.date).toISOString().slice(0, 10) : '';
+  const newDateStr = data.date ? data.date.toISOString().slice(0, 10) : '';
+  if (newDateStr && oldDateStr !== newDateStr) {
+    changes.push({ field: 'Date', from: oldDateStr, to: newDateStr });
+  }
+  if (data.notes !== undefined && (data.notes || '') !== (oldData.notes || '')) {
+    changes.push({ field: 'Notes', from: `"${oldData.notes || ''}"`, to: `"${data.notes || ''}"` });
+  }
 
-  const description = `${actorName} updated settlement details.`;
+  const changeSummary = changes.length > 0 ? changes.map(c => c.field.toLowerCase()).join(', ') : 'details';
+  const description = `${actorName} updated settlement ${changeSummary}.`;
   await logHistoryEvent(oldData.groupId, 'settlement_updated', actorId, description, {
     settlementId,
     changes,

@@ -33,9 +33,26 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
     getSettlementsByGroupId(groupId)
   ]);
 
-  const memberBalances: Record<string, number> = {};
+  const memberMap = new Map<string, UserProfile>();
   group.members.forEach(member => {
-    memberBalances[member.uid] = 0;
+    memberMap.set(member.uid, member);
+  });
+  expenses.forEach(expense => {
+    expense.payers.forEach(p => {
+      if (!memberMap.has(p.user.uid)) memberMap.set(p.user.uid, p.user);
+    });
+    expense.participants.forEach(p => {
+      if (!memberMap.has(p.user.uid)) memberMap.set(p.user.uid, p.user);
+    });
+  });
+  settlements.forEach(settlement => {
+    if (!memberMap.has(settlement.paidBy.uid)) memberMap.set(settlement.paidBy.uid, settlement.paidBy);
+    if (!memberMap.has(settlement.paidTo.uid)) memberMap.set(settlement.paidTo.uid, settlement.paidTo);
+  });
+
+  const memberBalances: Record<string, number> = {};
+  memberMap.forEach((_, uid) => {
+    memberBalances[uid] = 0;
   });
 
   expenses.forEach(expense => {
@@ -60,13 +77,15 @@ export async function getGroupBalances(groupId: string): Promise<Balance[]> {
     }
   });
 
-  const result = group.members.map(member => {
-    const netBalance = parseFloat((memberBalances[member.uid] || 0).toFixed(2));
-    return {
-      user: member,
-      netBalance,
-    };
-  });
+  const result = Array.from(memberMap.values())
+    .map(member => {
+      const netBalance = parseFloat((memberBalances[member.uid] || 0).toFixed(2));
+      return {
+        user: member,
+        netBalance,
+      };
+    })
+    .filter(b => group.members.some(m => m.uid === b.user.uid) || Math.abs(b.netBalance) > 0.01);
 
   balanceCache.set(groupId, {
     expiresAt: Date.now() + BALANCE_CACHE_TTL_MS,

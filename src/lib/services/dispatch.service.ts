@@ -150,7 +150,7 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
         destinationUrl = `/groups/${groupId}?expenseId=${expenseId}&action=view`;
       } else if (settlementId && (type === 'settlement_added' || type === 'settlement_updated' || type === 'payment_confirmation_request')) {
         destinationUrl = `/groups/${groupId}?settlementId=${settlementId}&action=view`;
-      } else if (type === 'settlement_deleted' || type === 'settlement_restored' || type === 'expense_restored') {
+      } else if (type === 'settlement_deleted' || type === 'settlement_restored' || type === 'expense_deleted' || type === 'expense_restored') {
         destinationUrl = `/groups/${groupId}?tab=history`;
       } else {
         destinationUrl = `/groups/${groupId}`;

@@ -82,7 +82,8 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
   const g = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!g) return null;
 
-  const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+  const rawMemberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+  const memberIds = Array.from(new Set([g.createdById, ...rawMemberIds].filter(Boolean)));
   const [members, createdBy] = await Promise.all([
     hydrateUsers(memberIds),
     getUserProfile(g.createdById)
@@ -111,7 +112,8 @@ export async function getGroupMembers(groupId: string): Promise<UserProfile[]> {
   const g = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!g) return [];
 
-  const memberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+  const rawMemberIds: string[] = (g.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
+  const memberIds = Array.from(new Set([g.createdById, ...rawMemberIds].filter(Boolean)));
   if (memberIds.length === 0) return [];
   return hydrateUsers(memberIds);
 }
@@ -273,14 +275,20 @@ export async function removeMemberFromGroup(groupId: string, memberIdToRemove: s
   ]);
   const actorName = getFullName(actor?.firstName, actor?.lastName);
   const removedUserName = getFullName(removedUser?.firstName, removedUser?.lastName);
+  const isSelfLeave = memberIdToRemove === actorId;
 
-  await logHistoryEvent(groupId, 'member_removed', actorId, `${actorName} removed ${removedUserName} from the group.`, {
+  const historyDescription = isSelfLeave
+    ? `${actorName} left the group.`
+    : `${actorName} removed ${removedUserName} from the group.`;
+
+  await logHistoryEvent(groupId, 'member_removed', actorId, historyDescription, {
     removedUserId: memberIdToRemove,
     removedUserName,
+    isSelfLeave,
   });
 
-  // 1. Notify the removed member
-  if (memberIdToRemove !== actorId) {
+  // 1. Notify the removed member (only if removed by someone else)
+  if (!isSelfLeave) {
     await notifyMemberRemoved(memberIdToRemove, actorId, groupId, groupDoc.name || 'a group');
   }
 
@@ -294,7 +302,15 @@ export async function removeMemberFromGroup(groupId: string, memberIdToRemove: s
 
   const remainingRecipientIds = Array.from(remainingMemberIds);
   if (remainingRecipientIds.length > 0) {
-    await notifyMemberLeft(remainingRecipientIds, actorId, groupId, groupDoc.name || 'a group', removedUserName);
+    await notifyMemberLeft(
+      remainingRecipientIds,
+      actorId,
+      groupId,
+      groupDoc.name || 'a group',
+      removedUserName,
+      isSelfLeave,
+      actorName
+    );
   }
 
   queueVectorEmbedding(groupId, groupId, 'group', 'upsert');

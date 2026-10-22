@@ -157,6 +157,24 @@ export async function addExpense(
     throw new Error("At least one participant is required.");
   }
 
+  if (expenseData.payers.some(p => Number(p.amount) < 0)) {
+    throw new Error("Payer amounts cannot be negative.");
+  }
+  if (expenseData.participants.some(p => Number(p.amountOwed) < 0)) {
+    throw new Error("Participant amounts cannot be negative.");
+  }
+
+  const totalPaid = expenseData.payers.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const totalOwed = expenseData.participants.reduce((sum, p) => sum + (Number(p.amountOwed) || 0), 0);
+  const expectedAmount = Number(expenseData.amount);
+
+  if (Math.abs(totalPaid - expectedAmount) > 0.05) {
+    throw new Error(`Total paid (₹${totalPaid.toFixed(2)}) must equal expense amount (₹${expectedAmount.toFixed(2)}).`);
+  }
+  if (Math.abs(totalOwed - expectedAmount) > 0.05) {
+    throw new Error(`Total split owed (₹${totalOwed.toFixed(2)}) must equal expense amount (₹${expectedAmount.toFixed(2)}).`);
+  }
+
   const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found to add expense.");
 
@@ -244,6 +262,28 @@ export async function updateExpense(
 
   const oldExpense = await getItem<any>(`GROUP#${expenseData.groupId}`, `EXPENSE#${expenseId}`);
   if (!oldExpense) throw new Error("Expense not found.");
+
+  const effectiveAmount = Number(expenseData.amount !== undefined ? expenseData.amount : oldExpense.amount);
+
+  if (expenseData.payers && expenseData.payers.length > 0) {
+    if (expenseData.payers.some(p => Number(p.amount) < 0)) {
+      throw new Error("Payer amounts cannot be negative.");
+    }
+    const totalPaid = expenseData.payers.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    if (Math.abs(totalPaid - effectiveAmount) > 0.05) {
+      throw new Error(`Total paid (₹${totalPaid.toFixed(2)}) must equal expense amount (₹${effectiveAmount.toFixed(2)}).`);
+    }
+  }
+
+  if (expenseData.participants && expenseData.participants.length > 0) {
+    if (expenseData.participants.some(p => Number(p.amountOwed) < 0)) {
+      throw new Error("Participant amounts cannot be negative.");
+    }
+    const totalOwed = expenseData.participants.reduce((sum, p) => sum + (Number(p.amountOwed) || 0), 0);
+    if (Math.abs(totalOwed - effectiveAmount) > 0.05) {
+      throw new Error(`Total split owed (₹${totalOwed.toFixed(2)}) must equal expense amount (₹${effectiveAmount.toFixed(2)}).`);
+    }
+  }
 
   const settings = await getSiteSettings();
   const masterCategory = getMasterCategory(expenseData.category || 'Other', settings.expenseCategories);
