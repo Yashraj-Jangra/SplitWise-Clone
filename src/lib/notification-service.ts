@@ -146,6 +146,187 @@ export const notifySettlementAdded = (
     actionUrl: `/groups/${groupId}`,
   });
 
+export const notifySettlementAddedToGroup = async (params: {
+  groupId: string;
+  groupName: string;
+  settlementId: string;
+  actorId: string;
+  actorName: string;
+  paidById: string;
+  paidByName: string;
+  paidToId: string;
+  paidToName: string;
+  amount: number;
+  allMemberIds: string[];
+}) => {
+  const {
+    groupId,
+    groupName,
+    settlementId,
+    actorId,
+    actorName,
+    paidById,
+    paidByName,
+    paidToId,
+    paidToName,
+    amount,
+    allMemberIds,
+  } = params;
+
+  const formattedAmount = `₹${Number(amount || 0).toFixed(2)}`;
+  const promises: Promise<void>[] = [];
+
+  // 1. Notify Payee (person receiving money) if not actor
+  if (paidToId && paidToId !== actorId) {
+    promises.push(
+      dispatchNotification({
+        type: 'settlement_added',
+        recipientIds: [paidToId],
+        title: 'Payment Received',
+        body: `${paidByName} paid you ${formattedAmount}${groupName ? ` in "${groupName}"` : ''}.`,
+        actorId,
+        groupId,
+        settlementId,
+        target: 'specific_users',
+        amount,
+        balanceAmount: formattedAmount,
+        groupName,
+        actionUrl: `/groups/${groupId}`,
+      })
+    );
+  }
+
+  // 2. Notify Payer (person who paid) if not actor
+  if (paidById && paidById !== actorId) {
+    promises.push(
+      dispatchNotification({
+        type: 'settlement_added',
+        recipientIds: [paidById],
+        title: 'Payment Recorded',
+        body: `${actorName} recorded that you paid ${formattedAmount} to ${paidToName}${groupName ? ` in "${groupName}"` : ''}.`,
+        actorId,
+        groupId,
+        settlementId,
+        target: 'specific_users',
+        amount,
+        balanceAmount: formattedAmount,
+        groupName,
+        actionUrl: `/groups/${groupId}`,
+      })
+    );
+  }
+
+  // 3. Notify other group members
+  const otherRecipients = allMemberIds.filter(
+    (id) => id !== actorId && id !== paidById && id !== paidToId
+  );
+  if (otherRecipients.length > 0) {
+    promises.push(
+      dispatchNotification({
+        type: 'settlement_added',
+        recipientIds: otherRecipients,
+        title: 'Settlement Recorded',
+        body: `${actorName} recorded a settlement: ${paidByName} paid ${paidToName} ${formattedAmount}${groupName ? ` in "${groupName}"` : ''}.`,
+        actorId,
+        groupId,
+        settlementId,
+        target: 'group',
+        amount,
+        balanceAmount: formattedAmount,
+        groupName,
+        actionUrl: `/groups/${groupId}`,
+      })
+    );
+  }
+
+  await Promise.allSettled(promises);
+};
+
+export const notifySettlementUpdated = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  settlementId: string,
+  groupName: string,
+  description: string
+) =>
+  dispatchNotification({
+    type: 'settlement_updated',
+    recipientIds,
+    title: 'Settlement Updated',
+    body: description || `A settlement was updated in "${groupName}".`,
+    actorId,
+    groupId,
+    settlementId,
+    target: 'group',
+    groupName,
+    actionUrl: `/groups/${groupId}`,
+  });
+
+export const notifySettlementDeleted = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  groupName: string,
+  description: string
+) =>
+  dispatchNotification({
+    type: 'settlement_deleted',
+    recipientIds,
+    title: 'Settlement Deleted',
+    body: description || `A settlement was deleted in "${groupName}".`,
+    actorId,
+    groupId,
+    target: 'group',
+    groupName,
+    actionUrl: `/groups/${groupId}`,
+  });
+
+export const notifySettlementRestored = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  settlementId: string,
+  groupName: string,
+  description: string
+) =>
+  dispatchNotification({
+    type: 'settlement_restored',
+    recipientIds,
+    title: 'Settlement Restored',
+    body: description || `A settlement was restored in "${groupName}".`,
+    actorId,
+    groupId,
+    settlementId,
+    target: 'group',
+    groupName,
+    actionUrl: `/groups/${groupId}`,
+  });
+
+export const notifyExpenseRestored = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  expenseId: string,
+  description: string,
+  amount: number,
+  groupName?: string
+) =>
+  dispatchNotification({
+    type: 'expense_restored',
+    recipientIds,
+    title: 'Expense Restored',
+    body: `The expense "${description}" for ₹${Number(amount || 0).toFixed(2)} was restored${groupName ? ` in "${groupName}"` : ''}.`,
+    actorId,
+    groupId,
+    expenseId,
+    target: 'group',
+    amount,
+    description,
+    groupName,
+    actionUrl: `/groups/${groupId}`,
+  });
+
 export const notifyMemberAdded = (
   recipientIds: string[],
   actorId: string,
@@ -162,6 +343,24 @@ export const notifyMemberAdded = (
     target: 'group',
   });
 
+export const notifyMembersJoined = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  groupName: string,
+  newMemberNames: string
+) =>
+  dispatchNotification({
+    type: 'member_added',
+    recipientIds,
+    title: 'New Member Joined',
+    body: `${newMemberNames} joined "${groupName}".`,
+    actorId,
+    groupId,
+    target: 'group',
+    groupName,
+  });
+
 export const notifyMemberRemoved = (
   recipientId: string,
   actorId: string,
@@ -176,6 +375,62 @@ export const notifyMemberRemoved = (
     actorId,
     groupId,
     target: 'specific_users',
+  });
+
+export const notifyMemberLeft = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  groupName: string,
+  removedUserName: string
+) =>
+  dispatchNotification({
+    type: 'member_removed',
+    recipientIds,
+    title: 'Member Removed',
+    body: `${removedUserName} was removed from "${groupName}".`,
+    actorId,
+    groupId,
+    target: 'group',
+    groupName,
+  });
+
+export const notifyGroupUpdated = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  groupName: string,
+  description: string
+) =>
+  dispatchNotification({
+    type: 'group_updated',
+    recipientIds,
+    title: 'Group Updated',
+    body: description || `Group details were updated for "${groupName}".`,
+    actorId,
+    groupId,
+    target: 'group',
+    groupName,
+    actionUrl: `/groups/${groupId}`,
+  });
+
+export const notifyBudgetUpdated = (
+  recipientIds: string[],
+  actorId: string,
+  groupId: string,
+  groupName: string,
+  description: string
+) =>
+  dispatchNotification({
+    type: 'budget_updated',
+    recipientIds,
+    title: 'Budget Updated',
+    body: description || `Budget limits were updated for "${groupName}".`,
+    actorId,
+    groupId,
+    target: 'group',
+    groupName,
+    actionUrl: `/groups/${groupId}?tab=budget`,
   });
 
 export const notifySupportReply = (

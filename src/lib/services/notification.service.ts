@@ -154,9 +154,14 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
     expense_added: { inApp: true, push: true, email: false },
     expense_updated: { inApp: true, push: true, email: false },
     expense_deleted: { inApp: true, push: true, email: false },
+    expense_restored: { inApp: true, push: true, email: false },
     settlement_added: { inApp: true, push: true, email: true },
+    settlement_updated: { inApp: true, push: true, email: false },
+    settlement_deleted: { inApp: true, push: true, email: false },
+    settlement_restored: { inApp: true, push: true, email: true },
     member_added: { inApp: true, push: true, email: false },
     member_removed: { inApp: true, push: true, email: false },
+    group_updated: { inApp: true, push: true, email: false },
     balance_reminder: { inApp: true, push: true, email: true },
     payment_reminder: { inApp: true, push: true, email: true },
     payment_confirmation_request: { inApp: true, push: true, email: true },
@@ -167,6 +172,7 @@ const DEFAULT_USER_NOTIFICATION_PREFS = {
     group_inactivity: { inApp: true, push: true, email: false },
     budget_alert: { inApp: true, push: true, email: true },
     budget_exceeded: { inApp: true, push: true, email: true },
+    budget_updated: { inApp: true, push: true, email: true },
   }
 };
 
