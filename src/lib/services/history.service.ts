@@ -3,6 +3,7 @@ import type { HistoryEvent, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { addExpense } from './expense.service';
 import { addSettlement } from './settlement.service';
+import { notifyExpenseRestored, notifySettlementRestored } from '@/lib/notification-service';
 
 function mapHistoryRow(row: any, actor: UserProfile): HistoryEvent {
   return {
@@ -114,6 +115,25 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
       date: dataToRestore.date,
     });
 
+    const groupDoc = await getItem<any>(`GROUP#${dataToRestore.groupId}`, 'METADATA');
+    const currentMembers: any[] = groupDoc?.members || [];
+    const allMemberIds = [...new Set([
+      ...currentMembers.map((m: any) => typeof m === 'string' ? m : m.userId),
+      groupDoc?.createdById,
+    ].filter(Boolean))];
+    const recipientIds = allMemberIds.filter(id => id !== actorId);
+    if (recipientIds.length > 0) {
+      await notifyExpenseRestored(
+        recipientIds,
+        actorId,
+        dataToRestore.groupId,
+        newExpenseId,
+        dataToRestore.description,
+        dataToRestore.amount,
+        groupDoc?.name
+      );
+    }
+
     return newExpenseId;
   }
   return null;
@@ -146,10 +166,11 @@ export async function restoreSettlement(historyEventId: string, actorId: string)
       `HISTORY#${historyEvent.id}`
     );
 
-    const actor = await getUserProfile(actorId);
-    const [paidBy, paidTo] = await Promise.all([
+    const [actor, paidBy, paidTo, groupDoc] = await Promise.all([
+      getUserProfile(actorId),
       getUserProfile(dataToRestore.paidById),
       getUserProfile(dataToRestore.paidToId),
+      getItem<any>(`GROUP#${dataToRestore.groupId}`, 'METADATA'),
     ]);
 
     const actorName = actor ? `${actor.firstName} ${actor.lastName || ''}`.trim() : 'Someone';
@@ -165,6 +186,25 @@ export async function restoreSettlement(historyEventId: string, actorId: string)
       settlementId: dataToRestore.settlementId,
       date: dataToRestore.date,
     });
+
+    const currentMembers: any[] = groupDoc?.members || [];
+    const allMemberIds = [...new Set([
+      ...currentMembers.map((m: any) => typeof m === 'string' ? m : m.userId),
+      groupDoc?.createdById,
+      dataToRestore.paidById,
+      dataToRestore.paidToId,
+    ].filter(Boolean))];
+    const recipientIds = allMemberIds.filter(id => id !== actorId);
+    if (recipientIds.length > 0) {
+      await notifySettlementRestored(
+        recipientIds,
+        actorId,
+        dataToRestore.groupId,
+        newSettlementId,
+        groupDoc?.name || 'your group',
+        restoreDescription
+      );
+    }
 
     return newSettlementId;
   }

@@ -53,8 +53,8 @@ export async function POST(request: Request) {
     }
     const body = await request.json();
 
-    if (!body.groupId) {
-      return NextResponse.json({ error: 'groupId is required' }, { status: 400 });
+    if (!body.groupId || !body.paidById || !body.paidToId || body.amount === undefined) {
+      return NextResponse.json({ error: 'groupId, paidById, paidToId, and amount are required' }, { status: 400 });
     }
 
     // Authorization Check: Must be admin or group member
