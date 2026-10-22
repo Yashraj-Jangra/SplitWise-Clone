@@ -1,6 +1,19 @@
 # Session Progress & Context Preservation
 
-- **Comprehensive Group Events Notification, Settlement Audit Trail & Edge-Case Integrity Overhaul** ✨ 🛡️ 🗄️ 🎨 🧪 ✅:
+- **Deep Scan Verification & Systemic Edge-Case Hardening** ✨ 🛡️ 🗄️ ⚡ 🧪 ✅:
+  - **Structural Edge Cases & Audit Integrity Resolved**:
+    1. *Direct Settlement Lookup & Fallback Guards (`GET /api/settlements/[id]`)*: Added missing single-settlement `GET` endpoint with group authorization guard, eliminating client-side array search. Added fallback in `PUT` and `DELETE` to look up `groupId` from settlement entity if omitted by mobile or legacy client.
+    2. *Settlement Update Granular Diffs*: Expanded `updateSettlement` change detection beyond amount to also detect and log diffs for Payer (`paidById`), Payee (`paidToId`), Date, and Notes in history events.
+    3. *Audit Trail Preservation for Former Members*: Added `getFallbackUser` in `getHistoryByGroupId` so history records of former or deleted members are permanently preserved in the audit log instead of being silently dropped.
+    4. *Restoration Re-entrancy & Recipient Parity*: Added duplicate-restoration guard (`historyEvent.restored`) to `restoreExpense` and `restoreSettlement` with HTTP 400 client-friendly error. In `restoreExpense`, included restored participants and payers in the notification recipient list.
+    5. *Group Creator & Legacy Member Balance Integrity*: Ensured `createdById` is always included in hydrated `memberIds` in `group.service.ts`. In `balance.service.ts`, seeded `memberMap` from expenses and settlements so debts involving former members are never orphaned.
+    6. *Payer & Participant Double-Entry Validation*: In `addExpense` and `updateExpense`, enforced non-negative amount checks and validated that sum of payers and sum of split owed match the total expense amount within a 0.05 penny tolerance.
+    7. *Self-Leave vs. Admin Removal Semantics*: Differentiated self-leave from admin removal in `removeMemberFromGroup` and `notifyMemberLeft` so history logs and notifications say "User left the group" instead of "User removed User from the group".
+    8. *Push Notification Routing Precision*: Routed `expense_deleted` push notifications directly to the group history tab (`/groups/${groupId}?tab=history`).
+    9. *Floating Point Drift Elimination in Debt Simplification*: Added 2-decimal rounding in `simplifyDebts` in `@splitit/core` to prevent float precision drift in greedy settlement transfers.
+  - **Verification & Test Suite**:
+    - All 134 vitest tests pass in `SplitWise-Clone` (`npm test`).
+    - Type check passed with 0 errors (`npm run typecheck`).
   - **Identified Bugs & Systemic Edge Cases Resolved**:
     1. *Settlement Deletion Logging & Restoration Gap*: Deleting a settlement previously removed the item without logging any history event or audit trail. Implemented full history logging of `settlement_deleted` with complete snapshot metadata (`settlementId`, `groupId`, `paidById`, `paidToId`, `amount`, `date`, `notes`), enabling full restoration via `restoreSettlement`. Also invalidates group balance cache, deletes vector embedding, and dispatches `notifySettlementDeleted` to all group members.
     2. *P2P & Group Settlement Notification Blind Spots*: When user A added a settlement where B pays A, B received zero notification. Added `notifySettlementAddedToGroup` which customizes messaging for the payer, payee, and all group members, ensuring full awareness.
