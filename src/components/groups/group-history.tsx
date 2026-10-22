@@ -432,6 +432,16 @@ export function GroupHistoryTab({ groupId, onViewExpense }: GroupHistoryTabProps
     return deletedIds;
   }, [history]);
 
+  const deletedSettlementIds = useMemo(() => {
+    const deletedIds = new Set<string>();
+    history.forEach(event => {
+      if (event.eventType === 'settlement_deleted' && event.data?.settlementId && !event.restored) {
+        deletedIds.add(event.data.settlementId);
+      }
+    });
+    return deletedIds;
+  }, [history]);
+
   if (loading) {
     return (
       <Card>
@@ -459,7 +469,9 @@ export function GroupHistoryTab({ groupId, onViewExpense }: GroupHistoryTabProps
         {history.length > 0 ? (
           <div className="divide-y divide-border">
               {history.map(event => {
-                  const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
+                  const isExpenseDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
+                  const isSettlementDeleted = (event.eventType === 'settlement_created' || event.eventType === 'settlement_updated') && event.data?.settlementId && deletedSettlementIds.has(event.data.settlementId);
+                  const isDeleted = Boolean(isExpenseDeleted || isSettlementDeleted);
                   return (<HistoryEventItem key={event.id} event={event} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
               })}
           </div>
