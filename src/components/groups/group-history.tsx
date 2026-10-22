@@ -157,8 +157,8 @@ function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryE
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const expenseDate = useMemo(() => {
-        // Only show expense date for expense-related events
-        if (event.data?.date && event.eventType.startsWith('expense_')) {
+        // Show date for expense and settlement events
+        if (event.data?.date && (event.eventType.startsWith('expense_') || event.eventType.startsWith('settlement_'))) {
             const dateValue = event.data.date;
             // The date from event data may have a .toDate() method or ISO string
             if (dateValue.toDate && typeof dateValue.toDate === 'function') {
