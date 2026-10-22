@@ -1,5 +1,9 @@
 # Session Progress & Context Preservation
 
+- **Group History Settlement Date Display Parity** 🎨 🌐 ✨ ✅:
+  - Updated `src/components/groups/group-history.tsx` to display the target date (`(for ${format(expenseDate, 'MMM d')})`) for both expense and settlement events, maintaining cross-platform parity with the mobile app.
+  - Tested: all 134 vitest unit tests pass and `npx tsc --noEmit` succeeds with 0 errors.
+
 - **Deep Scan Verification & Systemic Edge-Case Hardening** ✨ 🛡️ 🗄️ ⚡ 🧪 ✅:
   - **Structural Edge Cases & Audit Integrity Resolved**:
     1. *Direct Settlement Lookup & Fallback Guards (`GET /api/settlements/[id]`)*: Added missing single-settlement `GET` endpoint with group authorization guard, eliminating client-side array search. Added fallback in `PUT` and `DELETE` to look up `groupId` from settlement entity if omitted by mobile or legacy client.
