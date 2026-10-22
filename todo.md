@@ -1,6 +1,18 @@
 # Session Progress & Context Preservation
 
-  - **Backend Performance Optimization & Lightweight Members Endpoint** ⚡ 🛡️ 🗄️ ✅:
+- **Comprehensive Group Events Notification, Settlement Audit Trail & Edge-Case Integrity Overhaul** ✨ 🛡️ 🗄️ 🎨 🧪 ✅:
+  - **Identified Bugs & Systemic Edge Cases Resolved**:
+    1. *Settlement Deletion Logging & Restoration Gap*: Deleting a settlement previously removed the item without logging any history event or audit trail. Implemented full history logging of `settlement_deleted` with complete snapshot metadata (`settlementId`, `groupId`, `paidById`, `paidToId`, `amount`, `date`, `notes`), enabling full restoration via `restoreSettlement`. Also invalidates group balance cache, deletes vector embedding, and dispatches `notifySettlementDeleted` to all group members.
+    2. *P2P & Group Settlement Notification Blind Spots*: When user A added a settlement where B pays A, B received zero notification. Added `notifySettlementAddedToGroup` which customizes messaging for the payer, payee, and all group members, ensuring full awareness.
+    3. *Universal Group-Wide Notification Rule*: All group events (expense add/update/delete/restore, settlement add/update/delete/restore, member join/leave, group details and budget updates) are now dispatched to all users in the group (excluding the actor).
+    4. *Expense Update History & Diff Integrity*: In `updateExpense`, previously only `description` and `amount` differences were checked; edits to category, split type, date, notes, payers, or participants produced zero history and skipped notifications. Expanded change detection across all fields. Corrected total expense diffing to read authoritative `oldExpense.amount` directly from the database instead of client-provided `oldAmount`.
+    5. *Group Member Removal Guard & Cache Parity*: Guarded `removeMemberFromGroup` against removing members who have active outstanding non-zero balances. Added `invalidateGroupBalanceCache(groupId)` across all group membership, archival, and restoration mutations.
+    6. *Web & Mobile History UI Parity*: Added `deletedSettlementIds` tracking to `group-history.tsx` (web) and `GroupHistoryTab.tsx` (mobile) so deleted settlements receive proper strikethrough styling and restore capabilities.
+    7. *Notification Types & Preferences*: Added 6 new event types (`settlement_updated`, `settlement_deleted`, `settlement_restored`, `expense_restored`, `group_updated`, `budget_updated`) with full icon, styling, destination URL routing, and user notification preference controls across both web and mobile platforms.
+  - **Verification & Test Suite**:
+    - All 134 unit tests pass in `SplitWise-Clone` (`npm test`).
+    - Type check passed with 0 errors (`npm run typecheck`).
+    - Commits saved cleanly on `dev` branch with human-like emoji formatting and `--no-gpg-sign`.
     - **Optimization Details**:
       - *Lightweight Group Members Endpoint (`src/app/api/groups/[id]/members/route.ts`)*: Added a dedicated `GET` handler returning hydrated group members without querying all expenses, settlements, or audit history. Guarded with Better-Auth session verification and `verifyGroupMembership` (zero security risk).
       - *Bounded In-Memory Cache on Balances (`src/lib/services/balance.service.ts`)*: Added `balanceCache` with 20s TTL for `getGroupBalances(groupId)`, with automatic targeted invalidation via `invalidateGroupBalanceCache(groupId)` across expense and settlement mutations (`createExpense`, `updateExpense`, `deleteExpense`, `addSettlement`, `updateSettlement`, `deleteSettlement`).
