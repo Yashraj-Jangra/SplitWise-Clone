@@ -1,5 +1,20 @@
 # Session Progress & Context Preservation
 
+- **Android Notification Categorization & Expo Push Dispatch Routing** 🔔 📱 🌐 ✨ ✅:
+  - **Android Notification Channel Tagging**:
+    - Created `getNotificationChannelId(type: NotificationEventType): string` in `src/lib/services/dispatch.service.ts` to map each event type to its dedicated OS notification channel:
+      - `expenses`: `expense_added`, `expense_updated`, `expense_deleted`, `expense_restored`
+      - `settlements`: `settlement_added`, `settlement_updated`, `settlement_deleted`, `settlement_restored`, `payment_confirmation_request`
+      - `reminders`: `payment_reminder`, `balance_reminder`
+      - `budgets`: `budget_alert`, `budget_exceeded`, `budget_updated`
+      - `groups`: `member_added`, `member_removed`, `group_updated`, `group_inactivity`
+      - `announcements`: `broadcast_announcement`, `broadcast_critical`, `support_reply`, `monthly_summary`
+      - `default`: fallback
+    - Updated `expoMessages` mapping in `serverDispatchNotification` to attach `channelId` and payload `data.channelId`, allowing modern Android OS (8.0+ through Android 15) to route notifications to discrete system channels where users can toggle sounds, vibration, or disable specific notification types.
+  - **Quality Gates & Discipline**:
+    - All 140 vitest tests pass (`npm test`).
+    - `npx tsc --noEmit` verified with 0 errors.
+
 - **Comprehensive Logic Hardening, Security Integrity, and Ecosystem Guardrails** 🛡️ 🔑 ⚡ 🗄️ ✨ ✅:
   - **Shared Core Simplification & Penny Drift Prevention (`@splitit/core`)**:
     - Fixed infinite loop in `simplifyDebts` (`packages/core/src/debts.ts`) on 1-penny (0.01) leftover balances by adjusting threshold to `EPSILON = 0.005`, filtering sub-penny noise, and rounding deductions down to the cent.

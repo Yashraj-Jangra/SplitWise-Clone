@@ -36,6 +36,41 @@ export interface ServerDispatchParams {
   authUid?: string;
 }
 
+export function getNotificationChannelId(type: NotificationEventType): string {
+  switch (type) {
+    case 'expense_added':
+    case 'expense_updated':
+    case 'expense_deleted':
+    case 'expense_restored':
+      return 'expenses';
+    case 'settlement_added':
+    case 'settlement_updated':
+    case 'settlement_deleted':
+    case 'settlement_restored':
+    case 'payment_confirmation_request':
+      return 'settlements';
+    case 'payment_reminder':
+    case 'balance_reminder':
+      return 'reminders';
+    case 'budget_alert':
+    case 'budget_exceeded':
+    case 'budget_updated':
+      return 'budgets';
+    case 'member_added':
+    case 'member_removed':
+    case 'group_updated':
+    case 'group_inactivity':
+      return 'groups';
+    case 'broadcast_announcement':
+    case 'broadcast_critical':
+    case 'support_reply':
+    case 'monthly_summary':
+      return 'announcements';
+    default:
+      return 'default';
+  }
+}
+
 export async function serverDispatchNotification(params: ServerDispatchParams): Promise<{ success: boolean; notificationId?: string; error?: string }> {
   const {
     type, recipientIds, title, body: notifBody,
@@ -183,14 +218,21 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
       })
     );
 
+
     if (expoSubscriptions.length > 0) {
+      const channelId = getNotificationChannelId(type);
       const expoMessages = expoSubscriptions.map((sub: any) => ({
         to: sub.expoPushToken,
         title,
         body: notifBody,
         sound: 'default',
         badge: 1,
-        data: pushPayload.data,
+        channelId,
+        _displayInForeground: true,
+        data: {
+          ...pushPayload.data,
+          channelId,
+        },
       }));
 
       const expoHeaders: Record<string, string> = {
