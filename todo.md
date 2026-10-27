@@ -1,5 +1,9 @@
 # Session Progress & Context Preservation
 
+- **Release v0.5.1 Manifest Synchronization** 📌 🌐 ✨ ✅:
+  - Bumped version to `0.5.1` in `package.json` for ecosystem parity.
+  - Quality Gates: `npx tsc --noEmit` verified with 0 errors.
+
 - **Android Notification Categorization & Expo Push Dispatch Routing** 🔔 📱 🌐 ✨ ✅:
   - **Android Notification Channel Tagging**:
     - Created `getNotificationChannelId(type: NotificationEventType): string` in `src/lib/services/dispatch.service.ts` to map each event type to its dedicated OS notification channel:
