@@ -119,12 +119,65 @@ function mapExpenseRow(row: any, payers: ExpensePayer[], participants: ExpensePa
   };
 }
 
+function getGroupRecipientIds(
+  groupDoc: any,
+  actorId: string,
+  additionalUserIds: (string | undefined | null)[] = []
+): string[] {
+  const memberIds = new Set<string>();
+  const members: any[] = groupDoc?.members || [];
+  members.forEach((m: any) => {
+    const uid = typeof m === 'string' ? m : m?.userId;
+    if (uid) memberIds.add(uid);
+  });
+  if (groupDoc?.createdById) {
+    memberIds.add(groupDoc.createdById);
+  }
+  additionalUserIds.forEach((id) => {
+    if (id) memberIds.add(id);
+  });
+  memberIds.delete(actorId);
+  return Array.from(memberIds);
+}
+
 export async function addExpense(
   expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'groupCreatorId' | 'expenseCreatorId' | 'masterCategory' | 'createdAt'> & { date: Date },
   actorId: string
 ): Promise<string> {
+  if (!expenseData.amount || expenseData.amount <= 0) {
+    throw new Error("Expense amount must be greater than zero.");
+  }
+  if (!expenseData.description || !expenseData.description.trim()) {
+    throw new Error("Expense description is required.");
+  }
+  if (!expenseData.payers || expenseData.payers.length === 0) {
+    throw new Error("At least one payer is required.");
+  }
+  if (!expenseData.participants || expenseData.participants.length === 0) {
+    throw new Error("At least one participant is required.");
+  }
+
+  if (expenseData.payers.some(p => Number(p.amount) < 0)) {
+    throw new Error("Payer amounts cannot be negative.");
+  }
+  if (expenseData.participants.some(p => Number(p.amountOwed) < 0)) {
+    throw new Error("Participant amounts cannot be negative.");
+  }
+
+  const totalPaid = expenseData.payers.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const totalOwed = expenseData.participants.reduce((sum, p) => sum + (Number(p.amountOwed) || 0), 0);
+  const expectedAmount = Number(expenseData.amount);
+
+  if (Math.abs(totalPaid - expectedAmount) > 0.05) {
+    throw new Error(`Total paid (₹${totalPaid.toFixed(2)}) must equal expense amount (₹${expectedAmount.toFixed(2)}).`);
+  }
+  if (Math.abs(totalOwed - expectedAmount) > 0.05) {
+    throw new Error(`Total split owed (₹${totalOwed.toFixed(2)}) must equal expense amount (₹${expectedAmount.toFixed(2)}).`);
+  }
+
   const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found to add expense.");
+  if (groupDoc.archivedAt) throw new Error("Cannot add an expense to an archived group.");
 
   const settings = await getSiteSettings();
   const masterCategory = getMasterCategory(expenseData.category || 'Other', settings.expenseCategories);
@@ -171,8 +224,12 @@ export async function addExpense(
     date: expenseData.date
   });
 
-  // Notifications
-  const recipientIds = expenseData.participants.map(p => p.userId).filter(id => id !== actorId);
+  // Notifications - Notify all group members, payers, and participants (excluding actor)
+  const additionalUserIds = [
+    ...expenseData.participants.map(p => p.userId),
+    ...expenseData.payers.map(p => p.userId),
+  ];
+  const recipientIds = getGroupRecipientIds(groupDoc, actorId, additionalUserIds);
   if (recipientIds.length > 0) {
     await notifyExpenseAdded(recipientIds, actorId, expenseData.groupId, expenseId, expenseData.description, expenseData.amount);
   }
@@ -197,8 +254,40 @@ export async function updateExpense(
   expenseData: Omit<ExpenseDocument, 'date' | 'participantIds' | 'payerIds' | 'groupMemberIds' | 'createdAt' | 'masterCategory'> & { date: Date; createdAt: string },
   actorId: string
 ): Promise<void> {
+  if (expenseData.amount !== undefined && expenseData.amount <= 0) {
+    throw new Error("Expense amount must be greater than zero.");
+  }
+  if (expenseData.description !== undefined && !expenseData.description.trim()) {
+    throw new Error("Expense description cannot be empty.");
+  }
+
   const oldExpense = await getItem<any>(`GROUP#${expenseData.groupId}`, `EXPENSE#${expenseId}`);
   if (!oldExpense) throw new Error("Expense not found.");
+
+  const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
+  if (groupDoc?.archivedAt) throw new Error("Cannot modify an expense in an archived group.");
+
+  const effectiveAmount = Number(expenseData.amount !== undefined ? expenseData.amount : oldExpense.amount);
+
+  if (expenseData.payers && expenseData.payers.length > 0) {
+    if (expenseData.payers.some(p => Number(p.amount) < 0)) {
+      throw new Error("Payer amounts cannot be negative.");
+    }
+    const totalPaid = expenseData.payers.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    if (Math.abs(totalPaid - effectiveAmount) > 0.05) {
+      throw new Error(`Total paid (₹${totalPaid.toFixed(2)}) must equal expense amount (₹${effectiveAmount.toFixed(2)}).`);
+    }
+  }
+
+  if (expenseData.participants && expenseData.participants.length > 0) {
+    if (expenseData.participants.some(p => Number(p.amountOwed) < 0)) {
+      throw new Error("Participant amounts cannot be negative.");
+    }
+    const totalOwed = expenseData.participants.reduce((sum, p) => sum + (Number(p.amountOwed) || 0), 0);
+    if (Math.abs(totalOwed - effectiveAmount) > 0.05) {
+      throw new Error(`Total split owed (₹${totalOwed.toFixed(2)}) must equal expense amount (₹${effectiveAmount.toFixed(2)}).`);
+    }
+  }
 
   const settings = await getSiteSettings();
   const masterCategory = getMasterCategory(expenseData.category || 'Other', settings.expenseCategories);
@@ -230,12 +319,12 @@ export async function updateExpense(
   queueVectorEmbedding(expenseId, expenseData.groupId, 'expense', 'upsert');
   invalidateGroupBalanceCache(expenseData.groupId);
 
-  // Adjust group total & check budget
-  const diff = expenseData.amount - oldAmount;
-  const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
+  // Adjust group total using the authoritative old expense amount from database
+  const effectiveOldAmount = typeof oldExpense.amount === 'number' ? oldExpense.amount : oldAmount;
+  const diff = expenseData.amount - effectiveOldAmount;
   if (groupDoc) {
     if (Math.abs(diff) > 0.001) {
-      groupDoc.totalExpenses = (groupDoc.totalExpenses || 0) + diff;
+      groupDoc.totalExpenses = Math.max(0, (groupDoc.totalExpenses || 0) + diff);
       groupDoc.updatedAt = new Date().toISOString();
       await putItem(`GROUP#${expenseData.groupId}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupDoc.createdById}`, `GROUP#${expenseData.groupId}`);
     }
@@ -262,16 +351,47 @@ export async function updateExpense(
   if (oldExpense.amount !== expenseData.amount) {
     changes.push({ field: 'Amount', from: `₹${oldExpense.amount.toFixed(2)}`, to: `₹${expenseData.amount.toFixed(2)}` });
   }
+  if ((oldExpense.category || '') !== (expenseData.category || '')) {
+    changes.push({ field: 'Category', from: `"${oldExpense.category || 'Other'}"`, to: `"${expenseData.category || 'Other'}"` });
+  }
+  if (oldExpense.splitType !== expenseData.splitType) {
+    changes.push({ field: 'Split Type', from: `"${oldExpense.splitType}"`, to: `"${expenseData.splitType}"` });
+  }
+  const oldDateStr = oldExpense.date ? new Date(oldExpense.date).toISOString().slice(0, 10) : '';
+  const newDateStr = expenseData.date ? expenseData.date.toISOString().slice(0, 10) : '';
+  if (oldDateStr !== newDateStr) {
+    changes.push({ field: 'Date', from: oldDateStr, to: newDateStr });
+  }
+  if ((oldExpense.notes || '') !== (expenseData.notes || '')) {
+    changes.push({ field: 'Notes', from: `"${oldExpense.notes || ''}"`, to: `"${expenseData.notes || ''}"` });
+  }
+  const oldPayersSummary = (oldExpense.payers || []).map((p: any) => `${p.userId || p.user?.uid}:${p.amount}`).sort().join(';');
+  const newPayersSummary = (expenseData.payers || []).map((p: any) => `${p.userId || p.user?.uid}:${p.amount}`).sort().join(';');
+  if (oldPayersSummary !== newPayersSummary) {
+    changes.push({ field: 'Payers', from: 'previous payers', to: 'updated payers' });
+  }
+  const oldParticipantsSummary = (oldExpense.participants || []).map((p: any) => `${p.userId || p.user?.uid}:${p.amountOwed}`).sort().join(';');
+  const newParticipantsSummary = (expenseData.participants || []).map((p: any) => `${p.userId || p.user?.uid}:${p.amountOwed}`).sort().join(';');
+  if (oldParticipantsSummary !== newParticipantsSummary) {
+    changes.push({ field: 'Participants', from: 'previous split', to: 'updated split' });
+  }
 
   if (changes.length > 0) {
-    const description = `${actorName} updated expense details for "${oldExpense.description}".`;
+    const changeSummary = changes.map(c => c.field.toLowerCase()).join(', ');
+    const description = `${actorName} updated ${changeSummary} for "${oldExpense.description}".`;
     await logHistoryEvent(expenseData.groupId, 'expense_updated', actorId, description, {
       expenseId,
       changes,
       date: expenseData.date
     });
 
-    const recipientIds = expenseData.participants.map(p => p.userId).filter(id => id !== actorId);
+    const additionalUserIds = [
+      ...expenseData.participants.map(p => p.userId),
+      ...expenseData.payers.map(p => p.userId),
+      ...(oldExpense.participants || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+      ...(oldExpense.payers || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+    ];
+    const recipientIds = getGroupRecipientIds(groupDoc, actorId, additionalUserIds);
     if (recipientIds.length > 0) {
       await notifyExpenseUpdated(recipientIds, actorId, expenseData.groupId, expenseId, expenseData.description);
     }
@@ -279,6 +399,9 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(expenseId: string, groupId: string, amount: number, actorId: string): Promise<void> {
+  const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
+  if (groupDoc?.archivedAt) throw new Error("Cannot delete an expense from an archived group.");
+
   const expense = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
   if (!expense) return;
 
@@ -287,7 +410,6 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   await deleteItem(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
 
   // Adjust group total
-  const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (groupDoc) {
     groupDoc.totalExpenses = Math.max(0, (groupDoc.totalExpenses || 0) - actualAmount);
     groupDoc.updatedAt = new Date().toISOString();
@@ -304,8 +426,11 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
     date: expense.date
   });
 
-  const participants: any[] = expense.participants || [];
-  const recipientIds = participants.map(p => typeof p === 'string' ? p : p.userId).filter(id => id !== actorId);
+  const additionalUserIds = [
+    ...(expense.participants || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+    ...(expense.payers || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+  ];
+  const recipientIds = getGroupRecipientIds(groupDoc, actorId, additionalUserIds);
   if (recipientIds.length > 0) {
     await notifyExpenseDeleted(recipientIds, actorId, groupId, expense.description);
   }

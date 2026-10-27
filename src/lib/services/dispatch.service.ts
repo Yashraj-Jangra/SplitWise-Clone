@@ -36,6 +36,41 @@ export interface ServerDispatchParams {
   authUid?: string;
 }
 
+export function getNotificationChannelId(type: NotificationEventType): string {
+  switch (type) {
+    case 'expense_added':
+    case 'expense_updated':
+    case 'expense_deleted':
+    case 'expense_restored':
+      return 'expenses';
+    case 'settlement_added':
+    case 'settlement_updated':
+    case 'settlement_deleted':
+    case 'settlement_restored':
+    case 'payment_confirmation_request':
+      return 'settlements';
+    case 'payment_reminder':
+    case 'balance_reminder':
+      return 'reminders';
+    case 'budget_alert':
+    case 'budget_exceeded':
+    case 'budget_updated':
+      return 'budgets';
+    case 'member_added':
+    case 'member_removed':
+    case 'group_updated':
+    case 'group_inactivity':
+      return 'groups';
+    case 'broadcast_announcement':
+    case 'broadcast_critical':
+    case 'support_reply':
+    case 'monthly_summary':
+      return 'announcements';
+    default:
+      return 'default';
+  }
+}
+
 export async function serverDispatchNotification(params: ServerDispatchParams): Promise<{ success: boolean; notificationId?: string; error?: string }> {
   const {
     type, recipientIds, title, body: notifBody,
@@ -142,14 +177,16 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
     } else if (type.startsWith('broadcast')) {
       destinationUrl = '/notifications';
     } else if (groupId) {
-      if (type === 'budget_alert' || type === 'budget_exceeded') {
+      if (type === 'budget_alert' || type === 'budget_exceeded' || type === 'budget_updated') {
         destinationUrl = `/groups/${groupId}?tab=budget`;
       } else if (type === 'payment_reminder') {
         destinationUrl = `/groups/${groupId}?settlementId=${settlementId || ''}&action=settle`;
       } else if (expenseId && (type === 'expense_added' || type === 'expense_updated')) {
         destinationUrl = `/groups/${groupId}?expenseId=${expenseId}&action=view`;
-      } else if (settlementId && (type === 'settlement_added' || type === 'payment_confirmation_request')) {
+      } else if (settlementId && (type === 'settlement_added' || type === 'settlement_updated' || type === 'payment_confirmation_request')) {
         destinationUrl = `/groups/${groupId}?settlementId=${settlementId}&action=view`;
+      } else if (type === 'settlement_deleted' || type === 'settlement_restored' || type === 'expense_deleted' || type === 'expense_restored') {
+        destinationUrl = `/groups/${groupId}?tab=history`;
       } else {
         destinationUrl = `/groups/${groupId}`;
       }
@@ -181,14 +218,21 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
       })
     );
 
+
     if (expoSubscriptions.length > 0) {
+      const channelId = getNotificationChannelId(type);
       const expoMessages = expoSubscriptions.map((sub: any) => ({
         to: sub.expoPushToken,
         title,
         body: notifBody,
         sound: 'default',
         badge: 1,
-        data: pushPayload.data,
+        channelId,
+        _displayInForeground: true,
+        data: {
+          ...pushPayload.data,
+          channelId,
+        },
       }));
 
       const expoHeaders: Record<string, string> = {
@@ -284,8 +328,24 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
             emailBodyText = `${actorName} deleted the expense **"${description || 'Expense'}"** from group **"${resolvedGroupName || 'Group'}"**.`;
             break;
           case 'settlement_added':
-            emailSubject = `🤝 Payment Received in ${resolvedGroupName || 'Group'}`;
-            emailBodyText = `${actorName} paid you **${formattedAmount}** as a settlement in group **"${resolvedGroupName || 'Group'}"**.\n\nThank you for keeping your balances clean!`;
+            emailSubject = `🤝 ${title} in ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nGroup balances have been synchronized. View full settlement details in the app.`;
+            break;
+          case 'settlement_updated':
+            emailSubject = `📝 Settlement Updated in ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nGroup balances and audit history have been adjusted.`;
+            break;
+          case 'settlement_deleted':
+            emailSubject = `🗑️ Settlement Deleted in ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nGroup balances have been recalculated.`;
+            break;
+          case 'settlement_restored':
+            emailSubject = `♻️ Settlement Restored in ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nGroup balances have been updated.`;
+            break;
+          case 'expense_restored':
+            emailSubject = `♻️ Expense Restored: ${description || 'Expense'} in ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${actorName} restored the expense **"${description || 'Expense'}"** in group **"${resolvedGroupName || 'Group'}"**.\n\nGroup balances have been updated.`;
             break;
           case 'member_added':
             emailSubject = `👥 Added to Group: ${resolvedGroupName || 'Group'}`;
@@ -312,6 +372,14 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
           case 'budget_exceeded':
             emailSubject = `🚨 Budget Exceeded: ${resolvedGroupName || 'Group'}`;
             emailBodyText = `${notifBody}\n\nYour group has exceeded the monthly budget ceiling. Review expenses and settle outstanding balances in the app.`;
+            break;
+          case 'group_updated':
+            emailSubject = `⚙️ Group Updated: ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nCheck out the updated group details inside the app.`;
+            break;
+          case 'budget_updated':
+            emailSubject = `📊 Group Budget Updated: ${resolvedGroupName || 'Group'}`;
+            emailBodyText = `${notifBody}\n\nCheck out the updated budget and category limits in the app.`;
             break;
         }
 

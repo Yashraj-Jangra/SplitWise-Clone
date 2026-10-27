@@ -109,10 +109,6 @@ export default function GroupDetailPage() {
         return;
       }
       
-      if (groupData.archivedAt && userProfile.role !== 'admin') {
-        setError(true);
-        return;
-      }
 
 
       setGroup(groupData);

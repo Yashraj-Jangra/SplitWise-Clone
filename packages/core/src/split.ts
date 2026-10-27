@@ -256,14 +256,15 @@ export function calculateSplitAmounts(
 }
 
 export type SplitValidationError =
-  | { field: 'payers'; totalPaid: number; totalAmount: number }
-  | { field: 'participants'; kind: 'amounts'; totalOwed: number; totalAmount: number }
-  | { field: 'participants'; kind: 'percentage'; totalPercentage: number };
+  | { field: 'payers'; totalPaid: number; totalAmount: number; message?: string }
+  | { field: 'participants'; kind: 'amounts'; totalOwed: number; totalAmount: number; message?: string }
+  | { field: 'participants'; kind: 'percentage'; totalPercentage: number; message?: string };
 
 const TOLERANCE = 0.01;
 
 /**
  * Validates multi-payer totals and manual/percentage splits before submit.
+ * Checks for non-negative values, finite numbers, and exact balances.
  * Returns null when valid.
  */
 export function validateSplit(input: {
@@ -275,6 +276,12 @@ export function validateSplit(input: {
   const { totalAmount, splitType, participants, multiPayerAmounts } = input;
 
   if (multiPayerAmounts) {
+    for (const a of multiPayerAmounts) {
+      const num = Number(a);
+      if (!Number.isFinite(num) || num < 0) {
+        return { field: 'payers', totalPaid: -1, totalAmount, message: 'Payer amounts cannot be negative.' };
+      }
+    }
     const totalPaid = multiPayerAmounts.reduce((acc, a) => acc + (Number(a) || 0), 0);
     if (Math.abs(totalPaid - totalAmount) > TOLERANCE) {
       return { field: 'payers', totalPaid, totalAmount };
@@ -282,17 +289,41 @@ export function validateSplit(input: {
   }
 
   const selected = participants.filter((p) => p.selected);
+
   if (splitType === 'unequally') {
+    for (const p of selected) {
+      const num = Number(p.amountOwed);
+      if (!Number.isFinite(num) || num < 0) {
+        return { field: 'participants', kind: 'amounts', totalOwed: -1, totalAmount, message: 'Participant amounts cannot be negative.' };
+      }
+    }
     const totalOwed = selected.reduce((acc, p) => acc + (Number(p.amountOwed) || 0), 0);
     if (Math.abs(totalOwed - totalAmount) > TOLERANCE) {
       return { field: 'participants', kind: 'amounts', totalOwed, totalAmount };
     }
   }
+
   if (splitType === 'by_percentage') {
+    for (const p of selected) {
+      const num = Number(p.percentage);
+      if (!Number.isFinite(num) || num < 0) {
+        return { field: 'participants', kind: 'percentage', totalPercentage: -1, message: 'Percentages cannot be negative.' };
+      }
+    }
     const totalPercentage = selected.reduce((acc, p) => acc + (Number(p.percentage) || 0), 0);
     if (Math.abs(totalPercentage - 100) > TOLERANCE) {
       return { field: 'participants', kind: 'percentage', totalPercentage };
     }
   }
+
+  if (splitType === 'by_shares') {
+    for (const p of selected) {
+      const num = Number(p.shares);
+      if (!Number.isFinite(num) || num <= 0) {
+        return { field: 'participants', kind: 'amounts', totalOwed: 0, totalAmount, message: 'Shares must be greater than zero.' };
+      }
+    }
+  }
+
   return null;
 }

@@ -82,4 +82,25 @@ describe('Debt Simplification Algorithm', () => {
     expect(bobToCharlie).toBeDefined();
     expect(bobToCharlie?.amount).toBeCloseTo(20);
   });
+
+  it('correctly simplifies 1-penny (0.01) debts without infinite loop', () => {
+    const balances: Balance[] = [
+      { user: makeUser('u1', 'Alice'), netBalance: -0.01 },
+      { user: makeUser('u2', 'Bob'), netBalance: 0.01 },
+    ];
+    const settlements = simplifyDebts(balances);
+    expect(settlements.length).toBe(1);
+    expect(settlements[0].from.uid).toBe('u1');
+    expect(settlements[0].to.uid).toBe('u2');
+    expect(settlements[0].amount).toBe(0.01);
+  });
+
+  it('ignores sub-penny float noise (< 0.005) cleanly', () => {
+    const balances: Balance[] = [
+      { user: makeUser('u1', 'Alice'), netBalance: -0.002 },
+      { user: makeUser('u2', 'Bob'), netBalance: 0.002 },
+    ];
+    const settlements = simplifyDebts(balances);
+    expect(settlements.length).toBe(0);
+  });
 });

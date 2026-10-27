@@ -74,10 +74,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    let effectiveActorId = actorId;
+
     if (!isInternal) {
       const isBroadcast = target === 'all_users' || type === 'broadcast_announcement' || type === 'broadcast_critical';
       if (isBroadcast && session.user.role !== 'admin') {
         return NextResponse.json({ error: 'Forbidden: Admin privilege required for broadcast notifications' }, { status: 403 });
+      }
+
+      // Prevent non-admin users from spoofing actorId
+      if (session.user.role !== 'admin') {
+        effectiveActorId = authUid;
+      }
+
+      // If tied to a group, ensure non-admin is a member of that group
+      if (groupId && session.user.role !== 'admin') {
+        const { verifyGroupMembership } = await import('@/lib/services/group.service');
+        const isMember = await verifyGroupMembership(groupId, session.user.id);
+        if (!isMember) {
+          return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
+        }
       }
     }
 
@@ -86,7 +102,7 @@ export async function POST(request: Request) {
       recipientIds,
       title,
       body: notifBody,
-      actorId,
+      actorId: effectiveActorId,
       groupId,
       expenseId,
       settlementId,

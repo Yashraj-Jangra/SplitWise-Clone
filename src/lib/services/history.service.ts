@@ -3,6 +3,7 @@ import type { HistoryEvent, UserProfile } from '@/types';
 import { hydrateUsers, getUserProfile } from './user.service';
 import { addExpense } from './expense.service';
 import { addSettlement } from './settlement.service';
+import { notifyExpenseRestored, notifySettlementRestored } from '@/lib/notification-service';
 
 function mapHistoryRow(row: any, actor: UserProfile): HistoryEvent {
   return {
@@ -46,6 +47,18 @@ export async function logHistoryEvent(groupId: string, eventType: string, actorI
   }
 }
 
+function getFallbackUser(userId: string): UserProfile {
+  return {
+    uid: userId || 'unknown',
+    firstName: 'Former',
+    lastName: 'Member',
+    username: 'former_member',
+    email: '',
+    role: 'user',
+    createdAt: new Date().toISOString(),
+  };
+}
+
 export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent[]> {
   const items = await queryByPk<any>(`GROUP#${groupId}`);
   const historyDocs = items.filter(i => i.id && i.eventType && i.description);
@@ -56,11 +69,9 @@ export async function getHistoryByGroupId(groupId: string): Promise<HistoryEvent
 
   return historyDocs
     .map(r => {
-      const actor = actorMap.get(r.actorId);
-      if (!actor) return null;
+      const actor = actorMap.get(r.actorId) || getFallbackUser(r.actorId);
       return mapHistoryRow(r, actor);
     })
-    .filter((h): h is HistoryEvent => h !== null)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
@@ -81,6 +92,10 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
 
   if (!historyEvent || historyEvent.eventType !== 'expense_deleted' || !historyEvent.data) {
     throw new Error("This history event cannot be restored.");
+  }
+
+  if (historyEvent.restored) {
+    throw new Error("This expense has already been restored.");
   }
 
   const dataToRestore = { ...historyEvent.data };
@@ -114,6 +129,30 @@ export async function restoreExpense(historyEventId: string, actorId: string): P
       date: dataToRestore.date,
     });
 
+    const groupDoc = await getItem<any>(`GROUP#${dataToRestore.groupId}`, 'METADATA');
+    const currentMembers: any[] = groupDoc?.members || [];
+    const additionalUserIds = [
+      ...(dataToRestore.participants || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+      ...(dataToRestore.payers || []).map((p: any) => typeof p === 'string' ? p : p.userId),
+    ];
+    const allMemberIds = [...new Set([
+      ...currentMembers.map((m: any) => typeof m === 'string' ? m : m.userId),
+      groupDoc?.createdById,
+      ...additionalUserIds,
+    ].filter(Boolean))];
+    const recipientIds = allMemberIds.filter(id => id !== actorId);
+    if (recipientIds.length > 0) {
+      await notifyExpenseRestored(
+        recipientIds,
+        actorId,
+        dataToRestore.groupId,
+        newExpenseId,
+        dataToRestore.description,
+        dataToRestore.amount,
+        groupDoc?.name
+      );
+    }
+
     return newExpenseId;
   }
   return null;
@@ -125,6 +164,10 @@ export async function restoreSettlement(historyEventId: string, actorId: string)
 
   if (!historyEvent || historyEvent.eventType !== 'settlement_deleted' || !historyEvent.data) {
     throw new Error("This history event cannot be restored.");
+  }
+
+  if (historyEvent.restored) {
+    throw new Error("This settlement has already been restored.");
   }
 
   const dataToRestore = { ...historyEvent.data };
@@ -146,10 +189,11 @@ export async function restoreSettlement(historyEventId: string, actorId: string)
       `HISTORY#${historyEvent.id}`
     );
 
-    const actor = await getUserProfile(actorId);
-    const [paidBy, paidTo] = await Promise.all([
+    const [actor, paidBy, paidTo, groupDoc] = await Promise.all([
+      getUserProfile(actorId),
       getUserProfile(dataToRestore.paidById),
       getUserProfile(dataToRestore.paidToId),
+      getItem<any>(`GROUP#${dataToRestore.groupId}`, 'METADATA'),
     ]);
 
     const actorName = actor ? `${actor.firstName} ${actor.lastName || ''}`.trim() : 'Someone';
@@ -165,6 +209,25 @@ export async function restoreSettlement(historyEventId: string, actorId: string)
       settlementId: dataToRestore.settlementId,
       date: dataToRestore.date,
     });
+
+    const currentMembers: any[] = groupDoc?.members || [];
+    const allMemberIds = [...new Set([
+      ...currentMembers.map((m: any) => typeof m === 'string' ? m : m.userId),
+      groupDoc?.createdById,
+      dataToRestore.paidById,
+      dataToRestore.paidToId,
+    ].filter(Boolean))];
+    const recipientIds = allMemberIds.filter(id => id !== actorId);
+    if (recipientIds.length > 0) {
+      await notifySettlementRestored(
+        recipientIds,
+        actorId,
+        dataToRestore.groupId,
+        newSettlementId,
+        groupDoc?.name || 'your group',
+        restoreDescription
+      );
+    }
 
     return newSettlementId;
   }

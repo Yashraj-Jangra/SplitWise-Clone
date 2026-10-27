@@ -208,6 +208,11 @@ export async function getSettlementsByGroupId(groupId: string): Promise<Settleme
   return fetchApi(`/api/settlements?groupId=${groupId}`);
 }
 
+export async function getSettlementById(settlementId: string, groupId?: string): Promise<Settlement | null> {
+  const query = groupId ? `?groupId=${groupId}` : '';
+  return fetchApi(`/api/settlements/${settlementId}${query}`);
+}
+
 export async function getSettlementsByUserId(userId: string): Promise<Settlement[]> {
   return fetchApi(`/api/settlements?userId=${userId}`);
 }

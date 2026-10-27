@@ -73,6 +73,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error removing member from group:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const isForbidden = error.message?.includes('Forbidden:');
+    const isBadRequest = error.message?.includes('Cannot remove') || error.message?.includes('outstanding balance');
+    const status = isForbidden ? 403 : isBadRequest ? 400 : 500;
+    return NextResponse.json({ error: error.message }, { status });
   }
 }

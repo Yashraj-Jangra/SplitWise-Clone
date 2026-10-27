@@ -28,11 +28,42 @@ export function NotificationItem({ notification, onClick, onMarkRead }: Notifica
       bgColor = 'bg-blue-500/10';
       if (!notification.isRead) borderClass = 'border-l-blue-500';
       break;
+    case 'expense_restored':
+      Icon = Icons.Restore;
+      iconColor = 'text-purple-500';
+      bgColor = 'bg-purple-500/10';
+      if (!notification.isRead) borderClass = 'border-l-purple-500';
+      break;
     case 'settlement_added':
+    case 'settlement_updated':
       Icon = Icons.Settle;
       iconColor = 'text-green-500';
       bgColor = 'bg-green-500/10';
       if (!notification.isRead) borderClass = 'border-l-green-500';
+      break;
+    case 'settlement_deleted':
+      Icon = Icons.Settle;
+      iconColor = 'text-red-500';
+      bgColor = 'bg-red-500/10';
+      if (!notification.isRead) borderClass = 'border-l-red-500';
+      break;
+    case 'settlement_restored':
+      Icon = Icons.Restore;
+      iconColor = 'text-purple-500';
+      bgColor = 'bg-purple-500/10';
+      if (!notification.isRead) borderClass = 'border-l-purple-500';
+      break;
+    case 'group_updated':
+      Icon = Icons.Users;
+      iconColor = 'text-blue-500';
+      bgColor = 'bg-blue-500/10';
+      if (!notification.isRead) borderClass = 'border-l-blue-500';
+      break;
+    case 'budget_updated':
+      Icon = Icons.Wallet;
+      iconColor = 'text-emerald-500';
+      bgColor = 'bg-emerald-500/10';
+      if (!notification.isRead) borderClass = 'border-l-emerald-500';
       break;
     case 'member_added':
     case 'member_removed':

@@ -68,10 +68,15 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
     const { id } = await params;
 
-    // Authorization Check: Must be admin or group member
-    const isMember = session.user.role === 'admin' || await verifyGroupMembership(id, session.user.id);
-    if (!isMember) {
-      return NextResponse.json({ error: 'Forbidden: You do not belong to this group' }, { status: 403 });
+    const group = await getGroupById(id);
+    if (!group) {
+      return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+    }
+
+    // Authorization Check: Must be admin or the group creator
+    const isAuthorized = session.user.role === 'admin' || group.createdBy.uid === session.user.id;
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Forbidden: Only the group creator or an administrator can permanently delete this group' }, { status: 403 });
     }
 
     await deleteGroupPermanently(id);

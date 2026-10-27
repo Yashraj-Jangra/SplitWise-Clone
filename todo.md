@@ -1,6 +1,79 @@
 # Session Progress & Context Preservation
 
-  - **Backend Performance Optimization & Lightweight Members Endpoint** ⚡ 🛡️ 🗄️ ✅:
+- **Release v0.5.1 Manifest Synchronization** 📌 🌐 ✨ ✅:
+  - Bumped version to `0.5.1` in `package.json` for ecosystem parity.
+  - Quality Gates: `npx tsc --noEmit` verified with 0 errors.
+
+- **Android Notification Categorization & Expo Push Dispatch Routing** 🔔 📱 🌐 ✨ ✅:
+  - **Android Notification Channel Tagging**:
+    - Created `getNotificationChannelId(type: NotificationEventType): string` in `src/lib/services/dispatch.service.ts` to map each event type to its dedicated OS notification channel:
+      - `expenses`: `expense_added`, `expense_updated`, `expense_deleted`, `expense_restored`
+      - `settlements`: `settlement_added`, `settlement_updated`, `settlement_deleted`, `settlement_restored`, `payment_confirmation_request`
+      - `reminders`: `payment_reminder`, `balance_reminder`
+      - `budgets`: `budget_alert`, `budget_exceeded`, `budget_updated`
+      - `groups`: `member_added`, `member_removed`, `group_updated`, `group_inactivity`
+      - `announcements`: `broadcast_announcement`, `broadcast_critical`, `support_reply`, `monthly_summary`
+      - `default`: fallback
+    - Updated `expoMessages` mapping in `serverDispatchNotification` to attach `channelId` and payload `data.channelId`, allowing modern Android OS (8.0+ through Android 15) to route notifications to discrete system channels where users can toggle sounds, vibration, or disable specific notification types.
+  - **Quality Gates & Discipline**:
+    - All 140 vitest tests pass (`npm test`).
+    - `npx tsc --noEmit` verified with 0 errors.
+
+- **Comprehensive Logic Hardening, Security Integrity, and Ecosystem Guardrails** 🛡️ 🔑 ⚡ 🗄️ ✨ ✅:
+  - **Shared Core Simplification & Penny Drift Prevention (`@splitit/core`)**:
+    - Fixed infinite loop in `simplifyDebts` (`packages/core/src/debts.ts`) on 1-penny (0.01) leftover balances by adjusting threshold to `EPSILON = 0.005`, filtering sub-penny noise, and rounding deductions down to the cent.
+    - Added 2 regression tests in `src/__tests__/debt-simplification.test.ts`. Verified with Vitest (7/7 passed).
+    - Hardened `validateSplit` (`packages/core/src/split.ts`) to strictly reject negative numbers, `NaN`, non-finite amounts, and zero/negative share weights across multi-payer and participant splits.
+    - Added 4 unit tests in `src/__tests__/splitting.test.ts`. Verified with Vitest (25/25 passed).
+  - **Group Deletion & Archive Authorization Hardening**:
+    - `DELETE /api/groups/[id]`: Restricted permanent group deletion to group creator or admin (`session.user.role === 'admin' || group.createdBy.uid === session.user.id`).
+    - `POST /api/groups/[id]/archive`: Restricted archive and restore operations to group creator or admin. Enforced zero-unsettled-balance check in `archiveGroup()` (`Math.abs(b.netBalance) >= 0.01`) before permitting group archival.
+    - `src/lib/services/group.service.ts`: Fixed group creator authorization check in `verifyGroupMembership` (`if (groupDoc.createdById === userId) return true;`).
+  - **Archived Group Immutability Across Backend Services**:
+    - Guarded `addExpense`, `updateExpense`, `deleteExpense`, `addSettlement`, `updateSettlement`, `deleteSettlement`, `addMembersToGroup`, `removeMemberFromGroup`, and `updateGroup` to strictly reject mutations on archived groups (`groupDoc.archivedAt`).
+    - `src/app/(app)/groups/[groupId]/page.tsx`: Removed artificial block that previously prevented non-admin members from viewing their own archived group in read-only mode and accessing settings.
+  - **Account Deletion & Debt Escape Guard**:
+    - `DELETE /api/user/delete-account`: Verified all groups for unsettled debts before account deletion. Rejects deletion if any active group balance is non-zero, preventing debt evasion exploits. Cleans up membership from active groups where user is a regular member.
+  - **Privilege Escalation Closure & Input Whitelisting**:
+    - `PATCH /api/user/profile`: Enforced strict whitelist of user-editable fields (`firstName`, `lastName`, `username`, `countryCode`, `mobileNumber`, `upiId`, `dob`, `avatarUrl`), preventing regular users from self-elevating to admin role.
+    - `DELETE /api/groups/[id]/members`: Restricted kicking out other members to group creator or admin. Regular members can only leave group themselves.
+    - `POST /api/notifications/send`: Prevented actor ID impersonation by locking non-admin `actorId` to authenticated session ID. Verified group membership for group-specific notifications.
+    - `GET /api/notifications`: Clamped `limit` parameter between 1 and 100.
+    - `POST /api/upload/avatar`: Sanitized file extension to alphanumeric only.
+  - **Quality Gates & Pre-Commit Verification**:
+    - All 140 vitest tests pass (`npm test`).
+    - `npx tsc --noEmit` verified with 0 errors.
+
+- **Group History Settlement Date Display Parity** 🎨 🌐 ✨ ✅:
+  - Updated `src/components/groups/group-history.tsx` to display the target date (`(for ${format(expenseDate, 'MMM d')})`) for both expense and settlement events, maintaining cross-platform parity with the mobile app.
+  - Tested: all 134 vitest unit tests pass and `npx tsc --noEmit` succeeds with 0 errors.
+
+- **Deep Scan Verification & Systemic Edge-Case Hardening** ✨ 🛡️ 🗄️ ⚡ 🧪 ✅:
+  - **Structural Edge Cases & Audit Integrity Resolved**:
+    1. *Direct Settlement Lookup & Fallback Guards (`GET /api/settlements/[id]`)*: Added missing single-settlement `GET` endpoint with group authorization guard, eliminating client-side array search. Added fallback in `PUT` and `DELETE` to look up `groupId` from settlement entity if omitted by mobile or legacy client.
+    2. *Settlement Update Granular Diffs*: Expanded `updateSettlement` change detection beyond amount to also detect and log diffs for Payer (`paidById`), Payee (`paidToId`), Date, and Notes in history events.
+    3. *Audit Trail Preservation for Former Members*: Added `getFallbackUser` in `getHistoryByGroupId` so history records of former or deleted members are permanently preserved in the audit log instead of being silently dropped.
+    4. *Restoration Re-entrancy & Recipient Parity*: Added duplicate-restoration guard (`historyEvent.restored`) to `restoreExpense` and `restoreSettlement` with HTTP 400 client-friendly error. In `restoreExpense`, included restored participants and payers in the notification recipient list.
+    5. *Group Creator & Legacy Member Balance Integrity*: Ensured `createdById` is always included in hydrated `memberIds` in `group.service.ts`. In `balance.service.ts`, seeded `memberMap` from expenses and settlements so debts involving former members are never orphaned.
+    6. *Payer & Participant Double-Entry Validation*: In `addExpense` and `updateExpense`, enforced non-negative amount checks and validated that sum of payers and sum of split owed match the total expense amount within a 0.05 penny tolerance.
+    7. *Self-Leave vs. Admin Removal Semantics*: Differentiated self-leave from admin removal in `removeMemberFromGroup` and `notifyMemberLeft` so history logs and notifications say "User left the group" instead of "User removed User from the group".
+    8. *Push Notification Routing Precision*: Routed `expense_deleted` push notifications directly to the group history tab (`/groups/${groupId}?tab=history`).
+    9. *Floating Point Drift Elimination in Debt Simplification*: Added 2-decimal rounding in `simplifyDebts` in `@splitit/core` to prevent float precision drift in greedy settlement transfers.
+  - **Verification & Test Suite**:
+    - All 134 vitest tests pass in `SplitWise-Clone` (`npm test`).
+    - Type check passed with 0 errors (`npm run typecheck`).
+  - **Identified Bugs & Systemic Edge Cases Resolved**:
+    1. *Settlement Deletion Logging & Restoration Gap*: Deleting a settlement previously removed the item without logging any history event or audit trail. Implemented full history logging of `settlement_deleted` with complete snapshot metadata (`settlementId`, `groupId`, `paidById`, `paidToId`, `amount`, `date`, `notes`), enabling full restoration via `restoreSettlement`. Also invalidates group balance cache, deletes vector embedding, and dispatches `notifySettlementDeleted` to all group members.
+    2. *P2P & Group Settlement Notification Blind Spots*: When user A added a settlement where B pays A, B received zero notification. Added `notifySettlementAddedToGroup` which customizes messaging for the payer, payee, and all group members, ensuring full awareness.
+    3. *Universal Group-Wide Notification Rule*: All group events (expense add/update/delete/restore, settlement add/update/delete/restore, member join/leave, group details and budget updates) are now dispatched to all users in the group (excluding the actor).
+    4. *Expense Update History & Diff Integrity*: In `updateExpense`, previously only `description` and `amount` differences were checked; edits to category, split type, date, notes, payers, or participants produced zero history and skipped notifications. Expanded change detection across all fields. Corrected total expense diffing to read authoritative `oldExpense.amount` directly from the database instead of client-provided `oldAmount`.
+    5. *Group Member Removal Guard & Cache Parity*: Guarded `removeMemberFromGroup` against removing members who have active outstanding non-zero balances. Added `invalidateGroupBalanceCache(groupId)` across all group membership, archival, and restoration mutations.
+    6. *Web & Mobile History UI Parity*: Added `deletedSettlementIds` tracking to `group-history.tsx` (web) and `GroupHistoryTab.tsx` (mobile) so deleted settlements receive proper strikethrough styling and restore capabilities.
+    7. *Notification Types & Preferences*: Added 6 new event types (`settlement_updated`, `settlement_deleted`, `settlement_restored`, `expense_restored`, `group_updated`, `budget_updated`) with full icon, styling, destination URL routing, and user notification preference controls across both web and mobile platforms.
+  - **Verification & Test Suite**:
+    - All 134 unit tests pass in `SplitWise-Clone` (`npm test`).
+    - Type check passed with 0 errors (`npm run typecheck`).
+    - Commits saved cleanly on `dev` branch with human-like emoji formatting and `--no-gpg-sign`.
     - **Optimization Details**:
       - *Lightweight Group Members Endpoint (`src/app/api/groups/[id]/members/route.ts`)*: Added a dedicated `GET` handler returning hydrated group members without querying all expenses, settlements, or audit history. Guarded with Better-Auth session verification and `verifyGroupMembership` (zero security risk).
       - *Bounded In-Memory Cache on Balances (`src/lib/services/balance.service.ts`)*: Added `balanceCache` with 20s TTL for `getGroupBalances(groupId)`, with automatic targeted invalidation via `invalidateGroupBalanceCache(groupId)` across expense and settlement mutations (`createExpense`, `updateExpense`, `deleteExpense`, `addSettlement`, `updateSettlement`, `deleteSettlement`).

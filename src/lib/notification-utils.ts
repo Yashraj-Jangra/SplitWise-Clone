@@ -18,11 +18,28 @@ export function getNotificationUrl(notification: NotificationV2): string | null 
     case 'expense_deleted':
       return groupId ? `/groups/${groupId}` : null;
 
+    case 'expense_restored':
+      if (groupId && expenseId) {
+        return `/groups/${groupId}?expenseId=${expenseId}&action=view`;
+      }
+      return groupId ? `/groups/${groupId}` : null;
+
     case 'settlement_added':
+    case 'settlement_updated':
+    case 'settlement_restored':
       if (groupId && settlementId) {
         return `/groups/${groupId}?settlementId=${settlementId}&action=view`;
       }
       return groupId ? `/groups/${groupId}` : null;
+
+    case 'settlement_deleted':
+      return groupId ? `/groups/${groupId}` : null;
+
+    case 'group_updated':
+      return groupId ? `/groups/${groupId}` : null;
+
+    case 'budget_updated':
+      return groupId ? `/groups/${groupId}?tab=budget` : null;
 
     case 'member_added':
     case 'member_removed':

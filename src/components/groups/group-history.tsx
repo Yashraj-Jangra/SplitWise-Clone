@@ -140,6 +140,7 @@ const eventIcons: { [key: string]: React.ReactNode } = {
   expense_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   settlement_deleted: <Icons.Delete className="h-4 w-4 text-red-500" />,
   member_removed: <Icons.UserMinus className="h-4 w-4 text-red-500" />,
+  member_left: <Icons.UserMinus className="h-4 w-4 text-amber-500" />,
   // Restorations
   expense_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
   settlement_restored: <Icons.Restore className="h-4 w-4 text-purple-500" />,
@@ -156,8 +157,8 @@ function HistoryEventItem({ event, onViewExpense, isDeleted }: { event: HistoryE
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const expenseDate = useMemo(() => {
-        // Only show expense date for expense-related events
-        if (event.data?.date && event.eventType.startsWith('expense_')) {
+        // Show date for expense and settlement events
+        if (event.data?.date && (event.eventType.startsWith('expense_') || event.eventType.startsWith('settlement_'))) {
             const dateValue = event.data.date;
             // The date from event data may have a .toDate() method or ISO string
             if (dateValue.toDate && typeof dateValue.toDate === 'function') {
@@ -432,6 +433,16 @@ export function GroupHistoryTab({ groupId, onViewExpense }: GroupHistoryTabProps
     return deletedIds;
   }, [history]);
 
+  const deletedSettlementIds = useMemo(() => {
+    const deletedIds = new Set<string>();
+    history.forEach(event => {
+      if (event.eventType === 'settlement_deleted' && event.data?.settlementId && !event.restored) {
+        deletedIds.add(event.data.settlementId);
+      }
+    });
+    return deletedIds;
+  }, [history]);
+
   if (loading) {
     return (
       <Card>
@@ -459,7 +470,9 @@ export function GroupHistoryTab({ groupId, onViewExpense }: GroupHistoryTabProps
         {history.length > 0 ? (
           <div className="divide-y divide-border">
               {history.map(event => {
-                  const isDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
+                  const isExpenseDeleted = (event.eventType === 'expense_created' || event.eventType === 'expense_updated') && event.data?.expenseId && deletedExpenseIds.has(event.data.expenseId);
+                  const isSettlementDeleted = (event.eventType === 'settlement_created' || event.eventType === 'settlement_updated') && event.data?.settlementId && deletedSettlementIds.has(event.data.settlementId);
+                  const isDeleted = Boolean(isExpenseDeleted || isSettlementDeleted);
                   return (<HistoryEventItem key={event.id} event={event} onViewExpense={onViewExpense} isDeleted={isDeleted} />)
               })}
           </div>
