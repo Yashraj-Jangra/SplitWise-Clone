@@ -211,6 +211,77 @@ describe('Expense Splitting Calculations', () => {
       });
       expect(validation).toBeNull();
     });
+
+    it('rejects negative or invalid multi-payer amounts', () => {
+      const result = validateSplit({
+        totalAmount: 100,
+        splitType: 'equally',
+        participants: [
+          { userId: 'u1', selected: true },
+          { userId: 'u2', selected: true },
+        ],
+        multiPayerAmounts: [-50, 150],
+      });
+      expect(result).toEqual({
+        field: 'payers',
+        totalPaid: -1,
+        totalAmount: 100,
+        message: 'Payer amounts cannot be negative.',
+      });
+    });
+
+    it('rejects negative participant amounts in unequal splits', () => {
+      const result = validateSplit({
+        totalAmount: 100,
+        splitType: 'unequally',
+        participants: [
+          { userId: 'u1', selected: true, amountOwed: -20 },
+          { userId: 'u2', selected: true, amountOwed: 120 },
+        ],
+      });
+      expect(result).toEqual({
+        field: 'participants',
+        kind: 'amounts',
+        totalOwed: -1,
+        totalAmount: 100,
+        message: 'Participant amounts cannot be negative.',
+      });
+    });
+
+    it('rejects negative percentages in percentage splits', () => {
+      const result = validateSplit({
+        totalAmount: 100,
+        splitType: 'by_percentage',
+        participants: [
+          { userId: 'u1', selected: true, percentage: -10 },
+          { userId: 'u2', selected: true, percentage: 110 },
+        ],
+      });
+      expect(result).toEqual({
+        field: 'participants',
+        kind: 'percentage',
+        totalPercentage: -1,
+        message: 'Percentages cannot be negative.',
+      });
+    });
+
+    it('rejects non-positive shares in by_shares split', () => {
+      const result = validateSplit({
+        totalAmount: 100,
+        splitType: 'by_shares',
+        participants: [
+          { userId: 'u1', selected: true, shares: 0 },
+          { userId: 'u2', selected: true, shares: 2 },
+        ],
+      });
+      expect(result).toEqual({
+        field: 'participants',
+        kind: 'amounts',
+        totalOwed: 0,
+        totalAmount: 100,
+        message: 'Shares must be greater than zero.',
+      });
+    });
   });
 
   describe('Equal Split Helpers (Penny & Percent Allocation with Payer Priority)', () => {

@@ -1,5 +1,30 @@
 # Session Progress & Context Preservation
 
+- **Comprehensive Logic Hardening, Security Integrity, and Ecosystem Guardrails** 🛡️ 🔑 ⚡ 🗄️ ✨ ✅:
+  - **Shared Core Simplification & Penny Drift Prevention (`@splitit/core`)**:
+    - Fixed infinite loop in `simplifyDebts` (`packages/core/src/debts.ts`) on 1-penny (0.01) leftover balances by adjusting threshold to `EPSILON = 0.005`, filtering sub-penny noise, and rounding deductions down to the cent.
+    - Added 2 regression tests in `src/__tests__/debt-simplification.test.ts`. Verified with Vitest (7/7 passed).
+    - Hardened `validateSplit` (`packages/core/src/split.ts`) to strictly reject negative numbers, `NaN`, non-finite amounts, and zero/negative share weights across multi-payer and participant splits.
+    - Added 4 unit tests in `src/__tests__/splitting.test.ts`. Verified with Vitest (25/25 passed).
+  - **Group Deletion & Archive Authorization Hardening**:
+    - `DELETE /api/groups/[id]`: Restricted permanent group deletion to group creator or admin (`session.user.role === 'admin' || group.createdBy.uid === session.user.id`).
+    - `POST /api/groups/[id]/archive`: Restricted archive and restore operations to group creator or admin. Enforced zero-unsettled-balance check in `archiveGroup()` (`Math.abs(b.netBalance) >= 0.01`) before permitting group archival.
+    - `src/lib/services/group.service.ts`: Fixed group creator authorization check in `verifyGroupMembership` (`if (groupDoc.createdById === userId) return true;`).
+  - **Archived Group Immutability Across Backend Services**:
+    - Guarded `addExpense`, `updateExpense`, `deleteExpense`, `addSettlement`, `updateSettlement`, `deleteSettlement`, `addMembersToGroup`, `removeMemberFromGroup`, and `updateGroup` to strictly reject mutations on archived groups (`groupDoc.archivedAt`).
+    - `src/app/(app)/groups/[groupId]/page.tsx`: Removed artificial block that previously prevented non-admin members from viewing their own archived group in read-only mode and accessing settings.
+  - **Account Deletion & Debt Escape Guard**:
+    - `DELETE /api/user/delete-account`: Verified all groups for unsettled debts before account deletion. Rejects deletion if any active group balance is non-zero, preventing debt evasion exploits. Cleans up membership from active groups where user is a regular member.
+  - **Privilege Escalation Closure & Input Whitelisting**:
+    - `PATCH /api/user/profile`: Enforced strict whitelist of user-editable fields (`firstName`, `lastName`, `username`, `countryCode`, `mobileNumber`, `upiId`, `dob`, `avatarUrl`), preventing regular users from self-elevating to admin role.
+    - `DELETE /api/groups/[id]/members`: Restricted kicking out other members to group creator or admin. Regular members can only leave group themselves.
+    - `POST /api/notifications/send`: Prevented actor ID impersonation by locking non-admin `actorId` to authenticated session ID. Verified group membership for group-specific notifications.
+    - `GET /api/notifications`: Clamped `limit` parameter between 1 and 100.
+    - `POST /api/upload/avatar`: Sanitized file extension to alphanumeric only.
+  - **Quality Gates & Pre-Commit Verification**:
+    - All 140 vitest tests pass (`npm test`).
+    - `npx tsc --noEmit` verified with 0 errors.
+
 - **Group History Settlement Date Display Parity** 🎨 🌐 ✨ ✅:
   - Updated `src/components/groups/group-history.tsx` to display the target date (`(for ${format(expenseDate, 'MMM d')})`) for both expense and settlement events, maintaining cross-platform parity with the mobile app.
   - Tested: all 134 vitest unit tests pass and `npx tsc --noEmit` succeeds with 0 errors.

@@ -177,6 +177,7 @@ export async function addExpense(
 
   const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found to add expense.");
+  if (groupDoc.archivedAt) throw new Error("Cannot add an expense to an archived group.");
 
   const settings = await getSiteSettings();
   const masterCategory = getMasterCategory(expenseData.category || 'Other', settings.expenseCategories);
@@ -263,6 +264,9 @@ export async function updateExpense(
   const oldExpense = await getItem<any>(`GROUP#${expenseData.groupId}`, `EXPENSE#${expenseId}`);
   if (!oldExpense) throw new Error("Expense not found.");
 
+  const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
+  if (groupDoc?.archivedAt) throw new Error("Cannot modify an expense in an archived group.");
+
   const effectiveAmount = Number(expenseData.amount !== undefined ? expenseData.amount : oldExpense.amount);
 
   if (expenseData.payers && expenseData.payers.length > 0) {
@@ -318,7 +322,6 @@ export async function updateExpense(
   // Adjust group total using the authoritative old expense amount from database
   const effectiveOldAmount = typeof oldExpense.amount === 'number' ? oldExpense.amount : oldAmount;
   const diff = expenseData.amount - effectiveOldAmount;
-  const groupDoc = await getItem<any>(`GROUP#${expenseData.groupId}`, 'METADATA');
   if (groupDoc) {
     if (Math.abs(diff) > 0.001) {
       groupDoc.totalExpenses = Math.max(0, (groupDoc.totalExpenses || 0) + diff);
@@ -396,6 +399,9 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(expenseId: string, groupId: string, amount: number, actorId: string): Promise<void> {
+  const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
+  if (groupDoc?.archivedAt) throw new Error("Cannot delete an expense from an archived group.");
+
   const expense = await getItem<any>(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
   if (!expense) return;
 
@@ -404,7 +410,6 @@ export async function deleteExpense(expenseId: string, groupId: string, amount: 
   await deleteItem(`GROUP#${groupId}`, `EXPENSE#${expenseId}`);
 
   // Adjust group total
-  const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (groupDoc) {
     groupDoc.totalExpenses = Math.max(0, (groupDoc.totalExpenses || 0) - actualAmount);
     groupDoc.updatedAt = new Date().toISOString();

@@ -51,6 +51,7 @@ export async function addSettlement(
 
   const groupDoc = await getItem<any>(`GROUP#${settlementData.groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found to add settlement.");
+  if (groupDoc.archivedAt) throw new Error("Cannot add a settlement to an archived group.");
 
   const currentMembers: any[] = groupDoc.members || [];
   const allMemberIds = [...new Set([
@@ -222,6 +223,9 @@ export async function updateSettlement(
   }
   if (!oldData) throw new Error("Settlement not found.");
 
+  const groupDocCheck = await getItem<any>(`GROUP#${oldData.groupId}`, 'METADATA');
+  if (groupDocCheck?.archivedAt) throw new Error("Cannot modify a settlement in an archived group.");
+
   if (data.amount !== undefined) {
     const num = Number(data.amount);
     if (!Number.isFinite(num) || num <= 0) {
@@ -334,6 +338,9 @@ export async function deleteSettlement(settlementId: string, groupId: string, ac
     const allSettlements = await queryByEntityType<any>('SETTLEMENT');
     oldData = allSettlements.find(s => s.id === settlementId);
   }
+  const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
+  if (groupDoc?.archivedAt) throw new Error("Cannot delete a settlement from an archived group.");
+
   if (!oldData) {
     return;
   }
@@ -342,11 +349,10 @@ export async function deleteSettlement(settlementId: string, groupId: string, ac
   invalidateGroupBalanceCache(groupId);
   queueVectorEmbedding(settlementId, groupId, 'settlement', 'delete');
 
-  const [actor, paidBy, paidTo, groupDoc] = await Promise.all([
+  const [actor, paidBy, paidTo] = await Promise.all([
     getUserProfile(actorId),
     getUserProfile(oldData.paidById),
     getUserProfile(oldData.paidToId),
-    getItem<any>(`GROUP#${groupId}`, 'METADATA'),
   ]);
 
   const actorName = getFullName(actor?.firstName, actor?.lastName);

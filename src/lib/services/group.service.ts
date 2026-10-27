@@ -187,6 +187,7 @@ export async function getAllGroups(): Promise<Group[]> {
 export async function addMembersToGroup(groupId: string, memberIds: string[], actorId: string): Promise<void> {
   const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found.");
+  if (groupDoc.archivedAt) throw new Error("Cannot add members to an archived group.");
 
   const currentMembers: any[] = groupDoc.members || [];
   const existingIds = new Set<string>(currentMembers.map((m: any) => typeof m === 'string' ? m : m.userId));
@@ -243,9 +244,19 @@ export async function addMemberToGroup(groupId: string, newMemberUserId: string,
 export async function removeMemberFromGroup(groupId: string, memberIdToRemove: string, actorId: string): Promise<void> {
   const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found.");
+  if (groupDoc.archivedAt) throw new Error("Cannot remove members from an archived group.");
 
   if (memberIdToRemove === groupDoc.createdById) {
     throw new Error("Cannot remove the group creator.");
+  }
+
+  const isSelfLeave = memberIdToRemove === actorId;
+  const isCreator = actorId === groupDoc.createdById;
+  if (!isSelfLeave && !isCreator) {
+    const actor = await getUserProfile(actorId);
+    if (actor?.role !== 'admin') {
+      throw new Error("Forbidden: Only the group creator or an admin can remove other members.");
+    }
   }
 
   // Check if member has unsettled balance
@@ -275,7 +286,6 @@ export async function removeMemberFromGroup(groupId: string, memberIdToRemove: s
   ]);
   const actorName = getFullName(actor?.firstName, actor?.lastName);
   const removedUserName = getFullName(removedUser?.firstName, removedUser?.lastName);
-  const isSelfLeave = memberIdToRemove === actorId;
 
   const historyDescription = isSelfLeave
     ? `${actorName} left the group.`
@@ -321,6 +331,7 @@ export async function removeMemberFromGroup(groupId: string, memberIdToRemove: s
 export async function updateGroup(groupId: string, data: Partial<GroupDocument>, actorId: string): Promise<void> {
   const oldData = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!oldData) throw new Error("Group not found.");
+  if (oldData.archivedAt) throw new Error("Cannot modify an archived group.");
 
   const updatedGroup = {
     ...oldData,
@@ -398,6 +409,12 @@ export async function archiveGroup(groupId: string, actorId: string): Promise<vo
   const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!groupDoc) throw new Error("Group not found.");
 
+  const balances = await getGroupBalances(groupId);
+  const hasUnsettled = balances.some(b => Math.abs(b.netBalance) >= 0.01);
+  if (hasUnsettled) {
+    throw new Error("Cannot archive group because there are unsettled balances. Please settle all balances first.");
+  }
+
   groupDoc.archivedAt = new Date().toISOString();
   await putItem(`GROUP#${groupId}`, 'METADATA', 'GROUP', groupDoc, `USER#${groupDoc.createdById}`, `GROUP#${groupId}`);
   invalidateUserGroupsCache();
@@ -459,6 +476,8 @@ export async function deleteGroupPermanently(groupId: string): Promise<void> {
 export async function verifyGroupMembership(groupId: string, userId: string): Promise<boolean> {
   const groupDoc = await getItem<any>(`GROUP#${groupId}`, 'METADATA');
   if (!groupDoc) return false;
+
+  if (groupDoc.createdById === userId) return true;
 
   const memberIds = (groupDoc.members || []).map((m: any) => typeof m === 'string' ? m : m.userId);
   return memberIds.includes(userId);

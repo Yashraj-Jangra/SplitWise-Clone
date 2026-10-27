@@ -37,7 +37,19 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const body = await request.json();
-    const profile = await updateUser(session.user.id, body);
+    
+    // Whitelist only user-editable fields to prevent privilege escalation
+    const allowedUpdates: Partial<any> = {};
+    if (typeof body.firstName === 'string') allowedUpdates.firstName = body.firstName.trim();
+    if (typeof body.lastName === 'string') allowedUpdates.lastName = body.lastName.trim();
+    if (typeof body.username === 'string') allowedUpdates.username = body.username.trim();
+    if (typeof body.countryCode === 'string') allowedUpdates.countryCode = body.countryCode.trim();
+    if (typeof body.mobileNumber === 'string') allowedUpdates.mobileNumber = body.mobileNumber.trim();
+    if (body.upiId !== undefined) allowedUpdates.upiId = typeof body.upiId === 'string' ? body.upiId.trim() : undefined;
+    if (body.dob !== undefined) allowedUpdates.dob = body.dob;
+    if (typeof body.avatarUrl === 'string') allowedUpdates.avatarUrl = body.avatarUrl;
+
+    const profile = await updateUser(session.user.id, allowedUpdates);
     return NextResponse.json({ success: true, profile });
   } catch (error: any) {
     console.error('Error updating user profile:', error);

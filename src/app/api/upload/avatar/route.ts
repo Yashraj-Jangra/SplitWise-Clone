@@ -29,7 +29,8 @@ export async function POST(request: Request) {
     }
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const fileExtension = file.name.split('.').pop() || 'png';
+    const rawExtension = file.name.split('.').pop() || 'png';
+    const fileExtension = rawExtension.toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
     const key = `avatars/${userId}-${Date.now()}.${fileExtension}`;
 
     const relativeUrl = await uploadFile(key, fileBuffer, file.type);
