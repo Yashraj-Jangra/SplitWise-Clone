@@ -12,7 +12,7 @@ import { sendVapidPush } from '@/lib/vapid-push';
 import { getSiteSettings } from '@/lib/services/settings.service';
 import { createNotification, getUserNotificationPrefs } from '@/lib/services/notification.service';
 import { getUserProfile } from '@/lib/services/user.service';
-import { queryByEntityType, getItem } from '@/lib/nosql';
+import { queryByEntityType, getItem, deleteItem } from '@/lib/nosql';
 
 export interface ServerDispatchParams {
   type: NotificationEventType;
@@ -228,6 +228,8 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
         sound: 'default',
         badge: 1,
         channelId,
+        priority: 'high',
+        ttl: 86400,
         _displayInForeground: true,
         data: {
           ...pushPayload.data,
@@ -248,6 +250,24 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
           method: 'POST',
           headers: expoHeaders,
           body: JSON.stringify(expoMessages),
+        }).then(async (res) => {
+          if (!res.ok) {
+            console.error('Expo push HTTP error:', res.status, await res.text().catch(() => ''));
+          } else {
+            const data = await res.json().catch(() => null);
+            if (data?.data && Array.isArray(data.data)) {
+              for (let i = 0; i < data.data.length; i++) {
+                const ticket = data.data[i];
+                if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
+                  const badSub = expoSubscriptions[i];
+                  if (badSub) {
+                    console.log(`Pruning unregistered push token for user ${badSub.userId}`);
+                    deleteItem(`USER#${badSub.userId}`, `PUSH_SUB#${badSub.deviceId}`).catch(() => {});
+                  }
+                }
+              }
+            }
+          }
         }).catch((err) => {
           console.error('Failed sending Expo push notifications:', err);
         })
