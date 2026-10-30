@@ -1,5 +1,16 @@
 # Session Progress & Context Preservation
 
+- **AI Chat Session Length Enforcement & Parity (30 User Chats Max)** 🛡️ ✨ 🌐 ✅:
+  - **Client-Side Session Limit Card (`src/components/ai/chat-panel.tsx`)**:
+    - Enforced a hard session cap of 30 user messages (`MAX_USER_CHATS = 30`).
+    - When limit is reached, gracefully replaced input area in both full-page and widget variants with a prominent **Session Limit Card** prompting users to clear history and start a new session with 1 tap.
+    - Added a real-time session counter badge (`{userChatCount}/30`) in the header next to the clear history action.
+    - Blocked send triggers on starter prompt buttons and enter key once the 30-chat limit is reached.
+  - **Backend Guardrail Layer 0 (`src/app/api/ai/chat/route.ts`)**:
+    - Added server-side validation rejecting requests if `body.history` has 30 or more user messages with 400 Bad Request (`Session limit reached (30/30 messages)`).
+  - **Quality Gates**:
+    - `npx tsc --noEmit` verified with 0 errors across `SplitWise-Clone`.
+
 - **Release v0.5.1 Manifest Synchronization** 📌 🌐 ✨ ✅:
   - Bumped version to `0.5.1` in `package.json` for ecosystem parity.
   - Quality Gates: `npx tsc --noEmit` verified with 0 errors.
