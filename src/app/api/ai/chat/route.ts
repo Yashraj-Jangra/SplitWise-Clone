@@ -44,6 +44,17 @@ export async function POST(request: Request) {
       });
     }
 
+    // ── Guardrail Layer 0: Session length limit (30 user messages maximum) ────
+    const userMsgCountInHistory = Array.isArray(body?.history)
+      ? body.history.filter((m: any) => m?.role === 'user').length
+      : 0;
+    if (userMsgCountInHistory >= 30) {
+      return new Response(
+        JSON.stringify({ error: 'Session limit reached (30/30 messages). Please clear the conversation to start a new session.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // ── Guardrail Layer 1: Input intent & safety classification ──────────────
     const guardrail = classifyInput(message);
     if (!guardrail.allowed) {

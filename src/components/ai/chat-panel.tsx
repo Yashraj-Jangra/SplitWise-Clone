@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { MessageBubble } from './message-bubble';
 import type { AIStreamStatus } from './status-pill';
@@ -291,6 +292,32 @@ function BudgetActionCard({ proposal, onApprove, onDeny, onConfigureManually, st
 }
 
 
+const MAX_USER_CHATS = 30;
+
+function SessionLimitCard({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-background/95 dark:bg-muted/40 border border-amber-500/30 backdrop-blur-md shadow-lg">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 flex-shrink-0">
+          <Sparkles className="w-4 h-4" />
+        </div>
+        <div className="text-left">
+          <p className="text-xs sm:text-sm font-semibold text-foreground">Session Limit Reached (30/30 messages)</p>
+          <p className="text-[11px] text-muted-foreground">Clear this conversation to start a fresh AI session with full ledger grounding.</p>
+        </div>
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        onClick={onClear}
+        className="h-8 px-4 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex-shrink-0 shadow-sm"
+      >
+        Start New Session
+      </Button>
+    </div>
+  );
+}
+
 export function ChatPanel({ groupId, groupName, className, onClose, variant = 'widget' }: ChatPanelProps) {
   const router = useRouter();
   const { userProfile } = useAuth();
@@ -309,6 +336,12 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   const abortControllerRef = useRef<AbortController | null>(null);
   const [pendingBudgetProposal, setPendingBudgetProposal] = useState<BudgetActionProposal | null>(null);
   const [budgetActionStatus, setBudgetActionStatus] = useState<'idle' | 'approving' | 'denying'>('idle');
+
+  const userChatCount = useMemo(
+    () => messages.filter((m) => m.role === 'user').length,
+    [messages]
+  );
+  const isSessionLimitReached = userChatCount >= MAX_USER_CHATS;
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -355,7 +388,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
   useEffect(() => {
     if (messages.length > 0) {
       try {
-        localStorage.setItem(storageKey, JSON.stringify(messages.slice(-30)));
+        localStorage.setItem(storageKey, JSON.stringify(messages));
       } catch {
         // Storage quota safe
       }
@@ -407,7 +440,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
 
   const handleSend = async (userText?: string, explicitGroupId?: string) => {
     const textToSend = (userText || input).trim();
-    if (!textToSend || isStreaming) return;
+    if (!textToSend || isStreaming || isSessionLimitReached) return;
 
     const targetGroupId = explicitGroupId || groupId;
 
@@ -722,6 +755,20 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 </PopoverContent>
               </Popover>
 
+              {userChatCount > 0 && (
+                <div
+                  className={cn(
+                    "px-2 py-0.5 rounded-full text-[11px] font-semibold border flex items-center gap-1",
+                    isSessionLimitReached
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
+                      : "bg-muted/30 border-border/30 text-muted-foreground"
+                  )}
+                  title={`${userChatCount}/${MAX_USER_CHATS} user messages in this session`}
+                >
+                  <span>{userChatCount}/{MAX_USER_CHATS}</span>
+                </div>
+              )}
+
               {messages.length > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -976,6 +1023,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       {isFullPage ? (
         <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent pt-6 pb-4 sm:pb-6">
           <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 pointer-events-auto">
+            {isSessionLimitReached ? (
+              <SessionLimitCard onClear={handleClearHistory} />
+            ) : (
             <div className="relative flex items-end rounded-2xl bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg focus-within:border-border/60 focus-within:bg-background focus-within:shadow-xl transition-all">
               <Textarea
                 ref={textareaRef}
@@ -1016,6 +1066,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 )}
               </div>
             </div>
+            )}
 
             <div className="flex items-center justify-center gap-1.5 mt-2">
               <span className="text-[11px] text-muted-foreground/75 text-center">
@@ -1047,6 +1098,9 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
       ) : (
         <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none bg-gradient-to-t from-background via-background/95 to-transparent pt-5 pb-3 px-3.5">
           <div className="w-full pointer-events-auto">
+            {isSessionLimitReached ? (
+              <SessionLimitCard onClear={handleClearHistory} />
+            ) : (
             <div className="relative flex items-end rounded-2xl bg-background/90 dark:bg-muted/30 border border-border/40 backdrop-blur-md shadow-lg focus-within:border-border/60 focus-within:bg-background focus-within:shadow-xl transition-all">
               <Textarea
                 ref={textareaRef}
@@ -1087,6 +1141,7 @@ export function ChatPanel({ groupId, groupName, className, onClose, variant = 'w
                 )}
               </div>
             </div>
+            )}
 
             <div className="flex items-center justify-center gap-1 mt-1.5">
               <span className="text-[10px] text-muted-foreground/75 text-center">
