@@ -1,5 +1,10 @@
 # Session Progress & Context Preservation
 
+- **Release v0.5.2 Manifest & PR Preparation** 📌 🚀 🌐 ✅:
+  - Bumped version to `0.5.2` in `package.json`.
+  - Prepared pull request from `dev` into `master` with full AI chat session persistence & 30-message limit guardrails.
+  - Quality Gates: `npx tsc --noEmit` passed with 0 errors.
+
 - **AI Chat Session Length Enforcement & Parity (30 User Chats Max)** 🛡️ ✨ 🌐 ✅:
   - **Client-Side Session Limit Card (`src/components/ai/chat-panel.tsx`)**:
     - Enforced a hard session cap of 30 user messages (`MAX_USER_CHATS = 30`).
