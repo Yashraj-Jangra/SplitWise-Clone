@@ -35,7 +35,25 @@ async function getAccessToken(): Promise<string | null> {
   }
 
   try {
-    const formattedKey = rawKey.replace(/\\n/g, '\n');
+    let formattedKey = rawKey.trim();
+    if (
+      (formattedKey.startsWith('"') && formattedKey.endsWith('"')) ||
+      (formattedKey.startsWith("'") && formattedKey.endsWith("'"))
+    ) {
+      formattedKey = formattedKey.slice(1, -1);
+    }
+    if (!formattedKey.includes('-----BEGIN') && formattedKey.length > 60) {
+      try {
+        const decoded = Buffer.from(formattedKey, 'base64').toString('utf8');
+        if (decoded.includes('-----BEGIN')) {
+          formattedKey = decoded;
+        }
+      } catch {
+        // Not base64
+      }
+    }
+    formattedKey = formattedKey.replace(/\\n/g, '\n');
+
     const jwtClient = new google.auth.JWT({
       email: clientEmail,
       key: formattedKey,
