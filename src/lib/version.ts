@@ -3,11 +3,11 @@
  * Single source of truth for app version, build identifiers, and release information.
  */
 
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '0.6.0';
 export const APP_NAME = 'SplitIt';
-export const BUILD_NUMBER = '2026.10.14';
-export const BUILD_CHANNEL: 'alpha' | 'beta' | 'rc' | 'stable' = 'beta';
-export const BUILD_DATE = '2026-10-14';
+export const BUILD_NUMBER = '2026.10.31';
+export const BUILD_CHANNEL: 'alpha' | 'beta' | 'rc' | 'stable' = 'stable';
+export const BUILD_DATE = '2026-10-31';
 export const APP_EDITION = 'Community Edition';
 
 export interface VersionInfo {

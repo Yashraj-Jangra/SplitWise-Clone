@@ -1,5 +1,21 @@
 # Session Progress & Context Preservation
 
+- **Release v0.6.0 Manifest Synchronization & Self-Hosted FCM Direct Push Engine** 📌 🚀 🌐 📱 ✨ ✅:
+  - **Version Manifests Synchronized to 0.6.0**:
+    - `package.json`: `"version": "0.6.0"`
+    - `src/lib/version.ts`: `APP_VERSION = '0.6.0'`, `BUILD_NUMBER = '2026.10.31'`, `BUILD_CHANNEL = 'stable'`, `BUILD_DATE = '2026-10-31'`
+  - **Self-Hosted FCM Direct Push Dispatch Engine**:
+    - Built `fcm-push.ts` with direct Google OAuth2 Service Account JWT authorization via `googleapis`.
+    - Added high-priority push payloads with Android notification channel routing (`expenses`, `settlements`, `reminders`, `budgets`, `groups`, `announcements`), `#00C4CC` cyan theme tint, and dead token auto-pruning.
+    - Updated `/api/push/subscribe` to register `platform: 'fcm'` subscriptions.
+    - Updated `dispatch.service.ts` to route all group events to registered native mobile devices.
+  - **CI/CD Pipeline & Docker Propagation**:
+    - Wired `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` into `.github/workflows/deploy.yml` with shell newline & quote sanitization.
+    - Configured `docker-compose.yml` environment pass-through.
+    - Added templates to `.env.local` and `.env.example`.
+  - **Quality Gates**:
+    - `npx tsc --noEmit` verified with 0 errors.
+
 - **Release v0.5.2 Manifest & PR Preparation** 📌 🚀 🌐 ✅:
   - Bumped version to `0.5.2` in `package.json`.
   - Prepared pull request from `dev` into `master` with full AI chat session persistence & 30-message limit guardrails.
