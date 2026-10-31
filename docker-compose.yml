@@ -18,6 +18,9 @@ services:
       - NODE_ENV=production
       - BETTER_AUTH_URL=http://localhost:3235
       - NEXT_PUBLIC_APP_URL=http://localhost:3235
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-splitit-cvweb}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     volumes:
       - ./wallet:/app/wallet
     restart: always

@@ -9,6 +9,7 @@ import { renderEmail } from '@/lib/email-templates/compiler';
 import { sendEmailViaGmail } from '@/lib/gmail-sender';
 import type { NotificationEventType, UserNotificationPrefsDocument } from '@/types';
 import { sendVapidPush } from '@/lib/vapid-push';
+import { sendFcmPush } from '@/lib/fcm-push';
 import { getSiteSettings } from '@/lib/services/settings.service';
 import { createNotification, getUserNotificationPrefs } from '@/lib/services/notification.service';
 import { getUserProfile } from '@/lib/services/user.service';
@@ -206,7 +207,8 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
       },
     };
 
-    const webSubscriptions = subscriptions.filter((s: any) => s.platform !== 'expo' && s.endpoint);
+    const webSubscriptions = subscriptions.filter((s: any) => s.platform !== 'expo' && s.platform !== 'fcm' && s.endpoint);
+    const fcmSubscriptions = subscriptions.filter((s: any) => s.platform === 'fcm' && s.fcmToken);
     const expoSubscriptions = subscriptions.filter((s: any) => (s.platform === 'expo' || s.expoPushToken) && s.expoPushToken);
 
     const pushPromises: Promise<any>[] = webSubscriptions.map((sub: any) =>
@@ -217,6 +219,31 @@ export async function serverDispatchNotification(params: ServerDispatchParams): 
         console.error(`Failed push to sub ${sub.id}:`, err);
       })
     );
+
+    // Direct Native Android FCM v1 Dispatch
+    if (fcmSubscriptions.length > 0) {
+      const channelId = getNotificationChannelId(type);
+      for (const sub of fcmSubscriptions) {
+        pushPromises.push(
+          sendFcmPush(sub.fcmToken, {
+            title,
+            body: notifBody,
+            androidChannelId: channelId,
+            data: {
+              ...pushPayload.data,
+              channelId,
+            },
+          }).then((res) => {
+            if (res.unregistered) {
+              console.log(`[FCM] Pruning unregistered dead token for user ${sub.userId} device ${sub.deviceId}`);
+              deleteItem(`USER#${sub.userId}`, `PUSH_SUB#${sub.deviceId}`).catch(() => {});
+            }
+          }).catch((err) => {
+            console.error('[FCM] Error dispatching push:', err);
+          })
+        );
+      }
+    }
 
 
     if (expoSubscriptions.length > 0) {
