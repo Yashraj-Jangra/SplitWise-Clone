@@ -11,10 +11,36 @@ export async function POST(request: Request) {
     const userId = session.user.id;
 
     const body = await request.json();
-    const { platform = 'webpush', deviceId, endpoint, p256dh, auth: authSecret, expoPushToken, deviceName } = body;
+    const {
+      platform = 'webpush',
+      deviceId,
+      endpoint,
+      p256dh,
+      auth: authSecret,
+      expoPushToken,
+      fcmToken,
+      deviceName,
+    } = body;
 
     if (!deviceId) {
       return NextResponse.json({ error: 'deviceId is required' }, { status: 400 });
+    }
+
+    if (platform === 'fcm') {
+      const activeToken = fcmToken || expoPushToken;
+      if (!activeToken) {
+        return NextResponse.json({ error: 'fcmToken is required for fcm platform.' }, { status: 400 });
+      }
+      const subData = {
+        deviceId,
+        userId,
+        platform: 'fcm',
+        fcmToken: activeToken,
+        deviceName: deviceName || 'Android Smartphone',
+        lastSeen: new Date().toISOString(),
+      };
+      await putItem(`USER#${userId}`, `PUSH_SUB#${deviceId}`, 'PUSH_SUB', subData, `DEVICE#${deviceId}`, 'PUSH_SUB');
+      return NextResponse.json({ success: true });
     }
 
     if (platform === 'expo') {

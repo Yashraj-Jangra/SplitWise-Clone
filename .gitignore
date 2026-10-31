@@ -41,7 +41,9 @@ yarn-error.log*
 PROJECT_KNOWLEDGE.md
 
 # secrets and data exports
-service-account.json
+service-account*.json
+*firebase*.json
+google-services.json
 scripts/exports/
 oracle_migration_data/
 wallet/
